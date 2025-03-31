@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:tobaco/Models/Cliente.dart';
 import 'package:tobaco/Screens/Clientes/clientes_screen.dart';
 import 'package:tobaco/Screens/Clientes/detalleCliente_screen.dart';
 
@@ -69,7 +70,7 @@ class MenuScreen extends StatelessWidget {
                   ),
                   onPressed: () {Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) =>  DetalleClienteScreen.empty()),
+                      MaterialPageRoute(builder: (context) => const ClientesScreen()),
                     );},
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,

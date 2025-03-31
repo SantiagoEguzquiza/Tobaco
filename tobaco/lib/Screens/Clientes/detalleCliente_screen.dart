@@ -13,26 +13,20 @@ class DetalleClienteScreen extends StatelessWidget {
     deuda: 100,
   );
 
-  final String nombreCliente;
-  final String direccion;
-  final String telefono;
-  final String deuda;
+  late String nombreCliente;
+  late String direccion;
+  late String telefono;
+  late String deuda;
 
-  DetalleClienteScreen({
-    Key? key,
-    required this.nombreCliente,
-    required this.direccion,
-    required this.telefono,
-    required this.deuda,
-  }) : super(key: key);
+  DetalleClienteScreen({required Cliente cliente}) {
+    nombreCliente = cliente.nombre;
+    direccion = cliente.direccion!;
+    telefono = cliente.telefono.toString();
+    deuda = cliente.deuda.toString();
+  }
+    
 
-  DetalleClienteScreen.empty({
-    Key? key,
-  })  : nombreCliente = 'Ana',
-        direccion = 'La Paz 123',
-        telefono = '012-345-6789',
-        deuda = '100.00',
-        super(key: key);
+ 
 
   @override
   Widget build(BuildContext context) {
@@ -51,18 +45,18 @@ class DetalleClienteScreen extends StatelessWidget {
             ),
             Text(
               direccion,
-              style: TextStyle(fontSize: 16),
+              style: const TextStyle(fontSize: 16),
             ),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             const Text(
               'Teléfono:',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             Text(
               telefono,
-              style: TextStyle(fontSize: 16),
+              style: const TextStyle(fontSize: 16),
             ),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             const Text(
               'Deuda:',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
