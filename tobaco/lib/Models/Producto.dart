@@ -1,24 +1,24 @@
 // ignore_for_file: file_names
 
-enum Origen {
+enum Categoria {
   nacional,
   importado,
   analgesico,
-  otros 
+  otro,
 }
 
 class Producto {
   int id;
   String nombre;
-  int cantidad;
+  int? cantidad;
   int precio;
-  Origen origen;
+  Categoria categoria;
 
   Producto({
     required this.id,
     required this.nombre,
-    required this.cantidad,
+    this.cantidad,
     required this.precio,
-    required this.origen,
+    required this.categoria,
   });
 }

@@ -22,7 +22,7 @@ class _ClientesScreenState extends State<ClientesScreen> {
     'Sofia',
     'Miguel',
   ];
-  String searchQuery = '';
+  String searchQuery = ''; 
 
   @override
   Widget build(BuildContext context) {

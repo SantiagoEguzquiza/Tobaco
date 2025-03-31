@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:tobaco/Screens/Clientes/clientes_screen.dart';
+import 'package:tobaco/Screens/Clientes/detalleCliente_screen.dart';
 
 class MenuScreen extends StatelessWidget {
+  const MenuScreen({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -64,7 +67,10 @@ class MenuScreen extends StatelessWidget {
                     elevation: 10, // Altura de la sombra
                     shadowColor: Colors.black, // Color de la sombra
                   ),
-                  onPressed: () {},
+                  onPressed: () {Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) =>  DetalleClienteScreen.empty()),
+                    );},
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -162,7 +168,7 @@ class MenuScreen extends StatelessWidget {
               children: [
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Color.fromARGB(255, 3, 117, 39), // background color
+                    backgroundColor: const Color.fromARGB(255, 3, 117, 39), // background color
                     foregroundColor: const Color.fromARGB(255, 255, 255, 255), // text color
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(20),
@@ -196,7 +202,7 @@ class MenuScreen extends StatelessWidget {
                 const SizedBox(width: 20),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Color.fromARGB(255, 99, 99, 99), // background color
+                    backgroundColor: const Color.fromARGB(255, 99, 99, 99), // background color
                     foregroundColor: Colors.white, // text color
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(20),
