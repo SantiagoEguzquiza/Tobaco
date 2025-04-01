@@ -9,7 +9,7 @@ class DetalleClienteScreen extends StatelessWidget {
     nombre: 'Ana',
     direccion: 'La Paz 123',
     telefono: 123456789,
-    whatsapp: '987654321',
+    
     deuda: 100,
   );
 

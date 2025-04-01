@@ -18,7 +18,6 @@ class _ClientesScreenState extends State<ClientesScreen> {
       nombre: 'Bella Union',
       direccion: 'Calle Principal 123',
       telefono: 123456789,
-      whatsapp: '987654321',
       deuda: 200,
     ),
     Cliente(
@@ -26,7 +25,6 @@ class _ClientesScreenState extends State<ClientesScreen> {
       nombre: 'Alicia',
       direccion: 'Av. Libertad 456',
       telefono: 987654321,
-      whatsapp: '123456789',
       deuda: 150,
     ),
     Cliente(
@@ -34,7 +32,6 @@ class _ClientesScreenState extends State<ClientesScreen> {
       nombre: 'Pedro',
       direccion: 'Calle Secundaria 789',
       telefono: 456789123,
-      whatsapp: '789123456',
       deuda: 300,
     ),
     Cliente(
@@ -42,7 +39,6 @@ class _ClientesScreenState extends State<ClientesScreen> {
       nombre: 'Maria',
       direccion: 'Av. Siempre Viva 101',
       telefono: 321654987,
-      whatsapp: '654987321',
       deuda: 50,
     ),
     Cliente(
@@ -50,7 +46,6 @@ class _ClientesScreenState extends State<ClientesScreen> {
       nombre: 'Juan',
       direccion: 'Calle Falsa 102',
       telefono: 741852963,
-      whatsapp: '852963741',
       deuda: 0,
     ),
     Cliente(
@@ -58,7 +53,6 @@ class _ClientesScreenState extends State<ClientesScreen> {
       nombre: 'Carlos',
       direccion: 'Av. Central 103',
       telefono: 963852741,
-      whatsapp: '741963852',
       deuda: 400,
     ),
     Cliente(
@@ -66,7 +60,6 @@ class _ClientesScreenState extends State<ClientesScreen> {
       nombre: 'Ana',
       direccion: 'La Paz 123',
       telefono: 123456789,
-      whatsapp: '987654321',
       deuda: 100,
     ),
     Cliente(
@@ -74,7 +67,6 @@ class _ClientesScreenState extends State<ClientesScreen> {
       nombre: 'Luis',
       direccion: 'Calle Norte 104',
       telefono: 852741963,
-      whatsapp: '963852741',
       deuda: 250,
     ),
     Cliente(
@@ -82,15 +74,13 @@ class _ClientesScreenState extends State<ClientesScreen> {
       nombre: 'Sofia',
       direccion: 'Av. Sur 105',
       telefono: 159753486,
-      whatsapp: '486753159',
       deuda: 75,
     ),
     Cliente(
       id: 10,
       nombre: 'Miguel',
       direccion: 'Calle Este 106',
-      telefono: 357951486,
-      whatsapp: '486159753',
+      telefono: 357951486,     
       deuda: 500,
     ),
   ];

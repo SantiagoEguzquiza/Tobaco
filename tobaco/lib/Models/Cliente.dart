@@ -5,8 +5,7 @@ class Cliente {
   int id;
   String nombre;
   String? direccion;
-  int? telefono;
-  String? whatsapp;
+  int? telefono; 
   int? deuda;
 
   Cliente(
@@ -14,6 +13,5 @@ class Cliente {
       required this.nombre,
       required this.direccion,
       this.telefono,
-      this.whatsapp,
       this.deuda});
 }
