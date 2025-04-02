@@ -3,6 +3,8 @@
 import 'package:flutter/material.dart';
 import 'package:tobaco/Models/Cliente.dart';
 import 'package:tobaco/Screens/Clientes/detalleCliente_screen.dart';
+import 'package:tobaco/Screens/Clientes/editarCliente_Screen.dart';
+import 'package:tobaco/Screens/Clientes/nuevoCliente_screen.dart';
 
 class ClientesScreen extends StatefulWidget {
   const ClientesScreen({super.key});
@@ -113,8 +115,12 @@ class _ClientesScreenState extends State<ClientesScreen> {
               width: double.infinity, // Botón ocupa todo el ancho
               child: ElevatedButton(
                 onPressed: () {
-                  // Acción para crear nuevo cliente
-                  print('Crear nuevo cliente');
+                 Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) =>  NuevoClienteScreen(),
+                    ),
+                  );
                 },
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 15),
@@ -246,8 +252,13 @@ class _ClientesScreenState extends State<ClientesScreen> {
                                 color: Colors.green,
                               ),
                               onPressed: () {
-                                // Acción para editar cliente
-                                print('Editar cliente: ${cliente.nombre}');
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                         EditarClienteScreen(),
+                                  ),
+                                );
                               },
                             ),
                             // Botón para eliminar cliente
