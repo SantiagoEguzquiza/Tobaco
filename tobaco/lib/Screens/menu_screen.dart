@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:tobaco/Models/Cliente.dart';
+import 'package:flutter/services.dart';
 import 'package:tobaco/Screens/Clientes/clientes_screen.dart';
-import 'package:tobaco/Screens/Clientes/detalleCliente_screen.dart';
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -9,6 +8,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
         // Configuración global del tema
         scaffoldBackgroundColor: Colors.white, // Fondo de todas las pantallas
@@ -87,11 +87,9 @@ class MenuScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      
       body: SafeArea(
         child: Center(
           child: Column(
-            
             mainAxisAlignment: MainAxisAlignment.center,
             children: <Widget>[
               Row(

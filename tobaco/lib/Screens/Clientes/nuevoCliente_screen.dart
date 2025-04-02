@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 
 class NuevoClienteScreen extends StatelessWidget {
+  const NuevoClienteScreen({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         centerTitle: true,
-        title: Text('Nuevo Cliente'),
+        title: const Text('Nuevo Cliente'),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),

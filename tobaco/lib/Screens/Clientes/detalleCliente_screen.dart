@@ -18,7 +18,7 @@ class DetalleClienteScreen extends StatelessWidget {
   late String telefono;
   late String deuda;
 
-  DetalleClienteScreen({required Cliente cliente}) {
+  DetalleClienteScreen({super.key, required Cliente cliente}) {
     nombreCliente = cliente.nombre;
     direccion = cliente.direccion!;
     telefono = cliente.telefono.toString();

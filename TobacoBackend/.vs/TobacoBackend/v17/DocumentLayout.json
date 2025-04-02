@@ -26,7 +26,7 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 7,
+          "SelectedChildIndex": 4,
           "Children": [
             {
               "$type": "Bookmark",
@@ -46,6 +46,19 @@
             },
             {
               "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "Program.cs",
+              "DocumentMoniker": "C:\\Users\\santi\\Desktop\\Carrera\\Tobaco\\TobacoBackend\\TobacoBackend\\Program.cs",
+              "RelativeDocumentMoniker": "TobacoBackend\\Program.cs",
+              "ToolTip": "C:\\Users\\santi\\Desktop\\Carrera\\Tobaco\\TobacoBackend\\TobacoBackend\\Program.cs",
+              "RelativeToolTip": "TobacoBackend\\Program.cs",
+              "ViewState": "AQIAAAAAAAAAAAAAAAAAABYAAAAVAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-03-31T17:19:12.82Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
               "DocumentIndex": 1,
               "Title": "appsettings.json",
               "DocumentMoniker": "C:\\Users\\santi\\Desktop\\Carrera\\Tobaco\\TobacoBackend\\TobacoBackend\\appsettings.json",
@@ -54,8 +67,7 @@
               "RelativeToolTip": "TobacoBackend\\appsettings.json",
               "ViewState": "AQIAAAAAAAAAAAAAAAAAAAgAAAABAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
-              "WhenOpened": "2025-04-01T03:21:30.541Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-04-01T03:21:30.541Z"
             },
             {
               "$type": "Document",
@@ -67,8 +79,7 @@
               "RelativeToolTip": "TobacoBackend\\Properties\\launchSettings.json",
               "ViewState": "AQIAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
-              "WhenOpened": "2025-03-31T17:39:52.139Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-03-31T17:39:52.139Z"
             },
             {
               "$type": "Document",
@@ -80,21 +91,7 @@
               "RelativeToolTip": "TobacoBackend\\Controllers\\WeatherForecastController.cs",
               "ViewState": "AQIAAAAAAAAAAAAAAAAAAB0AAAAXAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-03-31T17:19:22.569Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 0,
-              "Title": "Program.cs",
-              "DocumentMoniker": "C:\\Users\\santi\\Desktop\\Carrera\\Tobaco\\TobacoBackend\\TobacoBackend\\Program.cs",
-              "RelativeDocumentMoniker": "TobacoBackend\\Program.cs",
-              "ToolTip": "C:\\Users\\santi\\Desktop\\Carrera\\Tobaco\\TobacoBackend\\TobacoBackend\\Program.cs",
-              "RelativeToolTip": "TobacoBackend\\Program.cs",
-              "ViewState": "AQIAAAAAAAAAAAAAAAAAABkAAAAAAAAA",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-03-31T17:19:12.82Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-03-31T17:19:22.569Z"
             }
           ]
         }
