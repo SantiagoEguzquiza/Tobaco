@@ -30,6 +30,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  url_launcher: ^6.1.7
 
 
   # The following adds the Cupertino Icons font to your application.
@@ -53,10 +54,22 @@ dev_dependencies:
 # The following section is specific to Flutter packages.
 flutter:
 
-  # The following line ensures that the Material Icons font is
-  # included with your application, so that you can use the icons in
-  # the material Icons class.
   uses-material-design: true
+
+  fonts:
+    - family: Raleway
+      fonts:
+        - asset: Assets/fonts/Raleway/static/Raleway-Regular.ttf
+        - asset: Assets/fonts/Raleway/static/Raleway-Bold.ttf
+
+    - family: Shippori
+      fonts:
+        - asset: Assets/fonts/Shippori/ShipporiAntiqueB1-Regular.ttf
+
+    - family: LibreFranklin
+      fonts:
+        - asset: Assets/fonts/LibreFranklin/static/LibreFranklin-ExtraLight.ttf
+        - asset: Assets/fonts/LibreFranklin/static/LibreFranklin-Light.ttf
 
   assets:
     - Assets/images/

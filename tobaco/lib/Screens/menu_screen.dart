@@ -3,14 +3,55 @@ import 'package:tobaco/Models/Cliente.dart';
 import 'package:tobaco/Screens/Clientes/clientes_screen.dart';
 import 'package:tobaco/Screens/Clientes/detalleCliente_screen.dart';
 
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      theme: ThemeData(
+        // Configuración global del tema
+
+        scaffoldBackgroundColor: Colors.white, // Fondo de todas las pantallas
+        primarySwatch: Colors.blue, // Color principal de la app.
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Colors.white, // Color del AppBar
+          foregroundColor: Colors.black, // Color del texto en el AppBar
+          elevation: 0, // Sin sombra en el AppBar
+          titleTextStyle: TextStyle(
+              fontFamily: 'Shippori', fontSize: 30, color: Colors.black),
+        ),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.blue, // Color de fondo de los botones
+            foregroundColor: Colors.white, // Color del texto en los botones
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10), // Bordes redondeados
+            ),
+          ),
+        ),
+        textTheme: const TextTheme(
+          bodyLarge: TextStyle(
+              fontSize: 18,
+              color: Colors.black,
+              fontFamily: 'LibreFranklin'), // Texto general
+          bodyMedium: TextStyle(
+              fontSize: 16,
+              color: Colors.black54,
+              fontFamily: 'LibreFranklin'), // Texto secundario
+        ),
+      ),
+      home: const MenuScreen(), // Pantalla inicial
+    );
+  }
+}
+
 class MenuScreen extends StatelessWidget {
   const MenuScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(    
-      ),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -33,7 +74,8 @@ class MenuScreen extends StatelessWidget {
                   onPressed: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => const ClientesScreen()),
+                      MaterialPageRoute(
+                          builder: (context) => const ClientesScreen()),
                     );
                   },
                   child: Column(
@@ -68,10 +110,13 @@ class MenuScreen extends StatelessWidget {
                     elevation: 10, // Altura de la sombra
                     shadowColor: Colors.black, // Color de la sombra
                   ),
-                  onPressed: () {Navigator.push(
+                  onPressed: () {
+                    Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => const ClientesScreen()),
-                    );},
+                      MaterialPageRoute(
+                          builder: (context) => const ClientesScreen()),
+                    );
+                  },
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -164,13 +209,15 @@ class MenuScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 20),
-          Row(
+            Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color.fromARGB(255, 3, 117, 39), // background color
-                    foregroundColor: const Color.fromARGB(255, 255, 255, 255), // text color
+                    backgroundColor: const Color.fromARGB(
+                        255, 3, 117, 39), // background color
+                    foregroundColor:
+                        const Color.fromARGB(255, 255, 255, 255), // text color
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(20),
                     ),
@@ -178,9 +225,7 @@ class MenuScreen extends StatelessWidget {
                     elevation: 10, // Altura de la sombra
                     shadowColor: Colors.black, // Color de la sombra
                   ),
-                  onPressed: () {
-                    
-                  },
+                  onPressed: () {},
                   child: const Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -189,8 +234,8 @@ class MenuScreen extends StatelessWidget {
                       //   height: 80, // Altura de la imagen
                       //   width: 80, // Ancho de la imagen
                       // ),
-                       SizedBox(), // Espacio entre la imagen y el texto
-                       Text(
+                      SizedBox(), // Espacio entre la imagen y el texto
+                      Text(
                         'DOLAR',
                         style: TextStyle(
                           fontSize: 30,
@@ -203,7 +248,8 @@ class MenuScreen extends StatelessWidget {
                 const SizedBox(width: 20),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color.fromARGB(255, 99, 99, 99), // background color
+                    backgroundColor: const Color.fromARGB(
+                        255, 99, 99, 99), // background color
                     foregroundColor: Colors.white, // text color
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(20),
@@ -221,10 +267,10 @@ class MenuScreen extends StatelessWidget {
                       //   height: 80, // Altura de la imagen
                       //   width: 80, // Ancho de la imagen
                       // ),
-                       SizedBox(
+                      SizedBox(
                         height: 5,
                       ), // Espacio entre la imagen y el texto
-                       Text(
+                      Text(
                         'Configuración',
                         style: TextStyle(
                           fontSize: 15,

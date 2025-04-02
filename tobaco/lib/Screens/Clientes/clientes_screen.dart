@@ -80,7 +80,7 @@ class _ClientesScreenState extends State<ClientesScreen> {
       id: 10,
       nombre: 'Miguel',
       direccion: 'Calle Este 106',
-      telefono: 357951486,     
+      telefono: 357951486,
       deuda: 500,
     ),
   ];
@@ -101,56 +101,57 @@ class _ClientesScreenState extends State<ClientesScreen> {
         centerTitle: true,
         title: const Text(
           'Clientes',
-          style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+          style: TextStyle(fontSize: 32),
         ),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor:
-                    const Color.fromRGBO(168, 245, 172, 1), // background color
-                foregroundColor: Colors.black, // text color
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                fixedSize: const Size(376, 75),
-                elevation: 10, // Altura de la sombra
-                shadowColor: Colors.black, // Color de la sombra
-              ),
-              onPressed:
-                  () {}, // Agregar la ruta de la pantalla de agregar cliente
-              child: const Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    'Agregar nuevo cliente',
-                    style: TextStyle(
-                      fontSize: 20,
-                    ),
+          children: [       
+            SizedBox(
+              width: double.infinity, // Botón ocupa todo el ancho
+              child: ElevatedButton(
+                onPressed: () {
+                  // Acción para crear nuevo cliente
+                  print('Crear nuevo cliente');
+                },
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 15),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(5),
                   ),
-                ],
+                  backgroundColor: const Color(0xFFAAEDAA), // Color de fondo
+                  elevation: 5, // Altura de la sombra
+                  shadowColor: Colors.black, // Color de la sombra
+                ),
+                child: const Text(
+                  'Crear nuevo cliente',
+                  style: TextStyle(fontSize: 18, color: Colors.black),
+                ),
               ),
             ),
-            const SizedBox(height: 35),
+            const SizedBox(height: 30),
             TextField(
               cursorColor: Colors.black, // Cambia el color del cursor a negro
+              style: const TextStyle(fontSize: 15),
               decoration: const InputDecoration(
                 labelText: 'Buscar cliente...',
                 labelStyle: TextStyle(
-                  color: Colors.grey, // Color del label cuando no está enfocado
-                ),
+                    color: Colors.grey,
+                    fontSize: 15 // Color del label cuando no está enfocado
+                    ),
                 floatingLabelStyle: TextStyle(
                   color: Colors.grey, // Color del label cuando está enfocado
                 ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.all(Radius.circular(30)),
                 ),
-                prefixIcon:
-                    Icon(Icons.search, color: Colors.grey), // Color del ícono
+                prefixIcon: Icon(
+                  Icons.search,
+                  color: Colors.grey,
+                  size: 15, // Tamaño del ícono
+                ),
                 filled: true, // Habilitar fondo
                 fillColor: Color.fromRGBO(255, 255, 255, 1), // Fondo gris claro
                 focusedBorder: OutlineInputBorder(
@@ -158,7 +159,7 @@ class _ClientesScreenState extends State<ClientesScreen> {
                   borderSide: BorderSide(
                     color: Color.fromRGBO(
                         200, 200, 200, 1), // Color del borde al enfocar
-                    width: 1.5,
+                    width: 1.0, // Grosor más delgado
                   ),
                 ),
                 enabledBorder: OutlineInputBorder(
@@ -166,7 +167,7 @@ class _ClientesScreenState extends State<ClientesScreen> {
                   borderSide: BorderSide(
                     color: Color.fromRGBO(
                         200, 200, 200, 1), // Color del borde normal
-                    width: 1.5,
+                    width: 1.0, // Grosor más delgado
                   ),
                 ),
                 contentPadding: EdgeInsets.symmetric(
@@ -180,7 +181,7 @@ class _ClientesScreenState extends State<ClientesScreen> {
                 });
               },
             ),
-            const SizedBox(height: 35),
+            const SizedBox(height: 30),
             Expanded(
               child: ListView.builder(
                 itemCount: filteredClientes.length,
@@ -191,12 +192,10 @@ class _ClientesScreenState extends State<ClientesScreen> {
                       borderRadius: BorderRadius.circular(5),
                     ),
                     color: index % 2 == 0
-                        ? const Color.fromARGB(
-                            255, 255, 255, 255) // Blanco para impares
-                        : const Color.fromARGB(
-                            255, 240, 240, 240), // Gris claro para pares
+                        ? const Color(0xFFE9F3EF) // verde para impares
+                        : const Color(0xFFDBDBDB), // Gris claro para pares
                     margin:
-                        const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+                        const EdgeInsets.symmetric(vertical: 6),
                     child: Padding(
                       padding: const EdgeInsets.all(8.0),
                       child: InkWell(
@@ -226,14 +225,14 @@ class _ClientesScreenState extends State<ClientesScreen> {
                                   Text(
                                     cliente.nombre,
                                     style: const TextStyle(
+                                      color: Colors.black,
                                       fontSize: 18,
-                                      fontWeight: FontWeight.bold,
                                     ),
                                   ),
                                   Text(
                                     'Deuda: \$${cliente.deuda}',
                                     style: const TextStyle(
-                                      fontSize: 16,
+                                      fontSize: 12,
                                       color: Colors.grey,
                                     ),
                                   ),
