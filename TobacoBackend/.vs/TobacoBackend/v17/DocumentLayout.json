@@ -52,7 +52,7 @@
               "RelativeDocumentMoniker": "Backend_App\\Controllers\\WeatherForecastController.cs",
               "ToolTip": "C:\\Users\\pipi2\\OneDrive\\Escritorio\\proyectos\\Tobaco\\TobacoBackend\\Backend_App\\Controllers\\WeatherForecastController.cs",
               "RelativeToolTip": "Backend_App\\Controllers\\WeatherForecastController.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAABwAAAA7AAAAAAAAAA==",
+              "ViewState": "AgIAAAcAAAAAAAAAAAAcwBsAAABKAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-04-03T17:22:22.564Z",
               "EditorCaption": ""
@@ -67,8 +67,7 @@
               "RelativeToolTip": "TobacoBackend\\Program.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAwAAAAkAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-03-31T17:19:12.82Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-03-31T17:19:12.82Z"
             },
             {
               "$type": "Document",
