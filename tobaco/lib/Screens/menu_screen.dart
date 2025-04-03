@@ -17,6 +17,11 @@ class MyApp extends StatelessWidget {
           backgroundColor: Colors.white, // Color del AppBar
           foregroundColor: Colors.black, // Color del texto en el AppBar
           elevation: 0, // Sin sombra en el AppBar
+          systemOverlayStyle: SystemUiOverlayStyle(
+            statusBarBrightness: Brightness.light,
+            systemNavigationBarColor: Colors.transparent,
+          ),
+
           titleTextStyle: TextStyle(
               fontFamily: 'Shippori', fontSize: 30, color: Colors.black),
         ),
