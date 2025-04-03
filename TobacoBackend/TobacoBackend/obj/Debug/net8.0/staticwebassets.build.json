@@ -1,11 +1,12 @@
 {
   "Version": 1,
-  "Hash": "gJQxWQeflT/cqjFF69N6z/fpVSVv5wM9pWhyCjc9RGo=",
+  "Hash": "2d/c0zS3G33XSzg3YIbMNVDL30mCGI2UAGGT80vSSzw=",
   "Source": "TobacoBackend",
   "BasePath": "_content/TobacoBackend",
   "Mode": "Default",
   "ManifestType": "Build",
   "ReferencedProjectsConfiguration": [],
   "DiscoveryPatterns": [],
-  "Assets": []
+  "Assets": [],
+  "Endpoints": []
 }

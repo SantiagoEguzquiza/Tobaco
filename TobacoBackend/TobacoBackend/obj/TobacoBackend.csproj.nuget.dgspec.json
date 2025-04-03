@@ -1,23 +1,23 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\santi\\Desktop\\Carrera\\Tobaco\\TobacoBackend\\TobacoBackend\\TobacoBackend.csproj": {}
+    "C:\\Users\\pipi2\\OneDrive\\Escritorio\\proyectos\\Tobaco\\TobacoBackend\\TobacoBackend\\TobacoBackend.csproj": {}
   },
   "projects": {
-    "C:\\Users\\santi\\Desktop\\Carrera\\Tobaco\\TobacoBackend\\TobacoBackend\\TobacoBackend.csproj": {
+    "C:\\Users\\pipi2\\OneDrive\\Escritorio\\proyectos\\Tobaco\\TobacoBackend\\TobacoBackend\\TobacoBackend.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\santi\\Desktop\\Carrera\\Tobaco\\TobacoBackend\\TobacoBackend\\TobacoBackend.csproj",
+        "projectUniqueName": "C:\\Users\\pipi2\\OneDrive\\Escritorio\\proyectos\\Tobaco\\TobacoBackend\\TobacoBackend\\TobacoBackend.csproj",
         "projectName": "TobacoBackend",
-        "projectPath": "C:\\Users\\santi\\Desktop\\Carrera\\Tobaco\\TobacoBackend\\TobacoBackend\\TobacoBackend.csproj",
-        "packagesPath": "C:\\Users\\santi\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\santi\\Desktop\\Carrera\\Tobaco\\TobacoBackend\\TobacoBackend\\obj\\",
+        "projectPath": "C:\\Users\\pipi2\\OneDrive\\Escritorio\\proyectos\\Tobaco\\TobacoBackend\\TobacoBackend\\TobacoBackend.csproj",
+        "packagesPath": "C:\\Users\\pipi2\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\pipi2\\OneDrive\\Escritorio\\proyectos\\Tobaco\\TobacoBackend\\TobacoBackend\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
         ],
         "configFilePaths": [
-          "C:\\Users\\santi\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Users\\pipi2\\AppData\\Roaming\\NuGet\\NuGet.Config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
@@ -26,7 +26,6 @@
         ],
         "sources": {
           "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
-          "C:\\Program Files\\dotnet\\library-packs": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
@@ -44,7 +43,8 @@
           "enableAudit": "true",
           "auditLevel": "low",
           "auditMode": "direct"
-        }
+        },
+        "SdkAnalysisLevel": "9.0.200"
       },
       "frameworks": {
         "net8.0": {
@@ -74,7 +74,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.300/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.201/PortableRuntimeIdentifierGraph.json"
         }
       }
     }
