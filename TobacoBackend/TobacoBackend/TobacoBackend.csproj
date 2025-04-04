@@ -6,7 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
-  <ItemGroup>
+  <!--<ItemGroup>
     <Compile Remove="Domain\**" />
     <Compile Remove="Persistence\**" />
     <Compile Remove="Repositories\**" />
@@ -23,7 +23,7 @@
     <None Remove="Persistence\**" />
     <None Remove="Repositories\**" />
     <None Remove="Services\**" />
-  </ItemGroup>
+  </ItemGroup>-->
 
   <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.3">
