@@ -38,4 +38,11 @@
     <PackageReference Include="Swashbuckle.AspNetCore" Version="8.1.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Domain\IRepositories\" />
+    <Folder Include="Domain\IServices\" />
+    <Folder Include="Services\" />
+    <Folder Include="Repositories\" />
+  </ItemGroup>
+
 </Project>

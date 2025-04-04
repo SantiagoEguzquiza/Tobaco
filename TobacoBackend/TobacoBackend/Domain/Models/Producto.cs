@@ -1,0 +1,26 @@
+﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+
+namespace TobacoBackend.Domain.Models
+{
+    public class Producto
+    {
+        [Key]
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+        public int Id { get; set; }
+
+        [Required]
+        public string Nombre { get; set; }
+
+        [Required]
+        public int Cantidad { get; set; }
+
+        [Required]
+        public decimal Precio { get; set; }
+
+        [Required]
+        public CategoriaEnum Categoria { get; set; }
+
+        public List<PedidoProducto> PedidoProductos { get; set; } = new List<PedidoProducto>();
+    }
+}

@@ -3,8 +3,24 @@
   "WorkspaceRootPath": "C:\\Users\\pipi2\\OneDrive\\Escritorio\\proyectos\\Tobaco\\TobacoBackend\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{1FD5AA81-8B69-4486-A1E7-846069B60EE2}|TobacoBackend\\TobacoBackend.csproj|c:\\users\\pipi2\\onedrive\\escritorio\\proyectos\\tobaco\\tobacobackend\\tobacobackend\\tobacobackend.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}",
-      "RelativeMoniker": "D:0:0:{1FD5AA81-8B69-4486-A1E7-846069B60EE2}|TobacoBackend\\TobacoBackend.csproj|solutionrelative:tobacobackend\\tobacobackend.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}"
+      "AbsoluteMoniker": "D:0:0:{1FD5AA81-8B69-4486-A1E7-846069B60EE2}|TobacoBackend\\TobacoBackend.csproj|c:\\users\\pipi2\\onedrive\\escritorio\\proyectos\\tobaco\\tobacobackend\\tobacobackend\\persistence\\aplicationdbcontext.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{1FD5AA81-8B69-4486-A1E7-846069B60EE2}|TobacoBackend\\TobacoBackend.csproj|solutionrelative:tobacobackend\\persistence\\aplicationdbcontext.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{1FD5AA81-8B69-4486-A1E7-846069B60EE2}|TobacoBackend\\TobacoBackend.csproj|c:\\users\\pipi2\\onedrive\\escritorio\\proyectos\\tobaco\\tobacobackend\\tobacobackend\\domain\\models\\pedidoproducto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{1FD5AA81-8B69-4486-A1E7-846069B60EE2}|TobacoBackend\\TobacoBackend.csproj|solutionrelative:tobacobackend\\domain\\models\\pedidoproducto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{1FD5AA81-8B69-4486-A1E7-846069B60EE2}|TobacoBackend\\TobacoBackend.csproj|c:\\users\\pipi2\\onedrive\\escritorio\\proyectos\\tobaco\\tobacobackend\\tobacobackend\\domain\\models\\cliente.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{1FD5AA81-8B69-4486-A1E7-846069B60EE2}|TobacoBackend\\TobacoBackend.csproj|solutionrelative:tobacobackend\\domain\\models\\cliente.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{1FD5AA81-8B69-4486-A1E7-846069B60EE2}|TobacoBackend\\TobacoBackend.csproj|c:\\users\\pipi2\\onedrive\\escritorio\\proyectos\\tobaco\\tobacobackend\\tobacobackend\\domain\\models\\pedido.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{1FD5AA81-8B69-4486-A1E7-846069B60EE2}|TobacoBackend\\TobacoBackend.csproj|solutionrelative:tobacobackend\\domain\\models\\pedido.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{1FD5AA81-8B69-4486-A1E7-846069B60EE2}|TobacoBackend\\TobacoBackend.csproj|c:\\users\\pipi2\\onedrive\\escritorio\\proyectos\\tobaco\\tobacobackend\\tobacobackend\\domain\\models\\producto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{1FD5AA81-8B69-4486-A1E7-846069B60EE2}|TobacoBackend\\TobacoBackend.csproj|solutionrelative:tobacobackend\\domain\\models\\producto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{1FD5AA81-8B69-4486-A1E7-846069B60EE2}|TobacoBackend\\TobacoBackend.csproj|c:\\users\\pipi2\\onedrive\\escritorio\\proyectos\\tobaco\\tobacobackend\\tobacobackend\\controllers\\weatherforecastcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
@@ -18,7 +34,7 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 4,
+          "SelectedChildIndex": 8,
           "Children": [
             {
               "$type": "Bookmark",
@@ -38,28 +54,81 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
-              "Title": "TobacoBackend.csproj",
-              "DocumentMoniker": "C:\\Users\\pipi2\\OneDrive\\Escritorio\\proyectos\\Tobaco\\TobacoBackend\\TobacoBackend\\TobacoBackend.csproj",
-              "RelativeDocumentMoniker": "TobacoBackend\\TobacoBackend.csproj",
-              "ToolTip": "C:\\Users\\pipi2\\OneDrive\\Escritorio\\proyectos\\Tobaco\\TobacoBackend\\TobacoBackend\\TobacoBackend.csproj",
-              "RelativeToolTip": "TobacoBackend\\TobacoBackend.csproj",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAA4AAAAnAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
-              "WhenOpened": "2025-04-04T13:29:34.25Z",
+              "DocumentIndex": 1,
+              "Title": "PedidoProducto.cs",
+              "DocumentMoniker": "C:\\Users\\pipi2\\OneDrive\\Escritorio\\proyectos\\Tobaco\\TobacoBackend\\TobacoBackend\\Domain\\Models\\PedidoProducto.cs",
+              "RelativeDocumentMoniker": "TobacoBackend\\Domain\\Models\\PedidoProducto.cs",
+              "ToolTip": "C:\\Users\\pipi2\\OneDrive\\Escritorio\\proyectos\\Tobaco\\TobacoBackend\\TobacoBackend\\Domain\\Models\\PedidoProducto.cs",
+              "RelativeToolTip": "TobacoBackend\\Domain\\Models\\PedidoProducto.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAQAAAApAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-04-04T14:13:49.101Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 2,
+              "Title": "Cliente.cs",
+              "DocumentMoniker": "C:\\Users\\pipi2\\OneDrive\\Escritorio\\proyectos\\Tobaco\\TobacoBackend\\TobacoBackend\\Domain\\Models\\Cliente.cs",
+              "RelativeDocumentMoniker": "TobacoBackend\\Domain\\Models\\Cliente.cs",
+              "ToolTip": "C:\\Users\\pipi2\\OneDrive\\Escritorio\\proyectos\\Tobaco\\TobacoBackend\\TobacoBackend\\Domain\\Models\\Cliente.cs",
+              "RelativeToolTip": "TobacoBackend\\Domain\\Models\\Cliente.cs",
+              "ViewState": "AgIAAAMAAAAAAAAAAAAAABYAAABHAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-04-04T13:59:10.319Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "Producto.cs",
+              "DocumentMoniker": "C:\\Users\\pipi2\\OneDrive\\Escritorio\\proyectos\\Tobaco\\TobacoBackend\\TobacoBackend\\Domain\\Models\\Producto.cs",
+              "RelativeDocumentMoniker": "TobacoBackend\\Domain\\Models\\Producto.cs",
+              "ToolTip": "C:\\Users\\pipi2\\OneDrive\\Escritorio\\proyectos\\Tobaco\\TobacoBackend\\TobacoBackend\\Domain\\Models\\Producto.cs",
+              "RelativeToolTip": "TobacoBackend\\Domain\\Models\\Producto.cs",
+              "ViewState": "AgIAAAMAAAAAAAAAAAAAABcAAABfAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-04-04T13:54:58.833Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "Pedido.cs",
+              "DocumentMoniker": "C:\\Users\\pipi2\\OneDrive\\Escritorio\\proyectos\\Tobaco\\TobacoBackend\\TobacoBackend\\Domain\\Models\\Pedido.cs",
+              "RelativeDocumentMoniker": "TobacoBackend\\Domain\\Models\\Pedido.cs",
+              "ToolTip": "C:\\Users\\pipi2\\OneDrive\\Escritorio\\proyectos\\Tobaco\\TobacoBackend\\TobacoBackend\\Domain\\Models\\Pedido.cs",
+              "RelativeToolTip": "TobacoBackend\\Domain\\Models\\Pedido.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABEAAABfAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-04-04T13:54:51.392Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "AplicationDbContext.cs",
+              "DocumentMoniker": "C:\\Users\\pipi2\\OneDrive\\Escritorio\\proyectos\\Tobaco\\TobacoBackend\\TobacoBackend\\Persistence\\AplicationDbContext.cs",
+              "RelativeDocumentMoniker": "TobacoBackend\\Persistence\\AplicationDbContext.cs",
+              "ToolTip": "C:\\Users\\pipi2\\OneDrive\\Escritorio\\proyectos\\Tobaco\\TobacoBackend\\TobacoBackend\\Persistence\\AplicationDbContext.cs",
+              "RelativeToolTip": "TobacoBackend\\Persistence\\AplicationDbContext.cs",
+              "ViewState": "AgIAAAgAAAAAAAAAAAA9wBYAAAAtAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-04-04T13:33:37.054Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 5,
               "Title": "WeatherForecastController.cs",
               "DocumentMoniker": "C:\\Users\\pipi2\\OneDrive\\Escritorio\\proyectos\\Tobaco\\TobacoBackend\\TobacoBackend\\Controllers\\WeatherForecastController.cs",
               "RelativeDocumentMoniker": "TobacoBackend\\Controllers\\WeatherForecastController.cs",
               "ToolTip": "C:\\Users\\pipi2\\OneDrive\\Escritorio\\proyectos\\Tobaco\\TobacoBackend\\TobacoBackend\\Controllers\\WeatherForecastController.cs",
               "RelativeToolTip": "TobacoBackend\\Controllers\\WeatherForecastController.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAwAAAAAAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAA4AAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-04-03T19:55:07.296Z"
+              "WhenOpened": "2025-04-03T19:55:07.296Z",
+              "EditorCaption": ""
             }
           ]
         }
