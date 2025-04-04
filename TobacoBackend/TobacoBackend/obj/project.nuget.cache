@@ -1,9 +1,10 @@
 {
   "version": 2,
-  "dgSpecHash": "c3HAFr3g8xM=",
+  "dgSpecHash": "JT/QoibAJGg=",
   "success": true,
   "projectFilePath": "C:\\Users\\pipi2\\OneDrive\\Escritorio\\proyectos\\Tobaco\\TobacoBackend\\TobacoBackend\\TobacoBackend.csproj",
   "expectedPackageFiles": [
+    "C:\\Users\\pipi2\\.nuget\\packages\\automapper\\14.0.0\\automapper.14.0.0.nupkg.sha512",
     "C:\\Users\\pipi2\\.nuget\\packages\\azure.core\\1.38.0\\azure.core.1.38.0.nupkg.sha512",
     "C:\\Users\\pipi2\\.nuget\\packages\\azure.identity\\1.11.4\\azure.identity.1.11.4.nupkg.sha512",
     "C:\\Users\\pipi2\\.nuget\\packages\\humanizer.core\\2.14.1\\humanizer.core.2.14.1.nupkg.sha512",

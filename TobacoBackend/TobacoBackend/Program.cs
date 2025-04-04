@@ -1,4 +1,9 @@
 using Microsoft.EntityFrameworkCore;
+using TobacoBackend.Domain.IRepositories;
+using TobacoBackend.Domain.IServices;
+using TobacoBackend.Mapping;
+using TobacoBackend.Repositories;
+using TobacoBackend.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -8,9 +13,16 @@ builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
+
 
 builder.Services.AddDbContext<AplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+
+//Registrar servicios
+builder.Services.AddScoped<IClienteRepository, ClienteRepository>();
+builder.Services.AddScoped<IClienteService, ClienteService>();
 
 
 var app = builder.Build();

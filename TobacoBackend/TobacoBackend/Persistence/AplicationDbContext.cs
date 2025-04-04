@@ -31,8 +31,8 @@ public class AplicationDbContext : DbContext
             .HasForeignKey(pp => pp.ProductoId);
 
         modelBuilder.Entity<Producto>()
-    .Property(p => p.Precio)
-    .HasPrecision(18, 2); 
+            .Property(p => p.Precio)
+            .HasPrecision(18, 2);
 
         modelBuilder.Entity<Pedido>()
             .Property(p => p.Total)
