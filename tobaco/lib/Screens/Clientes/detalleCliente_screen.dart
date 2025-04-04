@@ -223,15 +223,14 @@ class DetalleClienteScreen extends StatelessWidget {
                   Navigator.pop(context); // Regresa a la pantalla anterior
                 },
                 style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 20),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),                      
-                    ),
-                    backgroundColor: const Color(0xE3E3E3E3),
-                    elevation: 5,
-                    shadowColor: Colors.black,
-                    ),
-                    
+                  padding: const EdgeInsets.symmetric(vertical: 20),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  backgroundColor: const Color(0xE3E3E3E3),
+                  elevation: 5,
+                  shadowColor: Colors.black,
+                ),
                 child: const Text(
                   'Volver',
                   style: TextStyle(fontSize: 18, color: Colors.black),
