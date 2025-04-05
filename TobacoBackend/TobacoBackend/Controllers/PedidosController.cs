@@ -43,7 +43,7 @@ namespace TobacoBackend.Controllers
 
 
         [HttpPost]
-        public async Task<ActionResult> AddCliente([FromBody] PedidoDTO pedidoDto)
+        public async Task<ActionResult> AddPedido([FromBody] PedidoDTO pedidoDto)
         {
             try
             {
@@ -66,7 +66,7 @@ namespace TobacoBackend.Controllers
 
 
         [HttpPut("{id}")]
-        public async Task<ActionResult> UpdateCliente(int id, [FromBody] PedidoDTO pedidoDto)
+        public async Task<ActionResult> UpdatePedido(int id, [FromBody] PedidoDTO pedidoDto)
         {
             if (pedidoDto == null || id != pedidoDto.Id)
             {
@@ -87,7 +87,7 @@ namespace TobacoBackend.Controllers
 
 
         [HttpDelete("{id}")]
-        public async Task<ActionResult> DeleteCliente(int id)
+        public async Task<ActionResult> DeletePedido(int id)
         {
             try
             {

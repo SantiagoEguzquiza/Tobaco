@@ -120,7 +120,7 @@
   },
   {
     "ContainingType": "TobacoBackend.Controllers.PedidosController",
-    "Method": "AddCliente",
+    "Method": "AddPedido",
     "RelativePath": "Pedidos",
     "HttpMethod": "POST",
     "IsController": true,
@@ -162,7 +162,7 @@
   },
   {
     "ContainingType": "TobacoBackend.Controllers.PedidosController",
-    "Method": "UpdateCliente",
+    "Method": "UpdatePedido",
     "RelativePath": "Pedidos/{id}",
     "HttpMethod": "PUT",
     "IsController": true,
@@ -183,7 +183,7 @@
   },
   {
     "ContainingType": "TobacoBackend.Controllers.PedidosController",
-    "Method": "DeleteCliente",
+    "Method": "DeletePedido",
     "RelativePath": "Pedidos/{id}",
     "HttpMethod": "DELETE",
     "IsController": true,

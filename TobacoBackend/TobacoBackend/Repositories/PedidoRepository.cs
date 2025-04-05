@@ -41,7 +41,7 @@ namespace TobacoBackend.Repositories
         public async Task<Pedido> GetPedidoById(int id)
         {
             var pedido = await _context.Pedidos.FirstOrDefaultAsync(c => c.Id == id);
-            if(pedido == null)
+            if (pedido == null)
             {
                 throw new Exception($"El pedido con id {id} no fue encontrado o no existe");
             }
@@ -51,7 +51,17 @@ namespace TobacoBackend.Repositories
 
         public async Task UpdatePedido(Pedido pedido)
         {
-            _context.Pedidos.Update(pedido);
+            var pedidoExistente = await _context.Pedidos.Include(p => p.PedidoProductos).FirstOrDefaultAsync(p => p.Id == pedido.Id);
+
+            if (pedidoExistente == null)
+                throw new Exception("Pedido no encontrado");
+
+            _context.PedidosProductos.RemoveRange(pedidoExistente.PedidoProductos);
+
+            pedidoExistente.PedidoProductos = pedido.PedidoProductos;
+            pedidoExistente.Total = pedido.Total;
+            pedidoExistente.Fecha = pedido.Fecha;
+
             await _context.SaveChangesAsync();
         }
     }
