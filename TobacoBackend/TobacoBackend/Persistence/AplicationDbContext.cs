@@ -37,6 +37,14 @@ public class AplicationDbContext : DbContext
         modelBuilder.Entity<Pedido>()
             .Property(p => p.Total)
             .HasPrecision(18, 2);
+
+        modelBuilder.Entity<PedidoProducto>()
+            .Property(p => p.Cantidad)
+            .HasPrecision(18, 2);
+
+        modelBuilder.Entity<Producto>()
+            .Property(p => p.Cantidad)
+            .HasPrecision(18, 2);
     }
 
 }

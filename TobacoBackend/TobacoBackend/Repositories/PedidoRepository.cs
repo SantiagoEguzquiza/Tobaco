@@ -15,7 +15,30 @@ namespace TobacoBackend.Repositories
 
         public async Task AddPedido(Pedido pedido)
         {
-            _context.Pedidos.Add(pedido);
+            await _context.Pedidos.AddAsync(pedido);
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task AddPedidoProducto(PedidoProducto pedidoProducto)
+        {
+            await _context.PedidosProductos.AddAsync(pedidoProducto);
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task AddOrUpdatePedidoProducto(PedidoProducto pedidoProducto)
+        {
+            var pedidoProductoExistente = await _context.PedidosProductos
+                .FirstOrDefaultAsync(pp => pp.PedidoId == pedidoProducto.PedidoId && pp.ProductoId == pedidoProducto.ProductoId);
+
+            if (pedidoProductoExistente == null)
+            {
+                await _context.PedidosProductos.AddAsync(pedidoProducto);
+            }
+            else
+            {
+                pedidoProductoExistente.Cantidad = pedidoProducto.Cantidad;
+            }
+
             await _context.SaveChangesAsync();
         }
 
@@ -54,12 +77,26 @@ namespace TobacoBackend.Repositories
             var pedidoExistente = await _context.Pedidos.Include(p => p.PedidoProductos).FirstOrDefaultAsync(p => p.Id == pedido.Id);
 
             if (pedidoExistente == null)
+            {
                 throw new Exception("Pedido no encontrado");
+            }
 
             _context.PedidosProductos.RemoveRange(pedidoExistente.PedidoProductos);
 
             pedidoExistente.PedidoProductos = pedido.PedidoProductos;
-            pedidoExistente.Total = pedido.Total;
+
+            decimal total = 0;
+
+            foreach (var pedidoProducto in pedido.PedidoProductos)
+            {
+                var producto = await _context.Productos.FirstOrDefaultAsync(p => p.Id == pedidoProducto.ProductoId);
+                if (producto != null)
+                {
+                    total += producto.Precio * pedidoProducto.Cantidad;
+                }
+            }
+
+            pedidoExistente.Total = total;
             pedidoExistente.Fecha = pedido.Fecha;
 
             await _context.SaveChangesAsync();

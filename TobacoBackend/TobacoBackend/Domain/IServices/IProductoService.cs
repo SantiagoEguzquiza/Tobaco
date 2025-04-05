@@ -1,4 +1,5 @@
-﻿using TobacoBackend.DTOs;
+﻿using TobacoBackend.Domain.Models;
+using TobacoBackend.DTOs;
 
 namespace TobacoBackend.Domain.IServices
 {

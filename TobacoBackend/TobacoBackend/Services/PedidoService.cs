@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Microsoft.EntityFrameworkCore;
 using TobacoBackend.Domain.IRepositories;
 using TobacoBackend.Domain.IServices;
 using TobacoBackend.Domain.Models;
@@ -10,19 +11,46 @@ namespace TobacoBackend.Services
     public class PedidoService : IPedidoService
     {
         private readonly IPedidoRepository _pedidoRepository;
+        private readonly IProductoRepository _productoRepository;
         private readonly IMapper _mapper;
 
-        public PedidoService(IPedidoRepository pedidoRepository, IMapper mapper)
+        public PedidoService(IPedidoRepository pedidoRepository, IMapper mapper, IProductoRepository productoRepository)
         {
             _pedidoRepository = pedidoRepository;
             _mapper = mapper;
+            _productoRepository = productoRepository;
         }
 
         public async Task AddPedido(PedidoDTO pedidoDto)
         {
             var pedido = _mapper.Map<Pedido>(pedidoDto);
+            pedido.Fecha = DateTime.Now;
+
             await _pedidoRepository.AddPedido(pedido);
+
+            foreach (var productoDto in pedidoDto.PedidoProductos)
+            {
+                var producto = await _productoRepository.GetProductoById(productoDto.ProductoId);
+                if (producto == null)
+                {
+                    throw new Exception($"Producto con ID {productoDto.ProductoId} no encontrado.");
+                }
+
+
+                var pedidoProducto = new PedidoProducto
+                {
+                    PedidoId = pedido.Id, 
+                    ProductoId = producto.Id,
+                    Cantidad = productoDto.Cantidad
+                };
+
+                await _pedidoRepository.AddOrUpdatePedidoProducto(pedidoProducto);
+            }
+
+            await _pedidoRepository.UpdatePedido(pedido); 
         }
+
+
 
         public async Task<bool> DeletePedido(int id)
         {

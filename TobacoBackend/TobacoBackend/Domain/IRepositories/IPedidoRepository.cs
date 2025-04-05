@@ -8,6 +8,8 @@ namespace TobacoBackend.Domain.IRepositories
         Task<List<Pedido>> GetAllPedidos();
         Task<Pedido> GetPedidoById(int id);
         Task AddPedido(Pedido pedido);
+        Task AddPedidoProducto(PedidoProducto pedidoProducto);
+        Task AddOrUpdatePedidoProducto(PedidoProducto pedidoProducto);
         Task UpdatePedido(Pedido pedido);
         Task<bool> DeletePedido(int id);
     }
