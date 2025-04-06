@@ -1,8 +1,9 @@
 {
   "ExpandedNodes": [
     "",
+    "\\Backend_App",
     "\\TobacoBackend"
   ],
-  "SelectedNode": "\\TobacoBackend\\TobacoBackend.csproj",
+  "SelectedNode": "\\TobacoBackend.sln",
   "PreviewInSolutionExplorer": false
 }
