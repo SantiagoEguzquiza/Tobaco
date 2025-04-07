@@ -11,7 +11,7 @@ namespace TobacoBackend.Mapping
             CreateMap<Cliente, ClienteDTO>().ReverseMap();
             CreateMap<Producto, ProductoDTO>().ReverseMap();
             CreateMap<Pedido, PedidoDTO>().ReverseMap();
-            //CreateMap<PedidoProducto, PedidoProductoDTO>().ReverseMap();
+            CreateMap<PedidoProducto, PedidoProductoDTO>().ReverseMap();
         }
     }
 }

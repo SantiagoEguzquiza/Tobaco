@@ -74,32 +74,40 @@ namespace TobacoBackend.Repositories
 
         public async Task UpdatePedido(Pedido pedido)
         {
-            var pedidoExistente = await _context.Pedidos.Include(p => p.PedidoProductos).FirstOrDefaultAsync(p => p.Id == pedido.Id);
+            var pedidoExistente = await _context.Pedidos
+                .Include(p => p.PedidoProductos)
+                .FirstOrDefaultAsync(p => p.Id == pedido.Id);
 
             if (pedidoExistente == null)
-            {
                 throw new Exception("Pedido no encontrado");
-            }
+
+            pedidoExistente.ClienteId = pedido.ClienteId;
+            pedidoExistente.Fecha = DateTime.Now;
 
             _context.PedidosProductos.RemoveRange(pedidoExistente.PedidoProductos);
 
-            pedidoExistente.PedidoProductos = pedido.PedidoProductos;
-
+            pedidoExistente.PedidoProductos = new List<PedidoProducto>();
             decimal total = 0;
 
-            foreach (var pedidoProducto in pedido.PedidoProductos)
+            foreach (var pp in pedido.PedidoProductos)
             {
-                var producto = await _context.Productos.FirstOrDefaultAsync(p => p.Id == pedidoProducto.ProductoId);
-                if (producto != null)
+                var producto = await _context.Productos.FirstOrDefaultAsync(p => p.Id == pp.ProductoId);
+                if (producto == null)
+                    throw new Exception($"Producto con ID {pp.ProductoId} no encontrado.");
+
+                total += producto.Precio * pp.Cantidad;
+
+                pedidoExistente.PedidoProductos.Add(new PedidoProducto
                 {
-                    total += producto.Precio * pedidoProducto.Cantidad;
-                }
+                    ProductoId = pp.ProductoId,
+                    Cantidad = pp.Cantidad
+                });
             }
 
             pedidoExistente.Total = total;
-            pedidoExistente.Fecha = pedido.Fecha;
 
             await _context.SaveChangesAsync();
         }
+
     }
 }

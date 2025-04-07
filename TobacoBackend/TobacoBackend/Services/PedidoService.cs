@@ -23,10 +23,14 @@ namespace TobacoBackend.Services
 
         public async Task AddPedido(PedidoDTO pedidoDto)
         {
-            var pedido = _mapper.Map<Pedido>(pedidoDto);
-            pedido.Fecha = DateTime.Now;
+            var pedido = new Pedido
+            {
+                ClienteId = pedidoDto.ClienteId,
+                Fecha = DateTime.Now,
+                PedidoProductos = new List<PedidoProducto>()
+            };
 
-            await _pedidoRepository.AddPedido(pedido);
+            decimal total = 0;
 
             foreach (var productoDto in pedidoDto.PedidoProductos)
             {
@@ -36,19 +40,22 @@ namespace TobacoBackend.Services
                     throw new Exception($"Producto con ID {productoDto.ProductoId} no encontrado.");
                 }
 
-
                 var pedidoProducto = new PedidoProducto
                 {
-                    PedidoId = pedido.Id, 
                     ProductoId = producto.Id,
                     Cantidad = productoDto.Cantidad
                 };
 
-                await _pedidoRepository.AddOrUpdatePedidoProducto(pedidoProducto);
+                total += producto.Precio * productoDto.Cantidad;
+
+                pedido.PedidoProductos.Add(pedidoProducto);
             }
 
-            await _pedidoRepository.UpdatePedido(pedido); 
+            pedido.Total = total;
+
+            await _pedidoRepository.AddPedido(pedido);
         }
+
 
 
 

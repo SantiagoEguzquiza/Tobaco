@@ -585,8 +585,8 @@
             "format": "int32"
           },
           "cantidad": {
-            "type": "integer",
-            "format": "int32"
+            "type": "number",
+            "format": "double"
           }
         },
         "additionalProperties": false
@@ -603,8 +603,8 @@
             "nullable": true
           },
           "cantidad": {
-            "type": "integer",
-            "format": "int32"
+            "type": "number",
+            "format": "double"
           },
           "precio": {
             "type": "number",
