@@ -1,38 +1,27 @@
-import 'dart:ffi';
 
 import 'package:flutter/material.dart';
 import 'package:tobaco/Models/Cliente.dart';
+import 'package:tobaco/Services/Clientes_Service/clientes_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class DetalleClienteScreen extends StatelessWidget {
-  Cliente cliente = Cliente(
-    id: 1,
-    nombre: 'Ana',
-    direccion: 'La Paz 123',
-    telefono: 123456789,
-    deuda: 100,
-  );
+  
+  
+  
 
-  late String nombreCliente;
-  late String direccion;
-  late String telefono;
-  late String deuda;
+  final Cliente cliente;
 
-  DetalleClienteScreen({super.key, required Cliente cliente}) {
-    nombreCliente = cliente.nombre;
-    direccion = cliente.direccion!;
-    telefono = cliente.telefono.toString();
-    deuda = cliente.deuda.toString();
-  }
+
+  DetalleClienteScreen({super.key, required this.cliente});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         centerTitle: true,
-        title: Text(nombreCliente,
+        title: Text(cliente.nombre,
             style: const TextStyle(
-                fontSize: 35, fontFamily: 'Shippori Antique B1')),
+                fontSize: 35)),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -58,7 +47,7 @@ class DetalleClienteScreen extends StatelessWidget {
                 ),
               ),
               child: Text(
-                direccion,
+                cliente.direccion?? 'No disponible',
                 style: const TextStyle(fontSize: 16, color: Colors.black),
               ),
             ),
@@ -82,7 +71,7 @@ class DetalleClienteScreen extends StatelessWidget {
                 ),
               ),
               child: Text(
-                telefono,
+                cliente.telefono?.toString() ?? 'No disponible',
                 style: const TextStyle(fontSize: 16, color: Colors.black),
               ),
             ),
@@ -106,7 +95,7 @@ class DetalleClienteScreen extends StatelessWidget {
                 ),
               ),
               child: Text(
-                deuda,
+                cliente.deuda.toString()?? 'No disponible',
                 style: const TextStyle(fontSize: 16, color: Colors.black),
               ),
             ),
@@ -115,7 +104,36 @@ class DetalleClienteScreen extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
                 ElevatedButton(
-                  onPressed: () {},
+                  onPressed: () async {
+                    final confirm = await showDialog<bool>(
+                      context: context,
+                      builder: (BuildContext context) {
+                        return AlertDialog(
+                          title: const Text('Confirmar eliminación'),
+                          content: const Text('¿Está seguro de que desea eliminar este cliente?'),
+                          actions: [
+                            TextButton(
+                              onPressed: () {
+                                Navigator.of(context).pop(false); // Cancelar
+                              },
+                              child: const Text('Cancelar'),
+                            ),
+                            TextButton(
+                              onPressed: () {
+                                Navigator.of(context).pop(true); // Confirmar
+                              },
+                              child: const Text('Eliminar'),
+                            ),
+                          ],
+                        );
+                      },
+                    );
+
+                    if (confirm == true) {
+                      await ClienteProvider().eliminarCliente(cliente.id!);
+                      Navigator.of(context).pop();
+                    }
+                  },
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(
                         vertical: 20, horizontal: 20),
@@ -151,7 +169,7 @@ class DetalleClienteScreen extends StatelessWidget {
                   onPressed: () {
                     final Uri launchUri = Uri(
                       scheme: 'tel',
-                      path: telefono,
+                      path: cliente.telefono.toString(),
                     );
                     launchUrl(launchUri).then((success) {
                       if (!success) {
@@ -184,7 +202,7 @@ class DetalleClienteScreen extends StatelessWidget {
                 ElevatedButton(
                   onPressed: () {
                     final Uri whatsappUri = Uri.parse(
-                        'https://wa.me/$telefono'); // Formato para abrir WhatsApp con el número
+                        'https://wa.me/${cliente.telefono}'); // Formato para abrir WhatsApp con el número
                     launchUrl(whatsappUri).then((success) {
                       if (!success) {
                         ScaffoldMessenger.of(context).showSnackBar(
@@ -227,13 +245,13 @@ class DetalleClienteScreen extends StatelessWidget {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  backgroundColor: const Color(0xE3E3E3E3),
+                  backgroundColor:  Colors.blue,
                   elevation: 5,
                   shadowColor: Colors.black,
                 ),
                 child: const Text(
                   'Volver',
-                  style: TextStyle(fontSize: 18, color: Colors.black),
+                  style: TextStyle(fontSize: 18, color: Colors.white),
                 ),
               ),
             ),
