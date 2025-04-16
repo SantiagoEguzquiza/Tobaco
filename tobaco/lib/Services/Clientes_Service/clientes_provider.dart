@@ -9,13 +9,14 @@ class ClienteProvider with ChangeNotifier {
 
   List<dynamic> get clientes => _clientes;
 
-  Future<void> obtenerClientes() async {
+  Future<List<Cliente>> obtenerClientes() async {
     try {
       _clientes = await _clienteService.obtenerClientes();
       notifyListeners();
     } catch (e) {
       print('Error: $e');
     }
+    return _clientes;
   }
 
   Future<void> crearCliente(Cliente cliente) async {

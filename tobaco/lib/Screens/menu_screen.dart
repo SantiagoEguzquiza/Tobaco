@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:tobaco/Screens/Clientes/clientes_screen.dart';
+import 'package:tobaco/Screens/Productos/productos_screen.dart';
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -159,7 +160,7 @@ class MenuScreen extends StatelessWidget {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                            builder: (context) => const ClientesScreen()),
+                            builder: (context) => const ProductosScreen()),
                       );
                     },
                     child: Column(

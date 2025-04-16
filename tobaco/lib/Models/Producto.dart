@@ -8,10 +8,10 @@ enum Categoria {
 }
 
 class Producto {
-  int id;
+  int? id;
   String nombre;
-  int? cantidad;
-  int precio;
+  double? cantidad;
+  double precio;
   Categoria categoria;
 
   Producto({
@@ -21,4 +21,27 @@ class Producto {
     required this.precio,
     required this.categoria,
   });
+
+  factory Producto.fromJson(Map<String, dynamic> json) {
+    return Producto(
+      id: json['id'] as int,
+      nombre: json['nombre'] as String,
+      cantidad: json['cantidad'] != null
+          ? double.tryParse(json['cantidad'].toString())
+          : null,
+      precio: json['precio'] as double,
+      categoria: Categoria.values.firstWhere(
+          (e) => e.toString().split('.').last == json['categoria']),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'nombre': nombre,
+      'cantidad': cantidad?.toString(),
+      'precio': precio,
+      'categoria': categoria.index,
+    };
+  }
 }

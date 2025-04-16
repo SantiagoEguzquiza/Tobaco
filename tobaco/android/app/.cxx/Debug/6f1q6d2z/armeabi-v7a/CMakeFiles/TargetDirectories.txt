@@ -1,0 +1,2 @@
+C:/Users/santi/Desktop/Carrera/Tobaco/tobaco/android/app/.cxx/Debug/6f1q6d2z/armeabi-v7a/CMakeFiles/edit_cache.dir
+C:/Users/santi/Desktop/Carrera/Tobaco/tobaco/android/app/.cxx/Debug/6f1q6d2z/armeabi-v7a/CMakeFiles/rebuild_cache.dir

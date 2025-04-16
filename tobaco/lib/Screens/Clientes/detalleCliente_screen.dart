@@ -12,7 +12,7 @@ class DetalleClienteScreen extends StatelessWidget {
   final Cliente cliente;
 
 
-  DetalleClienteScreen({super.key, required this.cliente});
+  const DetalleClienteScreen({super.key, required this.cliente});
 
   @override
   Widget build(BuildContext context) {

@@ -6,7 +6,6 @@ import 'package:tobaco/Screens/Clientes/detalleCliente_screen.dart';
 import 'package:tobaco/Screens/Clientes/editarCliente_Screen.dart';
 import 'package:tobaco/Screens/Clientes/nuevoCliente_screen.dart';
 import 'package:tobaco/Services/Clientes_Service/clientes_provider.dart';
-import 'package:tobaco/Services/Clientes_Service/clientes_service.dart';
 import 'dart:developer';
 
 class ClientesScreen extends StatefulWidget {
@@ -35,8 +34,9 @@ class _ClientesScreenState extends State<ClientesScreen> {
     });
 
     try {
+      final clienteProvider = ClienteProvider();
       final List<Cliente> fetchedClientes =
-          await ClienteService().obtenerClientes();
+          await clienteProvider.obtenerClientes();
 
       setState(() {
         clientes = fetchedClientes; // Actualiza la lista de clientes

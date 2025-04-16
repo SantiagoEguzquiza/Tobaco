@@ -8,7 +8,7 @@ import 'package:tobaco/Services/Clientes_Service/clientes_provider.dart';
 class EditarClienteScreen extends StatefulWidget {
   final Cliente cliente;
 
-  EditarClienteScreen({super.key, required this.cliente});
+  const EditarClienteScreen({super.key, required this.cliente});
 
   @override
   _EditarClienteScreenState createState() => _EditarClienteScreenState();

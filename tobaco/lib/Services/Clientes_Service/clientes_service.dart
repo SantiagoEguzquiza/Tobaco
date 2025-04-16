@@ -7,16 +7,13 @@ class ClienteService {
 
   Future<List<Cliente>> obtenerClientes() async {
     try {
-      // Realiza la solicitud usando el cliente personalizado
       final response = await Apihandler.client.get(
         Uri.parse('$baseUrl/Clientes'),
         headers: {'Content-Type': 'application/json'},
       );
 
       if (response.statusCode == 200) {
-        // Deserializa el JSON en una lista de objetos Cliente
         final List<dynamic> clientesJson = jsonDecode(response.body);
-
         return clientesJson.map((json) => Cliente.fromJson(json)).toList();
       } else {
         throw Exception(
@@ -24,26 +21,16 @@ class ClienteService {
       }
     } catch (e) {
       print('Error al obtener los clientes: $e');
-      rethrow; // Lanza la excepción para manejarla en otro lugar
+      rethrow;
     }
   }
 
   Future<void> crearCliente(Cliente cliente) async {
     try {
-
-      // Construye el JSON que se enviará en el body
-      final Map<String, dynamic> clienteJson = {
-        'nombre': cliente.nombre,
-        'direccion': cliente.direccion,
-        'telefono': cliente.telefono.toString(),
-        'deuda': cliente.deuda.toString(),
-      };
-
-      // Realiza la solicitud usando el cliente personalizado
       final response = await Apihandler.client.post(
         Uri.parse('$baseUrl/Clientes'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(clienteJson),
+        body: jsonEncode(cliente.toJson()),
       );
 
       if (response.statusCode != 201) {
@@ -54,20 +41,16 @@ class ClienteService {
       }
     } catch (e) {
       print('Error al guardar el cliente: $e');
-      rethrow; // Lanza la excepción para manejarla en otro lugar
+      rethrow;
     }
   }
 
   Future<void> editarCliente(Cliente cliente) async {
     try {
-      // Construye el JSON que se enviará en el body
-      final clienteJson = cliente.toJson();
-
-      // Realiza la solicitud usando el cliente personalizado
       final response = await Apihandler.client.put(
         Uri.parse('$baseUrl/Clientes/${cliente.id}'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(clienteJson),
+        body: jsonEncode(cliente.toJson()),
       );
 
       if (response.statusCode != 200) {
@@ -78,13 +61,12 @@ class ClienteService {
       }
     } catch (e) {
       print('Error al editar el cliente: $e');
-      rethrow; // Lanza la excepción para manejarla en otro lugar
+      rethrow;
     }
   }
 
   Future<void> eliminarCliente(int id) async {
     try {
-      // Realiza la solicitud usando el cliente personalizado
       final response = await Apihandler.client.delete(
         Uri.parse('$baseUrl/Clientes/$id'),
         headers: {'Content-Type': 'application/json'},
@@ -98,8 +80,7 @@ class ClienteService {
       }
     } catch (e) {
       print('Error al eliminar el cliente: $e');
-      rethrow; // Lanza la excepción para manejarla en otro lugar
+      rethrow;
     }
   }
- 
 }
