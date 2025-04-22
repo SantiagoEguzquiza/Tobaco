@@ -6,6 +6,7 @@ import 'package:tobaco/Screens/Clientes/detalleCliente_screen.dart';
 import 'package:tobaco/Screens/Clientes/editarCliente_Screen.dart';
 import 'package:tobaco/Screens/Clientes/nuevoCliente_screen.dart';
 import 'package:tobaco/Services/Clientes_Service/clientes_provider.dart';
+import 'package:tobaco/Theme/app_theme.dart'; // Importa el tema
 import 'dart:developer';
 
 class ClientesScreen extends StatefulWidget {
@@ -65,7 +66,7 @@ class _ClientesScreenState extends State<ClientesScreen> {
         centerTitle: true,
         title: const Text(
           'Clientes',
-          style: TextStyle(fontSize: 32),
+          style: AppTheme.appBarTitleStyle, // Usa el estilo del tema
         ),
       ),
       body: Padding(
@@ -74,26 +75,18 @@ class _ClientesScreenState extends State<ClientesScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             SizedBox(
-              width: double.infinity, // Ancho completo
+              width: double.infinity,
               child: ElevatedButton(
                 onPressed: () async {
                   await Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const NuevoClienteScreen(),
-                  ),
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const NuevoClienteScreen(),
+                    ),
                   );
-                  _loadClientes(); 
+                  _loadClientes();
                 },
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 15),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(5),
-                  ),
-                  backgroundColor: const Color(0xFFAAEDAA), // Color de fondo
-                  elevation: 5, // Altura de la sombra
-                  shadowColor: Colors.black, // Color de la sombra
-                ),
+                style: AppTheme.elevatedButtonStyle(AppTheme.primaryColor), // Usa el estilo del tema
                 child: const Text(
                   'Crear nuevo cliente',
                   style: TextStyle(fontSize: 18, color: Colors.black),
@@ -102,48 +95,9 @@ class _ClientesScreenState extends State<ClientesScreen> {
             ),
             const SizedBox(height: 30),
             TextField(
-              cursorColor: Colors.black, // Cambia el color del cursor a negro
+              cursorColor: Colors.black,
               style: const TextStyle(fontSize: 15),
-              decoration: const InputDecoration(
-                labelText: 'Buscar cliente...',
-                labelStyle: TextStyle(
-                    color: Colors.grey,
-                    fontSize: 15 // Color del label cuando no está enfocado
-                    ),
-                floatingLabelStyle: TextStyle(
-                  color: Colors.grey, // Color del label cuando está enfocado
-                ),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.all(Radius.circular(30)),
-                ),
-                prefixIcon: Icon(
-                  Icons.search,
-                  color: Colors.grey,
-                  size: 15, // Tamaño del ícono
-                ),
-                filled: true, // Habilitar fondo
-                fillColor: Color.fromRGBO(255, 255, 255, 1), // Fondo gris claro
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.all(Radius.circular(30)),
-                  borderSide: BorderSide(
-                    color: Color.fromRGBO(
-                        200, 200, 200, 1), // Color del borde al enfocar
-                    width: 1.0, // Grosor más delgado
-                  ),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.all(Radius.circular(30)),
-                  borderSide: BorderSide(
-                    color: Color.fromRGBO(
-                        200, 200, 200, 1), // Color del borde normal
-                    width: 1.0, // Grosor más delgado
-                  ),
-                ),
-                contentPadding: EdgeInsets.symmetric(
-                  vertical: 10, // Reduce la altura del TextField
-                  horizontal: 15, // Espaciado horizontal
-                ),
-              ),
+              decoration: AppTheme.searchInputDecoration, // Usa el tema
               onChanged: (value) {
                 setState(() {
                   searchQuery = value;
@@ -161,8 +115,8 @@ class _ClientesScreenState extends State<ClientesScreen> {
                       borderRadius: BorderRadius.circular(5),
                     ),
                     color: index % 2 == 0
-                        ? const Color(0xFFE9F3EF) // verde para impares
-                        : const Color(0xFFDBDBDB), // Gris claro para pares
+                        ? AppTheme.secondaryColor // Verde para impares
+                        : AppTheme.greyColor, // Gris claro para pares
                     margin: const EdgeInsets.symmetric(vertical: 6),
                     child: Padding(
                       padding: const EdgeInsets.all(8.0),
@@ -179,37 +133,30 @@ class _ClientesScreenState extends State<ClientesScreen> {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            // Icono del cliente
-                            Image.asset('Assets/images/tienda.png',
-                            height: 30, // Altura del icono
-                            ), // Ruta del icono en assets
-                            const SizedBox(width: 25), // Espaciado adicional
+                            Image.asset(
+                              'Assets/images/tienda.png',
+                              height: 30,
+                            ),
+                            const SizedBox(width: 25),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
                                     cliente.nombre,
-                                    style: const TextStyle(
-                                      color: Colors.black,
-                                      fontSize: 18,
-                                    ),
+                                    style: AppTheme.cardTitleStyle, // Usa el tema
                                   ),
                                   Text(
                                     'Deuda: \$${cliente.deuda}',
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.grey,
-                                    ),
+                                    style: AppTheme.cardSubtitleStyle, // Usa el tema
                                   ),
                                 ],
                               ),
                             ),
-                            // Botón para eliminar cliente
-                             IconButton(
-                              icon:  Image.asset(
-                              'Assets/images/borrar.png', // Ruta del icono en assets
-                              height: 24, // Altura del icono
+                            IconButton(
+                              icon: Image.asset(
+                                'Assets/images/borrar.png',
+                                height: 24,
                               ),
                               onPressed: () {
                                 showDialog(
@@ -229,7 +176,7 @@ class _ClientesScreenState extends State<ClientesScreen> {
                                         onPressed: () async {
                                           await ClienteProvider()
                                               .eliminarCliente(cliente.id!);
-                                          _loadClientes(); // Recargar clientes
+                                          _loadClientes();
                                           Navigator.of(context).pop();
                                         },
                                         child: const Text('Eliminar'),
@@ -239,22 +186,21 @@ class _ClientesScreenState extends State<ClientesScreen> {
                                 );
                               },
                             ),
-                            // Botón para editar cliente
                             IconButton(
                               icon: Image.asset(
-                              'Assets/images/editar.png', // Ruta del icono en assets
-                              height: 24, // Altura del icono
+                                'Assets/images/editar.png',
+                                height: 24,
                               ),
                               onPressed: () async {
-                              await Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                builder: (context) => EditarClienteScreen(
-                                  cliente: cliente,
-                                ),
-                                ),
-                              );
-                              _loadClientes(); // Recargar clientes al volver
+                                await Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => EditarClienteScreen(
+                                      cliente: cliente,
+                                    ),
+                                  ),
+                                );
+                                _loadClientes();
                               },
                             ),
                           ],
