@@ -23,7 +23,6 @@ class _ProductosScreenState extends State<ProductosScreen> {
   void initState() {
     super.initState();
     _loadProductos();
-    print(productos.toList());
   }
 
    Future<void> _loadProductos() async {
@@ -38,10 +37,9 @@ class _ProductosScreenState extends State<ProductosScreen> {
           await productoProvider.obtenerProductos();
 
       setState(() {
-        productos = fetchedProductos; // Actualiza la lista de productos
-        isLoading = false; // Finaliza la carga
+        productos = fetchedProductos; 
+        isLoading = false;
       });
-      log('Productos cargados exitosamente');
     } catch (e) {
       setState(() {
         isLoading = false;
@@ -181,7 +179,7 @@ class _ProductosScreenState extends State<ProductosScreen> {
                           children: [
                             // Icono del producto
                             Image.asset(
-                              'Assets/images/producto.png',
+                              'Assets/images/cigarettes.png',
                               height: 30, // Altura del icono
                             ), // Ruta del icono en assets
                             const SizedBox(width: 25), // Espaciado adicional
@@ -209,8 +207,8 @@ class _ProductosScreenState extends State<ProductosScreen> {
                             // Botón para eliminar producto
                             IconButton(
                               icon: Image.asset(
-                                'Assets/images/borrar.png', // Ruta del icono en assets
-                                height: 24, // Altura del icono
+                                'Assets/images/borrar.png', 
+                                height: 24, 
                               ),
                               onPressed: () {
                                 showDialog(
@@ -243,8 +241,8 @@ class _ProductosScreenState extends State<ProductosScreen> {
                             // Botón para editar producto
                             IconButton(
                               icon: Image.asset(
-                                'Assets/images/editar.png', // Ruta del icono en assets
-                                height: 24, // Altura del icono
+                                'Assets/images/editar.png', 
+                                height: 24, 
                               ),
                               onPressed: () async {
                                 // await Navigator.push(

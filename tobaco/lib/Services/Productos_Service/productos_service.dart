@@ -7,16 +7,14 @@ class ProductoService {
 
   Future<List<Producto>> obtenerProductos() async {
     try {
-      // Realiza la solicitud usando el cliente personalizado
       final response = await Apihandler.client.get(
         Uri.parse('$baseUrl/Productos'),
         headers: {'Content-Type': 'application/json'},
       );
 
       if (response.statusCode == 200) {
-        // Deserializa el JSON en una lista de objetos Producto
         final List<dynamic> productosJson = jsonDecode(response.body);
-
+        
         return productosJson.map((json) => Producto.fromJson(json)).toList();
       } else {
         throw Exception(
@@ -24,23 +22,21 @@ class ProductoService {
       }
     } catch (e) {
       print('Error al obtener los productos: $e');
-      rethrow; // Lanza la excepción para manejarla en otro lugar
+      rethrow;
     }
   }
 
   Future<void> crearProducto(Producto producto) async {
     try {
-      // Construye el JSON que se enviará en el body
       final Map<String, dynamic> productoJson = producto.toJson();
 
-      // Realiza la solicitud usando el cliente personalizado
       final response = await Apihandler.client.post(
         Uri.parse('$baseUrl/Productos'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode(productoJson),
       );
 
-      if (response.statusCode != 201) {
+      if (response.statusCode != 200) {
         throw Exception(
             'Error al guardar el producto. Código de estado: ${response.statusCode}, Respuesta: ${response.body}');
       } else {
@@ -48,16 +44,14 @@ class ProductoService {
       }
     } catch (e) {
       print('Error al guardar el producto: $e');
-      rethrow; // Lanza la excepción para manejarla en otro lugar
+      rethrow; 
     }
   }
 
   Future<void> editarProducto(Producto producto) async {
-    try {
-      // Construye el JSON que se enviará en el body
+    try {  
       final productoJson = producto.toJson();
 
-      // Realiza la solicitud usando el cliente personalizado
       final response = await Apihandler.client.put(
         Uri.parse('$baseUrl/Productos/${producto.id}'),
         headers: {'Content-Type': 'application/json'},
@@ -72,13 +66,13 @@ class ProductoService {
       }
     } catch (e) {
       print('Error al editar el producto: $e');
-      rethrow; // Lanza la excepción para manejarla en otro lugar
+      rethrow; 
     }
   }
 
   Future<void> eliminarProducto(int id) async {
     try {
-      // Realiza la solicitud usando el cliente personalizado
+      
       final response = await Apihandler.client.delete(
         Uri.parse('$baseUrl/Productos/$id'),
         headers: {'Content-Type': 'application/json'},
@@ -92,7 +86,7 @@ class ProductoService {
       }
     } catch (e) {
       print('Error al eliminar el producto: $e');
-      rethrow; // Lanza la excepción para manejarla en otro lugar
+      rethrow; 
     }
   }
 }

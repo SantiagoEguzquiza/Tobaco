@@ -42,7 +42,6 @@ class _ClientesScreenState extends State<ClientesScreen> {
         clientes = fetchedClientes; // Actualiza la lista de clientes
         isLoading = false; // Finaliza la carga
       });
-      log('Clientes cargados exitosamente');
     } catch (e) {
       setState(() {
         isLoading = false;

@@ -8,7 +8,6 @@ class NuevoProductoScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Controladores para los campos de texto
     final nombreController = TextEditingController();
     final cantidadController = TextEditingController();
     final precioController = TextEditingController();
@@ -19,171 +18,167 @@ class NuevoProductoScreen extends StatelessWidget {
         centerTitle: true,
         title: const Text('Nuevo Producto'),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Nombre:',
-              style: TextStyle(fontSize: 16, color: Colors.black),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: nombreController,
-              cursorColor: Colors.black,
-              decoration: const InputDecoration(
-                border: OutlineInputBorder(),
-                hintText: 'Ingrese el nombre del producto...',
-                hintStyle: TextStyle(
-                  color: Colors.grey,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w400,
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Cantidad:',
-              style: TextStyle(fontSize: 16, color: Colors.black),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: cantidadController,
-              cursorColor: Colors.black,
-              decoration: const InputDecoration(
-                border: OutlineInputBorder(),
-                hintText: 'Ingrese la cantidad...',
-                hintStyle: TextStyle(
-                  color: Colors.grey,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w400,
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Precio:',
-              style: TextStyle(fontSize: 16, color: Colors.black),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: precioController,
-              keyboardType: TextInputType.number,
-              cursorColor: Colors.black,
-              decoration: const InputDecoration(
-                border: OutlineInputBorder(),
-                hintText: 'Ingrese el precio...',
-                hintStyle: TextStyle(
-                  color: Colors.grey,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w400,
-                ),
-              ),
-            ),
-             const SizedBox(height: 16),
-            const Text(
-              'Categoria:',
-              style: TextStyle(fontSize: 16, color: Colors.black),
-            ),
-            const SizedBox(height: 10),
-            DropdownButtonFormField<Categoria>(
-              value: Categoria.nacional, // Valor inicial
-              items: Categoria.values.map((Categoria categoria) {
-              return DropdownMenuItem<Categoria>(
-                value: categoria,
-                child: Text(categoria.name), // Muestra el nombre del enum
-              );
-              }).toList(),
-              onChanged: (Categoria? newValue) {
-              categoriaController.text = newValue?.name ?? '';
-              },
-              decoration: const InputDecoration(
-              border: OutlineInputBorder(),
-              hintText: 'Seleccione una categoría...',
-              hintStyle: TextStyle(
-                color: Colors.grey,
-                fontSize: 15,
-                fontWeight: FontWeight.w400,
-              ),
-              ),
-            ),
-            
-            const Spacer(),
-            SizedBox(
-              width: double.infinity, // Botón ocupa todo el ancho
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(context); // Regresa a la pantalla anterior
-                },
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 20),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          return Stack(
+            children: [
+              // Scroll con campos
+              SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(
+                    16, 16, 16, 140), // espacio para botones
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                  child: IntrinsicHeight(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Nombre:', style: TextStyle(fontSize: 16)),
+                        const SizedBox(height: 10),
+                        TextField(
+                          controller: nombreController,
+                          decoration: const InputDecoration(
+                            border: OutlineInputBorder(),
+                            hintText: 'Ingrese el nombre...',
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        const Text('Cantidad:', style: TextStyle(fontSize: 16)),
+                        const SizedBox(height: 10),
+                        TextField(
+                          controller: cantidadController,
+                          decoration: const InputDecoration(
+                            border: OutlineInputBorder(),
+                            hintText: 'Ingrese la cantidad...',
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        const Text('Precio:', style: TextStyle(fontSize: 16)),
+                        const SizedBox(height: 10),
+                        TextField(
+                          controller: precioController,
+                          keyboardType: TextInputType.number,
+                          decoration: const InputDecoration(
+                            border: OutlineInputBorder(),
+                            hintText: 'Ingrese el precio...',
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        const Text('Categoría:',
+                            style: TextStyle(fontSize: 16)),
+                        const SizedBox(height: 10),
+                        DropdownButtonFormField<Categoria>(
+                          value: Categoria.nacional,
+                          items: Categoria.values.map((categoria) {
+                            return DropdownMenuItem<Categoria>(
+                              value: categoria,
+                              child: Text(categoria.name),
+                            );
+                          }).toList(),
+                          onChanged: (value) {
+                            categoriaController.text = value?.name ?? '';
+                          },
+                          decoration: const InputDecoration(
+                            border: OutlineInputBorder(),
+                            hintText: 'Seleccione una categoría...',
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        const Spacer(), 
+                      ],
+                    ),
                   ),
-                  backgroundColor: const Color.fromARGB(255, 255, 141, 141),
-                  elevation: 5,
-                  shadowColor: Colors.black,
-                ),
-                child: const Text(
-                  'Cancelar',
-                  style: TextStyle(fontSize: 18, color: Colors.black),
                 ),
               ),
-            ),
-            const SizedBox(height: 10),
-            SizedBox(
-              width: double.infinity, // Botón ocupa todo el ancho
-              child: ElevatedButton(
-                onPressed: () async {
-                  // Datos del producto
-                  final Producto producto = Producto(
-                    id: null, // ID se asignará automáticamente en el servidor
-                    nombre: nombreController.text,
-                    cantidad: double.tryParse(cantidadController.text),
-                    precio: double.tryParse(precioController.text) ?? 0.0,
-                    categoria: Categoria.values.firstWhere(
-                      (categoria) => categoria.name == categoriaController.text,
-                      orElse: () => Categoria.nacional, // Valor predeterminado
-                    ), // Cambia según tu lógica
-                  );
 
-                  try {
-                    // Llama al método para guardar el producto
-                    await Provider.of<ProductoProvider>(context, listen: false)
-                        .crearProducto(producto);
+              // Botones fijos al fondo de la pantalla
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: SafeArea(
+                  top: false,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
+                    color: Colors.transparent,
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () {
+                              Navigator.pop(context);
+                            },
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              side: const BorderSide(color: Colors.grey),
+                            ),
+                            child: const Text(
+                              'Cancelar',
+                              style:
+                                  TextStyle(fontSize: 16, color: Colors.black),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () async {
+                              final producto = Producto(
+                                id: null,
+                                nombre: nombreController.text,
+                                cantidad:
+                                    double.tryParse(cantidadController.text),
+                                precio:
+                                    double.tryParse(precioController.text) ??
+                                        0.0,
+                                categoria: Categoria.values.firstWhere(
+                                  (c) => c.name == categoriaController.text,
+                                  orElse: () => Categoria.nacional,
+                                ),
+                              );
 
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                          content: Text('Producto guardado con éxito')),
-                    );
-
-                    // Regresa a la pantalla anterior
-                    Navigator.pop(context);
-                  } catch (e) {
-                    // Muestra un mensaje de error
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Error: $e')),
-                    );
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 20),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+                              try {
+                                await Provider.of<ProductoProvider>(context,
+                                        listen: false)
+                                    .crearProducto(producto);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                      content:
+                                          Text('Producto guardado con éxito')),
+                                );
+                                Navigator.pop(context);
+                              } catch (e) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('Error: $e')),
+                                );
+                              }
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor:
+                                  const Color(0xFF4CAF50), // Verde suave
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: const Text(
+                              'Guardar',
+                              style:
+                                  TextStyle(fontSize: 16, color: Colors.white),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  backgroundColor: const Color(0xFFAAEDAA),
-                  elevation: 5,
-                  shadowColor: Colors.black,
-                ),
-                child: const Text(
-                  'Guardar',
-                  style: TextStyle(fontSize: 18, color: Colors.black),
                 ),
               ),
-            ),
-          ],
-        ),
+            ],
+          );
+        },
       ),
     );
   }

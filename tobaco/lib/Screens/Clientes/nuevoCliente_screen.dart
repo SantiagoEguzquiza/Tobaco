@@ -8,7 +8,6 @@ class NuevoClienteScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Controladores para los campos de texto
     final nombreController = TextEditingController();
     final direccionController = TextEditingController();
     final telefonoController = TextEditingController();
@@ -18,140 +17,130 @@ class NuevoClienteScreen extends StatelessWidget {
         centerTitle: true,
         title: const Text('Nuevo Cliente'),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Nombre:',
-              style: TextStyle(fontSize: 16, color: Colors.black),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: nombreController,
-              cursorColor: Colors.black,
-              decoration: const InputDecoration(
-                border: OutlineInputBorder(),
-                hintText: 'Ingrese el nombre...',
-                hintStyle: TextStyle(
-                  color: Colors.grey,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w400,
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Dirección:',
-              style: TextStyle(fontSize: 16, color: Colors.black),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: direccionController,
-              cursorColor: Colors.black,
-              decoration: const InputDecoration(
-                border: OutlineInputBorder(),
-                hintText: 'Ingrese la dirección...',
-                hintStyle: TextStyle(
-                  color: Colors.grey,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w400,
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Teléfono:',
-              style: TextStyle(fontSize: 16, color: Colors.black),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: telefonoController,
-              cursorColor: Colors.black,
-              decoration: const InputDecoration(
-                border: OutlineInputBorder(),
-                hintText: 'Ingrese el teléfono...',
-                hintStyle: TextStyle(
-                  color: Colors.grey,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w400,
-                ),
-              ),
-            ),
-            const Spacer(),
-            SizedBox(
-              width: double.infinity, // Botón ocupa todo el ancho
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(context); // Regresa a la pantalla anterior
-                },
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 20),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  backgroundColor: const Color.fromARGB(255, 255, 141, 141),
-                  elevation: 5,
-                  shadowColor: Colors.black,
-                ),
-                child: const Text(
-                  'Cancelar',
-                  style: TextStyle(fontSize: 18, color: Colors.black),
-                ),
-              ),
-            ),
-            const SizedBox(height: 10),
-            SizedBox(
-              width: double.infinity, // Botón ocupa todo el ancho
-              child: ElevatedButton(
-                onPressed: () async {
-                  // Datos del cliente
-                  final Cliente cliente = Cliente(
-                    id: null, // ID se asignará automáticamente en el servidor
-                    nombre: nombreController.text,
-                    direccion: direccionController.text,
-                    telefono: int.tryParse(telefonoController.text) ?? 0,
-                    deuda: 0 // Inicializa la deuda en 0
-                  );
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          return Stack(
+            children: [
+              SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                  child: IntrinsicHeight(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Nombre:', style: TextStyle(fontSize: 16)),
+                        const SizedBox(height: 8),
+                        TextField(
+                          controller: nombreController,
+                          decoration: const InputDecoration(
+                            hintText: 'Ingrese el nombre...',
+                            border: OutlineInputBorder(),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
 
-                  try {
-                    // Llama al método para guardar el cliente
-                    await Provider.of<ClienteProvider>(context, listen: false)
-                        .crearCliente(cliente);
+                        const Text('Dirección:', style: TextStyle(fontSize: 16)),
+                        const SizedBox(height: 8),
+                        TextField(
+                          controller: direccionController,
+                          decoration: const InputDecoration(
+                            hintText: 'Ingrese la dirección...',
+                            border: OutlineInputBorder(),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
 
-                    
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                          content: Text('Cliente guardado con éxito')),
-                    );
-                    
-                    // Regresa a la pantalla anterior
-                    Navigator.pop(context);
-                  } catch (e) {
-                    // Muestra un mensaje de error
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Error: $e')),
-                    );
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 20),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+                        const Text('Teléfono:', style: TextStyle(fontSize: 16)),
+                        const SizedBox(height: 8),
+                        TextField(
+                          controller: telefonoController,
+                          keyboardType: TextInputType.number,
+                          decoration: const InputDecoration(
+                            hintText: 'Ingrese el teléfono...',
+                            border: OutlineInputBorder(),
+                          ),
+                        ),
+                        const SizedBox(height: 100), // Espacio para que no tape los botones
+                      ],
+                    ),
                   ),
-                  backgroundColor: const Color(0xFFAAEDAA),
-                  elevation: 5,
-                  shadowColor: Colors.black,
-                ),
-                child: const Text(
-                  'Guardar',
-                  style: TextStyle(fontSize: 18, color: Colors.black),
                 ),
               ),
-            ),
-          ],
-        ),
+
+              /// Botones fijos en el fondo
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: SafeArea(
+                  top: false,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    color: Colors.white,
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () => Navigator.pop(context),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              side: const BorderSide(color: Colors.grey),
+                            ),
+                            child: const Text('Cancelar',
+                                style: TextStyle(fontSize: 16, color: Colors.black)),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () async {
+                              final cliente = Cliente(
+                                id: null,
+                                nombre: nombreController.text,
+                                direccion: direccionController.text,
+                                telefono: int.tryParse(telefonoController.text) ?? 0,
+                                deuda: 0,
+                              );
+
+                              try {
+                                await Provider.of<ClienteProvider>(
+                                  context,
+                                  listen: false,
+                                ).crearCliente(cliente);
+
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Cliente guardado con éxito')),
+                                );
+                                Navigator.pop(context);
+                              } catch (e) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('Error: $e')),
+                                );
+                              }
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF4CAF50),
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: const Text('Guardar',
+                                style: TextStyle(fontSize: 16, color: Colors.white)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
