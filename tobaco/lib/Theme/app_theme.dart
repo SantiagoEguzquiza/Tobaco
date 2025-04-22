@@ -4,11 +4,12 @@ import 'package:flutter/services.dart';
 class AppTheme {
   static const Color primaryColor = Colors.blue;
   static const Color confirmButtonColor = Colors.green;
-  static const Color cancelButtonColor = Colors.blue;
+  static const Color cancelButtonColor = Colors.white;
   static const Color secondaryColor = Color(0xFFE9F3EF); // Verde para impares
   static const Color greyColor = Color(0xFFDBDBDB); // Gris claro para pares
   static const Color textColor = Colors.black;
   static const Color textGreyColor = Colors.grey;
+  static const Color addGreenColor = Colors.green;
 
   static const TextStyle inputLabelStyle = TextStyle(
     fontSize: 16,
@@ -24,8 +25,53 @@ class AppTheme {
     border: OutlineInputBorder(),
   );
 
+  static AlertDialog alertDialogStyle({
+    required String title,
+    required String content,
+    required VoidCallback onConfirm,
+    required VoidCallback onCancel,
+  }) {
+    return AlertDialog(
+      backgroundColor: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      title: Text(
+        title,
+        style: const TextStyle(
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+          color: textColor,
+        ),
+      ),
+      content: Text(
+        content,
+        style: const TextStyle(
+          fontSize: 16,
+          color: textColor,
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: onCancel,
+          child: const Text(
+            'Cancelar',
+            style: TextStyle(color: Colors.grey),
+          ),
+        ),
+        TextButton(
+          onPressed: onConfirm,
+          child: const Text(
+            'Eliminar',
+            style: TextStyle(color: Colors.red),
+          ),
+        ),
+      ],
+    );
+  }
+
   static const InputDecoration searchInputDecoration = InputDecoration(
-    labelText: 'Buscar cliente...',
+    labelText: 'Buscar...',
     labelStyle: TextStyle(
       color: Colors.grey,
       fontSize: 15,
@@ -70,8 +116,6 @@ class AppTheme {
         borderRadius: BorderRadius.circular(10),
       ),
       backgroundColor: backgroundColor,
-      elevation: 5,
-      shadowColor: Colors.black,
     );
   }
 

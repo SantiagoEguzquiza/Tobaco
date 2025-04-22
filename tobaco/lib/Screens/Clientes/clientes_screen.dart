@@ -86,10 +86,11 @@ class _ClientesScreenState extends State<ClientesScreen> {
                   );
                   _loadClientes();
                 },
-                style: AppTheme.elevatedButtonStyle(AppTheme.primaryColor), // Usa el estilo del tema
+                style: AppTheme.elevatedButtonStyle(
+                    AppTheme.addGreenColor), // Usa el estilo del tema
                 child: const Text(
                   'Crear nuevo cliente',
-                  style: TextStyle(fontSize: 18, color: Colors.black),
+                  style: TextStyle(fontSize: 18, color: Colors.white),
                 ),
               ),
             ),
@@ -144,11 +145,13 @@ class _ClientesScreenState extends State<ClientesScreen> {
                                 children: [
                                   Text(
                                     cliente.nombre,
-                                    style: AppTheme.cardTitleStyle, // Usa el tema
+                                    style:
+                                        AppTheme.cardTitleStyle, // Usa el tema
                                   ),
                                   Text(
                                     'Deuda: \$${cliente.deuda}',
-                                    style: AppTheme.cardSubtitleStyle, // Usa el tema
+                                    style: AppTheme
+                                        .cardSubtitleStyle, // Usa el tema
                                   ),
                                 ],
                               ),
@@ -161,27 +164,20 @@ class _ClientesScreenState extends State<ClientesScreen> {
                               onPressed: () {
                                 showDialog(
                                   context: context,
-                                  builder: (context) => AlertDialog(
-                                    title: const Text('Eliminar cliente'),
-                                    content: const Text(
-                                        '¿Estás seguro de que deseas eliminar este cliente?'),
-                                    actions: [
-                                      TextButton(
-                                        onPressed: () {
-                                          Navigator.of(context).pop();
-                                        },
-                                        child: const Text('Cancelar'),
-                                      ),
-                                      TextButton(
-                                        onPressed: () async {
-                                          await ClienteProvider()
-                                              .eliminarCliente(cliente.id!);
-                                          _loadClientes();
-                                          Navigator.of(context).pop();
-                                        },
-                                        child: const Text('Eliminar'),
-                                      ),
-                                    ],
+                                  builder: (context) =>
+                                      AppTheme.alertDialogStyle(
+                                    title: 'Eliminar cliente',
+                                    content:
+                                        '¿Estás seguro de que deseas eliminar este cliente?',
+                                    onConfirm: () async {
+                                      await ClienteProvider()
+                                          .eliminarCliente(cliente.id!);
+                                      _loadClientes();
+                                      Navigator.of(context).pop();
+                                    },
+                                    onCancel: () {
+                                      Navigator.of(context).pop();
+                                    },
                                   ),
                                 );
                               },

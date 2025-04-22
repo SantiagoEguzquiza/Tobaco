@@ -137,15 +137,13 @@ class _EditarClienteScreenState extends State<EditarClienteScreen> {
                   children: [
                     Expanded(
                       child: ElevatedButton(
-                        style: AppTheme.elevatedButtonStyle(
-                          AppTheme.cancelButtonColor,
-                        ),
                         onPressed: () {
-                          Navigator.pop(context); // Volver a la pantalla anterior
+                          Navigator.pop(context);
                         },
+                        style: AppTheme.outlinedButtonStyle,
                         child: const Text(
                           'Volver',
-                          style: TextStyle(fontSize: 16),
+                          style: TextStyle(fontSize: 18, color: Colors.black),
                         ),
                       ),
                     ),
@@ -157,7 +155,8 @@ class _EditarClienteScreenState extends State<EditarClienteScreen> {
                         ),
                         onPressed: () async {
                           try {
-                            await ClienteProvider().editarCliente(widget.cliente);
+                            await ClienteProvider()
+                                .editarCliente(widget.cliente);
 
                             Navigator.of(context).pop();
 
@@ -176,7 +175,7 @@ class _EditarClienteScreenState extends State<EditarClienteScreen> {
                         },
                         child: const Text(
                           'Confirmar',
-                          style: TextStyle(fontSize: 16),
+                          style: TextStyle(fontSize: 18),
                         ),
                       ),
                     ),

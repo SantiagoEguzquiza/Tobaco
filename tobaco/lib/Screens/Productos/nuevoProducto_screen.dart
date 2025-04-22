@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:tobaco/Models/Producto.dart';
 import 'package:tobaco/Services/Productos_Service/productos_provider.dart';
+import 'package:tobaco/Theme/app_theme.dart'; // Importa el tema
 
 class NuevoProductoScreen extends StatelessWidget {
   const NuevoProductoScreen({super.key});
@@ -32,39 +33,36 @@ class NuevoProductoScreen extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Nombre:', style: TextStyle(fontSize: 16)),
+                        const Text('Nombre:', style: AppTheme.inputLabelStyle),
                         const SizedBox(height: 10),
                         TextField(
                           controller: nombreController,
-                          decoration: const InputDecoration(
-                            border: OutlineInputBorder(),
+                          decoration: AppTheme.inputDecoration.copyWith(
                             hintText: 'Ingrese el nombre...',
                           ),
                         ),
                         const SizedBox(height: 16),
-                        const Text('Cantidad:', style: TextStyle(fontSize: 16)),
+                        const Text('Cantidad:', style: AppTheme.inputLabelStyle),
                         const SizedBox(height: 10),
                         TextField(
                           controller: cantidadController,
-                          decoration: const InputDecoration(
-                            border: OutlineInputBorder(),
+                          decoration: AppTheme.inputDecoration.copyWith(
                             hintText: 'Ingrese la cantidad...',
                           ),
                         ),
                         const SizedBox(height: 16),
-                        const Text('Precio:', style: TextStyle(fontSize: 16)),
+                        const Text('Precio:', style: AppTheme.inputLabelStyle),
                         const SizedBox(height: 10),
                         TextField(
                           controller: precioController,
                           keyboardType: TextInputType.number,
-                          decoration: const InputDecoration(
-                            border: OutlineInputBorder(),
+                          decoration: AppTheme.inputDecoration.copyWith(
                             hintText: 'Ingrese el precio...',
                           ),
                         ),
                         const SizedBox(height: 16),
                         const Text('Categoría:',
-                            style: TextStyle(fontSize: 16)),
+                            style: AppTheme.inputLabelStyle),
                         const SizedBox(height: 10),
                         DropdownButtonFormField<Categoria>(
                           value: Categoria.nacional,
@@ -77,13 +75,12 @@ class NuevoProductoScreen extends StatelessWidget {
                           onChanged: (value) {
                             categoriaController.text = value?.name ?? '';
                           },
-                          decoration: const InputDecoration(
-                            border: OutlineInputBorder(),
+                          decoration: AppTheme.inputDecoration.copyWith(
                             hintText: 'Seleccione una categoría...',
                           ),
                         ),
                         const SizedBox(height: 16),
-                        const Spacer(), 
+                        const Spacer(),
                       ],
                     ),
                   ),
@@ -108,17 +105,11 @@ class NuevoProductoScreen extends StatelessWidget {
                             onPressed: () {
                               Navigator.pop(context);
                             },
-                            style: OutlinedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              side: const BorderSide(color: Colors.grey),
-                            ),
+                            style: AppTheme.outlinedButtonStyle,
                             child: const Text(
                               'Cancelar',
                               style:
-                                  TextStyle(fontSize: 16, color: Colors.black),
+                                  TextStyle(fontSize: 18, color: Colors.black),
                             ),
                           ),
                         ),
@@ -156,18 +147,13 @@ class NuevoProductoScreen extends StatelessWidget {
                                 );
                               }
                             },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor:
-                                  const Color(0xFF4CAF50), // Verde suave
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
+                            style: AppTheme.elevatedButtonStyle(
+                              AppTheme.primaryColor,
                             ),
                             child: const Text(
                               'Guardar',
                               style:
-                                  TextStyle(fontSize: 16, color: Colors.white),
+                                  TextStyle(fontSize: 18, color: Colors.white),
                             ),
                           ),
                         ),

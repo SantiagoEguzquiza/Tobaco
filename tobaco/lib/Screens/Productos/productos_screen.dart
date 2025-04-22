@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:tobaco/Models/Producto.dart';
 import 'package:tobaco/Screens/Productos/nuevoProducto_screen.dart';
 import 'package:tobaco/Services/Productos_Service/productos_provider.dart';
+import 'package:tobaco/Theme/app_theme.dart'; // Importa el tema
 import 'dart:developer';
 
 class ProductosScreen extends StatefulWidget {
@@ -25,7 +26,7 @@ class _ProductosScreenState extends State<ProductosScreen> {
     _loadProductos();
   }
 
-   Future<void> _loadProductos() async {
+  Future<void> _loadProductos() async {
     setState(() {
       isLoading = true;
       errorMessage = null;
@@ -37,7 +38,7 @@ class _ProductosScreenState extends State<ProductosScreen> {
           await productoProvider.obtenerProductos();
 
       setState(() {
-        productos = fetchedProductos; 
+        productos = fetchedProductos;
         isLoading = false;
       });
     } catch (e) {
@@ -63,7 +64,7 @@ class _ProductosScreenState extends State<ProductosScreen> {
         centerTitle: true,
         title: const Text(
           'Productos',
-          style: TextStyle(fontSize: 32),
+          style: AppTheme.appBarTitleStyle, // Usa el estilo del tema
         ),
       ),
       body: Padding(
@@ -72,7 +73,7 @@ class _ProductosScreenState extends State<ProductosScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             SizedBox(
-              width: double.infinity, // Ancho completo
+              width: double.infinity,
               child: ElevatedButton(
                 onPressed: () async {
                   await Navigator.push(
@@ -83,65 +84,19 @@ class _ProductosScreenState extends State<ProductosScreen> {
                   );
                   _loadProductos();
                 },
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 15),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(5),
-                  ),
-                  backgroundColor: const Color(0xFFAAEDAA), // Color de fondo
-                  elevation: 5, // Altura de la sombra
-                  shadowColor: Colors.black, // Color de la sombra
-                ),
+                style: AppTheme.elevatedButtonStyle(
+                    AppTheme.addGreenColor), // Usa el estilo del tema
                 child: const Text(
                   'Crear nuevo producto',
-                  style: TextStyle(fontSize: 18, color: Colors.black),
+                  style: TextStyle(fontSize: 18, color: Colors.white),
                 ),
               ),
             ),
             const SizedBox(height: 30),
             TextField(
-              cursorColor: Colors.black, // Cambia el color del cursor a negro
+              cursorColor: Colors.black,
               style: const TextStyle(fontSize: 15),
-              decoration: const InputDecoration(
-                labelText: 'Buscar producto...',
-                labelStyle: TextStyle(
-                    color: Colors.grey,
-                    fontSize: 15 // Color del label cuando no está enfocado
-                    ),
-                floatingLabelStyle: TextStyle(
-                  color: Colors.grey, // Color del label cuando está enfocado
-                ),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.all(Radius.circular(30)),
-                ),
-                prefixIcon: Icon(
-                  Icons.search,
-                  color: Colors.grey,
-                  size: 15, // Tamaño del ícono
-                ),
-                filled: true, // Habilitar fondo
-                fillColor: Color.fromRGBO(255, 255, 255, 1), // Fondo gris claro
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.all(Radius.circular(30)),
-                  borderSide: BorderSide(
-                    color: Color.fromRGBO(
-                        200, 200, 200, 1), // Color del borde al enfocar
-                    width: 1.0, // Grosor más delgado
-                  ),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.all(Radius.circular(30)),
-                  borderSide: BorderSide(
-                    color: Color.fromRGBO(
-                        200, 200, 200, 1), // Color del borde normal
-                    width: 1.0, // Grosor más delgado
-                  ),
-                ),
-                contentPadding: EdgeInsets.symmetric(
-                  vertical: 10, // Reduce la altura del TextField
-                  horizontal: 15, // Espaciado horizontal
-                ),
-              ),
+              decoration: AppTheme.searchInputDecoration, // Usa el tema
               onChanged: (value) {
                 setState(() {
                   searchQuery = value;
@@ -159,101 +114,73 @@ class _ProductosScreenState extends State<ProductosScreen> {
                       borderRadius: BorderRadius.circular(5),
                     ),
                     color: index % 2 == 0
-                        ? const Color(0xFFE9F3EF) // verde para impares
-                        : const Color(0xFFDBDBDB), // Gris claro para pares
+                        ? AppTheme.secondaryColor // Verde para impares
+                        : AppTheme.greyColor, // Gris claro para pares
                     margin: const EdgeInsets.symmetric(vertical: 6),
                     child: Padding(
                       padding: const EdgeInsets.all(8.0),
                       child: InkWell(
                         onTap: () {
-                          // Navigator.push(
-                          //   context,
-                          //   MaterialPageRoute(
-                          //     builder: (context) =>
-                          //         DetalleProductoScreen(producto: producto),
-                          //   ),
-                          // );
+                          // Navegación a detalles del producto
                         },
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            // Icono del producto
                             Image.asset(
                               'Assets/images/cigarettes.png',
-                              height: 30, // Altura del icono
-                            ), // Ruta del icono en assets
-                            const SizedBox(width: 25), // Espaciado adicional
+                              height: 30,
+                            ),
+                            const SizedBox(width: 25),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
                                     producto.nombre,
-                                    style: const TextStyle(
-                                      color: Colors.black,
-                                      fontSize: 18,
-                                    ),
+                                    style:
+                                        AppTheme.cardTitleStyle, // Usa el tema
                                   ),
                                   Text(
                                     'Precio: \$${producto.precio}',
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.grey,
-                                    ),
+                                    style: AppTheme
+                                        .cardSubtitleStyle, // Usa el tema
                                   ),
                                 ],
                               ),
                             ),
-                            // Botón para eliminar producto
                             IconButton(
                               icon: Image.asset(
-                                'Assets/images/borrar.png', 
-                                height: 24, 
+                                'Assets/images/borrar.png',
+                                height: 24,
                               ),
                               onPressed: () {
                                 showDialog(
                                   context: context,
-                                  builder: (context) => AlertDialog(
-                                    title: const Text('Eliminar producto'),
-                                    content: const Text(
-                                        '¿Estás seguro de que deseas eliminar este producto?'),
-                                    actions: [
-                                      TextButton(
-                                        onPressed: () {
-                                          Navigator.of(context).pop();
-                                        },
-                                        child: const Text('Cancelar'),
-                                      ),
-                                      TextButton(
-                                        onPressed: () async {
-                                          await ProductoProvider()
-                                              .eliminarProducto(producto.id!);
-                                          _loadProductos(); // Recargar productos
-                                          Navigator.of(context).pop();
-                                        },
-                                        child: const Text('Eliminar'),
-                                      ),
-                                    ],
+                                  builder: (context) =>
+                                      AppTheme.alertDialogStyle(
+                                    title: 'Eliminar producto',
+                                    content:
+                                        '¿Estás seguro de que deseas eliminar este producto?',
+                                    onConfirm: () async {
+                                      await ProductoProvider()
+                                          .eliminarProducto(producto.id!);
+                                      _loadProductos();
+                                      Navigator.of(context).pop();
+                                    },
+                                    onCancel: () {
+                                      Navigator.of(context).pop();
+                                    },
                                   ),
                                 );
                               },
                             ),
-                            // Botón para editar producto
                             IconButton(
                               icon: Image.asset(
-                                'Assets/images/editar.png', 
-                                height: 24, 
+                                'Assets/images/editar.png',
+                                height: 24,
                               ),
                               onPressed: () async {
-                                // await Navigator.push(
-                                //   context,
-                                //   MaterialPageRoute(
-                                //     builder: (context) => EditarProductoScreen(
-                                //       producto: producto,
-                                //     ),
-                                //   ),
-                                // );
-                                // _loadProductos(); // Recargar productos al volver
+                                // Navegación a editar producto
                               },
                             ),
                           ],
