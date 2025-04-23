@@ -71,9 +71,8 @@ class MenuScreen extends StatelessWidget {
                   const SizedBox(width: 20),
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color.fromRGBO(
-                          246, 243, 141, 1), // background color
-                      foregroundColor: Colors.black, // text color
+                      backgroundColor: const Color.fromRGBO(246, 243, 141, 1),
+                      foregroundColor: Colors.black,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(20),
                       ),
@@ -111,62 +110,94 @@ class MenuScreen extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 20),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color.fromRGBO(
-                      248, 207, 112, 1), // background color
-                  foregroundColor: Colors.black, // text color
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  fixedSize: const Size(320, 150),
-                  elevation: 10, // Altura de la sombra
-                  shadowColor: Colors.black, // Color de la sombra
-                ),
-                onPressed: () {},
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Image.asset(
-                      'Assets/images/files.png', // Ruta de la imagen
-                      height: 80, // Altura de la imagen
-                      width: 80, // Ancho de la imagen
-                    ),
-                    const SizedBox(
-                        width: 10), // Espacio entre la imagen y el texto
-                    const Text(
-                      'Lista de pedidos',
-                      style: TextStyle(
-                        fontSize: 20,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color.fromRGBO(242, 125, 125, 1),
+                      foregroundColor: Colors.black,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
                       ),
+                      minimumSize: const Size(150, 150),
+                      elevation: 10,
+                      shadowColor: Colors.black,
                     ),
-                  ],
-                ),
+                    onPressed: () {},
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Image.asset(
+                          'Assets/images/dinero.png',
+                          height: 70,
+                          width: 70,
+                        ),
+                        const SizedBox(height: 10),
+                        const Text(
+                          'Deudas',
+                          style: TextStyle(
+                            fontSize: 20,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 20),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color.fromRGBO(248, 207, 112, 1),
+                      foregroundColor: Colors.black,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      fixedSize: const Size(150, 150),
+                      elevation: 10,
+                      shadowColor: Colors.black,
+                    ),
+                    onPressed: () {},
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Image.asset(
+                          'Assets/images/files.png',
+                          height: 70,
+                          width: 70,
+                        ),
+                        const SizedBox(height: 10),
+                        const Text(
+                          'Pedidos',
+                          style: TextStyle(
+                            fontSize: 20,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 20),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color.fromARGB(
-                      255, 153, 251, 152), // background color
-                  foregroundColor: Colors.black, // text color
+                  backgroundColor: const Color.fromARGB(255, 153, 251, 152),
+                  foregroundColor: Colors.black,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20),
                   ),
                   fixedSize: const Size(320, 150),
-                  elevation: 10, // Altura de la sombra
-                  shadowColor: Colors.black, // Color de la sombra
+                  elevation: 10,
+                  shadowColor: Colors.black,
                 ),
                 onPressed: () {},
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Image.asset(
-                      'Assets/images/add_file.png', // Ruta de la imagen
-                      height: 80, // Altura de la imagen
-                      width: 80, // Ancho de la imagen
+                      'Assets/images/add_file.png',
+                      height: 80,
+                      width: 80,
                     ),
-                    const SizedBox(
-                        width: 10), // Espacio entre la imagen y el texto
+                    const SizedBox(width: 10),
                     const Text(
                       'Crear nuevo pedido',
                       style: TextStyle(
@@ -182,22 +213,20 @@ class MenuScreen extends StatelessWidget {
                 children: [
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color.fromARGB(
-                          255, 3, 117, 39), // background color
-                      foregroundColor: const Color.fromARGB(
-                          255, 255, 255, 255), // text color
+                      backgroundColor: const Color.fromARGB(255, 3, 117, 39),
+                      foregroundColor: const Color.fromARGB(255, 255, 255, 255),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(20),
                       ),
                       fixedSize: const Size(150, 150),
-                      elevation: 10, // Altura de la sombra
-                      shadowColor: Colors.black, // Color de la sombra
+                      elevation: 10,
+                      shadowColor: Colors.black,
                     ),
                     onPressed: () {},
                     child: const Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        SizedBox(), // Espacio entre la imagen y el texto
+                        SizedBox(),
                         Text(
                           'DOLAR',
                           style: TextStyle(
@@ -211,15 +240,14 @@ class MenuScreen extends StatelessWidget {
                   const SizedBox(width: 20),
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color.fromARGB(
-                          255, 99, 99, 99), // background color
-                      foregroundColor: Colors.white, // text color
+                      backgroundColor: const Color.fromARGB(255, 99, 99, 99),
+                      foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(20),
                       ),
                       fixedSize: const Size(150, 150),
-                      elevation: 10, // Altura de la sombra
-                      shadowColor: Colors.black, // Color de la sombra
+                      elevation: 10,
+                      shadowColor: Colors.black,
                     ),
                     onPressed: () {},
                     child: const Column(
@@ -227,7 +255,7 @@ class MenuScreen extends StatelessWidget {
                       children: [
                         SizedBox(
                           height: 5,
-                        ), // Espacio entre la imagen y el texto
+                        ),
                         Text(
                           'Configuración',
                           style: TextStyle(
