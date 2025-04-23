@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:tobaco/Screens/Clientes/clientes_screen.dart';
+import 'package:tobaco/Screens/Ventas/ventas_screen.dart';
 import 'package:tobaco/Screens/Productos/productos_screen.dart';
 import 'package:tobaco/Theme/app_theme.dart'; // Importa el tema
 
@@ -155,7 +156,13 @@ class MenuScreen extends StatelessWidget {
                       elevation: 10,
                       shadowColor: Colors.black,
                     ),
-                    onPressed: () {},
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => PedidosScreen()),
+                      );
+                    },
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -166,7 +173,7 @@ class MenuScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 10),
                         const Text(
-                          'Pedidos',
+                          'Ventas',
                           style: TextStyle(
                             fontSize: 20,
                           ),

@@ -17,6 +17,7 @@ class ClientesScreen extends StatefulWidget {
 }
 
 class _ClientesScreenState extends State<ClientesScreen> {
+  
   bool isLoading = true;
   String searchQuery = '';
   String? errorMessage;

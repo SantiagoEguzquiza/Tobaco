@@ -51,8 +51,4 @@ class ClienteProvider with ChangeNotifier {
       print('Error: $e');
     }
   }
-
-  
-
-
 }
