@@ -17,14 +17,18 @@ class ProductosScreen extends StatefulWidget {
 class _ProductosScreenState extends State<ProductosScreen> {
   bool isLoading = true;
   String searchQuery = '';
+  String? selectedCategory;
   String? errorMessage;
   List<Producto> productos = [];
+  List<String> categorias = Categoria.values.map((e) => e.name).toList();
 
   @override
-  void initState() {
-    super.initState();
-    _loadProductos();
-  }
+void initState() {
+  super.initState();
+  selectedCategory = categorias.isNotEmpty ? categorias[0] : null;
+  _loadProductos();
+}
+
 
   Future<void> _loadProductos() async {
     setState(() {
@@ -52,10 +56,14 @@ class _ProductosScreenState extends State<ProductosScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final filteredProductos = productos
-        .where((producto) =>
-            producto.nombre.toLowerCase().contains(searchQuery.toLowerCase()))
-        .toList()
+    final filteredProductos = productos.where((producto) {
+      final matchesSearchQuery =
+          producto.nombre.toLowerCase().contains(searchQuery.toLowerCase());
+      final matchesCategory = selectedCategory == null ||
+          producto.categoria.name == selectedCategory;
+
+      return matchesSearchQuery && matchesCategory;
+    }).toList()
       ..sort(
           (a, b) => a.nombre.toLowerCase().compareTo(b.nombre.toLowerCase()));
 
@@ -102,6 +110,38 @@ class _ProductosScreenState extends State<ProductosScreen> {
                   searchQuery = value;
                 });
               },
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              height: 50,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                itemCount: categorias.length, // Lista de categorías
+                itemBuilder: (context, index) {
+                  final categoria = categorias[index];
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: selectedCategory == categoria
+                            ? AppTheme.primaryColor
+                            : AppTheme.greyColor,
+                        foregroundColor: Colors.white,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          selectedCategory =
+                              selectedCategory == categoria ? null : categoria;
+                        });
+                      },
+                      child: Text(
+                        categoria[0].toUpperCase() + categoria.substring(1),
+                        style: const TextStyle(fontSize: 14),
+                      ),
+                    ),
+                  );
+                },
+              ),
             ),
             const SizedBox(height: 30),
             Expanded(
