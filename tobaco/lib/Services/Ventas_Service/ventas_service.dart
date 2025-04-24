@@ -14,10 +14,12 @@ class VentasService {
 
       if (response.statusCode == 200) {
         final List<dynamic> ventasJson = jsonDecode(response.body);
+
         return ventasJson.map((json) => Ventas.fromJson(json)).toList();
       } else {
         throw Exception(
-            'Error al obtener las ventas. Código de estado: ${response.statusCode}');
+          'Error al obtener las ventas. Código de estado: ${response.statusCode}',
+        );
       }
     } catch (e) {
       print('Error al obtener las ventas: $e');

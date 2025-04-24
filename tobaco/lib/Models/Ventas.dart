@@ -1,39 +1,43 @@
-import 'package:tobaco/Models/itemVenta.dart';
+import 'package:tobaco/Models/Cliente.dart';
+import 'package:tobaco/Models/VentasProductos.dart';
+
 
 class Ventas {
-  int? id;
+  int id;
   int clienteId;
-  int total;
+  Cliente cliente;
+  List<VentasProductos> ventasProductos;
+  double total;
   DateTime fecha;
-  List<ItemVenta> ventasProductos;
 
   Ventas({
-    this.id,
+    required this.id,
     required this.clienteId,
+    required this.cliente,
+    required this.ventasProductos,
     required this.total,
     required this.fecha,
-    required this.ventasProductos,
   });
 
-  factory Ventas.fromJson(Map<String, dynamic> json) {
-    return Ventas(
-      id: json['id'],
-      clienteId: json['clienteId'],
-      total: json['total'],
-      fecha: DateTime.parse(json['fecha']),
-      ventasProductos: (json['pedidoProductos'] as List)
-          .map((item) => ItemVenta.fromJson(item))
-          .toList(),
-    );
-  }
+  factory Ventas.fromJson(Map<String, dynamic> json) => Ventas(
+        id: json['id'],
+        clienteId: json['clienteId'],
+        cliente: Cliente.fromJson(json['cliente']),
+        ventasProductos: (json['pedidoProductos'] as List)
+            .map((e) => VentasProductos.fromJson(e))
+            .toList(),
+        total: (json['total'] as num).toDouble(),
+        fecha: DateTime.parse(json['fecha']),
+      );
 
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'clienteId': clienteId,
-      'total': total,
-      'fecha': fecha.toIso8601String(),
-      'pedidoProductos': ventasProductos.map((e) => e.toJson()).toList(),
-    };
-  }
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'clienteId': clienteId,
+        'cliente': cliente.toJson(),
+        'pedidoProductos':
+            ventasProductos.map((e) => e.toJson()).toList(),
+        'total': total,
+        'fecha': fecha.toIso8601String(),
+      };
 }
+

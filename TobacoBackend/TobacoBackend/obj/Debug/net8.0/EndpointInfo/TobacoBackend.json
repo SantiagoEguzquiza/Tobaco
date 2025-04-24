@@ -559,13 +559,8 @@
             "type": "integer",
             "format": "int32"
           },
-          "total": {
-            "type": "number",
-            "format": "double"
-          },
-          "fecha": {
-            "type": "string",
-            "format": "date-time"
+          "cliente": {
+            "$ref": "#/components/schemas/ClienteDTO"
           },
           "pedidoProductos": {
             "type": "array",
@@ -573,6 +568,14 @@
               "$ref": "#/components/schemas/PedidoProductoDTO"
             },
             "nullable": true
+          },
+          "total": {
+            "type": "number",
+            "format": "double"
+          },
+          "fecha": {
+            "type": "string",
+            "format": "date-time"
           }
         },
         "additionalProperties": false
@@ -583,6 +586,9 @@
           "productoId": {
             "type": "integer",
             "format": "int32"
+          },
+          "producto": {
+            "$ref": "#/components/schemas/ProductoDTO"
           },
           "cantidad": {
             "type": "number",

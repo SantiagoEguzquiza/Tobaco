@@ -160,7 +160,7 @@ class MenuScreen extends StatelessWidget {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                            builder: (context) => PedidosScreen()),
+                            builder: (context) => VentasScreen()),
                       );
                     },
                     child: Column(
