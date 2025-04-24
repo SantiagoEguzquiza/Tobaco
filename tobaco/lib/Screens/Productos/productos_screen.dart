@@ -120,7 +120,7 @@ void initState() {
                 itemBuilder: (context, index) {
                   final categoria = categorias[index];
                   return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                    padding: const EdgeInsets.symmetric(horizontal: 4.0),
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: selectedCategory == categoria

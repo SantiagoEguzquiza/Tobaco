@@ -28,8 +28,7 @@ class Cliente {
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'id': id,
+    return {     
       'nombre': nombre,
       'direccion': direccion,
       'telefono': telefono.toString(),

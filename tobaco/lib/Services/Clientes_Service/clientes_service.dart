@@ -33,7 +33,7 @@ class ClienteService {
         body: jsonEncode(cliente.toJson()),
       );
 
-      if (response.statusCode != 201) {
+      if (response.statusCode != 200) {
         throw Exception(
             'Error al guardar el cliente. Código de estado: ${response.statusCode}, Respuesta: ${response.body}');
       } else {
