@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:tobaco/Models/Producto.dart';
+import 'package:tobaco/Screens/Productos/editarProducto_screen.dart';
 import 'package:tobaco/Screens/Productos/nuevoProducto_screen.dart';
 import 'package:tobaco/Services/Productos_Service/productos_provider.dart';
 import 'package:tobaco/Theme/app_theme.dart'; // Importa el tema
@@ -23,12 +24,11 @@ class _ProductosScreenState extends State<ProductosScreen> {
   List<String> categorias = Categoria.values.map((e) => e.name).toList();
 
   @override
-void initState() {
-  super.initState();
-  selectedCategory = categorias.isNotEmpty ? categorias[0] : null;
-  _loadProductos();
-}
-
+  void initState() {
+    super.initState();
+    selectedCategory = categorias.isNotEmpty ? categorias[0] : null;
+    _loadProductos();
+  }
 
   Future<void> _loadProductos() async {
     setState(() {
@@ -220,7 +220,14 @@ void initState() {
                                 height: 24,
                               ),
                               onPressed: () async {
-                                // Navegación a editar producto
+                                await Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => EditarProductoScreen(
+                                        producto: producto),
+                                  ),
+                                );
+                                _loadProductos();
                               },
                             ),
                           ],
