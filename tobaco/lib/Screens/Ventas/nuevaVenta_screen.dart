@@ -73,28 +73,33 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
             // 1. Sección de selección de cliente
             if (isSearching) ...[
               TextField(
-                controller: _searchController,
-                decoration: const InputDecoration(
-                  labelText: 'Buscar cliente',
-                  prefixIcon: Icon(Icons.search),
-                ),
-                cursorColor: Colors.black,
-                onChanged: buscarClientes,
+              controller: _searchController,
+              decoration: const InputDecoration(
+                labelText: 'Buscar cliente',
+                prefixIcon: Icon(Icons.search),
+              ),
+              cursorColor: Colors.black,
+              onChanged: buscarClientes,
               ),
               const SizedBox(height: 10),
               SizedBox(
-                height: 180,
-                child: ListView.builder(
-                  itemCount: clientesFiltrados.length.clamp(0, 3),
-                  shrinkWrap: true,
-                  itemBuilder: (context, index) {
-                    final cliente = clientesFiltrados[index];
-                    return ListTile(
-                      title: Text(cliente.nombre),
-                      onTap: () => seleccionarCliente(cliente),
-                    );
-                  },
-                ),
+              height: 180,
+              child: ListView.builder(
+                itemCount: clientesFiltrados.length.clamp(0, 3),
+                shrinkWrap: true,
+                itemBuilder: (context, index) {
+                final cliente = clientesFiltrados[index];
+                return Container(
+                  color: index % 2 == 0
+                    ? AppTheme.secondaryColor
+                    : AppTheme.greyColor,
+                  child: ListTile(
+                  title: Text(cliente.nombre),
+                  onTap: () => seleccionarCliente(cliente),
+                  ),
+                );
+                },
+              ),
               ),
             ] else ...[
               Card(
@@ -138,7 +143,6 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                 ),
               ),
               const SizedBox(height: 20),
-
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
@@ -167,79 +171,78 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                   ),
                 ),
               ),
-
               if (productosSeleccionados.isNotEmpty) const SizedBox(height: 20),
-             Expanded(
-            child: ListView.builder(
-              itemCount: productosSeleccionados.length,
-              itemBuilder: (context, index) {
-                final ps = productosSeleccionados[index];
-                return Card(
-                  color: index % 2 == 0
-                      ? AppTheme.secondaryColor
-                      : AppTheme.greyColor,
-                  margin: const EdgeInsets.symmetric(vertical: 6),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(5),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        // Nombre del producto
-                        Expanded(
-                          child: Text(
-                            ps.producto.nombre,
-                            style: AppTheme.itemListaNegrita,
-                          ),
-                        ),
-                        // Precio del producto alineado a la derecha
-                        Text(
-                          '\$ ${ps.producto.precio.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (match) => '${match[1]}.')}',
-                          style: AppTheme.itemListaNegrita,
-                        ),
-                        const SizedBox(width: 10), // Espaciado entre el precio y los botones
-                        // Botones de cantidad
-                        Row(
+              Expanded(
+                child: ListView.builder(
+                  itemCount: productosSeleccionados.length,
+                  itemBuilder: (context, index) {
+                    final ps = productosSeleccionados[index];
+                    return Card(
+                      color: index % 2 == 0
+                          ? AppTheme.secondaryColor
+                          : AppTheme.greyColor,
+                      margin: const EdgeInsets.symmetric(vertical: 6),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(5),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            IconButton(
-                              onPressed: () {
-                                setState(() {
-                                  ps.cantidad =
-                                      (ps.cantidad - 1).clamp(0.5, double.infinity).toInt();
-                                });
-                              },
-                              icon: const Icon(Icons.remove_circle, color: Colors.red),
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6),
+                            Expanded(
                               child: Text(
-                                ps.cantidad % 1 == 0
-                                    ? '${ps.cantidad.toInt()}'
-                                    : '${ps.cantidad}',
-                                style: const TextStyle(fontWeight: FontWeight.bold),
+                                ps.producto.nombre,
+                                style: AppTheme.itemListaNegrita,
                               ),
                             ),
-                            IconButton(
-                              onPressed: () {
-                                setState(() {
-                                  ps.cantidad += 1;
-                                });
-                              },
-                              icon: const Icon(Icons.add_circle, color: Colors.green),
+                            Text(
+                              '\$ ${ps.producto.precio.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (match) => '${match[1]}.')}',
+                              style: AppTheme.itemListaNegrita,
+                            ),
+                            const SizedBox(width: 10),
+                            Row(
+                              children: [
+                                IconButton(
+                                  onPressed: () {
+                                    setState(() {
+                                      ps.cantidad = (ps.cantidad - 1)
+                                          .clamp(0.5, double.infinity)
+                                          .toInt();
+                                    });
+                                  },
+                                  icon: const Icon(Icons.remove_circle,
+                                      color: Colors.red),
+                                ),
+                                Container(
+                                  padding:
+                                      const EdgeInsets.symmetric(horizontal: 6),
+                                  child: Text(
+                                    ps.cantidad % 1 == 0
+                                        ? '${ps.cantidad.toInt()}'
+                                        : '${ps.cantidad}',
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.bold),
+                                  ),
+                                ),
+                                IconButton(
+                                  onPressed: () {
+                                    setState(() {
+                                      ps.cantidad += 1;
+                                    });
+                                  },
+                                  icon: const Icon(Icons.add_circle,
+                                      color: Colors.green),
+                                ),
+                              ],
                             ),
                           ],
                         ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-
-              // 2. Continúa con el formulario de la venta
+                      ),
+                    );
+                  },
+                ),
+              ),
             ],
           ],
         ),
