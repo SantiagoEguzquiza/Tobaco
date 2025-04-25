@@ -10,5 +10,6 @@ namespace TobacoBackend.Domain.IServices
         Task AddCliente(ClienteDTO cliente);
         Task UpdateCliente(int id, ClienteDTO cliente);
         Task<bool> DeleteCliente(int id);
+        Task<IEnumerable<ClienteDTO>> BuscarClientesAsync(string query);
     }
 }

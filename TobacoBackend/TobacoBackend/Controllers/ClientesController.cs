@@ -102,5 +102,16 @@ namespace TobacoBackend.Controllers
             }
         }
 
+        // GET: api/clientes/buscar?query=juan
+        [HttpGet("buscar")]
+        public async Task<IActionResult> BuscarClientes([FromQuery] string query)
+        {
+            if (string.IsNullOrWhiteSpace(query))
+                return BadRequest("El parámetro de búsqueda no puede estar vacío.");
+
+            var clientes = await _clienteService.BuscarClientesAsync(query);
+            return Ok(clientes);
+        }
+
     }
 }

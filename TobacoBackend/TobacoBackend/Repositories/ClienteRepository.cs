@@ -56,5 +56,12 @@ namespace TobacoBackend.Repositories
         {
             return await _context.Clientes.ToListAsync();
         }
+
+        public async Task<IEnumerable<Cliente>> BuscarClientesAsync(string query)
+        {
+            return await _context.Clientes
+                .Where(c => c.Nombre.Contains(query))
+                .ToListAsync();
+        }
     }
 }

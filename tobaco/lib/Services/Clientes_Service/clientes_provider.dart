@@ -51,4 +51,14 @@ class ClienteProvider with ChangeNotifier {
       print('Error: $e');
     }
   }
+
+  Future<List<Cliente>> buscarClientes(String query) async {
+    try {
+      _clientes = await _clienteService.buscarClientes(query);
+      notifyListeners();
+    } catch (e) {
+      print('Error: $e');
+    }
+    return _clientes;
+  }
 }

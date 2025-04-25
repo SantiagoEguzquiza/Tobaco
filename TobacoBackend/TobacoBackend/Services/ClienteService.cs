@@ -45,5 +45,11 @@ namespace TobacoBackend.Services
             cliente.Id = id;
             await _clienteRepository.UpdateCliente(cliente);
         }
+
+        public async Task<IEnumerable<ClienteDTO>> BuscarClientesAsync(string query)
+        {
+            var clientes = await _clienteRepository.BuscarClientesAsync(query);
+            return _mapper.Map<IEnumerable<ClienteDTO>>(clientes);
+        }
     }
 }

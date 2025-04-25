@@ -99,6 +99,22 @@
     "ReturnTypes": []
   },
   {
+    "ContainingType": "TobacoBackend.Controllers.ClientesController",
+    "Method": "BuscarClientes",
+    "RelativePath": "Clientes/buscar",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "query",
+        "Type": "System.String",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
     "ContainingType": "TobacoBackend.Controllers.PedidosController",
     "Method": "GetAllPedidos",
     "RelativePath": "Pedidos",
