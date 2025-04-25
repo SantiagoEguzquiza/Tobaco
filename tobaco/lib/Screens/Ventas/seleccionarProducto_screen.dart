@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:tobaco/Models/Producto.dart';
 import 'package:tobaco/Models/ProductoSeleccionado.dart';
 import 'package:tobaco/Services/Productos_Service/productos_provider.dart';
+import 'package:tobaco/Theme/app_theme.dart';
 
 class SeleccionarProductosScreen extends StatefulWidget {
   final List<ProductoSeleccionado> productosYaSeleccionados;
@@ -40,7 +41,10 @@ class _SeleccionarProductosScreenState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Seleccionar productos")),
+      appBar: AppBar(
+        centerTitle: true,
+        title: const Text('Seleccionar', style: AppTheme.appBarTitleStyle),
+      ),
       body: todosLosProductos.isEmpty
           ? const Center(child: CircularProgressIndicator())
           : ListView.builder(

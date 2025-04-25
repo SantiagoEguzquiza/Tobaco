@@ -110,6 +110,8 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                       padding: EdgeInsets.all(15),
                       child: Row(
                         children: [
+                          Image.asset('Assets/images/tienda.png', height: 24),
+                          const SizedBox(width: 15),
                           Expanded(
                             child: Text(
                               clienteSeleccionado!.nombre,
@@ -167,62 +169,76 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
               ),
 
               if (productosSeleccionados.isNotEmpty) const SizedBox(height: 20),
-              Expanded(
-                child: ListView.builder(
-                  itemCount: productosSeleccionados.length,
-                  itemBuilder: (context, index) {
-                    final ps = productosSeleccionados[index];
-                    return Card(
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(5),
-                      ),
-                      color: index % 2 == 0
-                          ? AppTheme.secondaryColor // Verde para impares
-                          : AppTheme.greyColor, // Gris claro para pares
-                      margin: const EdgeInsets.symmetric(vertical: 6),
-                      child: Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+             Expanded(
+            child: ListView.builder(
+              itemCount: productosSeleccionados.length,
+              itemBuilder: (context, index) {
+                final ps = productosSeleccionados[index];
+                return Card(
+                  color: index % 2 == 0
+                      ? AppTheme.secondaryColor
+                      : AppTheme.greyColor,
+                  margin: const EdgeInsets.symmetric(vertical: 6),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(5),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        // Nombre del producto
+                        Expanded(
+                          child: Text(
+                            ps.producto.nombre,
+                            style: AppTheme.itemListaNegrita,
+                          ),
+                        ),
+                        // Precio del producto alineado a la derecha
+                        Text(
+                          '\$ ${ps.producto.precio.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (match) => '${match[1]}.')}',
+                          style: AppTheme.itemListaNegrita,
+                        ),
+                        const SizedBox(width: 10), // Espaciado entre el precio y los botones
+                        // Botones de cantidad
+                        Row(
                           children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    ps.producto.nombre,
-                                    style: AppTheme.cardTitleStyle, // Usa el tema
-                                  ),
-                                  Text(
-                                    '\$${(ps.producto.precio * ps.cantidad).toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (match) => '${match[1]}.')}',
-                                    style: AppTheme.cardTitleStyle, // Usa el tema
-                                  ),
-                                ],
-                              ),
-                            ),
-
-                            
-
-
                             IconButton(
-                              icon: Image.asset(
-                                'Assets/images/borrar.png',
-                                height: 24,
-                              ),
                               onPressed: () {
                                 setState(() {
-                                  productosSeleccionados.removeAt(index);
+                                  ps.cantidad =
+                                      (ps.cantidad - 1).clamp(0.5, double.infinity).toInt();
                                 });
                               },
+                              icon: const Icon(Icons.remove_circle, color: Colors.red),
                             ),
-                            
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6),
+                              child: Text(
+                                ps.cantidad % 1 == 0
+                                    ? '${ps.cantidad.toInt()}'
+                                    : '${ps.cantidad}',
+                                style: const TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                            IconButton(
+                              onPressed: () {
+                                setState(() {
+                                  ps.cantidad += 1;
+                                });
+                              },
+                              icon: const Icon(Icons.add_circle, color: Colors.green),
+                            ),
                           ],
                         ),
-                      ),
-                    );
-                  },
-                ),
-              ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+
               // 2. Continúa con el formulario de la venta
             ],
           ],

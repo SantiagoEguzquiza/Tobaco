@@ -114,8 +114,7 @@
               "RelativeToolTip": "TobacoBackend\\Domain\\IServices\\IClienteService.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAwAAAAjAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-04-25T01:35:27.323Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-04-25T01:35:27.323Z"
             },
             {
               "$type": "Document",
@@ -127,8 +126,7 @@
               "RelativeToolTip": "TobacoBackend\\Repositories\\ClienteRepository.cs",
               "ViewState": "AgIAAA0AAAAAAAAAAAAgwD4AAAA1AAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-04-25T01:35:01.509Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-04-25T01:35:01.509Z"
             },
             {
               "$type": "Document",
@@ -140,8 +138,7 @@
               "RelativeToolTip": "TobacoBackend\\Domain\\IRepositories\\IClienteRepository.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAsAAAApAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-04-25T01:34:27.396Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-04-25T01:34:27.396Z"
             },
             {
               "$type": "Document",
@@ -153,8 +150,7 @@
               "RelativeToolTip": "TobacoBackend\\Services\\ClienteService.cs",
               "ViewState": "AgIAABcAAAAAAAAAAAAowDMAAABCAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-04-25T01:33:41.888Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-04-25T01:33:41.888Z"
             },
             {
               "$type": "Document",
@@ -164,7 +160,7 @@
               "RelativeDocumentMoniker": "TobacoBackend\\Controllers\\ClientesController.cs",
               "ToolTip": "C:\\Users\\santi\\Desktop\\Carrera\\Tobaco\\TobacoBackend\\TobacoBackend\\Controllers\\ClientesController.cs",
               "RelativeToolTip": "TobacoBackend\\Controllers\\ClientesController.cs",
-              "ViewState": "AgIAAEwAAAAAAAAAAAAowHEAAAAJAAAAAAAAAA==",
+              "ViewState": "AgIAAEwAAAAAAAAAAAAowF8AAABlAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-04-25T01:33:34.715Z",
               "EditorCaption": ""
@@ -179,8 +175,7 @@
               "RelativeToolTip": "TobacoBackend\\appsettings.json",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAoAAACEAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
-              "WhenOpened": "2025-04-24T23:02:01.501Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-04-24T23:02:01.501Z"
             },
             {
               "$type": "Document",

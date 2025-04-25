@@ -153,6 +153,12 @@ class AppTheme {
     color: textColor,
   );
 
+  static const TextStyle itemListaNegrita = TextStyle(
+    color: textColor,
+    fontSize: 16,
+    fontWeight: FontWeight.bold
+  );
+
   static BoxDecoration sectionBoxDecoration = BoxDecoration(
     color: Colors.white,
     borderRadius: BorderRadius.circular(30),
