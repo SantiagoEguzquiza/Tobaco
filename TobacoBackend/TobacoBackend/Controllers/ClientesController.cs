@@ -113,5 +113,11 @@ namespace TobacoBackend.Controllers
             return Ok(clientes);
         }
 
+        [HttpGet("con-deuda")]
+        public async Task<ActionResult<List<ClienteDTO>>> GetClientesConDeuda()
+        {
+            var clientes = await _clienteService.GetClientesConDeuda();
+            return Ok(clientes);
+        }
     }
 }

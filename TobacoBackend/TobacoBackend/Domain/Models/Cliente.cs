@@ -21,5 +21,8 @@ namespace TobacoBackend.Domain.Models
         public string Deuda { get; set; }
 
         public List<Pedido> Pedidos { get; set; } = new List<Pedido>();
+
+        [NotMapped]
+        public decimal DeudaDecimal => decimal.TryParse(Deuda, out var value) ? value : 0;
     }
 }
