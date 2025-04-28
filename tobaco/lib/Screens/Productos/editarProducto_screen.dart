@@ -16,17 +16,23 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
   late TextEditingController nombreController;
   late TextEditingController cantidadController;
   late TextEditingController precioController;
+  late TextEditingController halfController;
 
-  late Categoria categoriaSeleccionada; // Variable para manejar la categoría seleccionada
+  late Categoria
+      categoriaSeleccionada; // Variable para manejar la categoría seleccionada
 
   @override
   void initState() {
     super.initState();
     // Inicializa los controladores con los valores actuales del producto
     nombreController = TextEditingController(text: widget.producto.nombre);
-    cantidadController = TextEditingController(text: widget.producto.cantidad.toString());
-    precioController = TextEditingController(text: widget.producto.precio.toString());
-    categoriaSeleccionada = widget.producto.categoria; // Inicializa con la categoría actual
+    cantidadController =
+        TextEditingController(text: widget.producto.cantidad.toString());
+    precioController =
+        TextEditingController(text: widget.producto.precio.toString());
+    categoriaSeleccionada = widget.producto.categoria;
+    halfController =
+        TextEditingController(text: widget.producto.half.toString());
   }
 
   @override
@@ -84,7 +90,8 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
                     decoration: AppTheme.inputDecoration,
                     onChanged: (value) {
                       setState(() {
-                        widget.producto.cantidad = int.tryParse(value)?.toDouble() ?? 0.0;
+                        widget.producto.cantidad =
+                            int.tryParse(value)?.toDouble() ?? 0.0;
                       });
                     },
                   ),
@@ -111,31 +118,59 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
                     'Categoria:',
                     style: AppTheme.inputLabelStyle,
                   ),
-                    const SizedBox(height: 10),
-                    DropdownButtonFormField<Categoria>(
+                  const SizedBox(height: 10),
+                  DropdownButtonFormField<Categoria>(
                     value: categoriaSeleccionada,
                     isExpanded: true,
                     items: Categoria.values.map((Categoria categoria) {
                       return DropdownMenuItem<Categoria>(
-                      value: categoria,
-                      child: Text(
-                        categoria.name, // Muestra el nombre de la categoría
-                        style: AppTheme.inputTextStyle,
-                      ),
+                        value: categoria,
+                        child: Text(
+                          categoria.name, // Muestra el nombre de la categoría
+                          style: AppTheme.inputTextStyle,
+                        ),
                       );
                     }).toList(),
                     onChanged: (Categoria? nuevaCategoria) {
                       if (nuevaCategoria != null) {
-                      setState(() {
-                        categoriaSeleccionada = nuevaCategoria;
-                        widget.producto.categoria = nuevaCategoria; // Actualiza el producto
-                      });
+                        setState(() {
+                          categoriaSeleccionada = nuevaCategoria;
+                          widget.producto.categoria =
+                              nuevaCategoria; // Actualiza el producto
+                        });
                       }
                     },
                     decoration: AppTheme.inputDecoration.copyWith(
-                      hintText: categoriaSeleccionada.name, // Muestra la categoría preseleccionada
+                      hintText: categoriaSeleccionada
+                          .name, // Muestra la categoría preseleccionada
                     ),
-                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      const Text(
+                        '¿Se puede vender medio?',
+                        style: AppTheme.inputLabelStyle,
+                      ),
+                      const SizedBox(width: 8),
+                      Checkbox(
+                        value: halfController.text == 'true',
+                        onChanged: (bool? value) {
+                          setState(() {
+                            halfController.text =
+                                value == true ? 'true' : 'false';
+                            widget.producto.half = value == true;
+                          });
+                        },
+                        shape: AppTheme.checkboxTheme.shape,
+                        fillColor: AppTheme.checkboxTheme.fillColor,
+                        checkColor:
+                            AppTheme.checkboxTheme.checkColor?.resolve({}),
+                        side: AppTheme.checkboxTheme.side,
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 80), // Espacio para los botones
                 ],
               ),
@@ -179,7 +214,8 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
                             );
                           } catch (e) {
                             // Manejo de errores
-                            print('Error al editar el producto: $e'); // Registro del error
+                            print(
+                                'Error al editar el producto: $e'); // Registro del error
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(content: Text('Error: ${e.toString()}')),
                             );

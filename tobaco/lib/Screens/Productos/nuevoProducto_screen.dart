@@ -13,6 +13,7 @@ class NuevoProductoScreen extends StatelessWidget {
     final cantidadController = TextEditingController();
     final precioController = TextEditingController();
     final categoriaController = TextEditingController();
+    final halfController = TextEditingController();
 
     return Scaffold(
       appBar: AppBar(
@@ -42,7 +43,8 @@ class NuevoProductoScreen extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: 16),
-                        const Text('Cantidad:', style: AppTheme.inputLabelStyle),
+                        const Text('Cantidad:',
+                            style: AppTheme.inputLabelStyle),
                         const SizedBox(height: 10),
                         TextField(
                           controller: cantidadController,
@@ -80,6 +82,29 @@ class NuevoProductoScreen extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: 16),
+                        StatefulBuilder(
+                          builder: (context, setState) {
+                            return Row(
+                                children: [
+                                const Text('¿Se puede vender medio?',
+                                  style: AppTheme.inputLabelStyle),
+                                const SizedBox(width: 8),
+                                Checkbox(
+                                  value: halfController.text == 'true',
+                                  onChanged: (bool? value) {
+                                    setState(() {
+                                      halfController.text = value == true ? 'true' : 'false';
+                                    });
+                                  },
+                                  shape: AppTheme.checkboxTheme.shape, 
+                                  fillColor: AppTheme.checkboxTheme.fillColor, 
+                                  checkColor: AppTheme.checkboxTheme.checkColor?.resolve({}),
+                                  side: AppTheme.checkboxTheme.side, 
+                                ),
+                              ],
+                            );
+                          },
+                        ),
                         const Spacer(),
                       ],
                     ),
@@ -87,7 +112,7 @@ class NuevoProductoScreen extends StatelessWidget {
                 ),
               ),
 
-              // Botones fijos al fondo de la pantalla
+              // Botones de acción
               Positioned(
                 left: 0,
                 right: 0,
@@ -97,20 +122,22 @@ class NuevoProductoScreen extends StatelessWidget {
                   child: Container(
                     padding: const EdgeInsets.symmetric(
                         horizontal: 16, vertical: 12),
-                    color: Colors.transparent,
+                    color: Colors.white,
                     child: Row(
                       children: [
                         Expanded(
                           child: OutlinedButton(
-                            onPressed: () {
-                              Navigator.pop(context);
-                            },
-                            style: AppTheme.outlinedButtonStyle,
-                            child: const Text(
-                              'Cancelar',
-                              style:
-                                  TextStyle(fontSize: 18, color: Colors.black),
+                            onPressed: () => Navigator.pop(context),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              side: const BorderSide(color: Colors.grey),
                             ),
+                            child: const Text('Cancelar',
+                                style: TextStyle(
+                                    fontSize: 16, color: Colors.black)),
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -129,6 +156,7 @@ class NuevoProductoScreen extends StatelessWidget {
                                   (c) => c.name == categoriaController.text,
                                   orElse: () => Categoria.nacional,
                                 ),
+                                half: halfController.text == 'true',
                               );
 
                               try {
@@ -147,14 +175,16 @@ class NuevoProductoScreen extends StatelessWidget {
                                 );
                               }
                             },
-                            style: AppTheme.elevatedButtonStyle(
-                              AppTheme.primaryColor,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF4CAF50),
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
                             ),
-                            child: const Text(
-                              'Guardar',
-                              style:
-                                  TextStyle(fontSize: 18, color: Colors.white),
-                            ),
+                            child: const Text('Guardar',
+                                style: TextStyle(
+                                    fontSize: 16, color: Colors.white)),
                           ),
                         ),
                       ],

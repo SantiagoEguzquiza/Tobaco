@@ -29,6 +29,7 @@ class Producto {
   double? cantidad;
   double precio;
   Categoria categoria;
+  bool half;
 
   Producto({
     required this.id,
@@ -36,22 +37,23 @@ class Producto {
     this.cantidad,
     required this.precio,
     required this.categoria,
+    required this.half,
   });
 
   factory Producto.fromJson(Map<String, dynamic> json) {
-  return Producto(
-    id: json['id'] as int,
-    nombre: json['nombre'] as String,
-    cantidad: json['cantidad'] != null
-        ? double.tryParse(json['cantidad'].toString())
-        : null,
-    precio: json['precio'] != null
-        ? double.tryParse(json['precio'].toString()) ?? 0.0
-        : 0.0,
-    categoria: Categoria.values[json['categoria'] as int],
-  );
-}
-
+    return Producto(
+      id: json['id'] as int,
+      nombre: json['nombre'] as String,
+      cantidad: json['cantidad'] != null
+          ? double.tryParse(json['cantidad'].toString())
+          : null,
+      precio: json['precio'] != null
+          ? double.tryParse(json['precio'].toString()) ?? 0.0
+          : 0.0,
+      categoria: Categoria.values[json['categoria'] as int],
+      half: json['half'] as bool,
+    );
+  }
 
   Map<String, dynamic> toJson() {
     return {      
@@ -59,6 +61,17 @@ class Producto {
       'cantidad': cantidad?.toString(),
       'precio': precio,
       'categoria': categoria.index,
+      'half': half,
+    };
+  }
+  Map<String, dynamic> toJsonId() {
+    return {   
+      'id': id,   
+      'nombre': nombre,
+      'cantidad': cantidad?.toString(),
+      'precio': precio,
+      'categoria': categoria.index,
+      'half': half,
     };
   }
 }

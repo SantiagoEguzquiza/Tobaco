@@ -50,7 +50,7 @@ class ProductoService {
 
   Future<void> editarProducto(Producto producto) async {
     try {  
-      final productoJson = producto.toJson();
+      final productoJson = producto.toJsonId();
 
       final response = await Apihandler.client.put(
         Uri.parse('$baseUrl/Productos/${producto.id}'),

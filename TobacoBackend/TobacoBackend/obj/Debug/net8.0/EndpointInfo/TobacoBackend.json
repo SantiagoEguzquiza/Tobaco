@@ -639,6 +639,9 @@
           },
           "categoria": {
             "$ref": "#/components/schemas/CategoriaEnum"
+          },
+          "half": {
+            "type": "boolean"
           }
         },
         "additionalProperties": false

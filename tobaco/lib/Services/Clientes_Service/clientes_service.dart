@@ -50,7 +50,7 @@ class ClienteService {
       final response = await Apihandler.client.put(
         Uri.parse('$baseUrl/Clientes/${cliente.id}'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(cliente.toJson()),
+        body: jsonEncode(cliente.toJsonId()),
       );
 
       if (response.statusCode != 200) {

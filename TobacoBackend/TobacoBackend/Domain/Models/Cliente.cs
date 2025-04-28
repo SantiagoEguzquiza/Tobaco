@@ -21,5 +21,6 @@ namespace TobacoBackend.Domain.Models
         public string Deuda { get; set; }
 
         public List<Pedido> Pedidos { get; set; } = new List<Pedido>();
+       
     }
 }

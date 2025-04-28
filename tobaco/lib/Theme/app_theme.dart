@@ -25,6 +25,23 @@ class AppTheme {
     border: OutlineInputBorder(),
   );
 
+static CheckboxThemeData checkboxTheme = CheckboxThemeData(
+  shape: RoundedRectangleBorder(
+    borderRadius: BorderRadius.circular(5),
+  ),
+  fillColor: MaterialStateProperty.resolveWith((states) {
+    if (states.contains(MaterialState.selected)) {
+      return primaryColor;
+    }
+    return greyColor;
+  }),
+  checkColor: MaterialStateProperty.all(Colors.white),
+  side: const BorderSide(
+    color: greyColor,
+    width: 2,
+  ),
+);
+
   static AlertDialog alertDialogStyle({
     required String title,
     required String content,
@@ -153,11 +170,8 @@ class AppTheme {
     color: textColor,
   );
 
-  static const TextStyle itemListaNegrita = TextStyle(
-    color: textColor,
-    fontSize: 16,
-    fontWeight: FontWeight.bold
-  );
+  static const TextStyle itemListaNegrita =
+      TextStyle(color: textColor, fontSize: 16, fontWeight: FontWeight.bold);
 
   static BoxDecoration sectionBoxDecoration = BoxDecoration(
     color: Colors.white,

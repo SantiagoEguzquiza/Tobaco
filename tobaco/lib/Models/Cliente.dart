@@ -7,12 +7,14 @@ class Cliente {
   int? telefono;
   int? deuda;
 
+
   Cliente(
       {required this.id,
       required this.nombre,
       required this.direccion,
       this.telefono,
-      this.deuda});
+      this.deuda,
+      });
 
   factory Cliente.fromJson(Map<String, dynamic> json) {
     return Cliente(
@@ -23,16 +25,28 @@ class Cliente {
           ? int.tryParse(json['telefono'].toString())
           : null,
       deuda:
-          json['deuda'] != null ? int.tryParse(json['deuda'].toString()) : null,
+          json['deuda'] != null ? int.tryParse(json['deuda'].toString()) : null,   
     );
   }
 
   Map<String, dynamic> toJson() {
-    return {     
+    return {
       'nombre': nombre,
       'direccion': direccion,
-      'telefono': telefono.toString(),
-      'deuda': deuda.toString(),
+      'telefono': telefono?.toString(),
+      'deuda': deuda?.toString(),
+      
+    };
+  }
+
+  Map<String, dynamic> toJsonId() {
+    return {
+      'id': id,
+      'nombre': nombre,
+      'direccion': direccion,
+      'telefono': telefono?.toString(),
+      'deuda': deuda?.toString(),
+      
     };
   }
 }

@@ -73,8 +73,7 @@ class _SeleccionarProductosScreenState
 
       return matchesSearchQuery && matchesCategory;
     }).toList()
-      ..sort(
-          (a, b) => a.nombre.toLowerCase().compareTo(b.nombre.toLowerCase()));
+      ..sort((a, b) => a.nombre.toLowerCase().compareTo(b.nombre.toLowerCase()));
     return Scaffold(
       appBar: AppBar(
         centerTitle: true,
@@ -90,16 +89,8 @@ class _SeleccionarProductosScreenState
               cursorColor: Colors.grey,
               onChanged: (query) {
                 setState(() {
-                  if (query.isEmpty) {
-                    loadProductos(); // Recargar todos los productos
-                  } else {
-                    searchQuery = query;
-                    productos = productos
-                        .where((producto) => producto.nombre
-                            .toLowerCase()
-                            .contains(query.toLowerCase()))
-                        .toList();
-                  }
+                  searchQuery = query;
+                  selectedCategory = null; // Deseleccionar la categoría
                 });
               },
             ),
@@ -141,7 +132,14 @@ class _SeleccionarProductosScreenState
             // Lista de productos
             Expanded(
               child: filteredProductos.isEmpty
-                  ? const Center(child: CircularProgressIndicator())
+                  ? Center(
+                      child: Text(
+                        selectedCategory != null
+                            ? 'No hay productos en esta categoría'
+                            : 'No hay productos disponibles',
+                        style: const TextStyle(fontSize: 16, color: Colors.grey),
+                      ),
+                    )
                   : ListView.builder(
                       itemCount: filteredProductos.length,
                       itemBuilder: (context, index) {
@@ -177,13 +175,12 @@ class _SeleccionarProductosScreenState
                                     style: AppTheme.itemListaNegrita,
                                   ),
                                   IconButton(
-                                   icon: const Icon(Icons.remove_circle,
-                                      color: Colors.red),
+                                    icon: const Icon(Icons.remove_circle,
+                                        color: Colors.red),
                                     onPressed: () {
                                       if (cantidad > 0) {
                                         setState(() {
-                                          cantidades[producto.id!] =
-                                              cantidad - 1;
+                                          cantidades[producto.id!] = cantidad - 1;
                                         });
                                       }
                                     },
@@ -222,7 +219,7 @@ class _SeleccionarProductosScreenState
                                   ),
                                   IconButton(
                                     icon: const Icon(Icons.add_circle,
-                                      color: Colors.green),
+                                        color: Colors.green),
                                     onPressed: () {
                                       setState(() {
                                         cantidades[producto.id!] = cantidad + 1;

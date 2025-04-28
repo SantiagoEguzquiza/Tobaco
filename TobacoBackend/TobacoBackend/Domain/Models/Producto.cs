@@ -22,5 +22,7 @@ namespace TobacoBackend.Domain.Models
         public CategoriaEnum Categoria { get; set; }
 
         public List<PedidoProducto> PedidoProductos { get; set; } = new List<PedidoProducto>();
+
+        public bool Half { get; set; } = false;
     }
 }
