@@ -11,6 +11,6 @@ namespace TobacoBackend.Domain.IRepositories
         Task UpdateCliente(Cliente cliente);
         Task<bool> DeleteCliente(int id);
         Task<IEnumerable<Cliente>> BuscarClientesAsync(string query);
-
+        Task<List<Cliente>> GetClientesConDeuda();
     }
 }

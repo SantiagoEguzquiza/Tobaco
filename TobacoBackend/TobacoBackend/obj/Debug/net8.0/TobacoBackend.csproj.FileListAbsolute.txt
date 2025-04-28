@@ -522,3 +522,4 @@ C:\Users\camil\Documents\GitHub\Tobaco\TobacoBackend\TobacoBackend\obj\Debug\net
 C:\Users\camil\Documents\GitHub\Tobaco\TobacoBackend\TobacoBackend\obj\Debug\net8.0\TobacoBackend.pdb
 C:\Users\camil\Documents\GitHub\Tobaco\TobacoBackend\TobacoBackend\obj\Debug\net8.0\TobacoBackend.genruntimeconfig.cache
 C:\Users\camil\Documents\GitHub\Tobaco\TobacoBackend\TobacoBackend\obj\Debug\net8.0\ref\TobacoBackend.dll
+C:\Users\pipi2\OneDrive\Escritorio\proyectos\Tobaco\TobacoBackend\TobacoBackend\bin\Debug\net8.0\Microsoft.AspNetCore.Authentication.JwtBearer.dll

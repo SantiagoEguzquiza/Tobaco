@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using TobacoBackend.Domain.IRepositories;
 using TobacoBackend.Domain.Models;
+using TobacoBackend.DTOs;
 
 namespace TobacoBackend.Repositories
 {
@@ -62,6 +63,13 @@ namespace TobacoBackend.Repositories
             return await _context.Clientes
                 .Where(c => c.Nombre.Contains(query))
                 .ToListAsync();
+        }
+
+        public async Task<List<Cliente>> GetClientesConDeuda()
+        {
+            var clientes = await _context.Clientes.ToListAsync(); 
+            var clientesConDeuda = clientes.Where(c => c.DeudaDecimal > 0).ToList(); 
+            return clientesConDeuda;
         }
     }
 }
