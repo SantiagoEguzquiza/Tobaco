@@ -112,14 +112,18 @@ class NuevoClienteScreen extends StatelessWidget {
                                   listen: false,
                                 ).crearCliente(cliente);
 
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Cliente guardado con éxito')),
-                                );
-                                Navigator.pop(context);
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Cliente guardado con éxito')),
+                                  );
+                                  Navigator.pop(context);
+                                }
                               } catch (e) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text('Error: $e')),
-                                );
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('Error: $e')),
+                                  );
+                                }
                               }
                             },
                             style: ElevatedButton.styleFrom(

@@ -2,7 +2,7 @@ import 'package:tobaco/Models/Producto.dart';
 
 class ProductoSeleccionado {
   Producto producto;
-  int cantidad;
+  double cantidad;
 
   ProductoSeleccionado({
     required this.producto,

@@ -172,6 +172,9 @@ static CheckboxThemeData checkboxTheme = CheckboxThemeData(
 
   static const TextStyle itemListaNegrita =
       TextStyle(color: textColor, fontSize: 16, fontWeight: FontWeight.bold);
+      
+static const TextStyle itemListaPrecio =
+      TextStyle(color: Colors.blueGrey, fontSize: 14);
 
   static BoxDecoration sectionBoxDecoration = BoxDecoration(
     color: Colors.white,

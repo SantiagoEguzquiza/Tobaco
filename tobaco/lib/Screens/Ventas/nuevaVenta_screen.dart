@@ -73,33 +73,33 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
             // 1. Sección de selección de cliente
             if (isSearching) ...[
               TextField(
-              controller: _searchController,
-              decoration: const InputDecoration(
-                labelText: 'Buscar cliente',
-                prefixIcon: Icon(Icons.search),
-              ),
-              cursorColor: Colors.black,
-              onChanged: buscarClientes,
+                controller: _searchController,
+                decoration: const InputDecoration(
+                  labelText: 'Buscar cliente',
+                  prefixIcon: Icon(Icons.search),
+                ),
+                cursorColor: Colors.black,
+                onChanged: buscarClientes,
               ),
               const SizedBox(height: 10),
               SizedBox(
-              height: 180,
-              child: ListView.builder(
-                itemCount: clientesFiltrados.length.clamp(0, 3),
-                shrinkWrap: true,
-                itemBuilder: (context, index) {
-                final cliente = clientesFiltrados[index];
-                return Container(
-                  color: index % 2 == 0
-                    ? AppTheme.secondaryColor
-                    : AppTheme.greyColor,
-                  child: ListTile(
-                  title: Text(cliente.nombre),
-                  onTap: () => seleccionarCliente(cliente),
-                  ),
-                );
-                },
-              ),
+                height: 180,
+                child: ListView.builder(
+                  itemCount: clientesFiltrados.length.clamp(0, 3),
+                  shrinkWrap: true,
+                  itemBuilder: (context, index) {
+                    final cliente = clientesFiltrados[index];
+                    return Container(
+                      color: index % 2 == 0
+                          ? AppTheme.secondaryColor
+                          : AppTheme.greyColor,
+                      child: ListTile(
+                        title: Text(cliente.nombre),
+                        onTap: () => seleccionarCliente(cliente),
+                      ),
+                    );
+                  },
+                ),
               ),
             ] else ...[
               Card(
@@ -207,8 +207,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                                   onPressed: () {
                                     setState(() {
                                       ps.cantidad = (ps.cantidad - 1)
-                                          .clamp(0.5, double.infinity)
-                                          .toInt();
+                                          .clamp(0.5, double.infinity);
                                     });
                                   },
                                   icon: const Icon(Icons.remove_circle,

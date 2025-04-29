@@ -9,10 +9,10 @@ class EditarClienteScreen extends StatefulWidget {
   const EditarClienteScreen({super.key, required this.cliente});
 
   @override
-  _EditarClienteScreenState createState() => _EditarClienteScreenState();
+  EditarClienteScreenState createState() => EditarClienteScreenState();
 }
 
-class _EditarClienteScreenState extends State<EditarClienteScreen> {
+class EditarClienteScreenState extends State<EditarClienteScreen> {
   late TextEditingController nombreController;
   late TextEditingController direccionController;
   late TextEditingController telefonoController;
@@ -158,19 +158,24 @@ class _EditarClienteScreenState extends State<EditarClienteScreen> {
                             await ClienteProvider()
                                 .editarCliente(widget.cliente);
 
+                            if (!mounted) return;
                             Navigator.of(context).pop();
 
                             // Acción para confirmar los cambios
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Cambios confirmados'),
-                              ),
-                            );
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Cambios confirmados'),
+                                ),
+                              );
+                            }
                           } catch (e) {
                             // Manejo de errores
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Error: ${e.toString()}')),
-                            );
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Error: ${e.toString()}')),
+                              );
+                            }
                           }
                         },
                         child: const Text(

@@ -163,6 +163,7 @@ class NuevoProductoScreen extends StatelessWidget {
                                 await Provider.of<ProductoProvider>(context,
                                         listen: false)
                                     .crearProducto(producto);
+                                if (!context.mounted) return;
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
                                       content:
@@ -170,6 +171,7 @@ class NuevoProductoScreen extends StatelessWidget {
                                 );
                                 Navigator.pop(context);
                               } catch (e) {
+                                if (!context.mounted) return;
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(content: Text('Error: $e')),
                                 );

@@ -89,7 +89,9 @@ class DetalleClienteScreen extends StatelessWidget {
 
                         if (confirm == true) {
                           await ClienteProvider().eliminarCliente(cliente.id!);
-                          Navigator.of(context).pop();
+                          if (context.mounted) {
+                            Navigator.of(context).pop();
+                          }
                         }
                       },
                       style: AppTheme.elevatedButtonStyle(
@@ -117,21 +119,16 @@ class DetalleClienteScreen extends StatelessWidget {
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 4.0),
                     child: ElevatedButton(
-                      onPressed: () {
+                      onPressed: () async {
                         final Uri launchUri = Uri(
                             scheme: 'tel', path: cliente.telefono.toString());
-                        launchUrl(launchUri).then((success) {
-                          if (!success) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                  content: Text('Could not launch $launchUri')),
-                            );
-                          }
-                        }).catchError((error) {
+                        final success = await launchUrl(launchUri);
+                        if (!success && context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Error: $error')),
+                            SnackBar(
+                                content: Text('Could not launch $launchUri')),
                           );
-                        });
+                        }
                       },
                       style: AppTheme.elevatedButtonStyle(
                         const Color.fromARGB(255, 104, 147, 255),
@@ -145,22 +142,17 @@ class DetalleClienteScreen extends StatelessWidget {
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 4.0),
                     child: ElevatedButton(
-                      onPressed: () {
+                      onPressed: () async {
                         final Uri whatsappUri =
                             Uri.parse('https://wa.me/${cliente.telefono}');
-                        launchUrl(whatsappUri).then((success) {
-                          if (!success) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                  content:
-                                      Text('Could not launch $whatsappUri')),
-                            );
-                          }
-                        }).catchError((error) {
+                        final success = await launchUrl(whatsappUri);
+                        if (!success && context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Error: $error')),
+                            SnackBar(
+                                content:
+                                    Text('Could not launch $whatsappUri')),
                           );
-                        });
+                        }
                       },
                       style: AppTheme.elevatedButtonStyle(
                         const Color.fromARGB(255, 37, 211, 101),

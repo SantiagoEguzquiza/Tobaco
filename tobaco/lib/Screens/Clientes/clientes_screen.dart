@@ -174,7 +174,9 @@ class _ClientesScreenState extends State<ClientesScreen> {
                                       await ClienteProvider()
                                           .eliminarCliente(cliente.id!);
                                       _loadClientes();
-                                      Navigator.of(context).pop();
+                                      if (mounted) {
+                                        Navigator.of(context).pop();
+                                      }
                                     },
                                     onCancel: () {
                                       Navigator.of(context).pop();

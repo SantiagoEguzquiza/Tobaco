@@ -205,7 +205,9 @@ class _ProductosScreenState extends State<ProductosScreen> {
                                       await ProductoProvider()
                                           .eliminarProducto(producto.id!);
                                       _loadProductos();
-                                      Navigator.of(context).pop();
+                                      if (mounted) {
+                                        Navigator.of(context).pop();
+                                      }
                                     },
                                     onCancel: () {
                                       Navigator.of(context).pop();

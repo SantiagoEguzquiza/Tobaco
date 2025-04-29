@@ -9,10 +9,10 @@ class EditarProductoScreen extends StatefulWidget {
   const EditarProductoScreen({super.key, required this.producto});
 
   @override
-  _EditarProductoScreenState createState() => _EditarProductoScreenState();
+  EditarProductoScreenState createState() => EditarProductoScreenState();
 }
 
-class _EditarProductoScreenState extends State<EditarProductoScreen> {
+class EditarProductoScreenState extends State<EditarProductoScreen> {
   late TextEditingController nombreController;
   late TextEditingController cantidadController;
   late TextEditingController precioController;
@@ -204,21 +204,26 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
                             await ProductoProvider()
                                 .editarProducto(widget.producto);
 
+                            if (!mounted) return;
                             Navigator.of(context).pop();
 
                             // Acción para confirmar los cambios
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Cambios confirmados'),
-                              ),
-                            );
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Cambios confirmados'),
+                                ),
+                              );
+                            }
                           } catch (e) {
                             // Manejo de errores
-                            print(
+                            debugPrint(
                                 'Error al editar el producto: $e'); // Registro del error
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Error: ${e.toString()}')),
-                            );
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Error: ${e.toString()}')),
+                              );
+                            }
                           }
                         },
                         child: const Text(
