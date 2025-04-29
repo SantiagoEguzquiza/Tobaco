@@ -29,13 +29,13 @@ static CheckboxThemeData checkboxTheme = CheckboxThemeData(
   shape: RoundedRectangleBorder(
     borderRadius: BorderRadius.circular(5),
   ),
-  fillColor: MaterialStateProperty.resolveWith((states) {
-    if (states.contains(MaterialState.selected)) {
+  fillColor: WidgetStateProperty.resolveWith((states) {
+    if (states.contains(WidgetState.selected)) {
       return primaryColor;
     }
     return greyColor;
   }),
-  checkColor: MaterialStateProperty.all(Colors.white),
+  checkColor: WidgetStateProperty.all(Colors.white),
   side: const BorderSide(
     color: greyColor,
     width: 2,

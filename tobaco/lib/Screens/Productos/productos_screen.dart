@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:tobaco/Models/Producto.dart';
+import 'package:tobaco/Screens/Productos/detalleProducto_screen.dart';
 import 'package:tobaco/Screens/Productos/editarProducto_screen.dart';
 import 'package:tobaco/Screens/Productos/nuevoProducto_screen.dart';
 import 'package:tobaco/Services/Productos_Service/productos_provider.dart';
@@ -161,8 +162,14 @@ class _ProductosScreenState extends State<ProductosScreen> {
                       padding: const EdgeInsets.all(8.0),
                       child: InkWell(
                         onTap: () {
-                          // Navegación a detalles del producto
-                        },
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  DetalleProductoScreen(producto: producto),
+                            ),
+                          );
+                                                },
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [

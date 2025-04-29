@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("TobacoBackend")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+b7ff797c22a29082fcf378f8d426cfe71f56b882")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+3e9cc66a1b46d51de13cefa2714c20ee7d2da7fb")]
 [assembly: System.Reflection.AssemblyProductAttribute("TobacoBackend")]
 [assembly: System.Reflection.AssemblyTitleAttribute("TobacoBackend")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
