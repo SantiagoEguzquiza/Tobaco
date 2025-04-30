@@ -1,13 +1,13 @@
 {
   "Version": 1,
-  "WorkspaceRootPath": "C:\\Users\\santi\\Desktop\\Carrera\\Tobaco\\TobacoBackend\\",
+  "WorkspaceRootPath": "C:\\Users\\camil\\Documents\\GitHub\\Tobaco\\TobacoBackend\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{1FD5AA81-8B69-4486-A1E7-846069B60EE2}|TobacoBackend\\TobacoBackend.csproj|c:\\users\\santi\\desktop\\carrera\\tobaco\\tobacobackend\\tobacobackend\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
+      "AbsoluteMoniker": "D:0:0:{1FD5AA81-8B69-4486-A1E7-846069B60EE2}|TobacoBackend\\TobacoBackend.csproj|c:\\users\\camil\\documents\\github\\tobaco\\tobacobackend\\tobacobackend\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
       "RelativeMoniker": "D:0:0:{1FD5AA81-8B69-4486-A1E7-846069B60EE2}|TobacoBackend\\TobacoBackend.csproj|solutionrelative:tobacobackend\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{1FD5AA81-8B69-4486-A1E7-846069B60EE2}|TobacoBackend\\TobacoBackend.csproj|c:\\users\\santi\\desktop\\carrera\\tobaco\\tobacobackend\\tobacobackend\\controllers\\clientescontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{1FD5AA81-8B69-4486-A1E7-846069B60EE2}|TobacoBackend\\TobacoBackend.csproj|c:\\users\\camil\\documents\\github\\tobaco\\tobacobackend\\tobacobackend\\controllers\\clientescontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{1FD5AA81-8B69-4486-A1E7-846069B60EE2}|TobacoBackend\\TobacoBackend.csproj|solutionrelative:tobacobackend\\controllers\\clientescontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     }
   ],
@@ -40,11 +40,11 @@
               "$type": "Document",
               "DocumentIndex": 0,
               "Title": "appsettings.json",
-              "DocumentMoniker": "C:\\Users\\santi\\Desktop\\Carrera\\Tobaco\\TobacoBackend\\TobacoBackend\\appsettings.json",
+              "DocumentMoniker": "C:\\Users\\camil\\Documents\\GitHub\\Tobaco\\TobacoBackend\\TobacoBackend\\appsettings.json",
               "RelativeDocumentMoniker": "TobacoBackend\\appsettings.json",
-              "ToolTip": "C:\\Users\\santi\\Desktop\\Carrera\\Tobaco\\TobacoBackend\\TobacoBackend\\appsettings.json",
+              "ToolTip": "C:\\Users\\camil\\Documents\\GitHub\\Tobaco\\TobacoBackend\\TobacoBackend\\appsettings.json",
               "RelativeToolTip": "TobacoBackend\\appsettings.json",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAoAAAAEAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABQAAAAEAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
               "WhenOpened": "2025-04-28T18:32:37.437Z",
               "EditorCaption": ""
@@ -53,9 +53,9 @@
               "$type": "Document",
               "DocumentIndex": 1,
               "Title": "ClientesController.cs",
-              "DocumentMoniker": "C:\\Users\\santi\\Desktop\\Carrera\\Tobaco\\TobacoBackend\\TobacoBackend\\Controllers\\ClientesController.cs",
+              "DocumentMoniker": "C:\\Users\\camil\\Documents\\GitHub\\Tobaco\\TobacoBackend\\TobacoBackend\\Controllers\\ClientesController.cs",
               "RelativeDocumentMoniker": "TobacoBackend\\Controllers\\ClientesController.cs",
-              "ToolTip": "C:\\Users\\santi\\Desktop\\Carrera\\Tobaco\\TobacoBackend\\TobacoBackend\\Controllers\\ClientesController.cs",
+              "ToolTip": "C:\\Users\\camil\\Documents\\GitHub\\Tobaco\\TobacoBackend\\TobacoBackend\\Controllers\\ClientesController.cs",
               "RelativeToolTip": "TobacoBackend\\Controllers\\ClientesController.cs",
               "ViewState": "AgIAAFQAAAAAAAAAAAA4wAAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
