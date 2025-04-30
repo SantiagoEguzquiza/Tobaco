@@ -14,32 +14,32 @@ class VentasProvider with ChangeNotifier {
       _ventas = await _ventasService.obtenerVentas();
       notifyListeners();
     } catch (e) {
-      print('Error: $e');
+      debugPrint('Error: $e');
     }
     return _ventas;
   }
 
-  Future<void> crearCliente(Ventas venta) async {
+  Future<void> crearVenta(Ventas venta) async {
     try {
       await _ventasService.crearVenta(venta);
       _ventas.add(venta);
       notifyListeners();
     } catch (e) {
-      print('Error: $e');
+      debugPrint('Error: $e');
     }
   }
 
-  Future<void> eliminarCliente(int id) async {
+  Future<void> eliminarVenta(int id) async {
     try {
       await _ventasService.eliminarVenta(id);
       _ventas.removeWhere((venta) => venta.id == id);
       notifyListeners();
     } catch (e) {
-      print('Error: $e');
+      debugPrint('Error: $e');
     }
   }
 
-  Future<void> editarCliente(Ventas venta) async {
+  Future<void> editarVenta(Ventas venta) async {
     try {
       await _ventasService.editarVenta(venta);
       int index = _ventas.indexWhere((c) => c.id == venta.id);
@@ -48,7 +48,7 @@ class VentasProvider with ChangeNotifier {
         notifyListeners();
       }
     } catch (e) {
-      print('Error: $e');
+      debugPrint('Error: $e');
     }
   }
 

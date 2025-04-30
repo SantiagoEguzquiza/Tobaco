@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/material.dart';
 import 'package:tobaco/Helpers/api_handler.dart';
 import 'package:tobaco/Models/Producto.dart';
 
@@ -21,7 +22,7 @@ class ProductoService {
             'Error al obtener los productos. Código de estado: ${response.statusCode}');
       }
     } catch (e) {
-      print('Error al obtener los productos: $e');
+      debugPrint('Error al obtener los productos: $e');
       rethrow;
     }
   }
@@ -40,10 +41,10 @@ class ProductoService {
         throw Exception(
             'Error al guardar el producto. Código de estado: ${response.statusCode}, Respuesta: ${response.body}');
       } else {
-        print('Producto guardado exitosamente');
+        debugPrint('Producto guardado exitosamente');
       }
     } catch (e) {
-      print('Error al guardar el producto: $e');
+      debugPrint('Error al guardar el producto: $e');
       rethrow; 
     }
   }
@@ -62,10 +63,10 @@ class ProductoService {
         throw Exception(
             'Error al editar el producto. Código de estado: ${response.statusCode}');
       } else {
-        print('Producto editado exitosamente');
+        debugPrint('Producto editado exitosamente');
       }
     } catch (e) {
-      print('Error al editar el producto: $e');
+      debugPrint('Error al editar el producto: $e');
       rethrow; 
     }
   }
@@ -82,10 +83,10 @@ class ProductoService {
         throw Exception(
             'Error al eliminar el producto. Código de estado: ${response.statusCode}');
       } else {
-        print('Producto eliminado exitosamente');
+        debugPrint('Producto eliminado exitosamente');
       }
     } catch (e) {
-      print('Error al eliminar el producto: $e');
+      debugPrint('Error al eliminar el producto: $e');
       rethrow; 
     }
   }

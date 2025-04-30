@@ -14,7 +14,7 @@ class ProductoProvider with ChangeNotifier {
       _productos = await _productoService.obtenerProductos();
       notifyListeners();
     } catch (e) {
-      print('Error: $e');
+      debugPrint('Error: $e');
     }
     return _productos;
   }
@@ -25,7 +25,7 @@ class ProductoProvider with ChangeNotifier {
       _productos.add(producto);
       notifyListeners();
     } catch (e) {
-      print('Error: $e');
+      debugPrint('Error: $e');
     }
   }
 
@@ -35,7 +35,7 @@ class ProductoProvider with ChangeNotifier {
       _productos.removeWhere((producto) => producto.id == id);
       notifyListeners();
     } catch (e) {
-      print('Error: $e');
+      debugPrint('Error: $e');
     }
   }
 
@@ -48,7 +48,7 @@ class ProductoProvider with ChangeNotifier {
         notifyListeners();
       }
     } catch (e) {
-      print('Error: $e');
+      debugPrint('Error: $e');
     }
   }
 }

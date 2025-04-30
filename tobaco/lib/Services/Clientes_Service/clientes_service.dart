@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/material.dart';
 import 'package:tobaco/Helpers/api_handler.dart';
 import 'package:tobaco/Models/Cliente.dart';
 
@@ -20,7 +21,7 @@ class ClienteService {
             'Error al obtener los clientes. Código de estado: ${response.statusCode}');
       }
     } catch (e) {
-      print('Error al obtener los clientes: $e');
+      debugPrint('Error al obtener los clientes: $e');
       rethrow;
     }
   }
@@ -37,10 +38,10 @@ class ClienteService {
         throw Exception(
             'Error al guardar el cliente. Código de estado: ${response.statusCode}, Respuesta: ${response.body}');
       } else {
-        print('Cliente guardado exitosamente');
+        debugPrint('Cliente guardado exitosamente');
       }
     } catch (e) {
-      print('Error al guardar el cliente: $e');
+      debugPrint('Error al guardar el cliente: $e');
       rethrow;
     }
   }
@@ -57,10 +58,10 @@ class ClienteService {
         throw Exception(
             'Error al editar el cliente. Código de estado: ${response.statusCode}');
       } else {
-        print('Cliente editado exitosamente');
+        debugPrint('Cliente editado exitosamente');
       }
     } catch (e) {
-      print('Error al editar el cliente: $e');
+      debugPrint('Error al editar el cliente: $e');
       rethrow;
     }
   }
@@ -76,10 +77,10 @@ class ClienteService {
         throw Exception(
             'Error al eliminar el cliente. Código de estado: ${response.statusCode}');
       } else {
-        print('Cliente eliminado exitosamente');
+        debugPrint('Cliente eliminado exitosamente');
       }
     } catch (e) {
-      print('Error al eliminar el cliente: $e');
+      debugPrint('Error al eliminar el cliente: $e');
       rethrow;
     }
   }

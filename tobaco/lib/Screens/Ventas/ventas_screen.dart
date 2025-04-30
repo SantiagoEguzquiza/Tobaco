@@ -33,16 +33,18 @@ class _VentasScreenState extends State<VentasScreen> {
     try {
       final ventasProvider = VentasProvider();
       final List<Ventas> fetchedVentas = await ventasProvider.obtenerVentas();
+      if (!mounted) return; 
       setState(() {
-        ventas = fetchedVentas; // Actualiza la lista de ventas
-        isLoading = false; // Finaliza la carga
+        ventas = fetchedVentas; 
+        isLoading = false; 
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         isLoading = false;
         errorMessage = 'Error al cargar los pedidos: $e';
       });
-      print('Error al cargar los pedidos: $e');
+      debugPrint('Error al cargar los pedidos: $e');
     }
   }
 

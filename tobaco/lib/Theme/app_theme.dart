@@ -29,13 +29,13 @@ static CheckboxThemeData checkboxTheme = CheckboxThemeData(
   shape: RoundedRectangleBorder(
     borderRadius: BorderRadius.circular(5),
   ),
-  fillColor: MaterialStateProperty.resolveWith((states) {
-    if (states.contains(MaterialState.selected)) {
+  fillColor: WidgetStateProperty.resolveWith((states) {
+    if (states.contains(WidgetState.selected)) {
       return primaryColor;
     }
     return greyColor;
   }),
-  checkColor: MaterialStateProperty.all(Colors.white),
+  checkColor: WidgetStateProperty.all(Colors.white),
   side: const BorderSide(
     color: greyColor,
     width: 2,
@@ -81,6 +81,51 @@ static CheckboxThemeData checkboxTheme = CheckboxThemeData(
           child: const Text(
             'Eliminar',
             style: TextStyle(color: Colors.red),
+          ),
+        ),
+      ],
+    );
+  }
+
+  static AlertDialog confirmDialogStyle({
+    required String title,
+    required String content,
+    required VoidCallback onConfirm,
+    required VoidCallback onCancel,
+  }) {
+    return AlertDialog(
+      backgroundColor: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      title: Text(
+        title,
+        style: const TextStyle(
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+          color: textColor,
+        ),
+      ),
+      content: Text(
+        content,
+        style: const TextStyle(
+          fontSize: 16,
+          color: textColor,
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: onCancel,
+          child: const Text(
+            'Cancelar',
+            style: TextStyle(color: Colors.grey),
+          ),
+        ),
+        TextButton(
+          onPressed: onConfirm,
+          child: const Text(
+            'Confirmar',
+            style: TextStyle(color: Colors.green),
           ),
         ),
       ],

@@ -3,7 +3,7 @@ import 'package:tobaco/Models/VentasProductos.dart';
 
 
 class Ventas {
-  int id;
+  int? id;
   int clienteId;
   Cliente cliente;
   List<VentasProductos> ventasProductos;
@@ -11,7 +11,7 @@ class Ventas {
   DateTime fecha;
 
   Ventas({
-    required this.id,
+    this.id,
     required this.clienteId,
     required this.cliente,
     required this.ventasProductos,
@@ -31,7 +31,6 @@ class Ventas {
       );
 
   Map<String, dynamic> toJson() => {
-        'id': id,
         'clienteId': clienteId,
         'cliente': cliente.toJson(),
         'pedidoProductos':

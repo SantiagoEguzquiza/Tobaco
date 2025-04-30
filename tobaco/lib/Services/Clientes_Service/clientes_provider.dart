@@ -14,7 +14,7 @@ class ClienteProvider with ChangeNotifier {
       _clientes = await _clienteService.obtenerClientes();
       notifyListeners();
     } catch (e) {
-      print('Error: $e');
+      debugPrint('Error: $e');
     }
     return _clientes;
   }
@@ -25,7 +25,7 @@ class ClienteProvider with ChangeNotifier {
       _clientes.add(cliente);
       notifyListeners();
     } catch (e) {
-      print('Error: $e');
+      debugPrint('Error: $e');
     }
   }
 
@@ -35,7 +35,7 @@ class ClienteProvider with ChangeNotifier {
       _clientes.removeWhere((cliente) => cliente.id == id);
       notifyListeners();
     } catch (e) {
-      print('Error: $e');
+      debugPrint('Error: $e');
     }
   }
 
@@ -48,7 +48,7 @@ class ClienteProvider with ChangeNotifier {
         notifyListeners();
       }
     } catch (e) {
-      print('Error: $e');
+      debugPrint('Error: $e');
     }
   }
 
@@ -57,7 +57,7 @@ class ClienteProvider with ChangeNotifier {
       _clientes = await _clienteService.buscarClientes(query);
       notifyListeners();
     } catch (e) {
-      print('Error: $e');
+      debugPrint('Error: $e');
     }
     return _clientes;
   }

@@ -1,5 +1,3 @@
-import 'dart:developer';
-
 import 'package:flutter/material.dart';
 import 'package:tobaco/Models/Producto.dart';
 import 'package:tobaco/Models/ProductoSeleccionado.dart';
@@ -59,7 +57,7 @@ class _SeleccionarProductosScreenState
         isLoading = false;
         errorMessage = 'Error al cargar los Productos: $e';
       });
-      log('Error al cargar los Productos: $e', level: 1000);
+      debugPrint('Error al cargar los Productos: $e');
     }
   }
 
@@ -181,7 +179,7 @@ class _SeleccionarProductosScreenState
                                     if (producto.half)
                                     IconButton(
                                       icon: const Icon(Icons.contrast,
-                                      color: Colors.amber),
+                                      color: Colors.blueGrey),
                                       onPressed: () {
                                       setState(() {
                                         final currentCantidad = cantidades[producto.id!] ?? 0;
@@ -259,7 +257,7 @@ class _SeleccionarProductosScreenState
         ),
       ),
       bottomNavigationBar: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(26.0),
         child: ElevatedButton(
           style: AppTheme.elevatedButtonStyle(Colors.green),
           onPressed: () {

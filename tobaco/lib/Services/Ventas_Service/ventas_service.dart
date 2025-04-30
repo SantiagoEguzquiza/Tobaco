@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/material.dart';
 import 'package:tobaco/Helpers/api_handler.dart';
 import 'package:tobaco/Models/Ventas.dart';
 
@@ -22,7 +23,7 @@ class VentasService {
         );
       }
     } catch (e) {
-      print('Error al obtener las ventas: $e');
+      debugPrint('Error al obtener las ventas: $e');
       rethrow;
     }
   }
@@ -35,14 +36,14 @@ class VentasService {
         body: jsonEncode(venta.toJson()),
       );
 
-      if (response.statusCode != 201) {
+      if (response.statusCode != 200) {
         throw Exception(
             'Error al guardar la venta. Código de estado: ${response.statusCode}, Respuesta: ${response.body}');
       } else {
-        print('Venta guardada exitosamente');
+        debugPrint('Venta guardada exitosamente');
       }
     } catch (e) {
-      print('Error al guardar la venta: $e');
+      debugPrint('Error al guardar la venta: $e');
       rethrow;
     }
   }
@@ -59,10 +60,10 @@ class VentasService {
         throw Exception(
             'Error al editar la venta. Código de estado: ${response.statusCode}');
       } else {
-        print('Venta editada exitosamente');
+        debugPrint('Venta editada exitosamente');
       }
     } catch (e) {
-      print('Error al editar la venta: $e');
+      debugPrint('Error al editar la venta: $e');
       rethrow;
     }
   }
@@ -78,10 +79,10 @@ class VentasService {
         throw Exception(
             'Error al eliminar el cliente. Código de estado: ${response.statusCode}');
       } else {
-        print('Cliente eliminado exitosamente');
+        debugPrint('Cliente eliminado exitosamente');
       }
     } catch (e) {
-      print('Error al eliminar el cliente: $e');
+      debugPrint('Error al eliminar el cliente: $e');
       rethrow;
     }
   }
