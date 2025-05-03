@@ -77,12 +77,12 @@ class VentasService {
 
       if (response.statusCode != 200) {
         throw Exception(
-            'Error al eliminar el cliente. Código de estado: ${response.statusCode}');
+            'Error al eliminar la venta. Código de estado: ${response.statusCode}');
       } else {
-        debugPrint('Cliente eliminado exitosamente');
+        debugPrint('Venta eliminada exitosamente');
       }
     } catch (e) {
-      debugPrint('Error al eliminar el cliente: $e');
+      debugPrint('Error al eliminar la venta: $e');
       rethrow;
     }
   }

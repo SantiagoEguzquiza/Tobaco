@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:tobaco/Models/Cliente.dart';
 import 'package:tobaco/Models/ProductoSeleccionado.dart';
@@ -8,6 +9,7 @@ import 'package:tobaco/Services/Clientes_Service/clientes_provider.dart';
 import 'package:tobaco/Services/Ventas_Service/ventas_provider.dart';
 import 'package:tobaco/Theme/app_theme.dart';
 import 'package:tobaco/Models/Ventas.dart';
+import 'package:tobaco/Theme/confirmAnimation.dart';
 
 class NuevaVentaScreen extends StatefulWidget {
   const NuevaVentaScreen({super.key});
@@ -199,9 +201,8 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                                         .clamp(0.5, double.infinity);
                                   });
                                 },
-                                backgroundColor: Colors.blueGrey,
                                 icon: Icons.contrast,
-                                borderRadius: BorderRadius.circular(5),
+                                backgroundColor: Colors.blueGrey,
                                 label: '½',
                               ),
                             SlidableAction(
@@ -214,7 +215,6 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                               },
                               backgroundColor: Colors.red,
                               icon: Icons.remove_circle,
-                              borderRadius: BorderRadius.circular(5),
                               label: '-',
                             ),
                             SlidableAction(
@@ -226,52 +226,45 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                               },
                               backgroundColor: Colors.green,
                               icon: Icons.add_circle,
-                              borderRadius: BorderRadius.circular(5),
                               label: '+',
                             ),
                           ],
                         ),
-                        child: Card(
+                        child: Container(
                           color: index % 2 == 0
                               ? AppTheme.secondaryColor
                               : const Color.fromARGB(255, 255, 255, 255),
-                          margin: const EdgeInsets.symmetric(vertical: 1),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(5),
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                                vertical: 15, horizontal: 15),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Expanded(
-                                  flex: 6,
-                                  child: Text(
-                                    ps.producto.nombre,
-                                    style: AppTheme.itemListaNegrita,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
+                          padding: const EdgeInsets.symmetric(
+                              vertical: 15, horizontal: 15),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                flex: 6,
+                                child: Text(
+                                  ps.producto.nombre,
+                                  style: AppTheme.itemListaNegrita,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
-                                Expanded(
-                                  flex: 1,
-                                  child: Text(
-                                    '${ps.cantidad % 1 == 0 ? ps.cantidad.toInt() : ps.cantidad}',
-                                    style: const TextStyle(
-                                        fontWeight: FontWeight.w500),
-                                    textAlign: TextAlign.center,
-                                  ),
+                              ),
+                              Expanded(
+                                flex: 1,
+                                child: Text(
+                                  '${ps.cantidad % 1 == 0 ? ps.cantidad.toInt() : ps.cantidad}',
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.w500),
+                                  textAlign: TextAlign.center,
                                 ),
-                                Expanded(
-                                  flex: 2,
-                                  child: Text(
-                                    '\$ ${(ps.producto.precio * ps.cantidad).toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (match) => '${match[1]}.')}',
-                                    style: AppTheme.itemListaPrecio,
-                                    textAlign: TextAlign.right,
-                                  ),
+                              ),
+                              Expanded(
+                                flex: 2,
+                                child: Text(
+                                  '\$ ${(ps.producto.precio * ps.cantidad).toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (match) => '${match[1]}.')}',
+                                  style: AppTheme.itemListaPrecio,
+                                  textAlign: TextAlign.right,
                                 ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
                         ),
                       );
@@ -312,16 +305,16 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                                   title: 'Confirmar Venta',
                                   content:
                                       '¿Está seguro de que desea finalizar la venta?',
-                                  onConfirm: () {
-                                    Navigator.of(context).pop(true);
-                                  },
-                                  onCancel: () {
-                                    Navigator.of(context).pop(false);
-                                  },
+                                  onConfirm: () =>
+                                      Navigator.of(context).pop(true),
+                                  onCancel: () =>
+                                      Navigator.of(context).pop(false),
                                 );
                               },
                             );
-                            
+
+                            if (confirmar != true) return;
+
                             final productos = productosSeleccionados
                                 .map((ps) => VentasProductos(
                                       productoId: ps.producto.id!,
@@ -334,26 +327,49 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                               clienteId: clienteSeleccionado!.id!,
                               cliente: clienteSeleccionado!,
                               ventasProductos: productos,
-                              total: productosSeleccionados.fold(0.0, (sum, ps) => sum + (ps.producto.precio * ps.cantidad)),
+                              total: productosSeleccionados.fold(
+                                  0.0,
+                                  (sum, ps) =>
+                                      sum + (ps.producto.precio * ps.cantidad)),
                               fecha: DateTime.now(),
                             );
 
-                            if (confirmar == true) {
-                              try {
-                                await VentasProvider().crearVenta(venta);
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('Venta registrada con éxito'),
-                                  ),
-                                );
-                              } catch (e) {
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text('Error: $e'),
+                            try {
+                              await VentasProvider().crearVenta(venta);
+
+                              // ✅ Mostrar animación y luego redirigir
+                              showGeneralDialog(
+                                context: context,
+                                barrierDismissible: false,
+                                barrierColor: Colors.transparent,
+                                transitionDuration:
+                                    const Duration(milliseconds: 0),
+                                pageBuilder:
+                                    (context, animation, secondaryAnimation) {
+                                  return AnnotatedRegion<SystemUiOverlayStyle>(
+                                    value: SystemUiOverlayStyle.light.copyWith(
+                                      statusBarColor: Colors.green,
+                                      systemNavigationBarColor: Colors.green,
+                                    ),
+                                    child: Scaffold(
+                                      backgroundColor: Colors.transparent,
+                                      body: VentaConfirmadaAnimacion(
+                                        onFinish: () {
+                                          Navigator.of(context)
+                                              .pop(); // cerrar animación
+                                          Navigator.of(context)
+                                              .pop(); // volver atrás
+                                        },
+                                      ),
                                     ),
                                   );
-                                }
+                                },
+                              );
+                            } catch (e) {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('Error: $e')),
+                                );
                               }
                             }
                           },

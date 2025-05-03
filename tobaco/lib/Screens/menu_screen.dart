@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:tobaco/Screens/Clientes/clientes_screen.dart';
+import 'package:tobaco/Screens/Ventas/nuevaVenta_screen.dart';
 import 'package:tobaco/Screens/Ventas/ventas_screen.dart';
 import 'package:tobaco/Screens/Productos/productos_screen.dart';
 import 'package:tobaco/Theme/app_theme.dart'; // Importa el tema
@@ -46,7 +47,7 @@ class MenuScreen extends StatelessWidget {
                     ),
                     onPressed: () {
                       Navigator.push(
-                        context,
+                        context, 
                         MaterialPageRoute(
                             builder: (context) => const ClientesScreen()),
                       );
@@ -195,7 +196,13 @@ class MenuScreen extends StatelessWidget {
                   elevation: 10,
                   shadowColor: Colors.black,
                 ),
-                onPressed: () {},
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => const NuevaVentaScreen()),
+                  );
+                },
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -206,7 +213,7 @@ class MenuScreen extends StatelessWidget {
                     ),
                     const SizedBox(width: 10),
                     const Text(
-                      'Crear nuevo pedido',
+                      'Crear nueva venta',
                       style: TextStyle(
                         fontSize: 20,
                       ),
