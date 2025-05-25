@@ -1,19 +1,38 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:tobaco/Models/Categoria.dart';
 import 'package:tobaco/Models/Producto.dart';
+import 'package:tobaco/Services/Categoria_Service/categoria_provider.dart';
 import 'package:tobaco/Services/Productos_Service/productos_provider.dart';
 import 'package:tobaco/Theme/app_theme.dart'; // Importa el tema
 
-class NuevoProductoScreen extends StatelessWidget {
+class NuevoProductoScreen extends StatefulWidget {
   const NuevoProductoScreen({super.key});
 
   @override
+  State<NuevoProductoScreen> createState() => _NuevoProductoScreenState();
+}
+
+class _NuevoProductoScreenState extends State<NuevoProductoScreen> {
+  final nombreController = TextEditingController();
+  final cantidadController = TextEditingController();
+  final precioController = TextEditingController();
+  final categoriaController = TextEditingController();
+  final halfController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    // Cargar categorías al iniciar
+    Future.microtask(() =>
+        Provider.of<CategoriasProvider>(context, listen: false)
+            .obtenerCategorias());
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final nombreController = TextEditingController();
-    final cantidadController = TextEditingController();
-    final precioController = TextEditingController();
-    final categoriaController = TextEditingController();
-    final halfController = TextEditingController();
+    final List<Categoria> categorias =
+        Provider.of<CategoriasProvider>(context).categorias;
 
     return Scaffold(
       appBar: AppBar(
@@ -67,15 +86,17 @@ class NuevoProductoScreen extends StatelessWidget {
                             style: AppTheme.inputLabelStyle),
                         const SizedBox(height: 10),
                         DropdownButtonFormField<Categoria>(
-                          value: Categoria.nacional,
-                          items: Categoria.values.map((categoria) {
+                          value:
+                              categorias.isNotEmpty ? categorias.first : null,
+                          items: categorias.map((categoria) {
                             return DropdownMenuItem<Categoria>(
                               value: categoria,
-                              child: Text(categoria.name),
+                              child: Text(categoria.nombre),
                             );
                           }).toList(),
                           onChanged: (value) {
-                            categoriaController.text = value?.name ?? '';
+                            categoriaController.text =
+                                value != null ? value.nombre : '';
                           },
                           decoration: AppTheme.inputDecoration.copyWith(
                             hintText: 'Seleccione una categoría...',
@@ -85,21 +106,23 @@ class NuevoProductoScreen extends StatelessWidget {
                         StatefulBuilder(
                           builder: (context, setState) {
                             return Row(
-                                children: [
+                              children: [
                                 const Text('¿Se puede vender medio?',
-                                  style: AppTheme.inputLabelStyle),
+                                    style: AppTheme.inputLabelStyle),
                                 const SizedBox(width: 8),
                                 Checkbox(
                                   value: halfController.text == 'true',
                                   onChanged: (bool? value) {
                                     setState(() {
-                                      halfController.text = value == true ? 'true' : 'false';
+                                      halfController.text =
+                                          value == true ? 'true' : 'false';
                                     });
                                   },
-                                  shape: AppTheme.checkboxTheme.shape, 
-                                  fillColor: AppTheme.checkboxTheme.fillColor, 
-                                  checkColor: AppTheme.checkboxTheme.checkColor?.resolve({}),
-                                  side: AppTheme.checkboxTheme.side, 
+                                  shape: AppTheme.checkboxTheme.shape,
+                                  fillColor: AppTheme.checkboxTheme.fillColor,
+                                  checkColor: AppTheme.checkboxTheme.checkColor
+                                      ?.resolve({}),
+                                  side: AppTheme.checkboxTheme.side,
                                 ),
                               ],
                             );
@@ -144,6 +167,10 @@ class NuevoProductoScreen extends StatelessWidget {
                         Expanded(
                           child: ElevatedButton(
                             onPressed: () async {
+                              final selectedCategoria = categorias.firstWhere(
+                                (c) => c.nombre == categoriaController.text,
+                                orElse: () => categorias.first,
+                              );
                               final producto = Producto(
                                 id: null,
                                 nombre: nombreController.text,
@@ -152,10 +179,7 @@ class NuevoProductoScreen extends StatelessWidget {
                                 precio:
                                     double.tryParse(precioController.text) ??
                                         0.0,
-                                categoria: Categoria.values.firstWhere(
-                                  (c) => c.name == categoriaController.text,
-                                  orElse: () => Categoria.nacional,
-                                ),
+                                categoriaId: selectedCategoria.id ?? 0,
                                 half: halfController.text == 'true',
                               );
 

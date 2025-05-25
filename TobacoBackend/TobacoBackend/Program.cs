@@ -29,11 +29,13 @@ builder.Services.AddDbContext<AplicationDbContext>(options =>
 builder.Services.AddScoped<IClienteService, ClienteService>();
 builder.Services.AddScoped<IProductoService, ProductoService>();
 builder.Services.AddScoped<IPedidoService, PedidoService>();
+builder.Services.AddScoped<ICategoriaService, CategoriaService>();
 
 //Registrar repositorios
 builder.Services.AddScoped<IClienteRepository, ClienteRepository>();
 builder.Services.AddScoped<IProductoRepository, ProductoRepository>();
 builder.Services.AddScoped<IPedidoRepository, PedidoRepository>();
+builder.Services.AddScoped<ICategoriaRepository, CategoriaRepository>();
 
 
 // Cors

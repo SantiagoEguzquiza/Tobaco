@@ -1,4 +1,6 @@
-﻿namespace TobacoBackend.DTOs
+﻿using TobacoBackend.Domain.Models;
+
+namespace TobacoBackend.DTOs
 {
     public class PedidoDTO
     {
@@ -8,5 +10,6 @@
         public List<PedidoProductoDTO> PedidoProductos { get; set; }
         public decimal Total { get; set; }
         public DateTime Fecha { get; set; }
+        public MetodoPagoEnum MetodoPago { get; set; } 
     }
 }

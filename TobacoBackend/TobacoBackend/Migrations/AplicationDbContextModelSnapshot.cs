@@ -21,6 +21,27 @@ namespace TobacoBackend.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("TobacoBackend.Domain.Models.Categoria", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Nombre")
+                        .IsUnique();
+
+                    b.ToTable("Categorias");
+                });
+
             modelBuilder.Entity("TobacoBackend.Domain.Models.Cliente", b =>
                 {
                     b.Property<int>("Id")
@@ -64,6 +85,9 @@ namespace TobacoBackend.Migrations
                     b.Property<DateTime>("Fecha")
                         .HasColumnType("datetime2");
 
+                    b.Property<int>("MetodoPago")
+                        .HasColumnType("int");
+
                     b.Property<decimal>("Total")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
@@ -106,7 +130,10 @@ namespace TobacoBackend.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<int>("Categoria")
+                    b.Property<int>("CategoriaId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("CategoriaId1")
                         .HasColumnType("int");
 
                     b.Property<bool>("Half")
@@ -121,6 +148,10 @@ namespace TobacoBackend.Migrations
                         .HasColumnType("decimal(18,2)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CategoriaId");
+
+                    b.HasIndex("CategoriaId1");
 
                     b.ToTable("Productos");
                 });
@@ -153,6 +184,26 @@ namespace TobacoBackend.Migrations
                     b.Navigation("Pedido");
 
                     b.Navigation("Producto");
+                });
+
+            modelBuilder.Entity("TobacoBackend.Domain.Models.Producto", b =>
+                {
+                    b.HasOne("TobacoBackend.Domain.Models.Categoria", "Categoria")
+                        .WithMany()
+                        .HasForeignKey("CategoriaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("TobacoBackend.Domain.Models.Categoria", null)
+                        .WithMany("Productos")
+                        .HasForeignKey("CategoriaId1");
+
+                    b.Navigation("Categoria");
+                });
+
+            modelBuilder.Entity("TobacoBackend.Domain.Models.Categoria", b =>
+                {
+                    b.Navigation("Productos");
                 });
 
             modelBuilder.Entity("TobacoBackend.Domain.Models.Cliente", b =>

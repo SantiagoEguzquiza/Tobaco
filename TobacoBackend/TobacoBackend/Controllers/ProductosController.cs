@@ -57,9 +57,15 @@ namespace TobacoBackend.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(ex.Message);
+                return BadRequest(new
+                {
+                    message = "Error al guardar el producto.",
+                    error = ex.Message,
+                    inner = ex.InnerException?.Message
+                });
             }
         }
+
 
 
 

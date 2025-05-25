@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:tobaco/Models/Producto.dart';
+import 'package:tobaco/Services/Categoria_Service/categoria_provider.dart';
 import 'package:tobaco/Services/Productos_Service/productos_provider.dart';
 import 'package:tobaco/Theme/app_theme.dart';
+import 'package:tobaco/Models/Categoria.dart';
 
 class EditarProductoScreen extends StatefulWidget {
   final Producto producto;
-
   const EditarProductoScreen({super.key, required this.producto});
 
   @override
@@ -18,21 +20,24 @@ class EditarProductoScreenState extends State<EditarProductoScreen> {
   late TextEditingController precioController;
   late TextEditingController halfController;
 
-  late Categoria
-      categoriaSeleccionada; // Variable para manejar la categoría seleccionada
+  Categoria? categoriaSeleccionada;
 
   @override
   void initState() {
     super.initState();
-    // Inicializa los controladores con los valores actuales del producto
+
     nombreController = TextEditingController(text: widget.producto.nombre);
     cantidadController =
         TextEditingController(text: widget.producto.cantidad.toString());
     precioController =
         TextEditingController(text: widget.producto.precio.toString());
-    categoriaSeleccionada = widget.producto.categoria;
     halfController =
         TextEditingController(text: widget.producto.half.toString());
+
+    // Cargar categorías al iniciar
+    Future.microtask(() {
+      Provider.of<CategoriasProvider>(context, listen: false).obtenerCategorias();
+    });
   }
 
   @override
@@ -45,6 +50,23 @@ class EditarProductoScreenState extends State<EditarProductoScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final List<Categoria> categorias =
+        Provider.of<CategoriasProvider>(context).categorias;
+
+    
+    if (categoriaSeleccionada == null && categorias.isNotEmpty) {
+      categoriaSeleccionada = categorias.firstWhere(
+        (cat) => cat.nombre == widget.producto.categoriaNombre,
+        orElse: () => categorias.first,
+      );
+    } else if (categoriaSeleccionada != null && categorias.isNotEmpty) {
+      
+      final match = categorias.where((cat) => cat.id == categoriaSeleccionada!.id).toList();
+      if (match.isNotEmpty) {
+        categoriaSeleccionada = match.first;
+      }
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Editar Producto'),
@@ -122,11 +144,11 @@ class EditarProductoScreenState extends State<EditarProductoScreen> {
                   DropdownButtonFormField<Categoria>(
                     value: categoriaSeleccionada,
                     isExpanded: true,
-                    items: Categoria.values.map((Categoria categoria) {
+                    items: categorias.map((Categoria categoria) {
                       return DropdownMenuItem<Categoria>(
                         value: categoria,
                         child: Text(
-                          categoria.name, // Muestra el nombre de la categoría
+                          categoria.nombre,
                           style: AppTheme.inputTextStyle,
                         ),
                       );
@@ -135,14 +157,14 @@ class EditarProductoScreenState extends State<EditarProductoScreen> {
                       if (nuevaCategoria != null) {
                         setState(() {
                           categoriaSeleccionada = nuevaCategoria;
-                          widget.producto.categoria =
-                              nuevaCategoria; // Actualiza el producto
+                          widget.producto.categoriaId = nuevaCategoria.id!;
+                          widget.producto.categoriaNombre = nuevaCategoria.nombre;
                         });
                       }
                     },
                     decoration: AppTheme.inputDecoration.copyWith(
-                      hintText: categoriaSeleccionada
-                          .name, // Muestra la categoría preseleccionada
+                      hintText: categoriaSeleccionada?.nombre ??
+                          'Selecciona una categoría',
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -221,7 +243,8 @@ class EditarProductoScreenState extends State<EditarProductoScreen> {
                                 'Error al editar el producto: $e'); // Registro del error
                             if (mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('Error: ${e.toString()}')),
+                                SnackBar(
+                                    content: Text('Error: ${e.toString()}')),
                               );
                             }
                           }

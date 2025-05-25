@@ -2,6 +2,13 @@ import 'package:tobaco/Models/Cliente.dart';
 import 'package:tobaco/Models/VentasProductos.dart';
 
 
+enum MetodoPago {
+  efectivo,
+  transferencia,
+  tarjeta,
+  cuentaCorriente,
+}
+
 class Ventas {
   int? id;
   int clienteId;
@@ -9,6 +16,7 @@ class Ventas {
   List<VentasProductos> ventasProductos;
   double total;
   DateTime fecha;
+  MetodoPago? metodoPago;
 
   Ventas({
     this.id,
@@ -17,6 +25,7 @@ class Ventas {
     required this.ventasProductos,
     required this.total,
     required this.fecha,
+    this.metodoPago,
   });
 
   factory Ventas.fromJson(Map<String, dynamic> json) => Ventas(
@@ -28,6 +37,7 @@ class Ventas {
             .toList(),
         total: (json['total'] as num).toDouble(),
         fecha: DateTime.parse(json['fecha']),
+       metodoPago: MetodoPago.values[json['metodoPago'] as int],
       );
 
   Map<String, dynamic> toJson() => {
@@ -37,6 +47,7 @@ class Ventas {
             ventasProductos.map((e) => e.toJson()).toList(),
         'total': total,
         'fecha': fecha.toIso8601String(),
+        'metodoPago': metodoPago?.index,
       };
 }
 

@@ -8,6 +8,7 @@ public class AplicationDbContext : DbContext
     public DbSet<Producto> Productos { get; set; }
     public DbSet<Pedido> Pedidos { get; set; }
     public DbSet<PedidoProducto> PedidosProductos { get; set; }
+    public DbSet<Categoria> Categorias { get; set; }
 
     public AplicationDbContext(DbContextOptions<AplicationDbContext> options) : base(options)
     {
@@ -16,6 +17,16 @@ public class AplicationDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+
+
+        modelBuilder.Entity<Categoria>()
+    .Property(c => c.Nombre)
+    .IsRequired()
+    .HasMaxLength(100);
+
+        modelBuilder.Entity<Categoria>()
+            .HasIndex(c => c.Nombre)
+            .IsUnique();
 
         modelBuilder.Entity<PedidoProducto>()
             .HasKey(pp => new { pp.PedidoId, pp.ProductoId });
@@ -45,6 +56,13 @@ public class AplicationDbContext : DbContext
         modelBuilder.Entity<Producto>()
             .Property(p => p.Cantidad)
             .HasPrecision(18, 2);
+
+        modelBuilder.Entity<Producto>()
+            .HasOne(p => p.Categoria)
+            .WithMany()
+            .HasForeignKey(p => p.CategoriaId)
+            .OnDelete(DeleteBehavior.Restrict);
+
     }
 
 }

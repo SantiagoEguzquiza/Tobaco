@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:tobaco/Models/Categoria.dart';
 import 'package:tobaco/Models/Producto.dart';
 import 'package:tobaco/Models/ProductoSeleccionado.dart';
+import 'package:tobaco/Services/Categoria_Service/categoria_provider.dart';
 import 'package:tobaco/Services/Productos_Service/productos_provider.dart';
 import 'package:tobaco/Theme/app_theme.dart';
 
@@ -21,8 +24,8 @@ class _SeleccionarProductosScreenState
     extends State<SeleccionarProductosScreen> {
   List<Producto> productos = [];
   final Map<int, double> cantidades = {};
-  List<String> categorias = Categoria.values.map((e) => e.name).toList();
-  String? selectedCategory;
+  List<Categoria> categorias = [];
+  Categoria? selectedCategory;
   bool isLoading = true;
   String? errorMessage;
   String searchQuery = '';
@@ -63,15 +66,18 @@ class _SeleccionarProductosScreenState
 
   @override
   Widget build(BuildContext context) {
+    categorias = Provider.of<CategoriasProvider>(context).categorias;
+
     final filteredProductos = productos.where((producto) {
       final matchesSearchQuery =
           producto.nombre.toLowerCase().contains(searchQuery.toLowerCase());
       final matchesCategory = selectedCategory == null ||
-          producto.categoria.name == selectedCategory;
+          producto.categoriaNombre == selectedCategory;
 
       return matchesSearchQuery && matchesCategory;
     }).toList()
-      ..sort((a, b) => a.nombre.toLowerCase().compareTo(b.nombre.toLowerCase()));
+      ..sort(
+          (a, b) => a.nombre.toLowerCase().compareTo(b.nombre.toLowerCase()));
     return Scaffold(
       appBar: AppBar(
         centerTitle: true,
@@ -117,7 +123,7 @@ class _SeleccionarProductosScreenState
                         });
                       },
                       child: Text(
-                        categoria[0].toUpperCase() + categoria.substring(1),
+                        categoria.nombre[0].toUpperCase() + categoria.nombre.substring(1),
                         style: const TextStyle(fontSize: 14),
                       ),
                     ),
@@ -135,7 +141,8 @@ class _SeleccionarProductosScreenState
                         selectedCategory != null
                             ? 'No hay productos en esta categoría'
                             : 'No hay productos disponibles',
-                        style: const TextStyle(fontSize: 16, color: Colors.grey),
+                        style:
+                            const TextStyle(fontSize: 16, color: Colors.grey),
                       ),
                     )
                   : ListView.builder(
@@ -175,20 +182,22 @@ class _SeleccionarProductosScreenState
                                     '\$ ${producto.precio.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (match) => '${match[1]}.')}',
                                     style: AppTheme.itemListaPrecio,
                                   ),
-
-                                    if (producto.half)
+                                  if (producto.half)
                                     IconButton(
                                       icon: const Icon(Icons.contrast,
-                                      color: Colors.blueGrey),
+                                          color: Colors.blueGrey),
                                       onPressed: () {
-                                      setState(() {
-                                        final currentCantidad = cantidades[producto.id!] ?? 0;
-                                        if (currentCantidad % 1 == 0) {
-                                        cantidades[producto.id!] = currentCantidad + 0.5;
-                                        } else {
-                                        cantidades[producto.id!] = currentCantidad - 0.5;
-                                        }
-                                      });
+                                        setState(() {
+                                          final currentCantidad =
+                                              cantidades[producto.id!] ?? 0;
+                                          if (currentCantidad % 1 == 0) {
+                                            cantidades[producto.id!] =
+                                                currentCantidad + 0.5;
+                                          } else {
+                                            cantidades[producto.id!] =
+                                                currentCantidad - 0.5;
+                                          }
+                                        });
                                       },
                                     ),
                                   IconButton(
@@ -197,12 +206,13 @@ class _SeleccionarProductosScreenState
                                     onPressed: () {
                                       if (cantidad > 0 && cantidad != 0.5) {
                                         setState(() {
-                                          cantidades[producto.id!] = cantidad - 1;
+                                          cantidades[producto.id!] =
+                                              cantidad - 1;
                                         });
                                       }
                                     },
                                   ),
-                                    Container(
+                                  Container(
                                     width: 35,
                                     height: 35,
                                     decoration: BoxDecoration(
@@ -213,29 +223,31 @@ class _SeleccionarProductosScreenState
                                     alignment: Alignment.center,
                                     child: EditableText(
                                       controller: TextEditingController(
-                                        text: cantidad % 1 == 0
-                                          ? cantidad.toInt().toString()
-                                          : cantidad.toStringAsFixed(1)),
+                                          text: cantidad % 1 == 0
+                                              ? cantidad.toInt().toString()
+                                              : cantidad.toStringAsFixed(1)),
                                       focusNode: FocusNode(),
                                       keyboardType: TextInputType.number,
                                       textAlign: TextAlign.center,
                                       style: const TextStyle(
-                                      fontSize: 16,
-                                      color: Colors.black,
+                                        fontSize: 16,
+                                        color: Colors.black,
                                       ),
                                       cursorColor: Colors.grey,
                                       backgroundCursorColor: Colors.transparent,
                                       inputFormatters: [], // Si querés, agregás restricciones acá
                                       onChanged: (value) {
-                                      final newCantidad =
-                                        double.tryParse(value) ?? cantidad;
-                                      setState(() {
-                                        cantidades[producto.id!] =
-                                          newCantidad < 0 ? 0.0 : newCantidad;
-                                      });
+                                        final newCantidad =
+                                            double.tryParse(value) ?? cantidad;
+                                        setState(() {
+                                          cantidades[producto.id!] =
+                                              newCantidad < 0
+                                                  ? 0.0
+                                                  : newCantidad;
+                                        });
                                       },
                                     ),
-                                    ),
+                                  ),
                                   IconButton(
                                     icon: const Icon(Icons.add_circle,
                                         color: Colors.green),

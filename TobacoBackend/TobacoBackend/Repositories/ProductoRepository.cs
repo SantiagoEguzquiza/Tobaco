@@ -33,19 +33,24 @@ namespace TobacoBackend.Repositories
 
         public async Task<List<Producto>> GetAllProductos()
         {
-            return await _context.Productos.ToListAsync();
+            return await _context.Productos
+                .Include(p => p.Categoria) 
+                .ToListAsync();
         }
+
 
         public async Task<Producto> GetProductoById(int id)
         {
-            var producto = await _context.Productos.FirstOrDefaultAsync(c => c.Id == id);
+            var producto = await _context.Productos
+                .Include(p => p.Categoria) 
+                .FirstOrDefaultAsync(p => p.Id == id);
+
             if (producto == null)
-            {
-                throw new Exception($"El cliente con id {id} no fue encontrado o no existe");
-            }
+                throw new Exception($"El producto con id {id} no fue encontrado.");
 
             return producto;
         }
+
 
         public async Task UpdateProducto(Producto producto)
         {

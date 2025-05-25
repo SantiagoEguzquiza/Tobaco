@@ -1,5 +1,104 @@
 [
   {
+    "ContainingType": "TobacoBackend.Controllers.CategoriaController",
+    "Method": "GetAllCategorias",
+    "RelativePath": "Categoria",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": [
+      {
+        "Type": "System.Collections.Generic.List\u00601[[TobacoBackend.DTOs.CategoriaDTO, TobacoBackend, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
+    "ContainingType": "TobacoBackend.Controllers.CategoriaController",
+    "Method": "AddCategoria",
+    "RelativePath": "Categoria",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "categoriaDto",
+        "Type": "TobacoBackend.DTOs.CategoriaDTO",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "TobacoBackend.Controllers.CategoriaController",
+    "Method": "GetCategoriaById",
+    "RelativePath": "Categoria/{id}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Int32",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "TobacoBackend.DTOs.CategoriaDTO",
+        "MediaTypes": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
+    "ContainingType": "TobacoBackend.Controllers.CategoriaController",
+    "Method": "UpdateCategoria",
+    "RelativePath": "Categoria/{id}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Int32",
+        "IsRequired": true
+      },
+      {
+        "Name": "categoriaDto",
+        "Type": "TobacoBackend.DTOs.CategoriaDTO",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "TobacoBackend.Controllers.CategoriaController",
+    "Method": "DeleteCategoria",
+    "RelativePath": "Categoria/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Int32",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
     "ContainingType": "TobacoBackend.Controllers.ClientesController",
     "Method": "GetAllClientes",
     "RelativePath": "Clientes",

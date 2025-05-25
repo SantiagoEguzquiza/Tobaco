@@ -338,33 +338,33 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                               await VentasProvider().crearVenta(venta);
 
                               // ✅ Mostrar animación y luego redirigir
-                              showGeneralDialog(
-                                context: context,
-                                barrierDismissible: false,
-                                barrierColor: Colors.transparent,
-                                transitionDuration:
-                                    const Duration(milliseconds: 0),
-                                pageBuilder:
-                                    (context, animation, secondaryAnimation) {
-                                  return AnnotatedRegion<SystemUiOverlayStyle>(
-                                    value: SystemUiOverlayStyle.light.copyWith(
-                                      statusBarColor: Colors.green,
-                                      systemNavigationBarColor: Colors.green,
-                                    ),
-                                    child: Scaffold(
-                                      backgroundColor: Colors.transparent,
-                                      body: VentaConfirmadaAnimacion(
-                                        onFinish: () {
-                                          Navigator.of(context)
-                                              .pop(); // cerrar animación
-                                          Navigator.of(context)
-                                              .pop(); // volver atrás
-                                        },
-                                      ),
-                                    ),
-                                  );
-                                },
-                              );
+                              // showGeneralDialog(
+                              //   context: context,
+                              //   barrierDismissible: false,
+                              //   barrierColor: Colors.transparent,
+                              //   transitionDuration:
+                              //       const Duration(milliseconds: 0),
+                              //   pageBuilder:
+                              //       (context, animation, secondaryAnimation) {
+                              //     return AnnotatedRegion<SystemUiOverlayStyle>(
+                              //       value: SystemUiOverlayStyle.light.copyWith(
+                              //         statusBarColor: Colors.green,
+                              //         systemNavigationBarColor: Colors.green,
+                              //       ),
+                              //       child: Scaffold(
+                              //         backgroundColor: Colors.transparent,
+                              //         body: VentaConfirmadaAnimacion(
+                              //           onFinish: () {
+                              //             Navigator.of(context)
+                              //                 .pop(); // cerrar animación
+                              //             Navigator.of(context)
+                              //                 .pop(); // volver atrás
+                              //           },
+                              //         ),
+                              //       ),
+                              //     );
+                              //   },
+                              // );
                             } catch (e) {
                               if (context.mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(

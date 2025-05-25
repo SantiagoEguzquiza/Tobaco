@@ -3,12 +3,132 @@
   "WorkspaceRootPath": "C:\\Users\\santi\\Desktop\\Carrera\\Tobaco\\TobacoBackend\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{1FD5AA81-8B69-4486-A1E7-846069B60EE2}|TobacoBackend\\TobacoBackend.csproj|c:\\users\\santi\\desktop\\carrera\\tobaco\\tobacobackend\\tobacobackend\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
-      "RelativeMoniker": "D:0:0:{1FD5AA81-8B69-4486-A1E7-846069B60EE2}|TobacoBackend\\TobacoBackend.csproj|solutionrelative:tobacobackend\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
+      "AbsoluteMoniker": "D:0:0:{1FD5AA81-8B69-4486-A1E7-846069B60EE2}|TobacoBackend\\TobacoBackend.csproj|c:\\users\\santi\\desktop\\carrera\\tobaco\\tobacobackend\\tobacobackend\\domain\\models\\producto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{1FD5AA81-8B69-4486-A1E7-846069B60EE2}|TobacoBackend\\TobacoBackend.csproj|solutionrelative:tobacobackend\\domain\\models\\producto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{1FD5AA81-8B69-4486-A1E7-846069B60EE2}|TobacoBackend\\TobacoBackend.csproj|c:\\users\\santi\\desktop\\carrera\\tobaco\\tobacobackend\\tobacobackend\\services\\productoservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{1FD5AA81-8B69-4486-A1E7-846069B60EE2}|TobacoBackend\\TobacoBackend.csproj|solutionrelative:tobacobackend\\services\\productoservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{1FD5AA81-8B69-4486-A1E7-846069B60EE2}|TobacoBackend\\TobacoBackend.csproj|c:\\users\\santi\\desktop\\carrera\\tobaco\\tobacobackend\\tobacobackend\\controllers\\productoscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{1FD5AA81-8B69-4486-A1E7-846069B60EE2}|TobacoBackend\\TobacoBackend.csproj|solutionrelative:tobacobackend\\controllers\\productoscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{1FD5AA81-8B69-4486-A1E7-846069B60EE2}|TobacoBackend\\TobacoBackend.csproj|c:\\users\\santi\\desktop\\carrera\\tobaco\\tobacobackend\\tobacobackend\\mapping\\mappingprofile.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{1FD5AA81-8B69-4486-A1E7-846069B60EE2}|TobacoBackend\\TobacoBackend.csproj|solutionrelative:tobacobackend\\mapping\\mappingprofile.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{1FD5AA81-8B69-4486-A1E7-846069B60EE2}|TobacoBackend\\TobacoBackend.csproj|c:\\users\\santi\\desktop\\carrera\\tobaco\\tobacobackend\\tobacobackend\\repositories\\productorepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{1FD5AA81-8B69-4486-A1E7-846069B60EE2}|TobacoBackend\\TobacoBackend.csproj|solutionrelative:tobacobackend\\repositories\\productorepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{1FD5AA81-8B69-4486-A1E7-846069B60EE2}|TobacoBackend\\TobacoBackend.csproj|c:\\users\\santi\\desktop\\carrera\\tobaco\\tobacobackend\\tobacobackend\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{1FD5AA81-8B69-4486-A1E7-846069B60EE2}|TobacoBackend\\TobacoBackend.csproj|solutionrelative:tobacobackend\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{1FD5AA81-8B69-4486-A1E7-846069B60EE2}|TobacoBackend\\TobacoBackend.csproj|c:\\users\\santi\\desktop\\carrera\\tobaco\\tobacobackend\\tobacobackend\\services\\categoriaservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{1FD5AA81-8B69-4486-A1E7-846069B60EE2}|TobacoBackend\\TobacoBackend.csproj|solutionrelative:tobacobackend\\services\\categoriaservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{1FD5AA81-8B69-4486-A1E7-846069B60EE2}|TobacoBackend\\TobacoBackend.csproj|c:\\users\\santi\\desktop\\carrera\\tobaco\\tobacobackend\\tobacobackend\\persistence\\aplicationdbcontext.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{1FD5AA81-8B69-4486-A1E7-846069B60EE2}|TobacoBackend\\TobacoBackend.csproj|solutionrelative:tobacobackend\\persistence\\aplicationdbcontext.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{1FD5AA81-8B69-4486-A1E7-846069B60EE2}|TobacoBackend\\TobacoBackend.csproj|c:\\users\\santi\\desktop\\carrera\\tobaco\\tobacobackend\\tobacobackend\\dtos\\productodto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{1FD5AA81-8B69-4486-A1E7-846069B60EE2}|TobacoBackend\\TobacoBackend.csproj|solutionrelative:tobacobackend\\dtos\\productodto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{1FD5AA81-8B69-4486-A1E7-846069B60EE2}|TobacoBackend\\TobacoBackend.csproj|c:\\users\\santi\\desktop\\carrera\\tobaco\\tobacobackend\\tobacobackend\\domain\\irepositories\\iclienterepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{1FD5AA81-8B69-4486-A1E7-846069B60EE2}|TobacoBackend\\TobacoBackend.csproj|solutionrelative:tobacobackend\\domain\\irepositories\\iclienterepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{1FD5AA81-8B69-4486-A1E7-846069B60EE2}|TobacoBackend\\TobacoBackend.csproj|c:\\users\\santi\\desktop\\carrera\\tobaco\\tobacobackend\\tobacobackend\\domain\\irepositories\\iproductorepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{1FD5AA81-8B69-4486-A1E7-846069B60EE2}|TobacoBackend\\TobacoBackend.csproj|solutionrelative:tobacobackend\\domain\\irepositories\\iproductorepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{1FD5AA81-8B69-4486-A1E7-846069B60EE2}|TobacoBackend\\TobacoBackend.csproj|c:\\users\\santi\\desktop\\carrera\\tobaco\\tobacobackend\\tobacobackend\\domain\\models\\cliente.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{1FD5AA81-8B69-4486-A1E7-846069B60EE2}|TobacoBackend\\TobacoBackend.csproj|solutionrelative:tobacobackend\\domain\\models\\cliente.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{1FD5AA81-8B69-4486-A1E7-846069B60EE2}|TobacoBackend\\TobacoBackend.csproj|c:\\users\\santi\\desktop\\carrera\\tobaco\\tobacobackend\\tobacobackend\\dtos\\clientedto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{1FD5AA81-8B69-4486-A1E7-846069B60EE2}|TobacoBackend\\TobacoBackend.csproj|solutionrelative:tobacobackend\\dtos\\clientedto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{1FD5AA81-8B69-4486-A1E7-846069B60EE2}|TobacoBackend\\TobacoBackend.csproj|c:\\users\\santi\\desktop\\carrera\\tobaco\\tobacobackend\\tobacobackend\\controllers\\clientescontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{1FD5AA81-8B69-4486-A1E7-846069B60EE2}|TobacoBackend\\TobacoBackend.csproj|solutionrelative:tobacobackend\\controllers\\clientescontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{1FD5AA81-8B69-4486-A1E7-846069B60EE2}|TobacoBackend\\TobacoBackend.csproj|c:\\users\\santi\\desktop\\carrera\\tobaco\\tobacobackend\\tobacobackend\\repositories\\categoriarepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{1FD5AA81-8B69-4486-A1E7-846069B60EE2}|TobacoBackend\\TobacoBackend.csproj|solutionrelative:tobacobackend\\repositories\\categoriarepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{1FD5AA81-8B69-4486-A1E7-846069B60EE2}|TobacoBackend\\TobacoBackend.csproj|c:\\users\\santi\\desktop\\carrera\\tobaco\\tobacobackend\\tobacobackend\\domain\\iservices\\iproductoservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{1FD5AA81-8B69-4486-A1E7-846069B60EE2}|TobacoBackend\\TobacoBackend.csproj|solutionrelative:tobacobackend\\domain\\iservices\\iproductoservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{1FD5AA81-8B69-4486-A1E7-846069B60EE2}|TobacoBackend\\TobacoBackend.csproj|c:\\users\\santi\\desktop\\carrera\\tobaco\\tobacobackend\\tobacobackend\\domain\\iservices\\iclienteservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{1FD5AA81-8B69-4486-A1E7-846069B60EE2}|TobacoBackend\\TobacoBackend.csproj|solutionrelative:tobacobackend\\domain\\iservices\\iclienteservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{1FD5AA81-8B69-4486-A1E7-846069B60EE2}|TobacoBackend\\TobacoBackend.csproj|c:\\users\\santi\\desktop\\carrera\\tobaco\\tobacobackend\\tobacobackend\\services\\clienteservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{1FD5AA81-8B69-4486-A1E7-846069B60EE2}|TobacoBackend\\TobacoBackend.csproj|solutionrelative:tobacobackend\\services\\clienteservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{1FD5AA81-8B69-4486-A1E7-846069B60EE2}|TobacoBackend\\TobacoBackend.csproj|c:\\users\\santi\\desktop\\carrera\\tobaco\\tobacobackend\\tobacobackend\\repositories\\clienterepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{1FD5AA81-8B69-4486-A1E7-846069B60EE2}|TobacoBackend\\TobacoBackend.csproj|solutionrelative:tobacobackend\\repositories\\clienterepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{1FD5AA81-8B69-4486-A1E7-846069B60EE2}|TobacoBackend\\TobacoBackend.csproj|c:\\users\\santi\\desktop\\carrera\\tobaco\\tobacobackend\\tobacobackend\\services\\tokenservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{1FD5AA81-8B69-4486-A1E7-846069B60EE2}|TobacoBackend\\TobacoBackend.csproj|solutionrelative:tobacobackend\\services\\tokenservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{1FD5AA81-8B69-4486-A1E7-846069B60EE2}|TobacoBackend\\TobacoBackend.csproj|c:\\users\\santi\\desktop\\carrera\\tobaco\\tobacobackend\\tobacobackend\\domain\\models\\pedido.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{1FD5AA81-8B69-4486-A1E7-846069B60EE2}|TobacoBackend\\TobacoBackend.csproj|solutionrelative:tobacobackend\\domain\\models\\pedido.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{1FD5AA81-8B69-4486-A1E7-846069B60EE2}|TobacoBackend\\TobacoBackend.csproj|c:\\users\\santi\\desktop\\carrera\\tobaco\\tobacobackend\\tobacobackend\\dtos\\categoriadto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{1FD5AA81-8B69-4486-A1E7-846069B60EE2}|TobacoBackend\\TobacoBackend.csproj|solutionrelative:tobacobackend\\dtos\\categoriadto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{1FD5AA81-8B69-4486-A1E7-846069B60EE2}|TobacoBackend\\TobacoBackend.csproj|c:\\users\\santi\\desktop\\carrera\\tobaco\\tobacobackend\\tobacobackend\\dtos\\pedidodto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{1FD5AA81-8B69-4486-A1E7-846069B60EE2}|TobacoBackend\\TobacoBackend.csproj|solutionrelative:tobacobackend\\dtos\\pedidodto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{1FD5AA81-8B69-4486-A1E7-846069B60EE2}|TobacoBackend\\TobacoBackend.csproj|c:\\users\\santi\\desktop\\carrera\\tobaco\\tobacobackend\\tobacobackend\\domain\\models\\pedidoproducto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{1FD5AA81-8B69-4486-A1E7-846069B60EE2}|TobacoBackend\\TobacoBackend.csproj|solutionrelative:tobacobackend\\domain\\models\\pedidoproducto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{1FD5AA81-8B69-4486-A1E7-846069B60EE2}|TobacoBackend\\TobacoBackend.csproj|c:\\users\\santi\\desktop\\carrera\\tobaco\\tobacobackend\\tobacobackend\\controllers\\categoriacontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{1FD5AA81-8B69-4486-A1E7-846069B60EE2}|TobacoBackend\\TobacoBackend.csproj|solutionrelative:tobacobackend\\controllers\\categoriacontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{1FD5AA81-8B69-4486-A1E7-846069B60EE2}|TobacoBackend\\TobacoBackend.csproj|c:\\users\\santi\\desktop\\carrera\\tobaco\\tobacobackend\\tobacobackend\\domain\\iservices\\icategoriaservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{1FD5AA81-8B69-4486-A1E7-846069B60EE2}|TobacoBackend\\TobacoBackend.csproj|solutionrelative:tobacobackend\\domain\\iservices\\icategoriaservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{1FD5AA81-8B69-4486-A1E7-846069B60EE2}|TobacoBackend\\TobacoBackend.csproj|c:\\users\\santi\\desktop\\carrera\\tobaco\\tobacobackend\\tobacobackend\\controllers\\pedidoscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{1FD5AA81-8B69-4486-A1E7-846069B60EE2}|TobacoBackend\\TobacoBackend.csproj|solutionrelative:tobacobackend\\controllers\\pedidoscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{1FD5AA81-8B69-4486-A1E7-846069B60EE2}|TobacoBackend\\TobacoBackend.csproj|c:\\users\\santi\\desktop\\carrera\\tobaco\\tobacobackend\\tobacobackend\\domain\\irepositories\\icategoriarepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{1FD5AA81-8B69-4486-A1E7-846069B60EE2}|TobacoBackend\\TobacoBackend.csproj|solutionrelative:tobacobackend\\domain\\irepositories\\icategoriarepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{1FD5AA81-8B69-4486-A1E7-846069B60EE2}|TobacoBackend\\TobacoBackend.csproj|c:\\users\\santi\\desktop\\carrera\\tobaco\\tobacobackend\\tobacobackend\\domain\\models\\categoria.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{1FD5AA81-8B69-4486-A1E7-846069B60EE2}|TobacoBackend\\TobacoBackend.csproj|solutionrelative:tobacobackend\\domain\\models\\categoria.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{1FD5AA81-8B69-4486-A1E7-846069B60EE2}|TobacoBackend\\TobacoBackend.csproj|c:\\users\\santi\\desktop\\carrera\\tobaco\\tobacobackend\\tobacobackend\\domain\\models\\metodopagoenum.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{1FD5AA81-8B69-4486-A1E7-846069B60EE2}|TobacoBackend\\TobacoBackend.csproj|solutionrelative:tobacobackend\\domain\\models\\metodopagoenum.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{1FD5AA81-8B69-4486-A1E7-846069B60EE2}|TobacoBackend\\TobacoBackend.csproj|c:\\users\\santi\\desktop\\carrera\\tobaco\\tobacobackend\\tobacobackend\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
+      "RelativeMoniker": "D:0:0:{1FD5AA81-8B69-4486-A1E7-846069B60EE2}|TobacoBackend\\TobacoBackend.csproj|solutionrelative:tobacobackend\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{1FD5AA81-8B69-4486-A1E7-846069B60EE2}|TobacoBackend\\TobacoBackend.csproj|c:\\users\\santi\\desktop\\carrera\\tobaco\\tobacobackend\\tobacobackend\\migrations\\20250525022500_categoriaconstraints.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{1FD5AA81-8B69-4486-A1E7-846069B60EE2}|TobacoBackend\\TobacoBackend.csproj|solutionrelative:tobacobackend\\migrations\\20250525022500_categoriaconstraints.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     }
   ],
   "DocumentGroupContainers": [
@@ -18,7 +138,7 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 4,
+          "SelectedChildIndex": 7,
           "Children": [
             {
               "$type": "Bookmark",
@@ -38,7 +158,380 @@
             },
             {
               "$type": "Document",
+              "DocumentIndex": 31,
+              "Title": "20250525022500_CategoriaConstraints.cs",
+              "DocumentMoniker": "C:\\Users\\santi\\Desktop\\Carrera\\Tobaco\\TobacoBackend\\TobacoBackend\\Migrations\\20250525022500_CategoriaConstraints.cs",
+              "RelativeDocumentMoniker": "TobacoBackend\\Migrations\\20250525022500_CategoriaConstraints.cs",
+              "ToolTip": "C:\\Users\\santi\\Desktop\\Carrera\\Tobaco\\TobacoBackend\\TobacoBackend\\Migrations\\20250525022500_CategoriaConstraints.cs",
+              "RelativeToolTip": "TobacoBackend\\Migrations\\20250525022500_CategoriaConstraints.cs",
+              "ViewState": "AgIAAAoAAAAAAAAAAAA1wAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-05-25T02:25:00.947Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "ProductosController.cs",
+              "DocumentMoniker": "C:\\Users\\santi\\Desktop\\Carrera\\Tobaco\\TobacoBackend\\TobacoBackend\\Controllers\\ProductosController.cs",
+              "RelativeDocumentMoniker": "TobacoBackend\\Controllers\\ProductosController.cs",
+              "ToolTip": "C:\\Users\\santi\\Desktop\\Carrera\\Tobaco\\TobacoBackend\\TobacoBackend\\Controllers\\ProductosController.cs",
+              "RelativeToolTip": "TobacoBackend\\Controllers\\ProductosController.cs",
+              "ViewState": "AgIAAB0AAAAAAAAAAAAwwCwAAABWAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-05-23T00:36:09.213Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "MappingProfile.cs",
+              "DocumentMoniker": "C:\\Users\\santi\\Desktop\\Carrera\\Tobaco\\TobacoBackend\\TobacoBackend\\Mapping\\MappingProfile.cs",
+              "RelativeDocumentMoniker": "TobacoBackend\\Mapping\\MappingProfile.cs",
+              "ToolTip": "C:\\Users\\santi\\Desktop\\Carrera\\Tobaco\\TobacoBackend\\TobacoBackend\\Mapping\\MappingProfile.cs",
+              "RelativeToolTip": "TobacoBackend\\Mapping\\MappingProfile.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABgAAAAFAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-05-22T23:47:11.927Z"
+            },
+            {
+              "$type": "Document",
               "DocumentIndex": 0,
+              "Title": "Producto.cs",
+              "DocumentMoniker": "C:\\Users\\santi\\Desktop\\Carrera\\Tobaco\\TobacoBackend\\TobacoBackend\\Domain\\Models\\Producto.cs",
+              "RelativeDocumentMoniker": "TobacoBackend\\Domain\\Models\\Producto.cs",
+              "ToolTip": "C:\\Users\\santi\\Desktop\\Carrera\\Tobaco\\TobacoBackend\\TobacoBackend\\Domain\\Models\\Producto.cs",
+              "RelativeToolTip": "TobacoBackend\\Domain\\Models\\Producto.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAB8AAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-05-13T04:43:43.419Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 8,
+              "Title": "ProductoDTO.cs",
+              "DocumentMoniker": "C:\\Users\\santi\\Desktop\\Carrera\\Tobaco\\TobacoBackend\\TobacoBackend\\DTOs\\ProductoDTO.cs",
+              "RelativeDocumentMoniker": "TobacoBackend\\DTOs\\ProductoDTO.cs",
+              "ToolTip": "C:\\Users\\santi\\Desktop\\Carrera\\Tobaco\\TobacoBackend\\TobacoBackend\\DTOs\\ProductoDTO.cs",
+              "RelativeToolTip": "TobacoBackend\\DTOs\\ProductoDTO.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAA8AAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-05-13T04:45:59.485Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 15,
+              "Title": "IProductoService.cs",
+              "DocumentMoniker": "C:\\Users\\santi\\Desktop\\Carrera\\Tobaco\\TobacoBackend\\TobacoBackend\\Domain\\IServices\\IProductoService.cs",
+              "RelativeDocumentMoniker": "TobacoBackend\\Domain\\IServices\\IProductoService.cs",
+              "ToolTip": "C:\\Users\\santi\\Desktop\\Carrera\\Tobaco\\TobacoBackend\\TobacoBackend\\Domain\\IServices\\IProductoService.cs",
+              "RelativeToolTip": "TobacoBackend\\Domain\\IServices\\IProductoService.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-05-13T04:45:50.924Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 11,
+              "Title": "Cliente.cs",
+              "DocumentMoniker": "C:\\Users\\santi\\Desktop\\Carrera\\Tobaco\\TobacoBackend\\TobacoBackend\\Domain\\Models\\Cliente.cs",
+              "RelativeDocumentMoniker": "TobacoBackend\\Domain\\Models\\Cliente.cs",
+              "ToolTip": "C:\\Users\\santi\\Desktop\\Carrera\\Tobaco\\TobacoBackend\\TobacoBackend\\Domain\\Models\\Cliente.cs",
+              "RelativeToolTip": "TobacoBackend\\Domain\\Models\\Cliente.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-05-13T04:45:42.004Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 7,
+              "Title": "AplicationDbContext.cs",
+              "DocumentMoniker": "C:\\Users\\santi\\Desktop\\Carrera\\Tobaco\\TobacoBackend\\TobacoBackend\\Persistence\\AplicationDbContext.cs",
+              "RelativeDocumentMoniker": "TobacoBackend\\Persistence\\AplicationDbContext.cs",
+              "ToolTip": "C:\\Users\\santi\\Desktop\\Carrera\\Tobaco\\TobacoBackend\\TobacoBackend\\Persistence\\AplicationDbContext.cs",
+              "RelativeToolTip": "TobacoBackend\\Persistence\\AplicationDbContext.cs",
+              "ViewState": "AgIAAA0AAAAAAAAAAADwvzoAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-05-23T00:06:52.534Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 14,
+              "Title": "CategoriaRepository.cs",
+              "DocumentMoniker": "C:\\Users\\santi\\Desktop\\Carrera\\Tobaco\\TobacoBackend\\TobacoBackend\\Repositories\\CategoriaRepository.cs",
+              "RelativeDocumentMoniker": "TobacoBackend\\Repositories\\CategoriaRepository.cs",
+              "ToolTip": "C:\\Users\\santi\\Desktop\\Carrera\\Tobaco\\TobacoBackend\\TobacoBackend\\Repositories\\CategoriaRepository.cs",
+              "RelativeToolTip": "TobacoBackend\\Repositories\\CategoriaRepository.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAkAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-05-23T00:06:06.599Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "ProductoService.cs",
+              "DocumentMoniker": "C:\\Users\\santi\\Desktop\\Carrera\\Tobaco\\TobacoBackend\\TobacoBackend\\Services\\ProductoService.cs",
+              "RelativeDocumentMoniker": "TobacoBackend\\Services\\ProductoService.cs",
+              "ToolTip": "C:\\Users\\santi\\Desktop\\Carrera\\Tobaco\\TobacoBackend\\TobacoBackend\\Services\\ProductoService.cs",
+              "RelativeToolTip": "TobacoBackend\\Services\\ProductoService.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAADMAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-05-23T23:58:27.008Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "ProductoRepository.cs",
+              "DocumentMoniker": "C:\\Users\\santi\\Desktop\\Carrera\\Tobaco\\TobacoBackend\\TobacoBackend\\Repositories\\ProductoRepository.cs",
+              "RelativeDocumentMoniker": "TobacoBackend\\Repositories\\ProductoRepository.cs",
+              "ToolTip": "C:\\Users\\santi\\Desktop\\Carrera\\Tobaco\\TobacoBackend\\TobacoBackend\\Repositories\\ProductoRepository.cs",
+              "RelativeToolTip": "TobacoBackend\\Repositories\\ProductoRepository.cs",
+              "ViewState": "AgIAAAMAAAAAAAAAAAAAADQAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-05-24T00:06:01.238Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 6,
+              "Title": "CategoriaService.cs",
+              "DocumentMoniker": "C:\\Users\\santi\\Desktop\\Carrera\\Tobaco\\TobacoBackend\\TobacoBackend\\Services\\CategoriaService.cs",
+              "RelativeDocumentMoniker": "TobacoBackend\\Services\\CategoriaService.cs",
+              "ToolTip": "C:\\Users\\santi\\Desktop\\Carrera\\Tobaco\\TobacoBackend\\TobacoBackend\\Services\\CategoriaService.cs",
+              "RelativeToolTip": "TobacoBackend\\Services\\CategoriaService.cs",
+              "ViewState": "AgIAAAkAAAAAAAAAAAAQwDAAAAAuAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-05-23T00:34:55.691Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 9,
+              "Title": "IClienteRepository.cs",
+              "DocumentMoniker": "C:\\Users\\santi\\Desktop\\Carrera\\Tobaco\\TobacoBackend\\TobacoBackend\\Domain\\IRepositories\\IClienteRepository.cs",
+              "RelativeDocumentMoniker": "TobacoBackend\\Domain\\IRepositories\\IClienteRepository.cs",
+              "ToolTip": "C:\\Users\\santi\\Desktop\\Carrera\\Tobaco\\TobacoBackend\\TobacoBackend\\Domain\\IRepositories\\IClienteRepository.cs",
+              "RelativeToolTip": "TobacoBackend\\Domain\\IRepositories\\IClienteRepository.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-05-24T00:08:09.14Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 18,
+              "Title": "ClienteRepository.cs",
+              "DocumentMoniker": "C:\\Users\\santi\\Desktop\\Carrera\\Tobaco\\TobacoBackend\\TobacoBackend\\Repositories\\ClienteRepository.cs",
+              "RelativeDocumentMoniker": "TobacoBackend\\Repositories\\ClienteRepository.cs",
+              "ToolTip": "C:\\Users\\santi\\Desktop\\Carrera\\Tobaco\\TobacoBackend\\TobacoBackend\\Repositories\\ClienteRepository.cs",
+              "RelativeToolTip": "TobacoBackend\\Repositories\\ClienteRepository.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-05-23T00:06:18.568Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 5,
+              "Title": "Program.cs",
+              "DocumentMoniker": "C:\\Users\\santi\\Desktop\\Carrera\\Tobaco\\TobacoBackend\\TobacoBackend\\Program.cs",
+              "RelativeDocumentMoniker": "TobacoBackend\\Program.cs",
+              "ToolTip": "C:\\Users\\santi\\Desktop\\Carrera\\Tobaco\\TobacoBackend\\TobacoBackend\\Program.cs",
+              "RelativeToolTip": "TobacoBackend\\Program.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAB8AAABCAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-05-22T23:46:53.766Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 10,
+              "Title": "IProductoRepository.cs",
+              "DocumentMoniker": "C:\\Users\\santi\\Desktop\\Carrera\\Tobaco\\TobacoBackend\\TobacoBackend\\Domain\\IRepositories\\IProductoRepository.cs",
+              "RelativeDocumentMoniker": "TobacoBackend\\Domain\\IRepositories\\IProductoRepository.cs",
+              "ToolTip": "C:\\Users\\santi\\Desktop\\Carrera\\Tobaco\\TobacoBackend\\TobacoBackend\\Domain\\IRepositories\\IProductoRepository.cs",
+              "RelativeToolTip": "TobacoBackend\\Domain\\IRepositories\\IProductoRepository.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-05-24T00:08:02.479Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 12,
+              "Title": "ClienteDTO.cs",
+              "DocumentMoniker": "C:\\Users\\santi\\Desktop\\Carrera\\Tobaco\\TobacoBackend\\TobacoBackend\\DTOs\\ClienteDTO.cs",
+              "RelativeDocumentMoniker": "TobacoBackend\\DTOs\\ClienteDTO.cs",
+              "ToolTip": "C:\\Users\\santi\\Desktop\\Carrera\\Tobaco\\TobacoBackend\\TobacoBackend\\DTOs\\ClienteDTO.cs",
+              "RelativeToolTip": "TobacoBackend\\DTOs\\ClienteDTO.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-05-23T23:57:50.586Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 17,
+              "Title": "ClienteService.cs",
+              "DocumentMoniker": "C:\\Users\\santi\\Desktop\\Carrera\\Tobaco\\TobacoBackend\\TobacoBackend\\Services\\ClienteService.cs",
+              "RelativeDocumentMoniker": "TobacoBackend\\Services\\ClienteService.cs",
+              "ToolTip": "C:\\Users\\santi\\Desktop\\Carrera\\Tobaco\\TobacoBackend\\TobacoBackend\\Services\\ClienteService.cs",
+              "RelativeToolTip": "TobacoBackend\\Services\\ClienteService.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-05-23T23:58:41.153Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 13,
+              "Title": "ClientesController.cs",
+              "DocumentMoniker": "C:\\Users\\santi\\Desktop\\Carrera\\Tobaco\\TobacoBackend\\TobacoBackend\\Controllers\\ClientesController.cs",
+              "RelativeDocumentMoniker": "TobacoBackend\\Controllers\\ClientesController.cs",
+              "ToolTip": "C:\\Users\\santi\\Desktop\\Carrera\\Tobaco\\TobacoBackend\\TobacoBackend\\Controllers\\ClientesController.cs",
+              "RelativeToolTip": "TobacoBackend\\Controllers\\ClientesController.cs",
+              "ViewState": "AgIAABwAAAAAAAAAAAAAwGEAAAANAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-05-23T00:35:51.769Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 16,
+              "Title": "IClienteService.cs",
+              "DocumentMoniker": "C:\\Users\\santi\\Desktop\\Carrera\\Tobaco\\TobacoBackend\\TobacoBackend\\Domain\\IServices\\IClienteService.cs",
+              "RelativeDocumentMoniker": "TobacoBackend\\Domain\\IServices\\IClienteService.cs",
+              "ToolTip": "C:\\Users\\santi\\Desktop\\Carrera\\Tobaco\\TobacoBackend\\TobacoBackend\\Domain\\IServices\\IClienteService.cs",
+              "RelativeToolTip": "TobacoBackend\\Domain\\IServices\\IClienteService.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-05-24T00:08:21.517Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 28,
+              "Title": "Categoria.cs",
+              "DocumentMoniker": "C:\\Users\\santi\\Desktop\\Carrera\\Tobaco\\TobacoBackend\\TobacoBackend\\Domain\\Models\\Categoria.cs",
+              "RelativeDocumentMoniker": "TobacoBackend\\Domain\\Models\\Categoria.cs",
+              "ToolTip": "C:\\Users\\santi\\Desktop\\Carrera\\Tobaco\\TobacoBackend\\TobacoBackend\\Domain\\Models\\Categoria.cs",
+              "RelativeToolTip": "TobacoBackend\\Domain\\Models\\Categoria.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABEAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-05-22T23:38:20.317Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 21,
+              "Title": "CategoriaDTO.cs",
+              "DocumentMoniker": "C:\\Users\\santi\\Desktop\\Carrera\\Tobaco\\TobacoBackend\\TobacoBackend\\DTOs\\CategoriaDTO.cs",
+              "RelativeDocumentMoniker": "TobacoBackend\\DTOs\\CategoriaDTO.cs",
+              "ToolTip": "C:\\Users\\santi\\Desktop\\Carrera\\Tobaco\\TobacoBackend\\TobacoBackend\\DTOs\\CategoriaDTO.cs",
+              "RelativeToolTip": "TobacoBackend\\DTOs\\CategoriaDTO.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAMAAAAFAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-05-22T23:46:25.838Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 27,
+              "Title": "ICategoriaRepository.cs",
+              "DocumentMoniker": "C:\\Users\\santi\\Desktop\\Carrera\\Tobaco\\TobacoBackend\\TobacoBackend\\Domain\\IRepositories\\ICategoriaRepository.cs",
+              "RelativeDocumentMoniker": "TobacoBackend\\Domain\\IRepositories\\ICategoriaRepository.cs",
+              "ToolTip": "C:\\Users\\santi\\Desktop\\Carrera\\Tobaco\\TobacoBackend\\TobacoBackend\\Domain\\IRepositories\\ICategoriaRepository.cs",
+              "RelativeToolTip": "TobacoBackend\\Domain\\IRepositories\\ICategoriaRepository.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAoAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-05-23T00:05:29.839Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 20,
+              "Title": "Pedido.cs",
+              "DocumentMoniker": "C:\\Users\\santi\\Desktop\\Carrera\\Tobaco\\TobacoBackend\\TobacoBackend\\Domain\\Models\\Pedido.cs",
+              "RelativeDocumentMoniker": "TobacoBackend\\Domain\\Models\\Pedido.cs",
+              "ToolTip": "C:\\Users\\santi\\Desktop\\Carrera\\Tobaco\\TobacoBackend\\TobacoBackend\\Domain\\Models\\Pedido.cs",
+              "RelativeToolTip": "TobacoBackend\\Domain\\Models\\Pedido.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABcAAAArAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-05-13T04:45:18.378Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 24,
+              "Title": "CategoriaController.cs",
+              "DocumentMoniker": "C:\\Users\\santi\\Desktop\\Carrera\\Tobaco\\TobacoBackend\\TobacoBackend\\Controllers\\CategoriaController.cs",
+              "RelativeDocumentMoniker": "TobacoBackend\\Controllers\\CategoriaController.cs",
+              "ToolTip": "C:\\Users\\santi\\Desktop\\Carrera\\Tobaco\\TobacoBackend\\TobacoBackend\\Controllers\\CategoriaController.cs",
+              "RelativeToolTip": "TobacoBackend\\Controllers\\CategoriaController.cs",
+              "ViewState": "AgIAABAAAAAAAAAAAAAgwCAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-05-23T00:35:31.327Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 23,
+              "Title": "PedidoProducto.cs",
+              "DocumentMoniker": "C:\\Users\\santi\\Desktop\\Carrera\\Tobaco\\TobacoBackend\\TobacoBackend\\Domain\\Models\\PedidoProducto.cs",
+              "RelativeDocumentMoniker": "TobacoBackend\\Domain\\Models\\PedidoProducto.cs",
+              "ToolTip": "C:\\Users\\santi\\Desktop\\Carrera\\Tobaco\\TobacoBackend\\TobacoBackend\\Domain\\Models\\PedidoProducto.cs",
+              "RelativeToolTip": "TobacoBackend\\Domain\\Models\\PedidoProducto.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-05-23T23:31:01.525Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 19,
+              "Title": "TokenService.cs",
+              "DocumentMoniker": "C:\\Users\\santi\\Desktop\\Carrera\\Tobaco\\TobacoBackend\\TobacoBackend\\Services\\TokenService.cs",
+              "RelativeDocumentMoniker": "TobacoBackend\\Services\\TokenService.cs",
+              "ToolTip": "C:\\Users\\santi\\Desktop\\Carrera\\Tobaco\\TobacoBackend\\TobacoBackend\\Services\\TokenService.cs",
+              "RelativeToolTip": "TobacoBackend\\Services\\TokenService.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-05-23T23:58:23.621Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 22,
+              "Title": "PedidoDTO.cs",
+              "DocumentMoniker": "C:\\Users\\santi\\Desktop\\Carrera\\Tobaco\\TobacoBackend\\TobacoBackend\\DTOs\\PedidoDTO.cs",
+              "RelativeDocumentMoniker": "TobacoBackend\\DTOs\\PedidoDTO.cs",
+              "ToolTip": "C:\\Users\\santi\\Desktop\\Carrera\\Tobaco\\TobacoBackend\\TobacoBackend\\DTOs\\PedidoDTO.cs",
+              "RelativeToolTip": "TobacoBackend\\DTOs\\PedidoDTO.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAsAAAArAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-05-13T04:46:06.657Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 25,
+              "Title": "ICategoriaService.cs",
+              "DocumentMoniker": "C:\\Users\\santi\\Desktop\\Carrera\\Tobaco\\TobacoBackend\\TobacoBackend\\Domain\\IServices\\ICategoriaService.cs",
+              "RelativeDocumentMoniker": "TobacoBackend\\Domain\\IServices\\ICategoriaService.cs",
+              "ToolTip": "C:\\Users\\santi\\Desktop\\Carrera\\Tobaco\\TobacoBackend\\TobacoBackend\\Domain\\IServices\\ICategoriaService.cs",
+              "RelativeToolTip": "TobacoBackend\\Domain\\IServices\\ICategoriaService.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAoAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-05-23T00:34:18.606Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 26,
+              "Title": "PedidosController.cs",
+              "DocumentMoniker": "C:\\Users\\santi\\Desktop\\Carrera\\Tobaco\\TobacoBackend\\TobacoBackend\\Controllers\\PedidosController.cs",
+              "RelativeDocumentMoniker": "TobacoBackend\\Controllers\\PedidosController.cs",
+              "ToolTip": "C:\\Users\\santi\\Desktop\\Carrera\\Tobaco\\TobacoBackend\\TobacoBackend\\Controllers\\PedidosController.cs",
+              "RelativeToolTip": "TobacoBackend\\Controllers\\PedidosController.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-05-23T00:36:07.159Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 29,
+              "Title": "MetodoPagoEnum.cs",
+              "DocumentMoniker": "C:\\Users\\santi\\Desktop\\Carrera\\Tobaco\\TobacoBackend\\TobacoBackend\\Domain\\Models\\MetodoPagoEnum.cs",
+              "RelativeDocumentMoniker": "TobacoBackend\\Domain\\Models\\MetodoPagoEnum.cs",
+              "ToolTip": "C:\\Users\\santi\\Desktop\\Carrera\\Tobaco\\TobacoBackend\\TobacoBackend\\Domain\\Models\\MetodoPagoEnum.cs",
+              "RelativeToolTip": "TobacoBackend\\Domain\\Models\\MetodoPagoEnum.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAcAAAAXAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-05-13T04:44:04.597Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 30,
               "Title": "appsettings.json",
               "DocumentMoniker": "C:\\Users\\santi\\Desktop\\Carrera\\Tobaco\\TobacoBackend\\TobacoBackend\\appsettings.json",
               "RelativeDocumentMoniker": "TobacoBackend\\appsettings.json",
@@ -46,20 +539,7 @@
               "RelativeToolTip": "TobacoBackend\\appsettings.json",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAoAAAAEAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
-              "WhenOpened": "2025-04-28T18:32:37.437Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 1,
-              "Title": "ClientesController.cs",
-              "DocumentMoniker": "C:\\Users\\santi\\Desktop\\Carrera\\Tobaco\\TobacoBackend\\TobacoBackend\\Controllers\\ClientesController.cs",
-              "RelativeDocumentMoniker": "TobacoBackend\\Controllers\\ClientesController.cs",
-              "ToolTip": "C:\\Users\\santi\\Desktop\\Carrera\\Tobaco\\TobacoBackend\\TobacoBackend\\Controllers\\ClientesController.cs",
-              "RelativeToolTip": "TobacoBackend\\Controllers\\ClientesController.cs",
-              "ViewState": "AgIAAFQAAAAAAAAAAAA4wAAAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-04-28T01:53:38.545Z"
+              "WhenOpened": "2025-04-28T18:32:37.437Z"
             }
           ]
         }

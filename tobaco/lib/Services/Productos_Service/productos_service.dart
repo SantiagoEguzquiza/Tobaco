@@ -14,8 +14,16 @@ class ProductoService {
       );
 
       if (response.statusCode == 200) {
-        final List<dynamic> productosJson = jsonDecode(response.body);
-        
+        if (response.body.isEmpty) {
+          // Respuesta vacía, retorna lista vacía
+          return [];
+        }
+        final decoded = jsonDecode(response.body);
+        if (decoded == null || (decoded is List && decoded.isEmpty)) {
+          // JSON vacío o lista vacía
+          return [];
+        }
+        final List<dynamic> productosJson = decoded;
         return productosJson.map((json) => Producto.fromJson(json)).toList();
       } else {
         throw Exception(

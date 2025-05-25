@@ -19,7 +19,10 @@ namespace TobacoBackend.Domain.Models
         public decimal Precio { get; set; }
 
         [Required]
-        public CategoriaEnum Categoria { get; set; }
+        public int CategoriaId { get; set; }
+
+        [ForeignKey("CategoriaId")]
+        public Categoria Categoria { get; set; }
 
         public List<PedidoProducto> PedidoProductos { get; set; } = new List<PedidoProducto>();
 

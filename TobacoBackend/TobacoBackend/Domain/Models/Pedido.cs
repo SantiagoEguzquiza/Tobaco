@@ -22,5 +22,6 @@ namespace TobacoBackend.Domain.Models
 
         [Required]
         public DateTime Fecha { get; set; }
+        public MetodoPagoEnum MetodoPago { get; set; }
     }
 }

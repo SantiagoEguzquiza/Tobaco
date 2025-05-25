@@ -28,7 +28,7 @@ class DetalleProductoScreen extends StatelessWidget {
               padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
               decoration: AppTheme.sectionBoxDecoration,
               child: Text(
-                producto.categoria.nombre, // Muestra el nombre de la categoría
+                producto.categoriaNombre ?? 'No disponible',
                 style: AppTheme.sectionContentStyle,
               ),
             ),

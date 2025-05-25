@@ -25,22 +25,49 @@ class AppTheme {
     border: OutlineInputBorder(),
   );
 
-static CheckboxThemeData checkboxTheme = CheckboxThemeData(
-  shape: RoundedRectangleBorder(
-    borderRadius: BorderRadius.circular(5),
-  ),
-  fillColor: WidgetStateProperty.resolveWith((states) {
-    if (states.contains(WidgetState.selected)) {
-      return primaryColor;
-    }
-    return greyColor;
-  }),
-  checkColor: WidgetStateProperty.all(Colors.white),
-  side: const BorderSide(
-    color: greyColor,
-    width: 2,
-  ),
-);
+  static const BoxDecoration showMenuBoxDecoration = BoxDecoration(
+    color: Colors.white,
+    borderRadius: BorderRadius.all(Radius.circular(12)),
+    boxShadow: [
+      BoxShadow(
+        color: Colors.black26,
+        blurRadius: 8,
+        offset: Offset(0, 2),
+      ),
+    ],
+  );
+
+  static const TextStyle showMenuItemTextStyle = TextStyle(
+    color: textColor,
+    fontSize: 16,
+  );
+
+  static const TextStyle showMenuSelectedItemTextStyle = TextStyle(
+    color: primaryColor,
+    fontSize: 16,
+    fontWeight: FontWeight.bold,
+  );
+
+  static const ShapeBorder showMenuShape = RoundedRectangleBorder(
+    borderRadius: BorderRadius.all(Radius.circular(12)),
+  );
+
+  static CheckboxThemeData checkboxTheme = CheckboxThemeData(
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(5),
+    ),
+    fillColor: WidgetStateProperty.resolveWith((states) {
+      if (states.contains(WidgetState.selected)) {
+        return primaryColor;
+      }
+      return greyColor;
+    }),
+    checkColor: WidgetStateProperty.all(Colors.white),
+    side: const BorderSide(
+      color: greyColor,
+      width: 2,
+    ),
+  );
 
   static AlertDialog alertDialogStyle({
     required String title,
@@ -217,8 +244,8 @@ static CheckboxThemeData checkboxTheme = CheckboxThemeData(
 
   static const TextStyle itemListaNegrita =
       TextStyle(color: textColor, fontSize: 16, fontWeight: FontWeight.bold);
-      
-static const TextStyle itemListaPrecio =
+
+  static const TextStyle itemListaPrecio =
       TextStyle(color: Colors.blueGrey, fontSize: 14);
 
   static BoxDecoration sectionBoxDecoration = BoxDecoration(
@@ -306,6 +333,74 @@ static const TextStyle itemListaPrecio =
           horizontal: 15,
         ),
       ),
+    );
+  }
+
+  static AlertDialog customAlertDialog({
+    required String title,
+    required Widget content,
+    required VoidCallback onConfirm,
+    VoidCallback? onCancel,
+    String confirmText = 'Agregar',
+    String cancelText = 'Cancelar',
+  }) {
+    return AlertDialog(
+      backgroundColor: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      title: Text(
+        title,
+        style: const TextStyle(
+          fontSize: 22,        
+          color: textColor,
+        ),
+      ),
+      content: content,
+      actionsAlignment: MainAxisAlignment.end,
+      actionsPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      actions: [
+        TextButton(
+          onPressed: onCancel,
+          child: const Text(
+            'Cancelar',
+            style: TextStyle(color: Colors.grey),
+          ),
+        ),
+        TextButton(
+          onPressed: onConfirm,
+          child: const Text(
+            'Agregar',
+            style: TextStyle(color: Colors.green),
+          ),
+        ),
+      ],
+    );
+  }
+
+  static AlertDialog minimalAlertDialog({
+    required String title,
+    required Widget content,
+    List<Widget>? actions,
+  }) {
+    return AlertDialog(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+      ),
+      backgroundColor: Colors.white,
+      title: Text(
+        title,
+        style: const TextStyle(
+          fontWeight: FontWeight.bold,
+          fontSize: 18,
+          color: Colors.black87,
+        ),
+      ),
+      content: content,
+      actions: actions,
+      actionsPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      titlePadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+      contentPadding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
     );
   }
 }
