@@ -25,7 +25,7 @@ class _SeleccionarProductosScreenState
   List<Producto> productos = [];
   final Map<int, double> cantidades = {};
   List<Categoria> categorias = [];
-  Categoria? selectedCategory;
+  String? selectedCategory;
   bool isLoading = true;
   String? errorMessage;
   String searchQuery = '';
@@ -33,7 +33,6 @@ class _SeleccionarProductosScreenState
   @override
   void initState() {
     super.initState();
-    selectedCategory = categorias.isNotEmpty ? categorias[0] : null;
     loadProductos();
   }
 
@@ -45,10 +44,15 @@ class _SeleccionarProductosScreenState
 
     try {
       final productoProvider = ProductoProvider();
+      final categoriasProvider = CategoriasProvider();
+
       final List<Producto> fetchedProductos =
           await productoProvider.obtenerProductos();
+      final List<Categoria> fetchedCategorias =
+          await categoriasProvider.obtenerCategorias();
 
       setState(() {
+        categorias = fetchedCategorias;
         productos = fetchedProductos;
         for (var ps in widget.productosYaSeleccionados) {
           cantidades[ps.producto.id!] = ps.cantidad;
@@ -66,7 +70,10 @@ class _SeleccionarProductosScreenState
 
   @override
   Widget build(BuildContext context) {
-    categorias = Provider.of<CategoriasProvider>(context).categorias;
+    
+    if (selectedCategory == null && categorias.isNotEmpty) {
+      selectedCategory = categorias.first.nombre;
+    }
 
     final filteredProductos = productos.where((producto) {
       final matchesSearchQuery =
@@ -111,19 +118,19 @@ class _SeleccionarProductosScreenState
                     padding: const EdgeInsets.symmetric(horizontal: 4.0),
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: selectedCategory == categoria
+                        backgroundColor: selectedCategory == categoria.nombre
                             ? AppTheme.primaryColor
                             : AppTheme.greyColor,
                         foregroundColor: Colors.white,
                       ),
                       onPressed: () {
                         setState(() {
-                          selectedCategory =
-                              selectedCategory == categoria ? null : categoria;
+                          selectedCategory = categoria.nombre;
                         });
                       },
                       child: Text(
-                        categoria.nombre[0].toUpperCase() + categoria.nombre.substring(1),
+                        categoria.nombre[0].toUpperCase() +
+                            categoria.nombre.substring(1),
                         style: const TextStyle(fontSize: 14),
                       ),
                     ),

@@ -86,16 +86,16 @@ class ClienteService {
   }
 
   Future<List<Cliente>> buscarClientes(String nombre) async {
-  final response = await Apihandler.client.get(
-    Uri.parse('$baseUrl/Clientes/buscar?query=$nombre'),
-    headers: {'Content-Type': 'application/json'},
-  );
+    final response = await Apihandler.client.get(
+      Uri.parse('$baseUrl/Clientes/buscar?query=$nombre'),
+      headers: {'Content-Type': 'application/json'},
+    );
 
-  if (response.statusCode == 200) {
-    final List<dynamic> jsonList = jsonDecode(response.body);
-    return jsonList.map((json) => Cliente.fromJson(json)).toList();
-  } else {
-    throw Exception('Error al buscar clientes');
+    if (response.statusCode == 200) {
+      final List<dynamic> jsonList = jsonDecode(response.body);
+      return jsonList.map((json) => Cliente.fromJson(json)).toList();
+    } else {
+      throw Exception('Error al buscar clientes');
+    }
   }
-}
 }

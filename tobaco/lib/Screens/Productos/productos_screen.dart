@@ -28,8 +28,7 @@ class _ProductosScreenState extends State<ProductosScreen> {
 
   @override
   void initState() {
-    super.initState();
-    selectedCategory = null;
+    super.initState(); 
     _loadProductos();
   }
 

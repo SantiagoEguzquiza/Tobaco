@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:tobaco/Screens/Clientes/clientes_screen.dart';
+import 'package:tobaco/Screens/Deudas/deudas_screen.dart';
 import 'package:tobaco/Screens/Ventas/nuevaVenta_screen.dart';
 import 'package:tobaco/Screens/Ventas/ventas_screen.dart';
 import 'package:tobaco/Screens/Productos/productos_screen.dart';
@@ -126,7 +127,13 @@ class MenuScreen extends StatelessWidget {
                       elevation: 10,
                       shadowColor: Colors.black,
                     ),
-                    onPressed: () {},
+                    onPressed: () { 
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) =>  DeudasScreen()),
+                      );
+                    },
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
