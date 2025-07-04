@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:tobaco/Models/Ventas.dart';
 
 class FormaPagoScreen extends StatefulWidget {
-  final double total;
+  
+  final Ventas venta;
 
-  const FormaPagoScreen({super.key, required this.total});
+  const FormaPagoScreen({super.key, required this.venta});
 
   @override
   State<FormaPagoScreen> createState() => _FormaPagoScreenState();
@@ -24,6 +26,7 @@ class _FormaPagoScreenState extends State<FormaPagoScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Forma de pago'),
+        centerTitle: true,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context),
@@ -33,20 +36,20 @@ class _FormaPagoScreenState extends State<FormaPagoScreen> {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            ...metodos.map((metodo) => _buildMetodoPagoTile(metodo)).toList(),
+            ...metodos.map((metodo) => _buildMetodoPagoTile(metodo)),
             const Spacer(),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Total: \$${widget.total.toStringAsFixed(0)}',
+                  'Total: \$${widget.venta.total.toStringAsFixed(0)}',
                   style: const TextStyle(fontSize: 16),
                 ),
                 ElevatedButton(
                   onPressed: metodoSeleccionado != null
                       ? () {
-                          // Podés devolver el método seleccionado o ir a pantalla resumen
-                          Navigator.pop(context, metodoSeleccionado);
+                          
+                          Navigator.pop(context, metodoSeleccionado); //aca va lo que huace despues de confirmar el metodo de pago
                         }
                       : null,
                   style: ElevatedButton.styleFrom(

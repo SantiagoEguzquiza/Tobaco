@@ -444,7 +444,7 @@ class _ProductosScreenState extends State<ProductosScreen> {
                                                 .eliminarProducto(producto.id!);
                                             _loadProductos();
                                             if (mounted) {
-                                              Navigator.of(context).pop();
+                                              Navigator.of(this.context).pop();
                                             }
                                           },
                                           onCancel: () {

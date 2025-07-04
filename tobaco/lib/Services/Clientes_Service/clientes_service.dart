@@ -98,4 +98,25 @@ class ClienteService {
       throw Exception('Error al buscar clientes');
     }
   }
+
+  Future<List<Cliente>> obtenerClientesConDeuda() async {
+    try {
+      final response = await Apihandler.client.get(
+        Uri.parse('$baseUrl/Clientes/con-deuda'),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      if (response.statusCode == 200) {
+        final List<dynamic> clientesJson = jsonDecode(response.body);
+        return clientesJson.map((json) => Cliente.fromJson(json)).toList();
+      } else {
+        throw Exception(
+            'Error al obtener los clientes. Código de estado: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('Error al obtener los clientes: $e');
+      rethrow;
+    }
+  }
+  
 }

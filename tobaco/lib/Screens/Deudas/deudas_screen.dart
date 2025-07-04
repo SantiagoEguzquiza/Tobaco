@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:tobaco/Models/Cliente.dart';
+import 'package:tobaco/Services/Clientes_Service/clientes_provider.dart';
 import 'package:tobaco/Theme/app_theme.dart';
+import 'dart:developer';
 
 class DeudasScreen extends StatefulWidget {
   @override
@@ -7,24 +10,55 @@ class DeudasScreen extends StatefulWidget {
 }
 
 class _DeudasScreenState extends State<DeudasScreen> {
+  bool isLoading = true;
+  String searchQuery = '';
+  String? errorMessage;
+  List<Cliente> clientes = [];
   final TextEditingController _searchController = TextEditingController();
 
-  final List<Map<String, dynamic>> _clientes = [
-    {'nombre': 'Juan Pérez', 'deuda': 1200.0},
-    {'nombre': 'Ana Gómez', 'deuda': 800.0},
-    {'nombre': 'Carlos Ruiz', 'deuda': 500.0},
-    {'nombre': 'Lucía Fernández', 'deuda': 1500.0},
-  ];
+   @override
+  void initState() {
+    super.initState();
+    _loadClientes();
+  }
+
+  // final List<Map<String, dynamic>> _clientes = [
+  //   {'nombre': 'Juan Pérez', 'deuda': 1200.0},
+  //   {'nombre': 'Ana Gómez', 'deuda': 800.0},
+  //   {'nombre': 'Carlos Ruiz', 'deuda': 500.0},
+  //   {'nombre': 'Lucía Fernández', 'deuda': 1500.0},
+  // ];
+
+  Future<void> _loadClientes() async {
+    setState(() {
+      isLoading = true;
+      errorMessage = null;
+    });
+
+    try {
+      final clienteProvider = ClienteProvider();
+      final List<Cliente> fetchedClientes =
+          await clienteProvider.obtenerClientesConDeuda();
+
+      setState(() {
+        clientes = fetchedClientes;
+        isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        isLoading = false;
+        errorMessage = 'Error al cargar los clientes: $e';
+      });
+      log('Error al cargar los clientes: $e', level: 1000);
+    }
+  }
 
   String _searchText = '';
 
   @override
   Widget build(BuildContext context) {
-    final filteredClientes = _clientes.where((cliente) {
-      return cliente['nombre']
-          .toLowerCase()
-          .contains(_searchText.toLowerCase());
-    }).toList();
+    
+    //falta que funcione la barra de busqueda y que se ordenen los clientes por orden alfabetico
 
     return Scaffold(
       appBar: AppBar(
@@ -50,9 +84,9 @@ class _DeudasScreenState extends State<DeudasScreen> {
           ),
           Expanded(
             child: ListView.builder(
-              itemCount: filteredClientes.length,
+              itemCount: clientes.length,
               itemBuilder: (context, index) {
-                final cliente = filteredClientes[index];
+                final cliente = clientes[index];
                 return Card(
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(5),
@@ -78,11 +112,11 @@ class _DeudasScreenState extends State<DeudasScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  cliente['nombre'],
+                                  cliente.nombre,
                                   style: AppTheme.cardTitleStyle,
                                 ),
                                 Text(
-                                  'Deuda: \$${cliente['deuda']}',
+                                  'Deuda: \$${cliente.deuda}',
                                   style: AppTheme.cardSubtitleStyle,
                                 ),
                               ],

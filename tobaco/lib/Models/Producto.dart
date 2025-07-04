@@ -28,7 +28,7 @@ class Producto {
           ? double.tryParse(json['precio'].toString()) ?? 0.0
           : 0.0,
       categoriaId: json['categoriaId'] as int,
-      categoriaNombre: json['categoriaNombre'] as String,
+      categoriaNombre: json['categoriaNombre'] as String ?,
       half: json['half'] ?? false, 
     );
   }

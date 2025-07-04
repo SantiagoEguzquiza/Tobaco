@@ -6,8 +6,10 @@ class ClienteProvider with ChangeNotifier {
   final ClienteService _clienteService = ClienteService();
 
   List<Cliente> _clientes = [];
+  List<Cliente> _clientesConDeuda = [];
 
   List<dynamic> get clientes => _clientes;
+  List<dynamic> get clientesConDeuda => _clientesConDeuda;
 
   Future<List<Cliente>> obtenerClientes() async {
     try {
@@ -60,5 +62,15 @@ class ClienteProvider with ChangeNotifier {
       debugPrint('Error: $e');
     }
     return _clientes;
+  }
+
+   Future<List<Cliente>> obtenerClientesConDeuda() async {
+    try {
+      _clientesConDeuda = await _clienteService.obtenerClientesConDeuda();
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error: $e');
+    }
+    return _clientesConDeuda;
   }
 }

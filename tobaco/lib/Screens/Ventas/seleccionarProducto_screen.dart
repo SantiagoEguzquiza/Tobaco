@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:tobaco/Models/Categoria.dart';
 import 'package:tobaco/Models/Producto.dart';
 import 'package:tobaco/Models/ProductoSeleccionado.dart';
@@ -24,6 +25,7 @@ class _SeleccionarProductosScreenState
     extends State<SeleccionarProductosScreen> {
   List<Producto> productos = [];
   final Map<int, double> cantidades = {};
+  final Map<int, TextEditingController> cantidadControllers = {};
   List<Categoria> categorias = [];
   String? selectedCategory;
   bool isLoading = true;
@@ -70,7 +72,6 @@ class _SeleccionarProductosScreenState
 
   @override
   Widget build(BuildContext context) {
-    
     if (selectedCategory == null && categorias.isNotEmpty) {
       selectedCategory = categorias.first.nombre;
     }
@@ -158,94 +159,107 @@ class _SeleccionarProductosScreenState
                         final producto = filteredProductos[index];
                         final cantidad = cantidades[producto.id] ?? 0;
 
-                        return Card(
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(5),
-                          ),
-                          color: index % 2 == 0
-                              ? AppTheme.secondaryColor // Verde para impares
-                              : AppTheme.greyColor, // Gris claro para pares
-                          margin: const EdgeInsets.symmetric(vertical: 4),
-                          child: Padding(
+                        if (!cantidadControllers.containsKey(producto.id)) {
+                          cantidadControllers[producto.id!] =
+                              TextEditingController(
+                            text: cantidad % 1 == 0
+                                ? cantidad.toInt().toString()
+                                : cantidad.toStringAsFixed(1),
+                          );
+                        } else {
+                          cantidadControllers[producto.id!]!.text =
+                              cantidad % 1 == 0
+                                  ? cantidad.toInt().toString()
+                                  : cantidad.toStringAsFixed(1);
+                        }
+
+                        return Slidable(
+                          key: ValueKey(producto.id),
+                          endActionPane: ActionPane(
+                              motion: const DrawerMotion(), children: []),
+                          child: Container(
+                            color: index % 2 == 0
+                                ? AppTheme.secondaryColor
+                                : const Color.fromARGB(255, 255, 255, 255),
                             padding: const EdgeInsets.symmetric(
-                              vertical: 6.0,
-                              horizontal: 6.0,
-                            ),
-                            child: InkWell(
-                              onTap: () {
-                                // Navegación a detalles del producto
-                              },
-                              child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: <Widget>[
-                                  Expanded(
-                                    child: Text(
-                                      producto.nombre,
-                                      style: AppTheme.itemListaNegrita,
-                                    ),
+                                vertical: 15, horizontal: 15),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Expanded(
+                                  flex: 6,
+                                  child: Text(
+                                    producto.nombre,
+                                    style: AppTheme.itemListaNegrita,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
-                                  Text(
-                                    '\$ ${producto.precio.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (match) => '${match[1]}.')}',
+                                ),
+                                Expanded(
+                                  flex: 2,
+                                  child: Text(
+                                    '\$ ${producto.precio.toStringAsFixed(0).replaceAllMapped(
+                                          RegExp(r'(\d)(?=(\d{3})+(?!\d))'),
+                                          (match) => '${match[1]}.',
+                                        )}',
                                     style: AppTheme.itemListaPrecio,
+                                    textAlign: TextAlign.right,
                                   ),
-                                  if (producto.half)
-                                    IconButton(
-                                      icon: const Icon(Icons.contrast,
-                                          color: Colors.blueGrey),
-                                      onPressed: () {
-                                        setState(() {
-                                          final currentCantidad =
-                                              cantidades[producto.id!] ?? 0;
-                                          if (currentCantidad % 1 == 0) {
-                                            cantidades[producto.id!] =
-                                                currentCantidad + 0.5;
-                                          } else {
-                                            cantidades[producto.id!] =
-                                                currentCantidad - 0.5;
-                                          }
-                                        });
-                                      },
-                                    ),
-                                  IconButton(
-                                    icon: const Icon(Icons.remove_circle,
-                                        color: Colors.red),
-                                    onPressed: () {
-                                      if (cantidad > 0 && cantidad != 0.5) {
-                                        setState(() {
-                                          cantidades[producto.id!] =
-                                              cantidad - 1;
-                                        });
-                                      }
-                                    },
-                                  ),
-                                  Container(
-                                    width: 35,
-                                    height: 35,
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      border: Border.all(color: Colors.grey),
-                                      borderRadius: BorderRadius.circular(5),
-                                    ),
-                                    alignment: Alignment.center,
-                                    child: EditableText(
-                                      controller: TextEditingController(
-                                          text: cantidad % 1 == 0
-                                              ? cantidad.toInt().toString()
-                                              : cantidad.toStringAsFixed(1)),
-                                      focusNode: FocusNode(),
+                                ),
+                                Expanded(
+                                  flex: 1,
+                                  child: SizedBox(
+                                    width: 40,
+                                    height: 40,
+                                    child: TextField(
+                                      controller:
+                                          cantidadControllers[producto.id!],
                                       keyboardType: TextInputType.number,
                                       textAlign: TextAlign.center,
                                       style: const TextStyle(
-                                        fontSize: 16,
+                                        fontSize: 14,
                                         color: Colors.black,
                                       ),
                                       cursorColor: Colors.grey,
-                                      backgroundCursorColor: Colors.transparent,
-                                      inputFormatters: [], // Si querés, agregás restricciones acá
+                                      decoration: InputDecoration(
+                                        contentPadding: EdgeInsets.zero,
+                                        filled: true,
+                                        fillColor: Colors.white,
+                                        border: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(6),
+                                          borderSide: const BorderSide(
+                                              color: Colors.grey),
+                                        ),
+                                        enabledBorder: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(6),
+                                          borderSide: const BorderSide(
+                                              color: Colors.grey),
+                                        ),
+                                        focusedBorder: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(6),
+                                          borderSide: const BorderSide(
+                                              color: Colors.blueGrey),
+                                        ),
+                                      ),
+                                      inputFormatters: [
+                                        FilteringTextInputFormatter.allow(
+                                            RegExp(r'^\d{0,3}(\.\d{0,1})?$')),
+                                      ],
                                       onChanged: (value) {
-                                        final newCantidad =
+                                        double newCantidad =
                                             double.tryParse(value) ?? cantidad;
+                                        if (newCantidad > 999) {
+                                          newCantidad = 999;
+                                          cantidadControllers[producto.id!]!
+                                              .text = '999';
+                                          cantidadControllers[producto.id!]!
+                                                  .selection =
+                                              TextSelection.fromPosition(
+                                            const TextPosition(offset: 3),
+                                          );
+                                        }
                                         setState(() {
                                           cantidades[producto.id!] =
                                               newCantidad < 0
@@ -255,17 +269,74 @@ class _SeleccionarProductosScreenState
                                       },
                                     ),
                                   ),
-                                  IconButton(
-                                    icon: const Icon(Icons.add_circle,
-                                        color: Colors.green),
-                                    onPressed: () {
-                                      setState(() {
-                                        cantidades[producto.id!] = cantidad + 1;
-                                      });
-                                    },
-                                  ),
-                                ],
-                              ),
+                                ),
+                                Column(
+                                  children: [
+                                    IconButton(
+                                      icon: const Icon(Icons.keyboard_arrow_up),
+                                      onPressed: () {
+                                        setState(() {
+                                          double current =
+                                              cantidades[producto.id!] ?? 0;
+                                          if (current < 999) {
+                                            current += 1;
+                                            cantidades[producto.id!] = current;
+                                            cantidadControllers[producto.id!]!
+                                                .text = current % 1 ==
+                                                    0
+                                                ? current.toInt().toString()
+                                                : current.toStringAsFixed(1);
+                                            cantidadControllers[producto.id!]!
+                                                    .selection =
+                                                TextSelection.fromPosition(
+                                              TextPosition(
+                                                  offset: cantidadControllers[
+                                                          producto.id!]!
+                                                      .text
+                                                      .length),
+                                            );
+                                          }
+                                        });
+                                      },
+                                      iconSize: 22,
+                                      padding: EdgeInsets.zero,
+                                      constraints: const BoxConstraints(),
+                                    ),
+                                    IconButton(
+                                      icon:
+                                          const Icon(Icons.keyboard_arrow_down),
+                                      onPressed: () {
+                                        setState(() {
+                                          double current =
+                                              cantidades[producto.id!] ?? 0;
+                                          if (current > 0) {
+                                            current -= 1;
+                                            if (current < 0) current = 0;
+                                            cantidades[producto.id!] = current;
+                                            cantidadControllers[producto.id!]!
+                                                .text = current % 1 ==
+                                                    0
+                                                ? current.toInt().toString()
+                                                : current.toStringAsFixed(1);
+                                            cantidadControllers[producto.id!]!
+                                                    .selection =
+                                                TextSelection.fromPosition(
+                                              TextPosition(
+                                                  offset: cantidadControllers[
+                                                          producto.id!]!
+                                                      .text
+                                                      .length),
+                                            );
+                                          }
+                                        });
+                                      },
+                                      iconSize: 22,
+                                      padding: EdgeInsets.zero,
+                                      constraints: const BoxConstraints(),
+                                    ),
+                                  ],
+                                )
+                              ],
                             ),
                           ),
                         );

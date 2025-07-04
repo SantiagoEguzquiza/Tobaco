@@ -169,7 +169,7 @@ class AppTheme {
       color: Colors.grey,
     ),
     border: OutlineInputBorder(
-      borderRadius: BorderRadius.all(Radius.circular(30)),
+      borderRadius: BorderRadius.all(Radius.circular(10)),
     ),
     prefixIcon: Icon(
       Icons.search,
@@ -179,14 +179,14 @@ class AppTheme {
     filled: true,
     fillColor: Color.fromRGBO(255, 255, 255, 1),
     focusedBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.all(Radius.circular(30)),
+      borderRadius: BorderRadius.all(Radius.circular(10)),
       borderSide: BorderSide(
         color: Color.fromRGBO(200, 200, 200, 1),
         width: 1.0,
       ),
     ),
     enabledBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.all(Radius.circular(30)),
+      borderRadius: BorderRadius.all(Radius.circular(10)),
       borderSide: BorderSide(
         color: Color.fromRGBO(200, 200, 200, 1),
         width: 1.0,

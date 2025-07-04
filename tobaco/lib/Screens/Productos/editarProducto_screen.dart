@@ -34,8 +34,9 @@ class EditarProductoScreenState extends State<EditarProductoScreen> {
     halfController =
         TextEditingController(text: widget.producto.half.toString());
 
-    // Cargar categorías al iniciar
+    
     Future.microtask(() {
+      if (!mounted) return;
       Provider.of<CategoriasProvider>(context, listen: false).obtenerCategorias();
     });
   }

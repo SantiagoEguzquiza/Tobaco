@@ -20,9 +20,9 @@ public class AplicationDbContext : DbContext
 
 
         modelBuilder.Entity<Categoria>()
-    .Property(c => c.Nombre)
-    .IsRequired()
-    .HasMaxLength(100);
+            .Property(c => c.Nombre)
+            .IsRequired()
+            .HasMaxLength(100);
 
         modelBuilder.Entity<Categoria>()
             .HasIndex(c => c.Nombre)

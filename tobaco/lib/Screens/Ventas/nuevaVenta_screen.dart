@@ -1,15 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:tobaco/Models/Cliente.dart';
 import 'package:tobaco/Models/ProductoSeleccionado.dart';
 import 'package:tobaco/Models/VentasProductos.dart';
+import 'package:tobaco/Screens/Ventas/metodoPago_screen.dart';
 import 'package:tobaco/Screens/Ventas/seleccionarProducto_screen.dart';
 import 'package:tobaco/Services/Clientes_Service/clientes_provider.dart';
-import 'package:tobaco/Services/Ventas_Service/ventas_provider.dart';
 import 'package:tobaco/Theme/app_theme.dart';
 import 'package:tobaco/Models/Ventas.dart';
-import 'package:tobaco/Theme/confirmAnimation.dart';
 
 class NuevaVentaScreen extends StatefulWidget {
   const NuevaVentaScreen({super.key});
@@ -31,7 +29,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
     if (trimmedQuery.isEmpty) {
       setState(() {
         clientesFiltrados =
-            []; // o poné clientes completos si querés sugerencias por defecto
+            []; //  poné clientes completos si querés sugerencias por defecto
       });
       return;
     }
@@ -333,45 +331,40 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                                       sum + (ps.producto.precio * ps.cantidad)),
                               fecha: DateTime.now(),
                             );
-
-                            try {
-                              await VentasProvider().crearVenta(venta);
-
-                              // ✅ Mostrar animación y luego redirigir
-                              // showGeneralDialog(
-                              //   context: context,
-                              //   barrierDismissible: false,
-                              //   barrierColor: Colors.transparent,
-                              //   transitionDuration:
-                              //       const Duration(milliseconds: 0),
-                              //   pageBuilder:
-                              //       (context, animation, secondaryAnimation) {
-                              //     return AnnotatedRegion<SystemUiOverlayStyle>(
-                              //       value: SystemUiOverlayStyle.light.copyWith(
-                              //         statusBarColor: Colors.green,
-                              //         systemNavigationBarColor: Colors.green,
-                              //       ),
-                              //       child: Scaffold(
-                              //         backgroundColor: Colors.transparent,
-                              //         body: VentaConfirmadaAnimacion(
-                              //           onFinish: () {
-                              //             Navigator.of(context)
-                              //                 .pop(); // cerrar animación
-                              //             Navigator.of(context)
-                              //                 .pop(); // volver atrás
-                              //           },
-                              //         ),
-                              //       ),
-                              //     );
-                              //   },
-                              // );
-                            } catch (e) {
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text('Error: $e')),
-                                );
-                              }
-                            }
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => FormaPagoScreen(venta: venta),
+                              ),
+                            );
+                            // ✅ Mostrar animación y luego redirigir
+                            // showGeneralDialog(
+                            //   context: context,
+                            //   barrierDismissible: false,
+                            //   barrierColor: Colors.transparent,
+                            //   transitionDuration:
+                            //       const Duration(milliseconds: 0),
+                            //   pageBuilder:
+                            //       (context, animation, secondaryAnimation) {
+                            //     return AnnotatedRegion<SystemUiOverlayStyle>(
+                            //       value: SystemUiOverlayStyle.light.copyWith(
+                            //         statusBarColor: Colors.green,
+                            //         systemNavigationBarColor: Colors.green,
+                            //       ),
+                            //       child: Scaffold(
+                            //         backgroundColor: Colors.transparent,
+                            //         body: VentaConfirmadaAnimacion(
+                            //           onFinish: () {
+                            //             Navigator.of(context)
+                            //                 .pop(); // cerrar animación
+                            //             Navigator.of(context)
+                            //                 .pop(); // volver atrás
+                            //           },
+                            //         ),
+                            //       ),
+                            //     );
+                            //   },
+                            // );
                           },
                           style: AppTheme.elevatedButtonStyle(
                               AppTheme.addGreenColor),

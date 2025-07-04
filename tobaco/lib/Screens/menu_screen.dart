@@ -4,7 +4,7 @@ import 'package:tobaco/Screens/Deudas/deudas_screen.dart';
 import 'package:tobaco/Screens/Ventas/nuevaVenta_screen.dart';
 import 'package:tobaco/Screens/Ventas/ventas_screen.dart';
 import 'package:tobaco/Screens/Productos/productos_screen.dart';
-import 'package:tobaco/Theme/app_theme.dart'; // Importa el tema
+import 'package:tobaco/Theme/app_theme.dart'; 
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -13,7 +13,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.theme, // Usa el tema desde el archivo separado
+      theme: AppTheme.theme, 
       home: const MenuScreen(),
     );
   }
