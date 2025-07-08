@@ -5134,23 +5134,23 @@
     ]
   },
   "packageFolders": {
-    "C:\\Users\\santi\\.nuget\\packages\\": {},
+    "C:\\Users\\emili\\.nuget\\packages\\": {},
     "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\santi\\Desktop\\Carrera\\Tobaco\\TobacoBackend\\TobacoBackend\\TobacoBackend.csproj",
+      "projectUniqueName": "C:\\Users\\emili\\OneDrive\\Escritorio\\github\\Tobaco\\TobacoBackend\\TobacoBackend\\TobacoBackend.csproj",
       "projectName": "TobacoBackend",
-      "projectPath": "C:\\Users\\santi\\Desktop\\Carrera\\Tobaco\\TobacoBackend\\TobacoBackend\\TobacoBackend.csproj",
-      "packagesPath": "C:\\Users\\santi\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\santi\\Desktop\\Carrera\\Tobaco\\TobacoBackend\\TobacoBackend\\obj\\",
+      "projectPath": "C:\\Users\\emili\\OneDrive\\Escritorio\\github\\Tobaco\\TobacoBackend\\TobacoBackend\\TobacoBackend.csproj",
+      "packagesPath": "C:\\Users\\emili\\.nuget\\packages\\",
+      "outputPath": "C:\\Users\\emili\\OneDrive\\Escritorio\\github\\Tobaco\\TobacoBackend\\TobacoBackend\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
         "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
       ],
       "configFilePaths": [
-        "C:\\Users\\santi\\AppData\\Roaming\\NuGet\\NuGet.Config",
+        "C:\\Users\\emili\\AppData\\Roaming\\NuGet\\NuGet.Config",
         "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
         "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
       ],
@@ -5236,7 +5236,7 @@
             "privateAssets": "all"
           }
         },
-        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.203/PortableRuntimeIdentifierGraph.json"
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.201/PortableRuntimeIdentifierGraph.json"
       }
     }
   }

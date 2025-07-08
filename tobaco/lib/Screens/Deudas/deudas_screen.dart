@@ -16,7 +16,7 @@ class _DeudasScreenState extends State<DeudasScreen> {
   List<Cliente> clientes = [];
   final TextEditingController _searchController = TextEditingController();
 
-   @override
+  @override
   void initState() {
     super.initState();
     _loadClientes();
@@ -57,8 +57,7 @@ class _DeudasScreenState extends State<DeudasScreen> {
 
   @override
   Widget build(BuildContext context) {
-    
-    //falta que funcione la barra de busqueda y que se ordenen los clientes por orden alfabetico
+    //falta que funcione la barra de busqueda y que se ordenen los clientes por orden alfabético
 
     return Scaffold(
       appBar: AppBar(
