@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:tobaco/Models/Categoria.dart';
 import 'package:tobaco/Models/Producto.dart';
 import 'package:tobaco/Models/ProductoSeleccionado.dart';
@@ -173,171 +172,185 @@ class _SeleccionarProductosScreenState
                                   : cantidad.toStringAsFixed(1);
                         }
 
-                        return Slidable(
-                          key: ValueKey(producto.id),
-                          endActionPane: ActionPane(
-                              motion: const DrawerMotion(), children: []),
-                          child: Container(
-                            color: index % 2 == 0
-                                ? AppTheme.secondaryColor
-                                : const Color.fromARGB(255, 255, 255, 255),
-                            padding: const EdgeInsets.symmetric(
-                                vertical: 15, horizontal: 15),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Expanded(
-                                  flex: 6,
-                                  child: Text(
-                                    producto.nombre,
-                                    style: AppTheme.itemListaNegrita,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
+                        return Container(
+                          color: index % 2 == 0
+                              ? AppTheme.secondaryColor
+                              : Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                              vertical: 12, horizontal: 12),
+                          child: Row(
+                            children: [
+                              // Nombre del producto
+                              Expanded(
+                                flex: 6,
+                                child: Text(
+                                  producto.nombre,
+                                  style: AppTheme.itemListaNegrita,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
-                                Expanded(
-                                  flex: 2,
-                                  child: Text(
-                                    '\$ ${producto.precio.toStringAsFixed(0).replaceAllMapped(
-                                          RegExp(r'(\d)(?=(\d{3})+(?!\d))'),
-                                          (match) => '${match[1]}.',
-                                        )}',
-                                    style: AppTheme.itemListaPrecio,
-                                    textAlign: TextAlign.right,
-                                  ),
+                              ),
+
+                              // Precio
+                              Expanded(
+                                flex: 2,
+                                child: Text(
+                                  '\$ ${producto.precio.toStringAsFixed(0).replaceAllMapped(
+                                        RegExp(r'(\d)(?=(\d{3})+(?!\d))'),
+                                        (match) => '${match[1]}.',
+                                      )}',
+                                  style: AppTheme.itemListaPrecio,
+                                  textAlign: TextAlign.right,
                                 ),
-                                Expanded(
-                                  flex: 1,
-                                  child: SizedBox(
-                                    width: 40,
-                                    height: 40,
-                                    child: TextField(
-                                      controller:
-                                          cantidadControllers[producto.id!],
-                                      keyboardType: TextInputType.number,
-                                      textAlign: TextAlign.center,
-                                      style: const TextStyle(
-                                        fontSize: 14,
-                                        color: Colors.black,
-                                      ),
-                                      cursorColor: Colors.grey,
-                                      decoration: InputDecoration(
-                                        contentPadding: EdgeInsets.zero,
-                                        filled: true,
-                                        fillColor: Colors.white,
-                                        border: OutlineInputBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(6),
-                                          borderSide: const BorderSide(
-                                              color: Colors.grey),
-                                        ),
-                                        enabledBorder: OutlineInputBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(6),
-                                          borderSide: const BorderSide(
-                                              color: Colors.grey),
-                                        ),
-                                        focusedBorder: OutlineInputBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(6),
-                                          borderSide: const BorderSide(
-                                              color: Colors.blueGrey),
-                                        ),
-                                      ),
-                                      inputFormatters: [
-                                        FilteringTextInputFormatter.allow(
-                                            RegExp(r'^\d{0,3}(\.\d{0,1})?$')),
-                                      ],
-                                      onChanged: (value) {
-                                        double newCantidad =
-                                            double.tryParse(value) ?? cantidad;
-                                        if (newCantidad > 999) {
-                                          newCantidad = 999;
-                                          cantidadControllers[producto.id!]!
-                                              .text = '999';
-                                          cantidadControllers[producto.id!]!
-                                                  .selection =
-                                              TextSelection.fromPosition(
-                                            const TextPosition(offset: 3),
-                                          );
-                                        }
-                                        setState(() {
-                                          cantidades[producto.id!] =
-                                              newCantidad < 0
-                                                  ? 0.0
-                                                  : newCantidad;
-                                        });
-                                      },
-                                    ),
+                              ),
+
+                              // Botón 0.5
+                              Expanded(
+                                flex: 1,
+                                child: IconButton(
+                                  icon: const Icon(
+                                    Icons.exposure, // Icono acorde a medio (±0.5)
+                                    color: Colors.blueGrey,
                                   ),
+                                  iconSize: 20,
+                                  padding: EdgeInsets.zero,
+                                  onPressed: () {
+                                    setState(() {
+                                      double current =
+                                          cantidades[producto.id!] ?? 0;
+                                      // Si el decimal es .5, resta 0.5, si no, suma 0.5
+                                      if (current % 1 == 0.5) {
+                                        current -= 0.5;
+                                      } else {
+                                        current += 0.5;
+                                      }
+                                      // Limita el rango entre 0 y 999
+                                      if (current < 0) current = 0;
+                                      if (current > 999) current = 999;
+                                      cantidades[producto.id!] = current;
+                                      cantidadControllers[producto.id!]!.text =
+                                          current % 1 == 0
+                                              ? current.toInt().toString()
+                                              : current.toStringAsFixed(1);
+                                      cantidadControllers[producto.id!]!
+                                          .selection = TextSelection.fromPosition(
+                                        TextPosition(
+                                            offset:
+                                                cantidadControllers[producto.id!]!
+                                                    .text
+                                                    .length),
+                                      );
+                                    });
+                                  },
                                 ),
-                                Column(
-                                  children: [
-                                    IconButton(
-                                      icon: const Icon(Icons.keyboard_arrow_up),
-                                      onPressed: () {
-                                        setState(() {
-                                          double current =
-                                              cantidades[producto.id!] ?? 0;
-                                          if (current < 999) {
-                                            current += 1;
-                                            cantidades[producto.id!] = current;
-                                            cantidadControllers[producto.id!]!
-                                                .text = current % 1 ==
-                                                    0
+                              ),
+
+                              // Botón -
+                              Expanded(
+                                flex: 1,
+                                child: IconButton(
+                                  icon: const Icon(Icons.remove,
+                                      color: Colors.redAccent),
+                                  iconSize: 20,
+                                  padding: EdgeInsets.zero,
+                                  onPressed: () {
+                                    setState(() {
+                                      double current =
+                                          cantidades[producto.id!] ?? 0;
+                                      if (current > 0) {
+                                        current -= 1;
+                                        cantidades[producto.id!] = current;
+                                        cantidadControllers[producto.id!]!
+                                                .text =
+                                            current % 1 == 0
                                                 ? current.toInt().toString()
                                                 : current.toStringAsFixed(1);
-                                            cantidadControllers[producto.id!]!
-                                                    .selection =
-                                                TextSelection.fromPosition(
-                                              TextPosition(
-                                                  offset: cantidadControllers[
-                                                          producto.id!]!
-                                                      .text
-                                                      .length),
-                                            );
-                                          }
-                                        });
-                                      },
-                                      iconSize: 22,
-                                      padding: EdgeInsets.zero,
-                                      constraints: const BoxConstraints(),
+                                        cantidadControllers[producto.id!]!
+                                                .selection =
+                                            TextSelection.fromPosition(
+                                          TextPosition(
+                                              offset: cantidadControllers[
+                                                      producto.id!]!
+                                                  .text
+                                                  .length),
+                                        );
+                                      }
+                                    });
+                                  },
+                                ),
+                              ),
+
+                              // Campo cantidad
+                              SizedBox(
+                                width: 45,
+                                height: 36,
+                                child: TextField(
+                                  controller: cantidadControllers[producto.id!],
+                                  keyboardType: TextInputType.number,
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(fontSize: 15),
+                                  decoration: InputDecoration(
+                                    isDense: true,
+                                    contentPadding:
+                                        const EdgeInsets.symmetric(vertical: 8),
+                                    filled: true,
+                                    fillColor: Colors.white,
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(6),
+                                      borderSide:
+                                          const BorderSide(color: Colors.grey),
                                     ),
-                                    IconButton(
-                                      icon:
-                                          const Icon(Icons.keyboard_arrow_down),
-                                      onPressed: () {
-                                        setState(() {
-                                          double current =
-                                              cantidades[producto.id!] ?? 0;
-                                          if (current > 0) {
-                                            current -= 1;
-                                            if (current < 0) current = 0;
-                                            cantidades[producto.id!] = current;
-                                            cantidadControllers[producto.id!]!
-                                                .text = current % 1 ==
-                                                    0
-                                                ? current.toInt().toString()
-                                                : current.toStringAsFixed(1);
-                                            cantidadControllers[producto.id!]!
-                                                    .selection =
-                                                TextSelection.fromPosition(
-                                              TextPosition(
-                                                  offset: cantidadControllers[
-                                                          producto.id!]!
-                                                      .text
-                                                      .length),
-                                            );
-                                          }
-                                        });
-                                      },
-                                      iconSize: 22,
-                                      padding: EdgeInsets.zero,
-                                      constraints: const BoxConstraints(),
-                                    ),
+                                  ),
+                                  inputFormatters: [
+                                    FilteringTextInputFormatter.allow(
+                                        RegExp(r'^\d{0,3}(\.\d{0,1})?$')),
                                   ],
-                                )
-                              ],
-                            ),
+                                  onChanged: (value) {
+                                    double newCantidad =
+                                        double.tryParse(value) ?? 0;
+                                    if (newCantidad > 999) newCantidad = 999;
+                                    setState(() {
+                                      cantidades[producto.id!] =
+                                          newCantidad < 0 ? 0.0 : newCantidad;
+                                    });
+                                  },
+                                ),
+                              ),
+
+                              // Botón +
+                              Expanded(
+                                flex: 1,
+                                child: IconButton(
+                                  icon: const Icon(Icons.add,
+                                      color: Colors.green),
+                                  iconSize: 20,
+                                  padding: EdgeInsets.zero,
+                                  onPressed: () {
+                                    setState(() {
+                                      double current =
+                                          cantidades[producto.id!] ?? 0;
+                                      if (current < 999) {
+                                        current += 1;
+                                        cantidades[producto.id!] = current;
+                                        cantidadControllers[producto.id!]!
+                                                .text =
+                                            current % 1 == 0
+                                                ? current.toInt().toString()
+                                                : current.toStringAsFixed(1);
+                                        cantidadControllers[producto.id!]!
+                                                .selection =
+                                            TextSelection.fromPosition(
+                                          TextPosition(
+                                              offset: cantidadControllers[
+                                                      producto.id!]!
+                                                  .text
+                                                  .length),
+                                        );
+                                      }
+                                    });
+                                  },
+                                ),
+                              ),
+                            ],
                           ),
                         );
                       },

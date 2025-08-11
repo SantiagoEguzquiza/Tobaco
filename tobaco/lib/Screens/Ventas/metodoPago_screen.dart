@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:tobaco/Models/Ventas.dart';
 
 class FormaPagoScreen extends StatefulWidget {
-  
   final Ventas venta;
 
   const FormaPagoScreen({super.key, required this.venta});
@@ -11,14 +10,22 @@ class FormaPagoScreen extends StatefulWidget {
   State<FormaPagoScreen> createState() => _FormaPagoScreenState();
 }
 
+class _MetodoPago {
+  final MetodoPago metodo;
+  final String nombre;
+  final IconData icono;
+
+  _MetodoPago(this.metodo, this.nombre, this.icono);
+}
+
 class _FormaPagoScreenState extends State<FormaPagoScreen> {
-  String? metodoSeleccionado;
+  MetodoPago? metodoSeleccionado;
 
   final List<_MetodoPago> metodos = [
-    _MetodoPago('Efectivo', Icons.payments),
-    _MetodoPago('Transferencia', Icons.swap_horiz),
-    _MetodoPago('Tarjeta', Icons.credit_card),
-    _MetodoPago('Cuenta corriente', Icons.receipt_long),
+    _MetodoPago(MetodoPago.efectivo, 'Efectivo', Icons.payments),
+    _MetodoPago(MetodoPago.transferencia, 'Transferencia', Icons.swap_horiz),
+    _MetodoPago(MetodoPago.tarjeta, 'Tarjeta', Icons.credit_card),
+    _MetodoPago(MetodoPago.cuentaCorriente, 'Cuenta corriente', Icons.receipt_long),
   ];
 
   @override
@@ -48,8 +55,7 @@ class _FormaPagoScreenState extends State<FormaPagoScreen> {
                 ElevatedButton(
                   onPressed: metodoSeleccionado != null
                       ? () {
-                          
-                          Navigator.pop(context, metodoSeleccionado); //aca va lo que huace despues de confirmar el metodo de pago
+                          Navigator.pop(context, metodoSeleccionado); // Devuelve el enum
                         }
                       : null,
                   style: ElevatedButton.styleFrom(
@@ -70,7 +76,7 @@ class _FormaPagoScreenState extends State<FormaPagoScreen> {
     return GestureDetector(
       onTap: () {
         setState(() {
-          metodoSeleccionado = metodo.nombre;
+          metodoSeleccionado = metodo.metodo;
         });
       },
       child: Container(
@@ -78,7 +84,7 @@ class _FormaPagoScreenState extends State<FormaPagoScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
         decoration: BoxDecoration(
           border: Border.all(
-              color: metodoSeleccionado == metodo.nombre
+              color: metodoSeleccionado == metodo.metodo
                   ? Colors.green
                   : Colors.grey.shade300),
           borderRadius: BorderRadius.circular(8),
@@ -93,18 +99,11 @@ class _FormaPagoScreenState extends State<FormaPagoScreen> {
                 style: const TextStyle(fontSize: 16),
               ),
             ),
-            if (metodoSeleccionado == metodo.nombre)
+            if (metodoSeleccionado == metodo.metodo)
               const Icon(Icons.check_circle, color: Colors.green)
           ],
         ),
       ),
     );
   }
-}
-
-class _MetodoPago {
-  final String nombre;
-  final IconData icono;
-
-  _MetodoPago(this.nombre, this.icono);
 }

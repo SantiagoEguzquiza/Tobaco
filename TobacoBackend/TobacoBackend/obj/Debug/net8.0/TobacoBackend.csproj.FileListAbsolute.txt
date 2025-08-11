@@ -19,11 +19,6 @@ C:\Users\santi\Desktop\Carrera\Tobaco\TobacoBackend\TobacoBackend\obj\Debug\net8
 C:\Users\santi\Desktop\Carrera\Tobaco\TobacoBackend\TobacoBackend\obj\Debug\net8.0\TobacoBackend.sourcelink.json
 C:\Users\santi\Desktop\Carrera\Tobaco\TobacoBackend\TobacoBackend\obj\Debug\net8.0\staticwebassets.build.json
 C:\Users\santi\Desktop\Carrera\Tobaco\TobacoBackend\TobacoBackend\obj\Debug\net8.0\staticwebassets.development.json
-C:\Users\santi\Desktop\Carrera\Tobaco\TobacoBackend\TobacoBackend\obj\Debug\net8.0\staticwebassets\msbuild.TobacoBackend.Microsoft.AspNetCore.StaticWebAssets.props
-C:\Users\santi\Desktop\Carrera\Tobaco\TobacoBackend\TobacoBackend\obj\Debug\net8.0\staticwebassets\msbuild.build.TobacoBackend.props
-C:\Users\santi\Desktop\Carrera\Tobaco\TobacoBackend\TobacoBackend\obj\Debug\net8.0\staticwebassets\msbuild.buildMultiTargeting.TobacoBackend.props
-C:\Users\santi\Desktop\Carrera\Tobaco\TobacoBackend\TobacoBackend\obj\Debug\net8.0\staticwebassets\msbuild.buildTransitive.TobacoBackend.props
-C:\Users\santi\Desktop\Carrera\Tobaco\TobacoBackend\TobacoBackend\obj\Debug\net8.0\staticwebassets.pack.json
 C:\Users\santi\Desktop\Carrera\Tobaco\TobacoBackend\TobacoBackend\obj\Debug\net8.0\scopedcss\bundle\TobacoBackend.styles.css
 C:\Users\santi\Desktop\Carrera\Tobaco\TobacoBackend\TobacoBackend\obj\Debug\net8.0\TobacoBa.AB98EC4A.Up2Date
 C:\Users\santi\Desktop\Carrera\Tobaco\TobacoBackend\TobacoBackend\obj\Debug\net8.0\TobacoBackend.dll
@@ -344,7 +339,6 @@ C:\Users\santi\Desktop\Carrera\Tobaco\TobacoBackend\TobacoBackend\bin\Debug\net8
 C:\Users\santi\Desktop\Carrera\Tobaco\TobacoBackend\TobacoBackend\bin\Debug\net8.0\runtimes\win\lib\net6.0\System.Windows.Extensions.dll
 C:\Users\santi\Desktop\Carrera\Tobaco\TobacoBackend\TobacoBackend\bin\Debug\net8.0\TobacoBackend.staticwebassets.endpoints.json
 C:\Users\santi\Desktop\Carrera\Tobaco\TobacoBackend\TobacoBackend\obj\Debug\net8.0\staticwebassets.build.endpoints.json
-C:\Users\santi\Desktop\Carrera\Tobaco\TobacoBackend\TobacoBackend\obj\Debug\net8.0\staticwebassets\msbuild.TobacoBackend.Microsoft.AspNetCore.StaticWebAssetEndpoints.props
 C:\Users\santi\Desktop\Carrera\Tobaco\TobacoBackend\TobacoBackend\obj\Debug\net8.0\staticwebassets.upToDateCheck.txt
 C:\Users\santi\Desktop\Carrera\Tobaco\TobacoBackend\TobacoBackend\bin\Debug\net8.0\Microsoft.AspNetCore.Authentication.JwtBearer.dll
 C:\Users\camil\Documents\GitHub\Tobaco\TobacoBackend\TobacoBackend\bin\Debug\net8.0\appsettings.Development.json
@@ -523,3 +517,8 @@ C:\Users\camil\Documents\GitHub\Tobaco\TobacoBackend\TobacoBackend\obj\Debug\net
 C:\Users\camil\Documents\GitHub\Tobaco\TobacoBackend\TobacoBackend\obj\Debug\net8.0\TobacoBackend.genruntimeconfig.cache
 C:\Users\camil\Documents\GitHub\Tobaco\TobacoBackend\TobacoBackend\obj\Debug\net8.0\ref\TobacoBackend.dll
 C:\Users\pipi2\OneDrive\Escritorio\proyectos\Tobaco\TobacoBackend\TobacoBackend\bin\Debug\net8.0\Microsoft.AspNetCore.Authentication.JwtBearer.dll
+C:\Users\santi\Desktop\Carrera\Tobaco\TobacoBackend\TobacoBackend\obj\Debug\net8.0\rpswa.dswa.cache.json
+C:\Users\santi\Desktop\Carrera\Tobaco\TobacoBackend\TobacoBackend\obj\Debug\net8.0\rjimswa.dswa.cache.json
+C:\Users\santi\Desktop\Carrera\Tobaco\TobacoBackend\TobacoBackend\obj\Debug\net8.0\rjsmrazor.dswa.cache.json
+C:\Users\santi\Desktop\Carrera\Tobaco\TobacoBackend\TobacoBackend\obj\Debug\net8.0\rjsmcshtml.dswa.cache.json
+C:\Users\santi\Desktop\Carrera\Tobaco\TobacoBackend\TobacoBackend\obj\Debug\net8.0\staticwebassets.build.json.cache
