@@ -1,0 +1,76 @@
+import 'package:flutter/material.dart';
+import 'package:tobaco/Models/Cliente.dart';
+import 'package:tobaco/Services/Clientes_Service/clientes_service.dart';
+
+class ClienteProvider with ChangeNotifier {
+  final ClienteService _clienteService = ClienteService();
+
+  List<Cliente> _clientes = [];
+  List<Cliente> _clientesConDeuda = [];
+
+  List<dynamic> get clientes => _clientes;
+  List<dynamic> get clientesConDeuda => _clientesConDeuda;
+
+  Future<List<Cliente>> obtenerClientes() async {
+    try {
+      _clientes = await _clienteService.obtenerClientes();
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error: $e');
+    }
+    return _clientes;
+  }
+
+  Future<void> crearCliente(Cliente cliente) async {
+    try {
+      await _clienteService.crearCliente(cliente);
+      _clientes.add(cliente);
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error: $e');
+    }
+  }
+
+  Future<void> eliminarCliente(int id) async {
+    try {
+      await _clienteService.eliminarCliente(id);
+      _clientes.removeWhere((cliente) => cliente.id == id);
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error: $e');
+    }
+  }
+
+  Future<void> editarCliente(Cliente cliente) async {
+    try {
+      await _clienteService.editarCliente(cliente);
+      int index = _clientes.indexWhere((c) => c.id == cliente.id);
+      if (index != -1) {
+        _clientes[index] = cliente;
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('Error: $e');
+    }
+  }
+
+  Future<List<Cliente>> buscarClientes(String query) async {
+    try {
+      _clientes = await _clienteService.buscarClientes(query);
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error: $e');
+    }
+    return _clientes;
+  }
+
+   Future<List<Cliente>> obtenerClientesConDeuda() async {
+    try {
+      _clientesConDeuda = await _clienteService.obtenerClientesConDeuda();
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error: $e');
+    }
+    return _clientesConDeuda;
+  }
+}
