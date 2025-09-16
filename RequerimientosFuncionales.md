@@ -49,9 +49,9 @@
 - **RF29 (F3)** – Recibos en PDF y envío por WhatsApp/Email.  
 
 ## G. Ruteo, Visitas y Geolocalización
-- **RF30 (MVP)** – Mapa con clientes geolocalizados y plan de visita.  
-- **RF31 (MVP)** – Generar ruta óptima por cercanía.  
-- **RF32 (MVP)** – Marcar cliente como “visitado” manualmente.  
+- **RF30 (F2)** – Mapa con clientes geolocalizados y plan de visita.  
+- **RF31 (F2)** – Generar ruta óptima por cercanía.  
+- **RF32 (F2)** – Marcar cliente como “visitado” manualmente.  
 - **RF33 (F2)** – Auto-marcado por geofence (radio configurable).  
 - **RF34 (F2)** – Reordenamiento dinámico de la ruta según visitas completadas.  
 - **RF35 (F3)** – Planificación semanal de visitas con metas de cobertura.  
@@ -79,7 +79,7 @@
 
 ## L. Seguridad y Auditoría
 - **RF49 (MVP)** – Autorizaciones por rol para acciones sensibles.  
-- **RF50 (MVP)** – Auditoría de acciones clave.  
+- **RF50 (F2)** – Auditoría de acciones clave.  
 - **RF51 (F2)** – Bloqueo de edición de documentos confirmados y circuito de aprobaciones.  
 
 ## M. Integraciones y Backend
