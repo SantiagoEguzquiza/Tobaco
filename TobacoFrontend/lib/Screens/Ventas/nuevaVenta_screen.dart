@@ -923,11 +923,17 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                                 final subtotal =
                                     ps.producto.precio * ps.cantidad;
 
-                                return Card(
-                                  margin:
-                                      const EdgeInsets.symmetric(vertical: 4),
-                                  shape: RoundedRectangleBorder(
+                                return Container(
+                                  margin: const EdgeInsets.only(bottom: 8),
+                                  decoration: BoxDecoration(
+                                    color: index % 2 == 0
+                                        ? AppTheme.primaryColor.withOpacity(0.1)
+                                        : Colors.white,
                                     borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: AppTheme.primaryColor.withOpacity(0.2),
+                                      width: 1,
+                                    ),
                                   ),
                                   child: Slidable(
                                     key: ValueKey(ps.producto.id),
@@ -948,118 +954,156 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                                         ),
                                       ],
                                     ),
-                                    child: Container(
-                                      padding: const EdgeInsets.all(16),
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 10,
+                                      ),
                                       child: Row(
                                         children: [
                                           // Información del producto
                                           Expanded(
-                                            flex: 4,
-                                            child: Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                  ps.producto.nombre,
-                                                  style:
-                                                      AppTheme.itemListaNegrita,
-                                                  overflow:
-                                                      TextOverflow.ellipsis,
-                                                ),
-                                                const SizedBox(height: 4),
-                                                Text(
-                                                  '\$${_formatearPrecio(ps.producto.precio)} c/u',
-                                                  style:
-                                                      AppTheme.itemListaPrecio,
-                                                ),
-                                              ],
+                                          flex: 4,
+                                          child: Column(
+                                            crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                            children: [
+                                            Text(
+                                              ps.producto.nombre,
+                                              style: const TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.bold,
+                                              color: AppTheme.primaryColor,
+                                              ),
+                                              overflow: TextOverflow.ellipsis,
+                                              maxLines: 1,
                                             ),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              '\$${ps.producto.precio.toStringAsFixed(0).replaceAllMapped(
+                                                RegExp(r'(\d)(?=(\d{3})+(?!\d))'),
+                                                (match) => '${match[1]}.',
+                                                )} c/u',
+                                              style: TextStyle(
+                                              fontSize: 14,
+                                              color: Colors.grey.shade600,
+                                              fontWeight: FontWeight.w500,
+                                              ),
+                                              overflow: TextOverflow.ellipsis,
+                                              maxLines: 1,
+                                            ),
+                                            ],
+                                          ),
                                           ),
 
-                                          // Controles de cantidad
-                                          Container(
+                                          // Controles de cantidad compactos
+                                          Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            // Botón 0.5
+                                            IconButton(
+                                            icon: const Icon(
+                                              Icons.exposure,
+                                              color: Colors.blueGrey,
+                                              size: 18,
+                                            ),
+                                            onPressed: () {
+                                              final nuevaCantidad = ps.cantidad % 1 == 0.5
+                                                ? ps.cantidad - 0.5
+                                                : ps.cantidad + 0.5;
+                                              if (nuevaCantidad >= 0) {
+                                              _actualizarCantidad(index, nuevaCantidad);
+                                              }
+                                            },
+                                            constraints: const BoxConstraints(
+                                              minWidth: 32,
+                                              minHeight: 32,
+                                            ),
+                                            ),
+
+                                            // Botón menos
+                                            IconButton(
+                                            icon: const Icon(
+                                              Icons.remove,
+                                              color: Colors.red,
+                                              size: 18,
+                                            ),
+                                            onPressed: () {
+                                              final nuevaCantidad = ps.cantidad - 1;
+                                              if (nuevaCantidad >= 0.5) {
+                                              _actualizarCantidad(index, nuevaCantidad);
+                                              } else {
+                                              _eliminarProducto(index);
+                                              }
+                                            },
+                                            constraints: const BoxConstraints(
+                                              minWidth: 32,
+                                              minHeight: 32,
+                                            ),
+                                            ),
+
+                                            // Campo cantidad
+                                            Container(
+                                            width: 60,
+                                            height: 32,
                                             decoration: BoxDecoration(
                                               border: Border.all(
-                                                  color: Colors.grey.shade300),
-                                              borderRadius:
-                                                  BorderRadius.circular(8),
+                                                color: Colors.grey.shade300),
+                                              borderRadius: BorderRadius.circular(6),
+                                              color: Colors.white,
                                             ),
-                                            child: Row(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                // Botón menos
-                                                IconButton(
-                                                  onPressed: () {
-                                                    final nuevaCantidad =
-                                                        ps.cantidad - 1;
-                                                    if (nuevaCantidad >= 0.5) {
-                                                      _actualizarCantidad(
-                                                          index, nuevaCantidad);
-                                                    } else {
-                                                      _eliminarProducto(index);
-                                                    }
-                                                  },
-                                                  icon: const Icon(Icons.remove,
-                                                      size: 20),
-                                                  constraints:
-                                                      const BoxConstraints(
-                                                    minWidth: 40,
-                                                    minHeight: 40,
-                                                  ),
-                                                ),
-
-                                                // Cantidad
-                                                Container(
-                                                  padding: const EdgeInsets
-                                                      .symmetric(
-                                                      horizontal: 12),
-                                                  child: Text(
-                                                    ps.cantidad % 1 == 0
-                                                        ? ps.cantidad
-                                                            .toInt()
-                                                            .toString()
-                                                        : ps.cantidad
-                                                            .toString(),
-                                                    style: const TextStyle(
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                      fontSize: 16,
-                                                    ),
-                                                  ),
-                                                ),
-
-                                                // Botón más
-                                                IconButton(
-                                                  onPressed: () {
-                                                    _actualizarCantidad(
-                                                        index, ps.cantidad + 1);
-                                                  },
-                                                  icon: const Icon(Icons.add,
-                                                      size: 20),
-                                                  constraints:
-                                                      const BoxConstraints(
-                                                    minWidth: 40,
-                                                    minHeight: 40,
-                                                  ),
-                                                ),
-                                              ],
+                                            child: Center(
+                                              child: Text(
+                                              ps.cantidad % 1 == 0
+                                                ? ps.cantidad.toInt().toString()
+                                                : ps.cantidad.toStringAsFixed(1),
+                                              style: const TextStyle(
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                              overflow: TextOverflow.ellipsis,
+                                              maxLines: 1,
+                                              ),
                                             ),
+                                            ),
+
+                                            // Botón más
+                                            IconButton(
+                                            icon: const Icon(
+                                              Icons.add,
+                                              color: Colors.green,
+                                              size: 18,
+                                            ),
+                                            onPressed: () {
+                                              _actualizarCantidad(index, ps.cantidad + 1);
+                                            },
+                                            constraints: const BoxConstraints(
+                                              minWidth: 32,
+                                              minHeight: 32,
+                                            ),
+                                            ),
+                                          ],
                                           ),
 
                                           const SizedBox(width: 12),
 
                                           // Subtotal
                                           Expanded(
-                                            flex: 2,
-                                            child: Text(
-                                              '\$${_formatearPrecio(subtotal)}',
-                                              style: const TextStyle(
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: 16,
-                                                color: AppTheme.primaryColor,
-                                              ),
-                                              textAlign: TextAlign.right,
+                                          flex: 3,
+                                          child: Text(
+                                            '\$${subtotal.toStringAsFixed(0).replaceAllMapped(
+                                              RegExp(r'(\d)(?=(\d{3})+(?!\d))'),
+                                              (match) => '${match[1]}.',
+                                              )}',
+                                            style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 16,
+                                            color: AppTheme.primaryColor,
                                             ),
+                                            textAlign: TextAlign.right,
+                                            overflow: TextOverflow.ellipsis,
+                                            maxLines: 1,
+                                          ),
                                           ),
                                         ],
                                       ),
