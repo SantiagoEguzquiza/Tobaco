@@ -2,15 +2,17 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:tobaco/Helpers/api_handler.dart';
 import 'package:tobaco/Models/Cliente.dart';
+import 'package:tobaco/Services/Auth_Service/auth_service.dart';
 
 class ClienteService {
   final Uri baseUrl = Apihandler.baseUrl;
 
   Future<List<Cliente>> obtenerClientes() async {
     try {
+      final headers = await AuthService.getAuthHeaders();
       final response = await Apihandler.client.get(
         Uri.parse('$baseUrl/Clientes'),
-        headers: {'Content-Type': 'application/json'},
+        headers: headers,
       );
 
       if (response.statusCode == 200) {
@@ -28,9 +30,10 @@ class ClienteService {
 
   Future<void> crearCliente(Cliente cliente) async {
     try {
+      final headers = await AuthService.getAuthHeaders();
       final response = await Apihandler.client.post(
         Uri.parse('$baseUrl/Clientes'),
-        headers: {'Content-Type': 'application/json'},
+        headers: headers,
         body: jsonEncode(cliente.toJson()),
       );
 
