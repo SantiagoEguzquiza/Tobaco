@@ -298,9 +298,9 @@ class MenuScreen extends StatelessWidget {
                               ),
                               const SizedBox(height: 10),
                               Text(
-                                'DOLAR',
+                                'Monedas',
                                 style: TextStyle(
-                                  fontSize: isTablet ? 35 : 30,
+                                  fontSize: fontSize, 
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
