@@ -36,17 +36,25 @@ class BcuCotizacionesService {
     required DateTime desde,
     required DateTime hasta,
     required int grupo,
+    http.Client? client,
   }) async {
     final body =
         _envelope(monedas: monedas, desde: desde, hasta: hasta, grupo: grupo);
-    final resp = await http.post(
-      Uri.parse(_endpoint),
-      headers: {'Content-Type': 'text/xml; charset=utf-8'},
-      body: utf8.encode(body),
-    );
-    if (resp.statusCode != 200) {
-      throw Exception('HTTP ${resp.statusCode}: ${resp.body}');
+    final httpClient = client ?? http.Client();
+    try {
+      final resp = await httpClient.post(
+        Uri.parse(_endpoint),
+        headers: {'Content-Type': 'text/xml; charset=utf-8'},
+        body: utf8.encode(body),
+      );
+      if (resp.statusCode != 200) {
+        throw Exception('HTTP ${resp.statusCode}: ${resp.body}');
+      }
+      return resp.body;
+    } finally {
+      if (client == null) {
+        httpClient.close();
+      }
     }
-    return resp.body;
   }
 }
