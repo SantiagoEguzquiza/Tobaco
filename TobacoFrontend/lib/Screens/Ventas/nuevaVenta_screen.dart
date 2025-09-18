@@ -243,21 +243,32 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
       );
 
       // Navegar a selección de método de pago
-      final MetodoPago? resultado = await Navigator.push(
+      final List<dynamic>? resultado = await Navigator.push(
         context,
         MaterialPageRoute(
           builder: (context) => FormaPagoScreen(venta: venta),
         ),
       );
 
-      if (resultado != null) {
-        venta.metodoPago = resultado;
+      // Si el usuario canceló o regresó sin confirmar, no procesar la venta
+      if (resultado == null || resultado.isEmpty) {
+        setState(() {
+          isProcessingVenta = false;
+        });
+        return;
+      }
+
+      // Si hay múltiples métodos de pago, usar el primero como principal
+      // En el futuro se puede expandir para manejar múltiples métodos
+      final primerPago = resultado.first;
+      if (primerPago is PagoParcial) {
+        venta.metodoPago = primerPago.metodo;
       }
 
       // Guardar la venta en la base de datos
       await VentasProvider().crearVenta(venta);
 
-      // Mostrar animación de confirmación
+      // Mostrar animación de confirmación solo si se guardó la venta
       if (mounted) {
         showGeneralDialog(
           context: context,
@@ -309,7 +320,6 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
     return Scaffold(
         appBar: AppBar(
           centerTitle: true,
-          title: const Text('Ventas', style: AppTheme.appBarTitleStyle),
         ),
         body: SafeArea(
           child: Padding(
@@ -760,7 +770,8 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                                       Navigator.push(
                                         context,
                                         MaterialPageRoute(
-                                            builder: (context) => NuevoClienteScreen()),
+                                            builder: (context) =>
+                                                NuevoClienteScreen()),
                                       );
                                     },
                                   ),
@@ -884,8 +895,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                     // Lista de productos seleccionados
                     const SizedBox(height: 20),
                     SizedBox(
-                      height:
-                          400, // Altura fija para evitar problemas con Expanded
+                      height: 500,
                       child: productosSeleccionados.isEmpty
                           ? Center(
                               child: Column(
@@ -931,7 +941,8 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                                         : Colors.white,
                                     borderRadius: BorderRadius.circular(12),
                                     border: Border.all(
-                                      color: AppTheme.primaryColor.withOpacity(0.2),
+                                      color: AppTheme.primaryColor
+                                          .withOpacity(0.2),
                                       width: 1,
                                     ),
                                   ),
@@ -963,147 +974,144 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                                         children: [
                                           // Información del producto
                                           Expanded(
-                                          flex: 4,
-                                          child: Column(
-                                            crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                            children: [
-                                            Text(
-                                              ps.producto.nombre,
-                                              style: const TextStyle(
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.bold,
-                                              color: AppTheme.primaryColor,
-                                              ),
-                                              overflow: TextOverflow.ellipsis,
-                                              maxLines: 1,
+                                            flex: 4,
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  ps.producto.nombre,
+                                                  style: const TextStyle(
+                                                    fontSize: 16,
+                                                    fontWeight: FontWeight.bold,
+                                                    color:
+                                                        AppTheme.primaryColor,
+                                                  ),
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                  maxLines: 1,
+                                                ),
+                                                const SizedBox(height: 4),
+                                                Text(
+                                                  '\$${ps.producto.precio.toStringAsFixed(0).replaceAllMapped(
+                                                        RegExp(
+                                                            r'(\d)(?=(\d{3})+(?!\d))'),
+                                                        (match) =>
+                                                            '${match[1]}.',
+                                                      )} c/u',
+                                                  style: TextStyle(
+                                                    fontSize: 14,
+                                                    color: Colors.grey.shade600,
+                                                    fontWeight: FontWeight.w500,
+                                                  ),
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                  maxLines: 1,
+                                                ),
+                                              ],
                                             ),
-                                            const SizedBox(height: 4),
-                                            Text(
-                                              '\$${ps.producto.precio.toStringAsFixed(0).replaceAllMapped(
-                                                RegExp(r'(\d)(?=(\d{3})+(?!\d))'),
-                                                (match) => '${match[1]}.',
-                                                )} c/u',
-                                              style: TextStyle(
-                                              fontSize: 14,
-                                              color: Colors.grey.shade600,
-                                              fontWeight: FontWeight.w500,
-                                              ),
-                                              overflow: TextOverflow.ellipsis,
-                                              maxLines: 1,
-                                            ),
-                                            ],
-                                          ),
                                           ),
 
                                           // Controles de cantidad compactos
                                           Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            // Botón 0.5
-                                            IconButton(
-                                            icon: const Icon(
-                                              Icons.exposure,
-                                              color: Colors.blueGrey,
-                                              size: 18,
-                                            ),
-                                            onPressed: () {
-                                              final nuevaCantidad = ps.cantidad % 1 == 0.5
-                                                ? ps.cantidad - 0.5
-                                                : ps.cantidad + 0.5;
-                                              if (nuevaCantidad >= 0) {
-                                              _actualizarCantidad(index, nuevaCantidad);
-                                              }
-                                            },
-                                            constraints: const BoxConstraints(
-                                              minWidth: 32,
-                                              minHeight: 32,
-                                            ),
-                                            ),
-
-                                            // Botón menos
-                                            IconButton(
-                                            icon: const Icon(
-                                              Icons.remove,
-                                              color: Colors.red,
-                                              size: 18,
-                                            ),
-                                            onPressed: () {
-                                              final nuevaCantidad = ps.cantidad - 1;
-                                              if (nuevaCantidad >= 0.5) {
-                                              _actualizarCantidad(index, nuevaCantidad);
-                                              } else {
-                                              _eliminarProducto(index);
-                                              }
-                                            },
-                                            constraints: const BoxConstraints(
-                                              minWidth: 32,
-                                              minHeight: 32,
-                                            ),
-                                            ),
-
-                                            // Campo cantidad
-                                            Container(
-                                            width: 60,
-                                            height: 32,
-                                            decoration: BoxDecoration(
-                                              border: Border.all(
-                                                color: Colors.grey.shade300),
-                                              borderRadius: BorderRadius.circular(6),
-                                              color: Colors.white,
-                                            ),
-                                            child: Center(
-                                              child: Text(
-                                              ps.cantidad % 1 == 0
-                                                ? ps.cantidad.toInt().toString()
-                                                : ps.cantidad.toStringAsFixed(1),
-                                              style: const TextStyle(
-                                                fontSize: 14,
-                                                fontWeight: FontWeight.bold,
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              // Botón menos
+                                              IconButton(
+                                                icon: const Icon(
+                                                  Icons.remove,
+                                                  color: Colors.red,
+                                                  size: 18,
+                                                ),
+                                                onPressed: () {
+                                                  final nuevaCantidad =
+                                                      ps.cantidad - 1;
+                                                  if (nuevaCantidad >= 0.5) {
+                                                    _actualizarCantidad(
+                                                        index, nuevaCantidad);
+                                                  } else {
+                                                    _eliminarProducto(index);
+                                                  }
+                                                },
+                                                constraints:
+                                                    const BoxConstraints(
+                                                  minWidth: 32,
+                                                  minHeight: 32,
+                                                ),
                                               ),
-                                              overflow: TextOverflow.ellipsis,
-                                              maxLines: 1,
-                                              ),
-                                            ),
-                                            ),
 
-                                            // Botón más
-                                            IconButton(
-                                            icon: const Icon(
-                                              Icons.add,
-                                              color: Colors.green,
-                                              size: 18,
-                                            ),
-                                            onPressed: () {
-                                              _actualizarCantidad(index, ps.cantidad + 1);
-                                            },
-                                            constraints: const BoxConstraints(
-                                              minWidth: 32,
-                                              minHeight: 32,
-                                            ),
-                                            ),
-                                          ],
+                                              // Campo cantidad
+                                              Container(
+                                                width: 60,
+                                                height: 32,
+                                                decoration: BoxDecoration(
+                                                  border: Border.all(
+                                                      color:
+                                                          Colors.grey.shade300),
+                                                  borderRadius:
+                                                      BorderRadius.circular(6),
+                                                  color: Colors.white,
+                                                ),
+                                                child: Center(
+                                                  child: Text(
+                                                    ps.cantidad % 1 == 0
+                                                        ? ps.cantidad
+                                                            .toInt()
+                                                            .toString()
+                                                        : ps.cantidad
+                                                            .toStringAsFixed(1),
+                                                    style: const TextStyle(
+                                                      fontSize: 14,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                    ),
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                    maxLines: 1,
+                                                  ),
+                                                ),
+                                              ),
+
+                                              // Botón más
+                                              IconButton(
+                                                icon: const Icon(
+                                                  Icons.add,
+                                                  color: Colors.green,
+                                                  size: 18,
+                                                ),
+                                                onPressed: () {
+                                                  _actualizarCantidad(
+                                                      index, ps.cantidad + 1);
+                                                },
+                                                constraints:
+                                                    const BoxConstraints(
+                                                  minWidth: 32,
+                                                  minHeight: 32,
+                                                ),
+                                              ),
+                                            ],
                                           ),
 
                                           const SizedBox(width: 12),
 
                                           // Subtotal
                                           Expanded(
-                                          flex: 3,
-                                          child: Text(
-                                            '\$${subtotal.toStringAsFixed(0).replaceAllMapped(
-                                              RegExp(r'(\d)(?=(\d{3})+(?!\d))'),
-                                              (match) => '${match[1]}.',
-                                              )}',
-                                            style: const TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 16,
-                                            color: AppTheme.primaryColor,
+                                            flex: 3,
+                                            child: Text(
+                                              '\$${subtotal.toStringAsFixed(0).replaceAllMapped(
+                                                    RegExp(
+                                                        r'(\d)(?=(\d{3})+(?!\d))'),
+                                                    (match) => '${match[1]}.',
+                                                  )}',
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 16,
+                                                color: AppTheme.primaryColor,
+                                              ),
+                                              textAlign: TextAlign.right,
+                                              overflow: TextOverflow.ellipsis,
+                                              maxLines: 1,
                                             ),
-                                            textAlign: TextAlign.right,
-                                            overflow: TextOverflow.ellipsis,
-                                            maxLines: 1,
-                                          ),
                                           ),
                                         ],
                                       ),
@@ -1121,7 +1129,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
         ),
         bottomNavigationBar: _puedeConfirmarVenta()
             ? Container(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   boxShadow: [

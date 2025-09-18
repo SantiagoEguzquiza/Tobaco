@@ -240,9 +240,10 @@ class _SeleccionarProductosScreenState
                 ),
                 const SizedBox(height: 20),
 
-                // Filtros de categorías simples
-                SizedBox(
-                  height: 50,
+                // Filtros de categorías mejorados
+                Container(
+                  height: 60,
+                  padding: const EdgeInsets.symmetric(vertical: 8),
                   child: ListView.builder(
                     scrollDirection: Axis.horizontal,
                     itemCount: categorias.length,
@@ -250,33 +251,60 @@ class _SeleccionarProductosScreenState
                       final categoria = categorias[index];
                       final isSelected = selectedCategory == categoria.nombre;
 
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 8.0),
-                        child: ElevatedButton(
-                          onPressed: () {
+                      return AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        curve: Curves.easeInOut,
+                        margin: const EdgeInsets.only(right: 12),
+                        child: InkWell(
+                          onTap: () {
                             setState(() {
                               selectedCategory = categoria.nombre;
                             });
                           },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: isSelected
-                                ? AppTheme.primaryColor
-                                : AppTheme.greyColor,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(15),
-                            ),
+                          borderRadius: BorderRadius.circular(25),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            curve: Curves.easeInOut,
                             padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 8,
+                              horizontal: 20,
+                              vertical: 12,
                             ),
-                          ),
-                          child: Text(
-                            categoria.nombre[0].toUpperCase() +
-                                categoria.nombre.substring(1),
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
+                            decoration: BoxDecoration(
+                              gradient: isSelected
+                                  ? LinearGradient(
+                                      colors: [
+                                        AppTheme.primaryColor,
+                                        AppTheme.primaryColor.withOpacity(0.8),
+                                      ],
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                    )
+                                  : null,
+                              color: isSelected ? null : Colors.white,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: isSelected
+                                    ? AppTheme.primaryColor
+                                    : Colors.grey.shade300,
+                                width: isSelected ? 2 : 1,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                
+                                Text(
+                                  categoria.nombre[0].toUpperCase() +
+                                      categoria.nombre.substring(1),
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: isSelected 
+                                        ? Colors.white 
+                                        : Colors.grey.shade700,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ),
