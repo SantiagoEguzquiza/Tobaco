@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../Models/User.dart';
 import '../../Models/LoginRequest.dart';
-import '../../Models/LoginResponse.dart';
 import 'auth_service.dart';
 
 class AuthProvider extends ChangeNotifier {
@@ -61,13 +60,22 @@ class AuthProvider extends ChangeNotifier {
         notifyListeners();
         return true;
       } else {
-        _errorMessage = 'Login failed';
+        _errorMessage = 'No se pudo iniciar sesión. Verifica tus datos e intenta nuevamente.';
         _isLoading = false;
         notifyListeners();
         return false;
       }
     } catch (e) {
-      _errorMessage = 'Login error: $e';
+      // Extract the actual error message from the exception
+      String errorMsg = e.toString();
+      if (errorMsg.contains('Exception: ')) {
+        errorMsg = errorMsg.replaceFirst('Exception: ', '');
+      }
+      if (errorMsg.contains('Login error: ')) {
+        errorMsg = errorMsg.replaceFirst('Login error: ', '');
+      }
+      
+      _errorMessage = errorMsg.isNotEmpty ? errorMsg : 'Error al iniciar sesión. Intenta nuevamente.';
       _isLoading = false;
       _isAuthenticated = false;
       _currentUser = null;
@@ -97,6 +105,12 @@ class AuthProvider extends ChangeNotifier {
   // Clear error message
   void clearError() {
     _errorMessage = null;
+    notifyListeners();
+  }
+
+  // Update current user data
+  void updateCurrentUser(User updatedUser) {
+    _currentUser = updatedUser;
     notifyListeners();
   }
 }
