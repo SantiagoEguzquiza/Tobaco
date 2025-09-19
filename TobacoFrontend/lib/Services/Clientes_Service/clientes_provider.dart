@@ -56,7 +56,16 @@ class ClienteProvider with ChangeNotifier {
 
   Future<List<Cliente>> buscarClientes(String query) async {
     try {
-      _clientes = await _clienteService.buscarClientes(query);
+      final resultados = await _clienteService.buscarClientes(query);
+
+      // Ordenar: primero los que empiezan con el query, luego los que lo contienen
+      final queryLower = query.toLowerCase();
+      final empiezaCon = resultados.where((c) => c.nombre.toLowerCase().startsWith(queryLower)).toList();
+      final contiene = resultados.where((c) =>
+          !c.nombre.toLowerCase().startsWith(queryLower) &&
+          c.nombre.toLowerCase().contains(queryLower)).toList();
+
+      _clientes = [...empiezaCon, ...contiene];
       notifyListeners();
     } catch (e) {
       debugPrint('Error: $e');
@@ -64,7 +73,7 @@ class ClienteProvider with ChangeNotifier {
     return _clientes;
   }
 
-   Future<List<Cliente>> obtenerClientesConDeuda() async {
+  Future<List<Cliente>> obtenerClientesConDeuda() async {
     try {
       _clientesConDeuda = await _clienteService.obtenerClientesConDeuda();
       notifyListeners();

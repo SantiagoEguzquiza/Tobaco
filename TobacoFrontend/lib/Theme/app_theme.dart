@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 class AppTheme {
-  static const Color primaryColor = Colors.blue;
+  static const Color primaryColor = Colors.green;
   static const Color confirmButtonColor = Colors.green;
   static const Color cancelButtonColor = Colors.white;
   static const Color secondaryColor = Color(0xFFE9F3EF); // Verde para impares
