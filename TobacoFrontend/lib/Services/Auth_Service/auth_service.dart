@@ -30,11 +30,24 @@ class AuthService {
         await _saveAuthData(loginResponse);
         
         return loginResponse;
+      } else if (response.statusCode == 401) {
+        // Unauthorized - invalid credentials
+        final errorData = jsonDecode(response.body);
+        throw Exception(errorData['message'] ?? 'Usuario o contraseña incorrectos');
+      } else if (response.statusCode == 400) {
+        // Bad request - validation errors
+        final errorData = jsonDecode(response.body);
+        throw Exception(errorData['message'] ?? 'Datos de login inválidos');
       } else {
-        throw Exception('Login failed: ${response.statusCode}');
+        throw Exception('Error del servidor. Intenta nuevamente más tarde.');
       }
     } catch (e) {
-      throw Exception('Login error: $e');
+      // Clean up the error message to remove "Exception" prefix
+      String errorMessage = e.toString();
+      if (errorMessage.contains('Exception: ')) {
+        errorMessage = errorMessage.replaceFirst('Exception: ', '');
+      }
+      throw Exception(errorMessage);
     }
   }
 
@@ -88,6 +101,44 @@ class AuthService {
     await prefs.remove(_tokenKey);
     await prefs.remove(_tokenExpiryKey);
     await prefs.remove(_userKey);
+  }
+
+  // Validate token with backend
+  static Future<bool> validateToken() async {
+    try {
+      final token = await getToken();
+      if (token == null) return false;
+
+      final response = await Apihandler.client.post(
+        Apihandler.baseUrl.resolve('/api/User/validate-token'),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({'token': token}),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['isValid'] == true;
+      }
+      return false;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // Refresh token by re-login (since there's no refresh endpoint)
+  static Future<bool> refreshToken() async {
+    try {
+      final currentUser = await getCurrentUser();
+      if (currentUser == null) return false;
+
+      // For now, we'll just validate the existing token
+      // In a real app, you'd have a refresh token endpoint
+      return await validateToken();
+    } catch (e) {
+      return false;
+    }
   }
 
   // Get headers with authorization token

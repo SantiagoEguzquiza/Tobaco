@@ -7,6 +7,7 @@ import 'package:tobaco/Services/Clientes_Service/clientes_provider.dart';
 import 'package:tobaco/Services/Cotizaciones_Service/cotizaciones_provider.dart';
 import 'package:tobaco/Services/Cotizaciones_Service/cotizaciones_repo.dart';
 import 'package:tobaco/Services/Auth_Service/auth_provider.dart';
+import 'package:tobaco/Services/User_Service/user_provider.dart';
 import 'package:tobaco/Theme/app_theme.dart';
 
 import 'package:tobaco/Services/Productos_Service/productos_provider.dart';
@@ -20,6 +21,7 @@ void main() {
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => UserProvider()),
         ChangeNotifierProvider(create: (_) => ClienteProvider()),
         ChangeNotifierProvider(create: (_) => ProductoProvider()),
         ChangeNotifierProvider(create: (_) => CategoriasProvider()),
