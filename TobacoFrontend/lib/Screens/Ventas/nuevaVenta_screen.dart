@@ -784,7 +784,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                   ] else ...[
                     // Cliente seleccionado
                     Card(
-                      margin: const EdgeInsets.symmetric(vertical: 8),
+                      margin: const EdgeInsets.symmetric(vertical: 2),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(18),
                       ),
