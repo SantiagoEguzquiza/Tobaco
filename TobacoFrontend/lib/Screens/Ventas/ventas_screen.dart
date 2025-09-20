@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:tobaco/Models/Ventas.dart';
 import 'package:tobaco/Screens/Ventas/nuevaVenta_screen.dart';
+import 'package:tobaco/Screens/Ventas/detalleVentas_screen.dart';
 import 'package:tobaco/Services/Ventas_Service/ventas_provider.dart';
 import 'package:tobaco/Theme/app_theme.dart';
 
@@ -188,40 +189,50 @@ class _VentasScreenState extends State<VentasScreen> {
                         ),
                       ],
                     ),
-                    child: Container(
-                      color: index % 2 == 0
-                          ? AppTheme.secondaryColor
-                          : Colors.white,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12.0, vertical: 14),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
-                            flex: 2,
-                            child: Text(
-                              '${venta.fecha.day}/${venta.fecha.month}',
-                              style: AppTheme.cardTitleStyle,
-                            ),
-                            
+                    child: InkWell(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => DetalleVentaScreen(venta: venta),
                           ),
-                          Expanded(
-                            flex: 4,
-                            child: Text(
-                              venta.cliente.nombre,
-                              style: AppTheme.cardTitleStyle,
-                              overflow: TextOverflow.ellipsis,
+                        );
+                      },
+                      child: Container(
+                        color: index % 2 == 0
+                            ? AppTheme.secondaryColor
+                            : Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12.0, vertical: 14),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              flex: 2,
+                              child: Text(
+                                '${venta.fecha.day}/${venta.fecha.month}',
+                                style: AppTheme.cardTitleStyle,
+                              ),
+                              
                             ),
-                          ),
-                          Expanded(
-                            flex: 2,
-                            child: Text(
-                              '\$ ${venta.total.toStringAsFixed(0).replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (match) => '.')}',
-                              style: AppTheme.cardTitleStyle,
-                              textAlign: TextAlign.end,
+                            Expanded(
+                              flex: 4,
+                              child: Text(
+                                venta.cliente.nombre,
+                                style: AppTheme.cardTitleStyle,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
-                          ),
-                        ],
+                            Expanded(
+                              flex: 2,
+                              child: Text(
+                                '\$ ${venta.total.toStringAsFixed(0).replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (match) => '.')}',
+                                style: AppTheme.cardTitleStyle,
+                                textAlign: TextAlign.end,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   );
