@@ -179,19 +179,7 @@ class DetalleVentaScreen extends StatelessWidget {
             ),
             child: Row(
               children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.blue.shade50,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(
-                    Icons.info_outline,
-                    color: Colors.blue.shade700,
-                    size: 20,
-                  ),
-                ),
-                const SizedBox(width: 12),
+                
                 const Text(
                   'Información de la Venta',
                   style: TextStyle(
@@ -284,20 +272,7 @@ class DetalleVentaScreen extends StatelessWidget {
               ),
             ),
             child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.green.shade50,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(
-                    Icons.shopping_cart,
-                    color: Colors.green.shade700,
-                    size: 20,
-                  ),
-                ),
-                const SizedBox(width: 12),
+              children: [             
                 Text(
                   'Productos (${venta.ventasProductos.length})',
                   style: const TextStyle(
