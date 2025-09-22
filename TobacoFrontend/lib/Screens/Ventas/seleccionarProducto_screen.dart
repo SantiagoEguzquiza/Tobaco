@@ -333,18 +333,18 @@ class _SeleccionarProductosScreenState
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Container(
-                            padding: const EdgeInsets.all(20),
-                            decoration: BoxDecoration(
-                              color: Colors.grey.shade100,
-                              shape: BoxShape.circle,
-                            ),
-                            child: Icon(
-                              Icons.inventory_2_outlined,
-                              size: 60,
-                              color: Colors.grey.shade400,
-                            ),
-                          ),
+                           Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: AppTheme.secondaryColor,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.inventory_2_outlined,
+                size: 60,
+                color: AppTheme.primaryColor,
+              ),
+            ),
                           const SizedBox(height: 16),
                           Text(
                             selectedCategory != null

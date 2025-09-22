@@ -320,6 +320,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
     return Scaffold(
         appBar: AppBar(
           centerTitle: true,
+          title: const Text('Nueva Venta'),
         ),
         body: SafeArea(
           child: Padding(
@@ -832,27 +833,26 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                                           color: AppTheme.primaryColor,
                                         ),
                                       ),
-                                      
                                       const SizedBox(height: 4),
                                       if (clienteSeleccionado!.deuda != null &&
-                                          clienteSeleccionado!.deuda! > 0) ...[                                     
+                                          clienteSeleccionado!.deuda! > 0) ...[
                                         Text(
-                                                'Deuda: \$${_formatearPrecio(clienteSeleccionado!.deuda!.toDouble())}',
-                                                style: TextStyle(
-                                                  color: Colors.red.shade600,
-                                                  fontSize: 14,
-                                                  fontWeight: FontWeight.w600,
-                                                ),
-                                              ),
-                                      ] else ...[
-                                        Text(                                       
-                                        'Cliente Seleccionado',
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          color: Colors.grey.shade600,
-                                          fontWeight: FontWeight.w500,
+                                          'Deuda: \$${_formatearPrecio(clienteSeleccionado!.deuda!.toDouble())}',
+                                          style: TextStyle(
+                                            color: Colors.red.shade600,
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w600,
+                                          ),
                                         ),
-                                      ),
+                                      ] else ...[
+                                        Text(
+                                          'Cliente Seleccionado',
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            color: Colors.grey.shade600,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
                                       ]
                                     ],
                                   ),
@@ -966,10 +966,17 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Icon(
-                                    Icons.shopping_cart_outlined,
-                                    size: 80,
-                                    color: Colors.grey.shade400,
+                                  Container(
+                                    padding: const EdgeInsets.all(20),
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.secondaryColor,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Icon(
+                                      Icons.shopping_cart_outlined,
+                                      size: 60,
+                                      color: AppTheme.primaryColor,
+                                    ),
                                   ),
                                   const SizedBox(height: 16),
                                   Text(
@@ -1003,10 +1010,12 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                                   decoration: BoxDecoration(
                                     color: index % 2 == 0
                                         ? Colors.white
-                                        : AppTheme.primaryColor.withOpacity(0.1),
+                                        : AppTheme.primaryColor
+                                            .withOpacity(0.1),
                                     borderRadius: BorderRadius.circular(12),
                                     border: Border.all(
-                                      color: AppTheme.primaryColor.withOpacity(0.2),
+                                      color: AppTheme.primaryColor
+                                          .withOpacity(0.2),
                                       width: 1,
                                     ),
                                   ),
