@@ -783,113 +783,178 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                       ),
                   ] else ...[
                     // Cliente seleccionado
-                    Card(
-                      margin: const EdgeInsets.symmetric(vertical: 2),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(18),
+                    Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            AppTheme.primaryColor.withOpacity(0.1),
+                            AppTheme.secondaryColor.withOpacity(0.3),
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: AppTheme.primaryColor.withOpacity(0.2),
+                          width: 1,
+                        ),
                       ),
-                      color: const Color.fromARGB(255, 255, 255, 255),
-                      elevation: 2,
-                      child: Padding(
-                        padding: const EdgeInsets.all(15),
-                        child: Row(
-                          children: [
-                            CircleAvatar(
-                              backgroundColor: AppTheme.primaryColor,
-                              radius: 20,
-                              child: Text(
-                                clienteSeleccionado!.nombre.isNotEmpty
-                                    ? clienteSeleccionado!.nombre[0]
-                                        .toUpperCase()
-                                    : '?',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 18,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 15),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    clienteSeleccionado!.nombre,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 20,
-                                      color: Colors.black,
-                                    ),
+                      child: Column(
+                        children: [
+                          // Sección superior con información del cliente
+                          Padding(
+                            padding: const EdgeInsets.all(20),
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.primaryColor,
+                                    borderRadius: BorderRadius.circular(12),
                                   ),
-                                  if (clienteSeleccionado!.deuda != null &&
-                                      clienteSeleccionado!.deuda! > 0)
-                                    Text(
-                                      'Deuda: \$${_formatearPrecio(clienteSeleccionado!.deuda!.toDouble())}',
-                                      style: const TextStyle(
-                                        color: Colors.red,
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w500,
+                                  child: const Icon(
+                                    Icons.person,
+                                    color: Colors.white,
+                                    size: 24,
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        clienteSeleccionado!.nombre,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 24,
+                                          color: AppTheme.primaryColor,
+                                        ),
+                                      ),
+                                      
+                                      const SizedBox(height: 4),
+                                      if (clienteSeleccionado!.deuda != null &&
+                                          clienteSeleccionado!.deuda! > 0) ...[                                     
+                                        Text(
+                                                'Deuda: \$${_formatearPrecio(clienteSeleccionado!.deuda!.toDouble())}',
+                                                style: TextStyle(
+                                                  color: Colors.red.shade600,
+                                                  fontSize: 14,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
+                                      ] else ...[
+                                        Text(                                       
+                                        'Cliente Seleccionado',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          color: Colors.grey.shade600,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                      ]
+                                    ],
+                                  ),
+                                ),
+                                Container(
+                                  decoration: BoxDecoration(
+                                    color:
+                                        AppTheme.primaryColor.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: IconButton(
+                                    icon: Icon(
+                                      Icons.edit,
+                                      color: AppTheme.primaryColor,
+                                      size: 20,
+                                    ),
+                                    onPressed: cambiarCliente,
+                                    tooltip: 'Cambiar cliente',
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          // Botón de agregar productos integrado
+                          Container(
+                            width: double.infinity,
+                            margin: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(15),
+                              boxShadow: [
+                                BoxShadow(
+                                  color:
+                                      AppTheme.addGreenColor.withOpacity(0.3),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: ElevatedButton.icon(
+                              onPressed: () async {
+                                try {
+                                  final resultado = await Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          SeleccionarProductosScreen(
+                                        productosYaSeleccionados:
+                                            productosSeleccionados,
                                       ),
                                     ),
-                                ],
-                              ),
-                            ),
-                            IconButton(
-                              icon: Image.asset(
-                                'Assets/images/editar.png',
-                                height: 24,
-                              ),
-                              onPressed: cambiarCliente,
-                              tooltip: 'Cambiar cliente',
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
+                                  );
 
-                    // Botón agregar productos
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        onPressed: () async {
-                          try {
-                            final resultado = await Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    SeleccionarProductosScreen(
-                                  productosYaSeleccionados:
-                                      productosSeleccionados,
+                                  if (resultado != null &&
+                                      resultado is List<ProductoSeleccionado>) {
+                                    setState(() {
+                                      productosSeleccionados = resultado;
+                                    });
+                                  }
+                                } catch (e) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                          'Error al seleccionar productos: $e'),
+                                      backgroundColor: Colors.red,
+                                    ),
+                                  );
+                                }
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppTheme.addGreenColor,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 18,
+                                  horizontal: 24,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                elevation: 0,
+                              ),
+                              icon: Container(
+                                padding: const EdgeInsets.all(4),
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: const Icon(
+                                  Icons.add_shopping_cart,
+                                  color: Colors.white,
+                                  size: 20,
                                 ),
                               ),
-                            );
-
-                            if (resultado != null &&
-                                resultado is List<ProductoSeleccionado>) {
-                              setState(() {
-                                productosSeleccionados = resultado;
-                              });
-                            }
-                          } catch (e) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content:
-                                    Text('Error al seleccionar productos: $e'),
-                                backgroundColor: Colors.red,
+                              label: const Text(
+                                'Agregar Productos',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
-                            );
-                          }
-                        },
-                        style: AppTheme.elevatedButtonStyle(
-                            AppTheme.addGreenColor),
-                        icon: const Icon(Icons.add_shopping_cart,
-                            color: Colors.white),
-                        label: const Text(
-                          'Agregar productos',
-                          style: TextStyle(fontSize: 18, color: Colors.white),
-                        ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                     // Lista de productos seleccionados
@@ -937,12 +1002,11 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                                   margin: const EdgeInsets.only(bottom: 8),
                                   decoration: BoxDecoration(
                                     color: index % 2 == 0
-                                        ? AppTheme.primaryColor.withOpacity(0.1)
-                                        : Colors.white,
+                                        ? Colors.white
+                                        : AppTheme.primaryColor.withOpacity(0.1),
                                     borderRadius: BorderRadius.circular(12),
                                     border: Border.all(
-                                      color: AppTheme.primaryColor
-                                          .withOpacity(0.2),
+                                      color: AppTheme.primaryColor.withOpacity(0.2),
                                       width: 1,
                                     ),
                                   ),

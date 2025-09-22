@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:tobaco/Models/Ventas.dart';
 import 'package:tobaco/Theme/app_theme.dart';
+import 'package:tobaco/Screens/Ventas/resumenVenta_screen.dart';
 
 class FormaPagoScreen extends StatefulWidget {
   final Ventas venta;
@@ -127,7 +128,7 @@ class _FormaPagoScreenState extends State<FormaPagoScreen> {
                 ),
               ),
               const SizedBox(height: 20),
-              TextField(
+                TextField(
                 controller: _montoController,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 inputFormatters: [
@@ -136,19 +137,23 @@ class _FormaPagoScreenState extends State<FormaPagoScreen> {
                 decoration: InputDecoration(
                   labelText: 'Monto',
                   hintText: 'Ingrese el monto',
-                  prefixText: '\$ ',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
+                  prefixText: '\$ ',                 
                   focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: AppTheme.primaryColor),
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: const BorderSide(color: AppTheme.primaryColor),
+                  ),
+                  enabledBorder:  OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide(color: Colors.grey),
+                  ),
+                  border:  OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
                   ),
                 ),
                 onChanged: (value) {
                   setState(() {});
                 },
-              ),
+                ),
               const SizedBox(height: 24),
               Row(
                 children: [

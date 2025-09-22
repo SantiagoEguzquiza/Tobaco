@@ -584,26 +584,6 @@ class _VentasScreenState extends State<VentasScreen> {
               ),
               textAlign: TextAlign.center,
             ),
-            if (searchQuery.isEmpty) ...[
-              const SizedBox(height: 20),
-              ElevatedButton.icon(
-                onPressed: () async {
-                  await Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const NuevaVentaScreen(),
-                    ),
-                  );
-                  _loadVentas();
-                },
-                style: AppTheme.elevatedButtonStyle(AppTheme.addGreenColor),
-                icon: const Icon(Icons.add_shopping_cart, color: Colors.white),
-                label: const Text(
-                  'Crear Primera Venta',
-                  style: TextStyle(color: Colors.white),
-                ),
-              ),
-            ],
           ],
         ),
       ),
