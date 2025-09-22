@@ -383,7 +383,7 @@ class MenuScreen extends StatelessWidget {
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (context) => const PruebaBcuPage(),
+                                    builder: (context) => const CotizacionesScreen(),
                                   ),
                                 );
                               },
