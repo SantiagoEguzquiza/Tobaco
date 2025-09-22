@@ -243,7 +243,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
       );
 
       // Navegar a selección de método de pago
-      final List<dynamic>? resultado = await Navigator.push(
+      final Ventas? ventaConPagos = await Navigator.push(
         context,
         MaterialPageRoute(
           builder: (context) => FormaPagoScreen(venta: venta),
@@ -251,22 +251,15 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
       );
 
       // Si el usuario canceló o regresó sin confirmar, no procesar la venta
-      if (resultado == null || resultado.isEmpty) {
+      if (ventaConPagos == null || ventaConPagos.pagos == null || ventaConPagos.pagos!.isEmpty) {
         setState(() {
           isProcessingVenta = false;
         });
         return;
-      }
-
-      // Si hay múltiples métodos de pago, usar el primero como principal
-      // En el futuro se puede expandir para manejar múltiples métodos
-      final primerPago = resultado.first;
-      if (primerPago is PagoParcial) {
-        venta.metodoPago = primerPago.metodo;
-      }
+      }  
 
       // Guardar la venta en la base de datos
-      await VentasProvider().crearVenta(venta);
+      await VentasProvider().crearVenta(ventaConPagos);
 
       // Mostrar animación de confirmación solo si se guardó la venta
       if (mounted) {

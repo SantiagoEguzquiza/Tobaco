@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:tobaco/Models/Ventas.dart';
+import 'package:tobaco/Models/metodoPago.dart';
+import 'package:tobaco/Models/ventasPago.dart';
 import 'package:tobaco/Theme/app_theme.dart';
 import 'package:tobaco/Screens/Ventas/resumenVenta_screen.dart';
 
@@ -242,7 +244,7 @@ class _FormaPagoScreenState extends State<FormaPagoScreen> {
   }
 
   Color _getPaymentMethodColor(MetodoPago metodo) {
-    // Use neutral colors - all methods get the same green accent
+    // color para los diferentes métodos de pago
     return Colors.green.shade600;
   }
 
@@ -724,8 +726,21 @@ class _FormaPagoScreenState extends State<FormaPagoScreen> {
           title: 'Confirmar Pago',
           content: '¿Está seguro de que desea confirmar el pago con ${pagosParciales.length} método${pagosParciales.length != 1 ? 's' : ''}?',
           onConfirm: () {
+            // Convertir pagosParciales a VentaPago y almacenar en la venta
+            final ventaPagos = pagosParciales.map((pago) => 
+              VentaPago(
+                id: 0, // Asigna el valor adecuado para 'id'
+                ventaId: widget.venta.id ?? 0, // Asegúrate de que 'widget.venta.id' existe y es correcto
+                metodo: pago.metodo, 
+                monto: pago.monto
+              )
+            ).toList();
+            
+            // Actualizar la venta con la lista de pagos
+            widget.venta.pagos = ventaPagos;
+            
             Navigator.of(context).pop(); // Cerrar diálogo
-            Navigator.pop(context, pagosParciales); // Devolver lista de pagos
+            Navigator.pop(context, widget.venta); // Devolver la venta actualizada
           },
           onCancel: () => Navigator.of(context).pop(),
         );

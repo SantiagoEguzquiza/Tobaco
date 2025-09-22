@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:tobaco/Models/Ventas.dart';
+import 'package:tobaco/Models/metodoPago.dart';
 import 'package:tobaco/Services/Ventas_Service/ventas_provider.dart';
 import 'package:tobaco/Theme/app_theme.dart';
 
@@ -179,7 +180,6 @@ class DetalleVentaScreen extends StatelessWidget {
             ),
             child: Row(
               children: [
-                
                 const Text(
                   'Información de la Venta',
                   style: TextStyle(
