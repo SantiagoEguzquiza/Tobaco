@@ -2,15 +2,17 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:tobaco/Helpers/api_handler.dart';
 import 'package:tobaco/Models/Ventas.dart';
+import 'package:tobaco/Services/Auth_Service/auth_service.dart';
 
 class VentasService {
   final Uri baseUrl = Apihandler.baseUrl;
 
   Future<List<Ventas>> obtenerVentas() async {
     try {
+      final headers = await AuthService.getAuthHeaders();
       final response = await Apihandler.client.get(
         Uri.parse('$baseUrl/Pedidos'),
-        headers: {'Content-Type': 'application/json'},
+        headers: headers,
       );
 
       if (response.statusCode == 200) {
@@ -30,9 +32,10 @@ class VentasService {
 
   Future<void> crearVenta(Ventas venta) async {
     try {
+      final headers = await AuthService.getAuthHeaders();
       final response = await Apihandler.client.post(
         Uri.parse('$baseUrl/Pedidos'),
-        headers: {'Content-Type': 'application/json'},
+        headers: headers,
         body: jsonEncode(venta.toJson()),
       );
 
@@ -50,9 +53,10 @@ class VentasService {
 
   Future<void> editarVenta(Ventas venta) async {
     try {
+      final headers = await AuthService.getAuthHeaders();
       final response = await Apihandler.client.put(
         Uri.parse('$baseUrl/Pedidos/${venta.id}'),
-        headers: {'Content-Type': 'application/json'},
+        headers: headers,
         body: jsonEncode(venta.toJson()),
       );
 
@@ -70,9 +74,10 @@ class VentasService {
 
   Future<void> eliminarVenta(int id) async {
     try {
+      final headers = await AuthService.getAuthHeaders();
       final response = await Apihandler.client.delete(
         Uri.parse('$baseUrl/Pedidos/$id'),
-        headers: {'Content-Type': 'application/json'},
+        headers: headers,
       );
 
       if (response.statusCode != 200) {

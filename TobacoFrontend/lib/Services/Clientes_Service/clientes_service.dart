@@ -51,9 +51,10 @@ class ClienteService {
 
   Future<void> editarCliente(Cliente cliente) async {
     try {
+      final headers = await AuthService.getAuthHeaders();
       final response = await Apihandler.client.put(
         Uri.parse('$baseUrl/Clientes/${cliente.id}'),
-        headers: {'Content-Type': 'application/json'},
+        headers: headers,
         body: jsonEncode(cliente.toJsonId()),
       );
 
@@ -71,9 +72,10 @@ class ClienteService {
 
   Future<void> eliminarCliente(int id) async {
     try {
+      final headers = await AuthService.getAuthHeaders();
       final response = await Apihandler.client.delete(
         Uri.parse('$baseUrl/Clientes/$id'),
-        headers: {'Content-Type': 'application/json'},
+        headers: headers,
       );
 
       if (response.statusCode != 200) {
@@ -89,9 +91,10 @@ class ClienteService {
   }
 
   Future<List<Cliente>> buscarClientes(String nombre) async {
+    final headers = await AuthService.getAuthHeaders();
     final response = await Apihandler.client.get(
       Uri.parse('$baseUrl/Clientes/buscar?query=$nombre'),
-      headers: {'Content-Type': 'application/json'},
+      headers: headers,
     );
 
     if (response.statusCode == 200) {
@@ -104,9 +107,10 @@ class ClienteService {
 
   Future<List<Cliente>> obtenerClientesConDeuda() async {
     try {
+      final headers = await AuthService.getAuthHeaders();
       final response = await Apihandler.client.get(
         Uri.parse('$baseUrl/Clientes/con-deuda'),
-        headers: {'Content-Type': 'application/json'},
+        headers: headers,
       );
 
       if (response.statusCode == 200) {

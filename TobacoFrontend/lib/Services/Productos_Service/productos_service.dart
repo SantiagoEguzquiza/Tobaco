@@ -2,15 +2,17 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:tobaco/Helpers/api_handler.dart';
 import 'package:tobaco/Models/Producto.dart';
+import 'package:tobaco/Services/Auth_Service/auth_service.dart';
 
 class ProductoService {
   final Uri baseUrl = Apihandler.baseUrl;
 
   Future<List<Producto>> obtenerProductos() async {
     try {
+      final headers = await AuthService.getAuthHeaders();
       final response = await Apihandler.client.get(
         Uri.parse('$baseUrl/Productos'),
-        headers: {'Content-Type': 'application/json'},
+        headers: headers,
       );
 
       if (response.statusCode == 200) {
@@ -39,9 +41,10 @@ class ProductoService {
     try {
       final Map<String, dynamic> productoJson = producto.toJson();
 
+      final headers = await AuthService.getAuthHeaders();
       final response = await Apihandler.client.post(
         Uri.parse('$baseUrl/Productos'),
-        headers: {'Content-Type': 'application/json'},
+        headers: headers,
         body: jsonEncode(productoJson),
       );
 
@@ -61,9 +64,10 @@ class ProductoService {
     try {  
       final productoJson = producto.toJsonId();
 
+      final headers = await AuthService.getAuthHeaders();
       final response = await Apihandler.client.put(
         Uri.parse('$baseUrl/Productos/${producto.id}'),
-        headers: {'Content-Type': 'application/json'},
+        headers: headers,
         body: jsonEncode(productoJson),
       );
 
@@ -82,9 +86,10 @@ class ProductoService {
   Future<void> eliminarProducto(int id) async {
     try {
       
+      final headers = await AuthService.getAuthHeaders();
       final response = await Apihandler.client.delete(
         Uri.parse('$baseUrl/Productos/$id'),
-        headers: {'Content-Type': 'application/json'},
+        headers: headers,
       );
 
       if (response.statusCode != 200) {
