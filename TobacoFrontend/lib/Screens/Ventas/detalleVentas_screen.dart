@@ -9,6 +9,10 @@ class DetalleVentaScreen extends StatelessWidget {
 
   const DetalleVentaScreen({super.key, required this.venta});
 
+ 
+  
+
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -20,8 +24,8 @@ class DetalleVentaScreen extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: SingleChildScrollView(
-            child: Column(
-              children: [
+            child: Column(             
+              children: [               
                 // Header con información principal de la venta
                 _buildHeaderSection(),
                 const SizedBox(height: 20),
@@ -197,7 +201,7 @@ class DetalleVentaScreen extends StatelessWidget {
               children: [
                 _buildInfoRow(Icons.calendar_today, 'Fecha', _formatFecha(venta.fecha)),
                 const SizedBox(height: 12),
-                _buildInfoRow(Icons.payment, 'Método de Pago', _getMetodoPagoString(venta.metodoPago)),
+                _buildInfoRow(Icons.payment, 'Método de Pago', _getAllPaymentMethodsString(venta)),
                 const SizedBox(height: 12),
                 _buildInfoRow(Icons.person, 'Cliente', venta.cliente.nombre),
               ],
@@ -369,6 +373,53 @@ class DetalleVentaScreen extends StatelessWidget {
       ),
       child: Column(
         children: [
+          // Desglose de métodos de pago
+          if (venta.pagos != null && venta.pagos!.isNotEmpty) ...[
+            const Text(
+              'Desglose de Pagos:',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 12),
+            ...venta.pagos!.map((pago) => Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        _getPaymentIcon(pago.metodo),
+                        size: 16,
+                        color: Colors.grey.shade600,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        _getMetodoPagoString(pago.metodo),
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey.shade700,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Text(
+                    '\$${_formatearPrecio(pago.monto)}',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black87,
+                    ),
+                  ),
+                ],
+              ),
+            )).toList(),
+            const Divider(height: 20),
+          ],
+          // Total de la venta
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -507,6 +558,49 @@ class DetalleVentaScreen extends StatelessWidget {
           );
         }
       }
+    }
+  }
+
+  // Función para obtener todos los métodos de pago separados por comas
+  String _getAllPaymentMethodsString(Ventas venta) {
+    List<String> metodos = [];
+    
+    // Agregar el método de pago principal si existe
+    if (venta.metodoPago != null) {
+      metodos.add(_getMetodoPagoString(venta.metodoPago));
+    }
+    
+    // Agregar métodos de pago de la lista de pagos si existen
+    if (venta.pagos != null && venta.pagos!.isNotEmpty) {
+      for (var pago in venta.pagos!) {
+        String metodo = _getMetodoPagoString(pago.metodo);
+        if (!metodos.contains(metodo)) {
+          metodos.add(metodo);
+        }
+      }
+    }
+    
+    // Si no hay métodos, mostrar mensaje por defecto
+    if (metodos.isEmpty) {
+      return 'No especificado';
+    }
+    
+    return metodos.join(', ');
+  }
+
+  // Función para obtener el icono del método de pago
+  IconData _getPaymentIcon(MetodoPago metodoPago) {
+    switch (metodoPago) {
+      case MetodoPago.efectivo:
+        return Icons.money;
+      case MetodoPago.transferencia:
+        return Icons.account_balance;
+      case MetodoPago.tarjeta:
+        return Icons.credit_card;
+      case MetodoPago.cuentaCorriente:
+        return Icons.receipt_long;
+      default:
+        return Icons.payment;
     }
   }
 
