@@ -40,13 +40,23 @@ class ProductoService {
   Future<void> crearProducto(Producto producto) async {
     try {
       final Map<String, dynamic> productoJson = producto.toJson();
+      
+      // Debug: Imprimir lo que se está enviando
+      debugPrint('=== CREANDO PRODUCTO ===');
+      debugPrint('Producto JSON: $productoJson');
+      debugPrint('URL: $baseUrl/Productos');
 
       final headers = await AuthService.getAuthHeaders();
+      debugPrint('Headers: $headers');
+      
       final response = await Apihandler.client.post(
         Uri.parse('$baseUrl/Productos'),
         headers: headers,
         body: jsonEncode(productoJson),
       );
+
+      debugPrint('Response Status: ${response.statusCode}');
+      debugPrint('Response Body: ${response.body}');
 
       if (response.statusCode != 200) {
         throw Exception(

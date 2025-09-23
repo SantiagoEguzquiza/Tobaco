@@ -1,6 +1,7 @@
 // ignore_for_file: library_private_types_in_public_api
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:tobaco/Models/Categoria.dart';
 import 'package:tobaco/Models/Producto.dart';
 import 'package:tobaco/Screens/Productos/detalleProducto_screen.dart';
@@ -9,6 +10,7 @@ import 'package:tobaco/Screens/Productos/nuevoProducto_screen.dart';
 import 'package:tobaco/Services/Categoria_Service/categoria_provider.dart';
 import 'package:tobaco/Services/Productos_Service/productos_provider.dart';
 import 'package:tobaco/Theme/app_theme.dart'; // Importa el tema
+import 'package:tobaco/Helpers/color_picker.dart';
 import 'dart:developer';
 
 class ProductosScreen extends StatefulWidget {
@@ -26,9 +28,21 @@ class _ProductosScreenState extends State<ProductosScreen> {
   List<Producto> productos = [];
   List<Categoria> categorias = [];
 
+  // Helper method to safely parse color hex
+  Color _parseColor(String colorHex) {
+    try {
+      if (colorHex.isEmpty || colorHex.length < 7) {
+        return const Color(0xFF9E9E9E); // Default gray
+      }
+      return Color(int.parse(colorHex.substring(1), radix: 16) + 0xFF000000);
+    } catch (e) {
+      return const Color(0xFF9E9E9E); // Default gray on error
+    }
+  }
+
   @override
   void initState() {
-    super.initState(); 
+    super.initState();
     _loadProductos();
   }
 
@@ -39,17 +53,19 @@ class _ProductosScreenState extends State<ProductosScreen> {
     });
 
     try {
-      final productoProvider = ProductoProvider();
-      final categoriasProvider = CategoriasProvider();
+      // Usar los providers del contexto en lugar de crear nuevas instancias
+      final productoProvider =
+          Provider.of<ProductoProvider>(context, listen: false);
+      final categoriasProvider =
+          Provider.of<CategoriasProvider>(context, listen: false);
 
-      final List<Producto> fetchedProductos =
-          await productoProvider.obtenerProductos();
-      final List<Categoria> fetchedCategorias =
-          await categoriasProvider.obtenerCategorias();
+      // Obtener productos y categorías
+      await productoProvider.obtenerProductos();
+      await categoriasProvider.obtenerCategorias();
 
       setState(() {
-        productos = fetchedProductos;
-        categorias = fetchedCategorias;
+        productos = productoProvider.productos;
+        categorias = categoriasProvider.categorias;
         isLoading = false;
       });
     } catch (e) {
@@ -80,404 +96,1019 @@ class _ProductosScreenState extends State<ProductosScreen> {
           (a, b) => a.nombre.toLowerCase().compareTo(b.nombre.toLowerCase()));
 
     return Scaffold(
+      backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
         centerTitle: true,
+        elevation: 0,
+        backgroundColor: Colors.transparent,
         title: const Text(
           'Productos',
-          style: AppTheme.appBarTitleStyle,
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: AppTheme.primaryColor,
+          ),
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.menu),
-            onPressed: () {
-              showMenu(
-                context: context,
-                position: const RelativeRect.fromLTRB(1000, 80, 0, 0),
-                color: Colors.white,
-                shape: AppTheme.showMenuShape,
-                items: [
-                  PopupMenuItem(
-                    value: '1',
-                    child: Text(
-                      'Agregar categoria',
-                      style: AppTheme.showMenuItemTextStyle,
-                    ),
+          Container(
+            margin: const EdgeInsets.only(right: 16),
+            decoration: BoxDecoration(
+              color: AppTheme.primaryColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: IconButton(
+              icon: const Icon(Icons.menu, color: AppTheme.primaryColor),
+              onPressed: () {
+                showMenu(
+                  context: context,
+                  position: const RelativeRect.fromLTRB(1000, 80, 0, 0),
+                  color: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  PopupMenuItem(
-                    value: '2',
-                    child: Text(
-                      'Ver categorias',
-                      style: AppTheme.showMenuItemTextStyle,
-                    ),
-                  ),
-                ],
-              ).then((value) {
-                if (value == '1') {
-                  showDialog(
-                    context: context,
-                    builder: (context) {
-                      String newCategoryName = '';
-                      return AppTheme.customAlertDialog(
-                        title: 'Agregar nueva categoría',
-                        content: TextField(
-                          cursorColor: Colors.black,
-                          autofocus: true,
-                          onChanged: (value) {
-                            newCategoryName = value;
-                          },
-                        ),
-                        onCancel: () => Navigator.of(context).pop(),
-                        onConfirm: () async {
-                          if (newCategoryName.trim().isNotEmpty) {
-                            await CategoriasProvider().agregarCategoria(
-                                Categoria(id: null, nombre: newCategoryName));
-                            Navigator.of(context).pop();
-                            _loadProductos();
-                          }
-                        },
-                        confirmText: 'Agregar',
-                        cancelText: 'Cancelar',
-                      );
-                    },
-                  );
-                } else if (value == '2') {
-                  showDialog(
-                    context: context,
-                    builder: (context) {
-                      return StatefulBuilder(
-                        builder: (context, setStateDialog) {
-                          return AppTheme.minimalAlertDialog(
-                            title: 'Categorías',
-                            content: Container(
-                              width: double.maxFinite,
-                              constraints: const BoxConstraints(
-                                maxHeight: 240,
-                              ),
-                              child: categorias.isEmpty
-                                  ? const Text('No hay categorías.')
-                                  : Scrollbar(
-                                      thumbVisibility: true,
-                                      child: ListView.builder(
-                                        shrinkWrap: true,
-                                        itemCount: categorias.length,
-                                        itemExtent:
-                                            56, // Altura fija para cada ListTile (aprox. 5 en 300px)
-                                        itemBuilder: (context, index) {
-                                          final categoria = categorias[index];
-                                          return ListTile(
-                                            title: Text(categoria.nombre),
-                                            trailing: Row(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                IconButton(
-                                                  icon: const Icon(Icons.edit,
-                                                      color: Colors.blue),
-                                                  onPressed: () {
-                                                    String editedName =
-                                                        categoria.nombre;
-                                                    showDialog(
-                                                      context: context,
-                                                      builder: (context) {
-                                                        return AppTheme
-                                                            .minimalAlertDialog(
-                                                          title:
-                                                              'Editar categoría',
-                                                          content: TextField(
-                                                            autofocus: true,
-                                                            controller:
-                                                                TextEditingController(
-                                                                    text: categoria
-                                                                        .nombre),
-                                                            onChanged: (value) {
-                                                              editedName =
-                                                                  value;
-                                                            },
-                                                          ),
-                                                          actions: [
-                                                            TextButton(
-                                                              onPressed: () =>
-                                                                  Navigator.of(
-                                                                          context)
-                                                                      .pop(),
-                                                              child: const Text(
-                                                                  'Cancelar'),
-                                                            ),
-                                                            TextButton(
-                                                              onPressed:
-                                                                  () async {
-                                                                if (editedName
-                                                                        .trim()
-                                                                        .isNotEmpty &&
-                                                                    editedName !=
-                                                                        categoria
-                                                                            .nombre) {
-                                                                  await CategoriasProvider()
-                                                                      .editarCategoria(
-                                                                    categoria
-                                                                        .id!,
-                                                                    editedName,
-                                                                  );
-                                                                  Navigator.of(
-                                                                          context)
-                                                                      .pop();
-                                                                  Navigator.of(
-                                                                          context)
-                                                                      .pop();
-                                                                  _loadProductos();
-                                                                }
-                                                              },
-                                                              child: const Text(
-                                                                  'Guardar'),
-                                                            ),
-                                                          ],
-                                                        );
-                                                      },
-                                                    );
-                                                  },
-                                                ),
-                                                IconButton(
-                                                  icon: const Icon(Icons.delete,
-                                                      color: Colors.red),
-                                                  onPressed: () {
-                                                    showDialog(
-                                                      context: context,
-                                                      builder: (context) =>
-                                                          AppTheme
-                                                              .alertDialogStyle(
-                                                        title:
-                                                            'Eliminar categoría',
-                                                        content:
-                                                            '¿Estás seguro de que deseas eliminar esta categoría?',
-                                                        onConfirm: () async {
-                                                          await CategoriasProvider()
-                                                              .eliminarCategoria(
-                                                                  categoria
-                                                                      .id!);
-                                                          Navigator.of(context)
-                                                              .pop();
-                                                          Navigator.of(context)
-                                                              .pop();
-                                                          _loadProductos();
-                                                        },
-                                                        onCancel: () {
-                                                          Navigator.of(context)
-                                                              .pop();
-                                                        },
-                                                      ),
-                                                    );
-                                                  },
-                                                ),
-                                              ],
-                                            ),
-                                          );
-                                        },
-                                      ),
-                                    ),
-                            ),
-                            actions: [
-                              TextButton(
-                                style: TextButton.styleFrom(
-                                  foregroundColor: Colors.red,
-                                ),
-                                onPressed: () => Navigator.of(context).pop(),
-                                child: const Text('Cerrar'),
-                              ),
-                            ],
-                          );
-                        },
-                      );
-                    },
-                  );
-                }
-              });
-            },
-          ),
-        ],
-      ),
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: () async {
-                        if (categorias.isEmpty) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: const Text(
-                                  'Primero debes crear una categoría'),
-                              duration: const Duration(seconds: 3),
-                              backgroundColor: Colors.red,
-                            ),
-                          );
-                          return;
-                        }
-                        await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const NuevoProductoScreen(),
-                          ),
-                        );
-                        _loadProductos();
-                      },
-                      style: AppTheme.elevatedButtonStyle(
-                          AppTheme.addGreenColor), // Usa el estilo del tema
-                      child: const Text(
-                        'Crear nuevo producto',
-                        style: TextStyle(fontSize: 18, color: Colors.white),
+                  items: [
+                    PopupMenuItem(
+                      value: '1',
+                      child: Row(
+                        children: [
+                          Icon(Icons.add_circle_outline,
+                              color: AppTheme.primaryColor),
+                          const SizedBox(width: 12),
+                          const Text('Agregar categoría'),
+                        ],
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 30),
-                  TextField(
-                    cursorColor: Colors.black,
-                    style: const TextStyle(fontSize: 15),
-                    decoration: AppTheme.searchInputDecoration, // Usa el tema
-                    onChanged: (value) {
-                      setState(() {
-                        searchQuery = value;
-                      });
-                    },
-                  ),
-                  const SizedBox(height: 20),
-                  SizedBox(
-                    height: 50,
-                    child: ListView.builder(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: categorias.length,
-                      itemBuilder: (context, index) {
-                        final categoria = categorias[index];
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                          child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: selectedCategory == categoria.nombre
-                                  ? AppTheme.primaryColor
-                                  : AppTheme.greyColor,
-                              foregroundColor: Colors.white,
-                            ),
-                            onPressed: () {
-                              setState(() {
-                                selectedCategory = categoria.nombre;
-                              });
-                            },
-                            child: Text(
-                              categoria.nombre[0].toUpperCase() +
-                                  categoria.nombre.substring(1),
-                              style: const TextStyle(fontSize: 14),
-                            ),
-                          ),
-                        );
-                      },
+                    PopupMenuItem(
+                      value: '2',
+                      child: Row(
+                        children: [
+                          Icon(Icons.category_outlined,
+                              color: AppTheme.primaryColor),
+                          const SizedBox(width: 12),
+                          const Text('Ver categorías'),
+                        ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 30),
-                  Expanded(
-                    child: ListView.builder(
-                      itemCount: filteredProductos.length,
-                      itemBuilder: (context, index) {
-                        final producto = filteredProductos[index];
-                        return Card(
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(5),
-                          ),
-                          color: index % 2 == 0
-                              ? AppTheme.secondaryColor // Verde para impares
-                              : AppTheme.greyColor, // Gris claro para pares
-                          margin: const EdgeInsets.symmetric(vertical: 6),
-                          child: Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: InkWell(
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        DetalleProductoScreen(producto: producto),
-                                  ),
-                                );
-                              },
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  ],
+                ).then((value) {
+                  if (value == '1') {
+                    showDialog(
+                      context: context,
+                      builder: (context) {
+                        String newCategoryName = '';
+                        String selectedColor = '#9E9E9E'; // Default gray
+                        return StatefulBuilder(
+                          builder: (context, setStateDialog) {
+                            return AppTheme.customAlertDialog(
+                              title: 'Agregar nueva categoría',
+                              content: Column(
+                                mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Image.asset(
-                                    'Assets/images/cigarettes.png',
-                                    height: 30,
-                                  ),
-                                  const SizedBox(width: 25),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          producto.nombre,
-                                          style:
-                                              AppTheme.cardTitleStyle, // Usa el tema
-                                        ),
-                                        Text(
-                                          'Precio: \$${producto.precio}',
-                                          style: AppTheme
-                                              .cardSubtitleStyle, // Usa el tema
-                                        ),
-                                      ],
+                                  TextField(
+                                    cursorColor: Colors.black,
+                                    autofocus: true,
+                                    decoration: const InputDecoration(
+                                      labelText: 'Nombre de la categoría',
+                                      border: OutlineInputBorder(),
                                     ),
-                                  ),
-                                  IconButton(
-                                    icon: Image.asset(
-                                      'Assets/images/borrar.png',
-                                      height: 24,
-                                    ),
-                                    onPressed: () {
-                                      showDialog(
-                                        context: context,
-                                        builder: (context) =>
-                                            AppTheme.alertDialogStyle(
-                                          title: 'Eliminar producto',
-                                          content:
-                                              '¿Estás seguro de que deseas eliminar este producto?',
-                                          onConfirm: () async {
-                                            await ProductoProvider()
-                                                .eliminarProducto(producto.id!);
-                                            _loadProductos();
-                                            if (mounted) {
-                                              Navigator.of(this.context).pop();
-                                            }
-                                          },
-                                          onCancel: () {
-                                            Navigator.of(context).pop();
-                                          },
-                                        ),
-                                      );
+                                    onChanged: (value) {
+                                      newCategoryName = value;
                                     },
                                   ),
-                                  IconButton(
-                                    icon: Image.asset(
-                                      'Assets/images/editar.png',
-                                      height: 24,
-                                    ),
-                                    onPressed: () async {
-                                      await Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) => EditarProductoScreen(
-                                              producto: producto),
-                                        ),
-                                      );
-                                      _loadProductos();
+                                  const SizedBox(height: 16),
+                                  ColorPicker(
+                                    selectedColor: selectedColor,
+                                    onColorSelected: (color) {
+                                      setStateDialog(() {
+                                        selectedColor = color;
+                                      });
                                     },
                                   ),
                                 ],
                               ),
+                              onCancel: () => Navigator.of(context).pop(),
+                              onConfirm: () async {
+                                if (newCategoryName.trim().isNotEmpty) {
+                                  await CategoriasProvider()
+                                      .agregarCategoria(Categoria(
+                                    id: null,
+                                    nombre: newCategoryName,
+                                    colorHex: selectedColor,
+                                  ));
+                                  Navigator.of(context).pop();
+                                  _loadProductos();
+                                }
+                              },
+                              confirmText: 'Agregar',
+                              cancelText: 'Cancelar',
+                            );
+                          },
+                        );
+                      },
+                    );
+                  } else if (value == '2') {
+                    showDialog(
+                      context: context,
+                      builder: (context) {
+                        return StatefulBuilder(
+                          builder: (context, setStateDialog) {
+                            return AppTheme.minimalAlertDialog(
+                              title: 'Categorías',
+                              content: Container(
+                                width: double.maxFinite,
+                                constraints: const BoxConstraints(
+                                  maxHeight: 240,
+                                ),
+                                child: categorias.isEmpty
+                                    ? const Text('No hay categorías.')
+                                    : Scrollbar(
+                                        thumbVisibility: true,
+                                        child: ListView.builder(
+                                          shrinkWrap: true,
+                                          itemCount: categorias.length,
+                                          itemExtent:
+                                              56, // Altura fija para cada ListTile (aprox. 5 en 300px)
+                                          itemBuilder: (context, index) {
+                                            final categoria = categorias[index];
+                                            return ListTile(
+                                              leading: Container(
+                                                width: 20,
+                                                height: 20,
+                                                decoration: BoxDecoration(
+                                                  color: _parseColor(
+                                                      categoria.colorHex),
+                                                  shape: BoxShape.circle,
+                                                  border: Border.all(
+                                                    color: Colors.grey.shade300,
+                                                    width: 1,
+                                                  ),
+                                                ),
+                                              ),
+                                              title: Text(categoria.nombre),
+                                              trailing: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  IconButton(
+                                                    icon: const Icon(Icons.edit,
+                                                        color: Colors.blue),
+                                                    onPressed: () {
+                                                      String editedName =
+                                                          categoria.nombre;
+                                                      String editedColor =
+                                                          categoria.colorHex;
+                                                      showDialog(
+                                                        context: context,
+                                                        builder: (context) {
+                                                          return StatefulBuilder(
+                                                            builder: (context,
+                                                                setStateDialog) {
+                                                              return AppTheme
+                                                                  .minimalAlertDialog(
+                                                                title:
+                                                                    'Editar categoría',
+                                                                content: Column(
+                                                                  mainAxisSize:
+                                                                      MainAxisSize
+                                                                          .min,
+                                                                  children: [
+                                                                    TextField(
+                                                                      autofocus:
+                                                                          true,
+                                                                      controller:
+                                                                          TextEditingController(
+                                                                              text: categoria.nombre),
+                                                                      decoration:
+                                                                          const InputDecoration(
+                                                                        labelText:
+                                                                            'Nombre de la categoría',
+                                                                        border:
+                                                                            OutlineInputBorder(),
+                                                                      ),
+                                                                      onChanged:
+                                                                          (value) {
+                                                                        editedName =
+                                                                            value;
+                                                                      },
+                                                                    ),
+                                                                    const SizedBox(
+                                                                        height:
+                                                                            16),
+                                                                    ColorPicker(
+                                                                      selectedColor:
+                                                                          editedColor,
+                                                                      onColorSelected:
+                                                                          (color) {
+                                                                        setStateDialog(
+                                                                            () {
+                                                                          editedColor =
+                                                                              color;
+                                                                        });
+                                                                      },
+                                                                    ),
+                                                                  ],
+                                                                ),
+                                                                actions: [
+                                                                  TextButton(
+                                                                    onPressed: () =>
+                                                                        Navigator.of(context)
+                                                                            .pop(),
+                                                                    child: const Text(
+                                                                        'Cancelar'),
+                                                                  ),
+                                                                  TextButton(
+                                                                    onPressed:
+                                                                        () async {
+                                                                      if (editedName
+                                                                          .trim()
+                                                                          .isNotEmpty) {
+                                                                        await CategoriasProvider()
+                                                                            .editarCategoria(
+                                                                          categoria
+                                                                              .id!,
+                                                                          editedName,
+                                                                          editedColor,
+                                                                        );
+                                                                        Navigator.of(context)
+                                                                            .pop();
+                                                                        Navigator.of(context)
+                                                                            .pop();
+                                                                        _loadProductos();
+                                                                      }
+                                                                    },
+                                                                    child: const Text(
+                                                                        'Guardar'),
+                                                                  ),
+                                                                ],
+                                                              );
+                                                            },
+                                                          );
+                                                        },
+                                                      );
+                                                    },
+                                                  ),
+                                                   IconButton(
+                                                     icon: const Icon(
+                                                         Icons.delete,
+                                                         color: Colors.red),
+                                                     onPressed: () {
+                                                       // Verificar si la categoría tiene productos asociados
+                                                       final productosAsociados = productos.where(
+                                                         (producto) => producto.categoriaNombre == categoria.nombre
+                                                       ).toList();
+                                                       
+                                                       if (productosAsociados.isNotEmpty) {
+                                                         // Mostrar mensaje de error si hay productos asociados
+                                                         showDialog(
+                                                           context: context,
+                                                           builder: (context) => AlertDialog(
+                                                             shape: RoundedRectangleBorder(
+                                                               borderRadius: BorderRadius.circular(16),
+                                                             ),
+                                                             title: Row(
+                                                               children: [
+                                                                 Icon(
+                                                                   Icons.warning_amber_rounded,
+                                                                   color: Colors.orange,
+                                                                   size: 28,
+                                                                 ),
+                                                                 const SizedBox(width: 12),
+                                                                 const Expanded(
+                                                                   child: Text(
+                                                                     'No se puede eliminar',
+                                                                     style: TextStyle(
+                                                                       fontSize: 18,
+                                                                       fontWeight: FontWeight.bold,
+                                                                     ),
+                                                                   ),
+                                                                 ),
+                                                               ],
+                                                             ),
+                                                             content: Column(
+                                                               mainAxisSize: MainAxisSize.min,
+                                                               crossAxisAlignment: CrossAxisAlignment.start,
+                                                               children: [
+                                                                 Text(
+                                                                   'La categoría "${categoria.nombre}" no se puede eliminar porque tiene ${productosAsociados.length} producto${productosAsociados.length == 1 ? '' : 's'} asociado${productosAsociados.length == 1 ? '' : 's'}.',
+                                                                   style: const TextStyle(fontSize: 16),
+                                                                 ),
+                                                                 const SizedBox(height: 16),
+                                                                 const Text(
+                                                                   'Para eliminar esta categoría:',
+                                                                   style: TextStyle(
+                                                                     fontWeight: FontWeight.w600,
+                                                                     fontSize: 14,
+                                                                   ),
+                                                                 ),
+                                                                 const SizedBox(height: 8),
+                                                                 Row(
+                                                                   children: [
+                                                                     Icon(
+                                                                       Icons.check_circle_outline,
+                                                                       color: Colors.green,
+                                                                       size: 16,
+                                                                     ),
+                                                                     const SizedBox(width: 8),
+                                                                     const Expanded(
+                                                                       child: Text(
+                                                                         'Elimina o mueve todos los productos de esta categoría',
+                                                                         style: TextStyle(fontSize: 14),
+                                                                       ),
+                                                                     ),
+                                                                   ],
+                                                                 ),
+                                                                 const SizedBox(height: 4),
+                                                                 Row(
+                                                                   children: [
+                                                                     Icon(
+                                                                       Icons.check_circle_outline,
+                                                                       color: Colors.green,
+                                                                       size: 16,
+                                                                     ),
+                                                                     const SizedBox(width: 8),
+                                                                     const Expanded(
+                                                                       child: Text(
+                                                                         'Luego intenta eliminar la categoría nuevamente',
+                                                                         style: TextStyle(fontSize: 14),
+                                                                       ),
+                                                                     ),
+                                                                   ],
+                                                                 ),
+                                                               ],
+                                                             ),
+                                                             actions: [
+                                                               ElevatedButton(
+                                                                 onPressed: () => Navigator.of(context).pop(),
+                                                                 style: ElevatedButton.styleFrom(
+                                                                   backgroundColor: AppTheme.primaryColor,
+                                                                   foregroundColor: Colors.white,
+                                                                   shape: RoundedRectangleBorder(
+                                                                     borderRadius: BorderRadius.circular(8),
+                                                                   ),
+                                                                 ),
+                                                                 child: const Text('Entendido'),
+                                                               ),
+                                                             ],
+                                                           ),
+                                                         );
+                                                       } else {
+                                                         // Si no hay productos asociados, proceder con la eliminación
+                                                         showDialog(
+                                                           context: context,
+                                                           builder: (context) =>
+                                                               AppTheme
+                                                                   .alertDialogStyle(
+                                                             title:
+                                                                 'Eliminar categoría',
+                                                             content:
+                                                                 '¿Estás seguro de que deseas eliminar la categoría "${categoria.nombre}"?',
+                                                             onConfirm: () async {
+                                                               try {
+                                                                 await CategoriasProvider()
+                                                                     .eliminarCategoria(
+                                                                         categoria
+                                                                             .id!);
+                                                                 Navigator.of(
+                                                                         context)
+                                                                     .pop();
+                                                                 Navigator.of(
+                                                                         context)
+                                                                     .pop();
+                                                                 _loadProductos();
+                                                                 
+                                                                 // Mostrar mensaje de éxito
+                                                                 if (mounted) {
+                                                                   ScaffoldMessenger.of(context).showSnackBar(
+                                                                     SnackBar(
+                                                                       content: Text('Categoría "${categoria.nombre}" eliminada exitosamente'),
+                                                                       backgroundColor: Colors.green,
+                                                                       behavior: SnackBarBehavior.floating,
+                                                                       shape: RoundedRectangleBorder(
+                                                                         borderRadius: BorderRadius.circular(10),
+                                                                       ),
+                                                                     ),
+                                                                   );
+                                                                 }
+                                                               } catch (e) {
+                                                                 // Mostrar mensaje de error si falla la eliminación
+                                                                 if (mounted) {
+                                                                   ScaffoldMessenger.of(context).showSnackBar(
+                                                                     SnackBar(
+                                                                       content: Text('Error al eliminar la categoría: $e'),
+                                                                       backgroundColor: Colors.red,
+                                                                       behavior: SnackBarBehavior.floating,
+                                                                       shape: RoundedRectangleBorder(
+                                                                         borderRadius: BorderRadius.circular(10),
+                                                                       ),
+                                                                     ),
+                                                                   );
+                                                                 }
+                                                                 Navigator.of(context).pop();
+                                                               }
+                                                             },
+                                                             onCancel: () {
+                                                               Navigator.of(
+                                                                       context)
+                                                                   .pop();
+                                                             },
+                                                           ),
+                                                         );
+                                                       }
+                                                     },
+                                                   ),
+                                                ],
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                      ),
+                              ),
+                              actions: [
+                                TextButton(
+                                  style: TextButton.styleFrom(
+                                    foregroundColor: Colors.red,
+                                  ),
+                                  onPressed: () => Navigator.of(context).pop(),
+                                  child: const Text('Cerrar'),
+                                ),
+                              ],
+                            );
+                          },
+                        );
+                      },
+                    );
+                  }
+                });
+              },
+            ),
+          )
+        ],
+      ),
+      body: isLoading
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(
+                    valueColor:
+                        AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Cargando productos...',
+                    style: TextStyle(
+                      color: Colors.grey.shade600,
+                      fontSize: 16,
+                    ),
+                  ),
+                ],
+              ),
+            )
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Header con estadísticas
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          AppTheme.primaryColor.withOpacity(0.1),
+                          AppTheme.secondaryColor.withOpacity(0.3),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: AppTheme.primaryColor.withOpacity(0.2),
+                        width: 1,
+                      ),
+                    ),
+                    child: Column(
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: AppTheme.primaryColor,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: const Icon(
+                                Icons.inventory_2,
+                                color: Colors.white,
+                                size: 24,
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'Gestión de Productos',
+                                    style: TextStyle(
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppTheme.primaryColor,
+                                    ),
+                                  ),
+                                  Text(
+                                    '${productos.length} productos • ${categorias.length} categorías',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.grey.shade600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 20),
+
+                        // Botón de crear producto
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: () async {
+                              if (categorias.isEmpty) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: const Text(
+                                        'Primero debes crear una categoría'),
+                                    duration: const Duration(seconds: 3),
+                                    backgroundColor: Colors.red,
+                                    behavior: SnackBarBehavior.floating,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                  ),
+                                );
+                                return;
+                              }
+                              final result = await Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      const NuevoProductoScreen(),
+                                ),
+                              );
+                              _loadProductos();
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.primaryColor,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(15),
+                              ),
+                              elevation: 2,
+                            ),
+                            icon:
+                                const Icon(Icons.add_circle_outline, size: 20),
+                            label: const Text(
+                              'Crear Nuevo Producto',
+                              style: TextStyle(
+                                  fontSize: 16, fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // Barra de búsqueda mejorada
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(15),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 10,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: TextField(
+                      cursorColor: AppTheme.primaryColor,
+                      style: const TextStyle(fontSize: 16),
+                      decoration: InputDecoration(
+                        hintText: 'Buscar productos...',
+                        hintStyle: TextStyle(
+                          color: Colors.grey.shade400,
+                          fontSize: 16,
+                        ),
+                        prefixIcon: Icon(
+                          Icons.search,
+                          color: AppTheme.primaryColor,
+                          size: 24,
+                        ),
+                        suffixIcon: searchQuery.isNotEmpty
+                            ? IconButton(
+                                icon: Icon(
+                                  Icons.clear,
+                                  color: Colors.grey.shade400,
+                                ),
+                                onPressed: () {
+                                  setState(() {
+                                    searchQuery = '';
+                                  });
+                                },
+                              )
+                            : null,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(15),
+                          borderSide: BorderSide.none,
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(15),
+                          borderSide: BorderSide.none,
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(15),
+                          borderSide: BorderSide.none,
+                        ),
+                        filled: true,
+                        fillColor: Colors.white,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 16,
+                        ),
+                      ),
+                      onChanged: (value) {
+                        setState(() {
+                          searchQuery = value;
+                        });
+                      },
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // Filtros de categoría
+                  if (categorias.isNotEmpty) ...[
+                    const Text(
+                      'Categorías',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.textColor,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      height: 50,
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: categorias.length,
+                        itemBuilder: (context, index) {
+                          final categoria = categorias[index];
+                          final isSelected =
+                              selectedCategory == categoria.nombre;
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 12),
+                            child: FilterChip(
+                              label: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Container(
+                                    width: 12,
+                                    height: 12,
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    categoria.nombre[0].toUpperCase() +
+                                        categoria.nombre.substring(1),
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: isSelected
+                                          ? FontWeight.w600
+                                          : FontWeight.normal,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              selected: isSelected,
+                              onSelected: (selected) {
+                                setState(() {
+                                  selectedCategory = categoria.nombre;
+                                });
+                              },
+                              backgroundColor: Colors.white,
+                              selectedColor: _parseColor(categoria.colorHex),
+                              checkmarkColor: Colors.white,
+                              side: BorderSide(
+                                color: isSelected
+                                    ? _parseColor(categoria.colorHex)
+                                    : Colors.grey.shade300,
+                                width: 1,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(25),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                  ],
+                  // Lista de productos
+                  if (filteredProductos.isEmpty) ...[
+                    Container(
+                      padding: const EdgeInsets.all(40),
+                      child: Column(
+                        children: [
+                          Icon(
+                            Icons.inventory_2_outlined,
+                            size: 80,
+                            color: Colors.grey.shade400,
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            searchQuery.isNotEmpty
+                                ? 'No se encontraron productos'
+                                : 'No hay productos disponibles',
+                            style: TextStyle(
+                              fontSize: 18,
+                              color: Colors.grey.shade600,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            searchQuery.isNotEmpty
+                                ? 'Intenta con otros términos de búsqueda'
+                                : 'Crea tu primer producto para comenzar',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey.shade500,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ] else ...[
+                    const Text(
+                      'Productos',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.textColor,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    ListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: filteredProductos.length,
+                      itemBuilder: (context, index) {
+                        final producto = filteredProductos[index];
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.05),
+                                blurRadius: 10,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(16),
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => DetalleProductoScreen(
+                                      producto: producto,
+                                    ),
+                                  ),
+                                );
+                              },
+                              child: Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Row(
+                                  children: [
+                                    // Indicador de categoría
+                                    Container(
+                                      width: 4,
+                                      height: 60,
+                                      decoration: BoxDecoration(
+                                        color: _parseColor(
+                                          categorias
+                                              .firstWhere(
+                                                (c) =>
+                                                    c.nombre ==
+                                                    producto.categoriaNombre,
+                                                orElse: () => Categoria(
+                                                    nombre: '',
+                                                    colorHex: '#9E9E9E'),
+                                              )
+                                              .colorHex,
+                                        ),
+                                        borderRadius: BorderRadius.circular(2),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 16),
+
+                                    // Información del producto
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            producto.nombre,
+                                            style: const TextStyle(
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.bold,
+                                              color: AppTheme.textColor,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Row(
+                                            children: [
+                                              Icon(
+                                                Icons.inventory_2_outlined,
+                                                size: 16,
+                                                color: Colors.grey.shade600,
+                                              ),
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                'Cantidad: ${producto.cantidad}',
+                                                style: TextStyle(
+                                                  fontSize: 14,
+                                                  color: Colors.grey.shade600,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Row(
+                                            children: [
+                                              Icon(
+                                                Icons.attach_money,
+                                                size: 16,
+                                                color: Colors.grey.shade600,
+                                              ),
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                'Precio: \$${producto.precio.toStringAsFixed(2)}',
+                                                style: TextStyle(
+                                                  fontSize: 14,
+                                                  color: Colors.grey.shade600,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Row(
+                                            children: [
+                                              Icon(
+                                                Icons.category_outlined,
+                                                size: 16,
+                                                color: Colors.grey.shade600,
+                                              ),
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                producto.categoriaNombre ??
+                                                    'Sin categoría',
+                                                style: TextStyle(
+                                                  fontSize: 14,
+                                                  color: Colors.grey.shade600,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+
+                                    // Botones de acción
+                                    Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Container(
+                                          decoration: BoxDecoration(
+                                            color: AppTheme.primaryColor
+                                                .withOpacity(0.1),
+                                            borderRadius:
+                                                BorderRadius.circular(8),
+                                          ),
+                                          child: IconButton(
+                                            icon: Icon(
+                                              Icons.edit_outlined,
+                                              color: AppTheme.primaryColor,
+                                              size: 20,
+                                            ),
+                                            onPressed: () async {
+                                              await Navigator.push(
+                                                context,
+                                                MaterialPageRoute(
+                                                  builder: (context) =>
+                                                      EditarProductoScreen(
+                                                    producto: producto,
+                                                  ),
+                                                ),
+                                              );
+                                              _loadProductos();
+                                            },
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Container(
+                                          decoration: BoxDecoration(
+                                            color: Colors.red.withOpacity(0.1),
+                                            borderRadius:
+                                                BorderRadius.circular(8),
+                                          ),
+                                          child: IconButton(
+                                            icon: Icon(
+                                              Icons.delete_outline,
+                                              color: Colors.red,
+                                              size: 20,
+                                            ),
+                                            onPressed: () {
+                                              showDialog(
+                                                context: context,
+                                                builder: (context) =>
+                                                    AlertDialog(
+                                                  shape: RoundedRectangleBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            16),
+                                                  ),
+                                                  title: const Text(
+                                                      'Eliminar Producto'),
+                                                  content: Text(
+                                                    '¿Estás seguro de que deseas eliminar "${producto.nombre}"?',
+                                                  ),
+                                                  actions: [
+                                                    TextButton(
+                                                      onPressed: () =>
+                                                          Navigator.of(context)
+                                                              .pop(),
+                                                      child: const Text(
+                                                          'Cancelar'),
+                                                    ),
+                                                    ElevatedButton(
+                                                      onPressed: () async {
+                                                        final productoProvider =
+                                                            Provider.of<
+                                                                    ProductoProvider>(
+                                                                context,
+                                                                listen: false);
+                                                        await productoProvider
+                                                            .eliminarProducto(
+                                                                producto.id!);
+                                                        _loadProductos();
+                                                        Navigator.of(context)
+                                                            .pop();
+                                                      },
+                                                      style: ElevatedButton
+                                                          .styleFrom(
+                                                        backgroundColor:
+                                                            Colors.red,
+                                                        foregroundColor:
+                                                            Colors.white,
+                                                      ),
+                                                      child: const Text(
+                                                          'Eliminar'),
+                                                    ),
+                                                  ],
+                                                ),
+                                              );
+                                            },
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
                             ),
                           ),
                         );
                       },
                     ),
-                  ),
+                  ],
                 ],
               ),
             ),

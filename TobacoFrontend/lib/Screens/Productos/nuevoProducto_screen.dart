@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:tobaco/Models/Categoria.dart';
 import 'package:tobaco/Models/Producto.dart';
@@ -19,6 +20,18 @@ class _NuevoProductoScreenState extends State<NuevoProductoScreen> {
   final precioController = TextEditingController();
   final categoriaController = TextEditingController();
   final halfController = TextEditingController();
+
+  // Helper method to safely parse color hex
+  Color _parseColor(String colorHex) {
+    try {
+      if (colorHex.isEmpty || colorHex.length < 7) {
+        return const Color(0xFF9E9E9E); // Default gray
+      }
+      return Color(int.parse(colorHex.substring(1), radix: 16) + 0xFF000000);
+    } catch (e) {
+      return const Color(0xFF9E9E9E); // Default gray on error
+    }
+  }
 
   @override
   void initState() {
@@ -67,6 +80,10 @@ class _NuevoProductoScreenState extends State<NuevoProductoScreen> {
                         const SizedBox(height: 10),
                         TextField(
                           controller: cantidadController,
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          inputFormatters: [
+                            FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                          ],
                           decoration: AppTheme.inputDecoration.copyWith(
                             hintText: 'Ingrese la cantidad...',
                           ),
@@ -76,7 +93,10 @@ class _NuevoProductoScreenState extends State<NuevoProductoScreen> {
                         const SizedBox(height: 10),
                         TextField(
                           controller: precioController,
-                          keyboardType: TextInputType.number,
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          inputFormatters: [
+                            FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                          ],
                           decoration: AppTheme.inputDecoration.copyWith(
                             hintText: 'Ingrese el precio...',
                           ),
@@ -91,7 +111,24 @@ class _NuevoProductoScreenState extends State<NuevoProductoScreen> {
                           items: categorias.map((categoria) {
                             return DropdownMenuItem<Categoria>(
                               value: categoria,
-                              child: Text(categoria.nombre),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 16,
+                                    height: 16,
+                                    decoration: BoxDecoration(
+                                      color: _parseColor(categoria.colorHex),
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: Colors.grey.shade300,
+                                        width: 1,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(categoria.nombre),
+                                ],
+                              ),
                             );
                           }).toList(),
                           onChanged: (value) {
@@ -167,18 +204,71 @@ class _NuevoProductoScreenState extends State<NuevoProductoScreen> {
                         Expanded(
                           child: ElevatedButton(
                             onPressed: () async {
+                              // Validar campos requeridos
+                              if (nombreController.text.trim().isEmpty) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('El nombre del producto es requerido'),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                                return;
+                              }
+
+                              if (cantidadController.text.trim().isEmpty) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('La cantidad es requerida'),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                                return;
+                              }
+
+                              // Validar que la cantidad sea un número válido
+                              final cantidadValue = double.tryParse(cantidadController.text.trim());
+                              if (cantidadValue == null || cantidadValue < 0) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('La cantidad debe ser un número válido mayor o igual a 0'),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                                return;
+                              }
+
+                              if (precioController.text.trim().isEmpty) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('El precio es requerido'),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                                return;
+                              }
+
+                              // Validar que el precio sea un número válido
+                              final precioValue = double.tryParse(precioController.text.trim());
+                              if (precioValue == null || precioValue <= 0) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('El precio debe ser un número válido mayor a 0'),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                                return;
+                              }
+
                               final selectedCategoria = categorias.firstWhere(
                                 (c) => c.nombre == categoriaController.text,
                                 orElse: () => categorias.first,
                               );
+                              
                               final producto = Producto(
                                 id: null,
-                                nombre: nombreController.text,
-                                cantidad:
-                                    double.tryParse(cantidadController.text),
-                                precio:
-                                    double.tryParse(precioController.text) ??
-                                        0.0,
+                                nombre: nombreController.text.trim(),
+                                cantidad: double.tryParse(cantidadController.text) ?? 0.0,
+                                precio: double.tryParse(precioController.text) ?? 0.0,
                                 categoriaId: selectedCategoria.id ?? 0,
                                 half: halfController.text == 'true',
                               );

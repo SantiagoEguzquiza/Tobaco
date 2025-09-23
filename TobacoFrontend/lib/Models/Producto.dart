@@ -33,15 +33,21 @@ class Producto {
     );
   }
   Map<String, dynamic> toJson() {
-    return {
-      'id': id,
+    final Map<String, dynamic> json = {
       'nombre': nombre,
-      'cantidad': cantidad,
+      'cantidad': cantidad ?? 0.0, // Asegurar que no sea null
       'precio': precio,
       'categoriaId': categoriaId,
       'categoriaNombre': categoriaNombre ?? '',
       'half': half,
     };
+    
+    // Solo incluir id si no es null (para productos existentes)
+    if (id != null) {
+      json['id'] = id;
+    }
+    
+    return json;
   }
 
   Map<String, dynamic> toJsonId() {
