@@ -37,8 +37,8 @@ class Ventas {
         metodoPago: json['metodoPago'] != null
             ? MetodoPago.values[json['metodoPago'] as int]
             : null,
-        pagos: json['VentaPagos'] != null
-            ? (json['VentaPagos'] as List)
+        pagos: json['ventaPagos'] != null
+            ? (json['ventaPagos'] as List)
                 .map((e) => VentaPago.fromJson(e))
                 .toList()
             : null,
@@ -50,7 +50,7 @@ class Ventas {
         'pedidoProductos': ventasProductos.map((e) => e.toJson()).toList(),
         'total': total,
         'fecha': fecha.toIso8601String(),
-        'metodoPago': metodoPago?.index,
-        'VentaPagos': pagos?.map((e) => e.toJson()).toList(),
+        'metodoPago': metodoPago?.index ?? 0,
+        'ventaPagos': pagos?.map((e) => e.toJson()).toList() ?? [],
       };    
 }

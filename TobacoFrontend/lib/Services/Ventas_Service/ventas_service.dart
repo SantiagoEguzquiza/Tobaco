@@ -33,6 +33,7 @@ class VentasService {
   Future<void> crearVenta(Ventas venta) async {
     try {
       final headers = await AuthService.getAuthHeaders();
+      headers['Content-Type'] = 'application/json';
       final response = await Apihandler.client.post(
         Uri.parse('$baseUrl/Pedidos'),
         headers: headers,
@@ -54,6 +55,7 @@ class VentasService {
   Future<void> editarVenta(Ventas venta) async {
     try {
       final headers = await AuthService.getAuthHeaders();
+      headers['Content-Type'] = 'application/json';
       final response = await Apihandler.client.put(
         Uri.parse('$baseUrl/Pedidos/${venta.id}'),
         headers: headers,
