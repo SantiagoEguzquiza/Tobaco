@@ -40,9 +40,9 @@ class CategoriasProvider with ChangeNotifier {
       debugPrint('Error al eliminar categoría: $e');
     }
   }
-  Future<void> editarCategoria(int id, String nombre) async {
+  Future<void> editarCategoria(int id, String nombre, String colorHex) async {
     try {
-      final categoriaEditada = await _categoriaService.editarCategoria(id, nombre);
+      final categoriaEditada = await _categoriaService.editarCategoria(id, nombre, colorHex);
       final index = _categorias.indexWhere((cat) => cat.id == id);
       if (index != -1) {
         _categorias[index] = categoriaEditada;

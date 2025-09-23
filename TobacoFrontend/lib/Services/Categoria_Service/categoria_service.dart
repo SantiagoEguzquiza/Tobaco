@@ -74,13 +74,17 @@ class CategoriaService {
     }
   }
 
-  Future<Categoria> editarCategoria(int id, String nombre) async {
+  Future<Categoria> editarCategoria(int id, String nombre, String colorHex) async {
     try {
       final headers = await AuthService.getAuthHeaders();
       final response = await Apihandler.client.put(
         Uri.parse('$baseUrl/Categoria/$id'),
         headers: headers,
-        body: jsonEncode({'nombre': nombre}),
+        body: jsonEncode({
+          'id': id,
+          'nombre': nombre,
+          'colorHex': colorHex,
+        }),
       );
 
       if (response.statusCode == 200) {

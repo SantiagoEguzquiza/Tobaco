@@ -293,30 +293,30 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
           ),
         ),
         switchTheme: SwitchThemeData(
-          thumbColor: MaterialStateProperty.resolveWith<Color>((states) {
-            if (states.contains(MaterialState.selected)) {
+          thumbColor: WidgetStateProperty.resolveWith<Color>((states) {
+            if (states.contains(WidgetState.selected)) {
               return const Color(0xFF2E7D32);
             }
             return Colors.grey;
           }),
-          trackColor: MaterialStateProperty.resolveWith<Color>((states) {
-            if (states.contains(MaterialState.selected)) {
+          trackColor: WidgetStateProperty.resolveWith<Color>((states) {
+            if (states.contains(WidgetState.selected)) {
               return const Color(0xFF2E7D32).withOpacity(0.5);
             }
             return Colors.grey.withOpacity(0.3);
           }),
         ),
         checkboxTheme: CheckboxThemeData(
-          fillColor: MaterialStateProperty.resolveWith<Color>((states) {
-            if (states.contains(MaterialState.selected)) {
+          fillColor: WidgetStateProperty.resolveWith<Color>((states) {
+            if (states.contains(WidgetState.selected)) {
               return const Color(0xFF2E7D32);
             }
             return Colors.grey;
           }),
         ),
         radioTheme: RadioThemeData(
-          fillColor: MaterialStateProperty.resolveWith<Color>((states) {
-            if (states.contains(MaterialState.selected)) {
+          fillColor: WidgetStateProperty.resolveWith<Color>((states) {
+            if (states.contains(WidgetState.selected)) {
               return const Color(0xFF2E7D32);
             }
             return Colors.grey;

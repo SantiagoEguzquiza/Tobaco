@@ -555,8 +555,9 @@ class _SeleccionarProductosScreenState
                                       onChanged: (value) {
                                         double newCantidad =
                                             double.tryParse(value) ?? 0;
-                                        if (newCantidad > 999)
+                                        if (newCantidad > 999) {
                                           newCantidad = 999;
+                                        }
                                         setState(() {
                                           cantidades[producto.id!] =
                                               newCantidad < 0

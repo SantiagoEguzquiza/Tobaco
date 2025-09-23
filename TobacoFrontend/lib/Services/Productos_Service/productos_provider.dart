@@ -7,7 +7,7 @@ class ProductoProvider with ChangeNotifier {
 
   List<Producto> _productos = [];
 
-  List<dynamic> get productos => _productos;
+  List<Producto> get productos => _productos;
 
   Future<List<Producto>> obtenerProductos() async {
     try {
@@ -22,8 +22,8 @@ class ProductoProvider with ChangeNotifier {
   Future<void> crearProducto(Producto producto) async {
     try {
       await _productoService.crearProducto(producto);
-      _productos.add(producto);
-      notifyListeners();
+      // Recargar la lista completa para obtener el ID real del servidor
+      await obtenerProductos();
     } catch (e) {
       debugPrint('Error: $e');
     }

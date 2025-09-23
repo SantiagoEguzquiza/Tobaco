@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:tobaco/Models/Producto.dart';
 import 'package:tobaco/Services/Categoria_Service/categoria_provider.dart';
@@ -21,6 +22,18 @@ class EditarProductoScreenState extends State<EditarProductoScreen> {
   late TextEditingController halfController;
 
   Categoria? categoriaSeleccionada;
+
+  // Helper method to safely parse color hex
+  Color _parseColor(String colorHex) {
+    try {
+      if (colorHex.isEmpty || colorHex.length < 7) {
+        return const Color(0xFF9E9E9E); // Default gray
+      }
+      return Color(int.parse(colorHex.substring(1), radix: 16) + 0xFF000000);
+    } catch (e) {
+      return const Color(0xFF9E9E9E); // Default gray on error
+    }
+  }
 
   @override
   void initState() {
@@ -109,12 +122,15 @@ class EditarProductoScreenState extends State<EditarProductoScreen> {
                     controller: cantidadController,
                     style: AppTheme.inputTextStyle,
                     cursorColor: Colors.black,
-                    keyboardType: TextInputType.number,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                    ],
                     decoration: AppTheme.inputDecoration,
                     onChanged: (value) {
                       setState(() {
                         widget.producto.cantidad =
-                            int.tryParse(value)?.toDouble() ?? 0.0;
+                            double.tryParse(value) ?? 0.0;
                       });
                     },
                   ),
@@ -128,7 +144,10 @@ class EditarProductoScreenState extends State<EditarProductoScreen> {
                     controller: precioController,
                     style: AppTheme.inputTextStyle,
                     cursorColor: Colors.black,
-                    keyboardType: TextInputType.number,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                    ],
                     decoration: AppTheme.inputDecoration,
                     onChanged: (value) {
                       setState(() {
@@ -148,9 +167,26 @@ class EditarProductoScreenState extends State<EditarProductoScreen> {
                     items: categorias.map((Categoria categoria) {
                       return DropdownMenuItem<Categoria>(
                         value: categoria,
-                        child: Text(
-                          categoria.nombre,
-                          style: AppTheme.inputTextStyle,
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 16,
+                              height: 16,
+                              decoration: BoxDecoration(
+                                color: _parseColor(categoria.colorHex),
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Colors.grey.shade300,
+                                  width: 1,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              categoria.nombre,
+                              style: AppTheme.inputTextStyle,
+                            ),
+                          ],
                         ),
                       );
                     }).toList(),
@@ -223,6 +259,41 @@ class EditarProductoScreenState extends State<EditarProductoScreen> {
                           AppTheme.confirmButtonColor,
                         ),
                         onPressed: () async {
+                          // Validar campos requeridos
+                          if (nombreController.text.trim().isEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('El nombre del producto es requerido'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                            return;
+                          }
+
+                          // Validar que la cantidad sea un número válido
+                          final cantidadValue = double.tryParse(cantidadController.text.trim());
+                          if (cantidadValue == null || cantidadValue < 0) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('La cantidad debe ser un número válido mayor o igual a 0'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                            return;
+                          }
+
+                          // Validar que el precio sea un número válido
+                          final precioValue = double.tryParse(precioController.text.trim());
+                          if (precioValue == null || precioValue <= 0) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('El precio debe ser un número válido mayor a 0'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                            return;
+                          }
+
                           try {
                             await ProductoProvider()
                                 .editarProducto(widget.producto);

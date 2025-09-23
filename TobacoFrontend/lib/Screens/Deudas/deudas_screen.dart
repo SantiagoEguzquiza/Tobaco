@@ -5,6 +5,8 @@ import 'package:tobaco/Theme/app_theme.dart';
 import 'dart:developer';
 
 class DeudasScreen extends StatefulWidget {
+  const DeudasScreen({super.key});
+
   @override
   _DeudasScreenState createState() => _DeudasScreenState();
 }
