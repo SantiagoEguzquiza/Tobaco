@@ -75,6 +75,7 @@ class ProductoService {
       final productoJson = producto.toJsonId();
 
       final headers = await AuthService.getAuthHeaders();
+      headers['Content-Type'] = 'application/json';
       final response = await Apihandler.client.put(
         Uri.parse('$baseUrl/Productos/${producto.id}'),
         headers: headers,

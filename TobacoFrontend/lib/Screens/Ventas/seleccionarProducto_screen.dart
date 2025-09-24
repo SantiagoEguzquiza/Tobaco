@@ -69,6 +69,76 @@ class _SeleccionarProductosScreenState
     }
   }
 
+  // Función para formatear precios con decimales más pequeños y grises
+  Widget _formatearPrecioConDecimales(double precio, {Color? color}) {
+    final precioStr = precio.toStringAsFixed(2);
+    final partes = precioStr.split('.');
+    final parteEntera = partes[0].replaceAllMapped(
+        RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (match) => '${match[1]}.');
+    final parteDecimal = partes[1];
+    
+    return RichText(
+      text: TextSpan(
+        children: [
+          TextSpan(
+            text: '\$${parteEntera}',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: color ?? Colors.grey.shade600,
+            ),
+          ),
+          TextSpan(
+            text: ',${parteDecimal}',
+            style: TextStyle(
+              fontSize: 10,
+              color: Colors.grey.shade400,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Función especial para el total del pedido
+  Widget _formatearTotalPedido() {
+    final total = cantidades.entries.where((e) => e.value > 0).map((e) {
+      final producto = productos.firstWhere(
+        (p) => p.id == e.key,
+        orElse: () => throw Exception('Producto no encontrado'),
+      );
+      return producto.precio * e.value;
+    }).fold<double>(0.0, (a, b) => a + b);
+
+    final totalStr = total.toStringAsFixed(2);
+    final partes = totalStr.split('.');
+    final parteEntera = partes[0].replaceAllMapped(
+        RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (match) => '${match[1]}.');
+    final parteDecimal = partes[1];
+    
+    return RichText(
+      text: TextSpan(
+        children: [
+          TextSpan(
+            text: '\$${parteEntera}',
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: AppTheme.primaryColor,
+            ),
+          ),
+          TextSpan(
+            text: ',${parteDecimal}',
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey.shade400,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (selectedCategory == null && categorias.isNotEmpty) {
@@ -292,15 +362,14 @@ class _SeleccionarProductosScreenState
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                
                                 Text(
                                   categoria.nombre[0].toUpperCase() +
                                       categoria.nombre.substring(1),
                                   style: TextStyle(
                                     fontSize: 14,
                                     fontWeight: FontWeight.w600,
-                                    color: isSelected 
-                                        ? Colors.white 
+                                    color: isSelected
+                                        ? Colors.white
                                         : Colors.grey.shade700,
                                   ),
                                 ),
@@ -333,18 +402,18 @@ class _SeleccionarProductosScreenState
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                           Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: AppTheme.secondaryColor,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.inventory_2_outlined,
-                size: 60,
-                color: AppTheme.primaryColor,
-              ),
-            ),
+                          Container(
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              color: AppTheme.secondaryColor,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.inventory_2_outlined,
+                              size: 60,
+                              color: AppTheme.primaryColor,
+                            ),
+                          ),
                           const SizedBox(height: 16),
                           Text(
                             selectedCategory != null
@@ -428,16 +497,19 @@ class _SeleccionarProductosScreenState
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                     const SizedBox(height: 4),
-                                    Text(
-                                      '\$${producto.precio.toStringAsFixed(0).replaceAllMapped(
-                                            RegExp(r'(\d)(?=(\d{3})+(?!\d))'),
-                                            (match) => '${match[1]}.',
-                                          )} c/u',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        color: Colors.grey.shade600,
-                                        fontWeight: FontWeight.w500,
-                                      ),
+                                    Row(
+                                      children: [
+                                        _formatearPrecioConDecimales(producto.precio),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          'c/u',
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            color: Colors.grey.shade600,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ],
                                 ),
@@ -634,21 +706,7 @@ class _SeleccionarProductosScreenState
                         fontWeight: FontWeight.w500,
                       ),
                     ),
-                    Text(
-                      '\$${cantidades.entries.where((e) => e.value > 0).map((e) {
-                            final producto = productos.firstWhere(
-                              (p) => p.id == e.key,
-                              orElse: () =>
-                                  throw Exception('Producto no encontrado'),
-                            );
-                            return producto.precio * e.value;
-                          }).fold<double>(0.0, (a, b) => a + b).toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (match) => '${match[1]}.')}',
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: AppTheme.primaryColor,
-                      ),
-                    ),
+                    _formatearTotalPedido(),
                   ],
                 ),
               ),

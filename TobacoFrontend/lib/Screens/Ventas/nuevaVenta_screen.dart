@@ -127,8 +127,44 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
   }
 
   String _formatearPrecio(double precio) {
-    return precio.toStringAsFixed(0).replaceAllMapped(
+    return precio.toStringAsFixed(2).replaceAllMapped(
         RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (match) => '${match[1]}.');
+  }
+
+  // Widget para formatear precios con decimales más pequeños y grises
+  Widget _formatearPrecioConDecimales(double precio,
+      {Color? color, double? fontSize}) {
+    final precioStr = precio.toStringAsFixed(2);
+    final partes = precioStr.split('.');
+    final parteEntera = partes[0].replaceAllMapped(
+        RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (match) => '${match[1]}.');
+    final parteDecimal = partes[1];
+
+    final baseFontSize = fontSize ?? 14.0;
+    final decimalFontSize =
+        baseFontSize * 0.7; // 70% del tamaño base para los decimales
+
+    return RichText(
+      text: TextSpan(
+        children: [
+          TextSpan(
+            text: '\$${parteEntera}',
+            style: TextStyle(
+              fontSize: baseFontSize,
+              fontWeight: FontWeight.w500,
+              color: color ?? Colors.grey.shade600,
+            ),
+          ),
+          TextSpan(
+            text: ',${parteDecimal}',
+            style: TextStyle(
+              fontSize: decimalFontSize,
+              color: Colors.grey.shade400,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   bool _puedeConfirmarVenta() {
@@ -251,12 +287,14 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
       );
 
       // Si el usuario canceló o regresó sin confirmar, no procesar la venta
-      if (ventaConPagos == null || ventaConPagos.pagos == null || ventaConPagos.pagos!.isEmpty) {
+      if (ventaConPagos == null ||
+          ventaConPagos.pagos == null ||
+          ventaConPagos.pagos!.isEmpty) {
         setState(() {
           isProcessingVenta = false;
         });
         return;
-      }  
+      }
 
       // Guardar la venta en la base de datos
       await VentasProvider().crearVenta(ventaConPagos);
@@ -598,7 +636,8 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                                           )
                                         : null,
                                     trailing: cliente.deuda != null &&
-                                            cliente.deuda! > 0
+                                            double.tryParse(cliente.deuda!.toString()) != null &&
+                                            double.parse(cliente.deuda!.toString()) > 0
                                         ? Container(
                                             padding: const EdgeInsets.symmetric(
                                               horizontal: 8,
@@ -611,7 +650,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                                                   BorderRadius.circular(8),
                                             ),
                                             child: Text(
-                                              'Deuda: \$${_formatearPrecio(cliente.deuda!.toDouble())}',
+                                              'Deuda: \$${_formatearPrecio(double.parse(cliente.deuda!.toString()))}',
                                               style: const TextStyle(
                                                 color: Colors.red,
                                                 fontSize: 12,
@@ -828,9 +867,10 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                                       ),
                                       const SizedBox(height: 4),
                                       if (clienteSeleccionado!.deuda != null &&
-                                          clienteSeleccionado!.deuda! > 0) ...[
+                                          double.tryParse(clienteSeleccionado!.deuda!.toString()) != null &&
+                                          double.parse(clienteSeleccionado!.deuda!.toString()) > 0) ...[
                                         Text(
-                                          'Deuda: \$${_formatearPrecio(clienteSeleccionado!.deuda!.toDouble())}',
+                                          'Deuda: \$${_formatearPrecio(double.parse(clienteSeleccionado!.deuda!.toString()))}',
                                           style: TextStyle(
                                             color: Colors.red.shade600,
                                             fontSize: 14,
@@ -1058,21 +1098,22 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                                                   maxLines: 1,
                                                 ),
                                                 const SizedBox(height: 4),
-                                                Text(
-                                                  '\$${ps.producto.precio.toStringAsFixed(0).replaceAllMapped(
-                                                        RegExp(
-                                                            r'(\d)(?=(\d{3})+(?!\d))'),
-                                                        (match) =>
-                                                            '${match[1]}.',
-                                                      )} c/u',
-                                                  style: TextStyle(
-                                                    fontSize: 14,
-                                                    color: Colors.grey.shade600,
-                                                    fontWeight: FontWeight.w500,
-                                                  ),
-                                                  overflow:
-                                                      TextOverflow.ellipsis,
-                                                  maxLines: 1,
+                                                Row(
+                                                  children: [
+                                                    _formatearPrecioConDecimales(
+                                                        ps.producto.precio),
+                                                    const SizedBox(width: 4),
+                                                    Text(
+                                                      'c/u',
+                                                      style: TextStyle(
+                                                        fontSize: 14,
+                                                        color: Colors
+                                                            .grey.shade600,
+                                                        fontWeight:
+                                                            FontWeight.w500,
+                                                      ),
+                                                    ),
+                                                  ],
                                                 ),
                                               ],
                                             ),
@@ -1163,20 +1204,10 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                                           // Subtotal
                                           Expanded(
                                             flex: 3,
-                                            child: Text(
-                                              '\$${subtotal.toStringAsFixed(0).replaceAllMapped(
-                                                    RegExp(
-                                                        r'(\d)(?=(\d{3})+(?!\d))'),
-                                                    (match) => '${match[1]}.',
-                                                  )}',
-                                              style: const TextStyle(
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: 16,
-                                                color: AppTheme.primaryColor,
-                                              ),
-                                              textAlign: TextAlign.right,
-                                              overflow: TextOverflow.ellipsis,
-                                              maxLines: 1,
+                                            child: _formatearPrecioConDecimales(
+                                              subtotal,
+                                              fontSize: 16,
+                                              color: Colors.black87,                                         
                                             ),
                                           ),
                                         ],
@@ -1224,13 +1255,10 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
-                            Text(
-                              '\$${_formatearPrecio(_calcularTotal())}',
-                              style: const TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                                color: AppTheme.primaryColor,
-                              ),
+                            _formatearPrecioConDecimales(
+                              _calcularTotal(),
+                              color: AppTheme.primaryColor,
+                              fontSize: 22.0,
                             ),
                             Text(
                               '${productosSeleccionados.length} producto${productosSeleccionados.length != 1 ? 's' : ''}',

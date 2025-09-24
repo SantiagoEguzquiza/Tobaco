@@ -103,7 +103,7 @@ class NuevoClienteScreen extends StatelessWidget {
                                 nombre: nombreController.text,
                                 direccion: direccionController.text,
                                 telefono: int.tryParse(telefonoController.text) ?? 0,
-                                deuda: 0,
+                                deuda: '0',
                               );
 
                               try {

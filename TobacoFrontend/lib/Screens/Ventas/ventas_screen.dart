@@ -411,13 +411,9 @@ class _VentasScreenState extends State<VentasScreen> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Text(
-                    '\$${_formatearPrecio(venta.total)}',
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.primaryColor,
-                    ),
+                  _formatearPrecioConDecimales(
+                    venta.total,
+                    color: AppTheme.primaryColor,
                   ),
                   Text(
                     '${venta.ventasProductos.length} producto${venta.ventasProductos.length != 1 ? 's' : ''}',
@@ -592,8 +588,39 @@ class _VentasScreenState extends State<VentasScreen> {
 
   // Función para formatear precios
   String _formatearPrecio(double precio) {
-    return precio.toStringAsFixed(0).replaceAllMapped(
+    return precio.toStringAsFixed(2).replaceAllMapped(
         RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (match) => '${match[1]}.');
+  }
+
+  // Widget para formatear precios con decimales más pequeños y grises
+  Widget _formatearPrecioConDecimales(double precio, {Color? color}) {
+    final precioStr = precio.toStringAsFixed(2);
+    final partes = precioStr.split('.');
+    final parteEntera = partes[0].replaceAllMapped(
+        RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (match) => '${match[1]}.');
+    final parteDecimal = partes[1];
+    
+    return RichText(
+      text: TextSpan(
+        children: [
+          TextSpan(
+            text: '\$${parteEntera}',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: color ?? AppTheme.primaryColor,
+            ),
+          ),
+          TextSpan(
+            text: ',${parteDecimal}',
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey.shade400,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   // Función para confirmar eliminación de venta

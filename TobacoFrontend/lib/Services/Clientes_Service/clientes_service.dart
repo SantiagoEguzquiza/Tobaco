@@ -31,13 +31,14 @@ class ClienteService {
   Future<void> crearCliente(Cliente cliente) async {
     try {
       final headers = await AuthService.getAuthHeaders();
+      headers['Content-Type'] = 'application/json';
       final response = await Apihandler.client.post(
         Uri.parse('$baseUrl/Clientes'),
         headers: headers,
         body: jsonEncode(cliente.toJson()),
       );
 
-      if (response.statusCode != 200) {
+      if (response.statusCode != 200 && response.statusCode != 201) {
         throw Exception(
             'Error al guardar el cliente. Código de estado: ${response.statusCode}, Respuesta: ${response.body}');
       } else {
@@ -52,6 +53,7 @@ class ClienteService {
   Future<void> editarCliente(Cliente cliente) async {
     try {
       final headers = await AuthService.getAuthHeaders();
+      headers['Content-Type'] = 'application/json';
       final response = await Apihandler.client.put(
         Uri.parse('$baseUrl/Clientes/${cliente.id}'),
         headers: headers,
