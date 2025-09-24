@@ -9,10 +9,6 @@ class DetalleVentaScreen extends StatelessWidget {
 
   const DetalleVentaScreen({super.key, required this.venta});
 
- 
-  
-
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -136,14 +132,7 @@ class DetalleVentaScreen extends StatelessWidget {
                       color: Colors.grey.shade600,
                     ),
                   ),
-                  Text(
-                    '\$${_formatearPrecio(venta.total)}',
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.primaryColor,
-                    ),
-                  ),
+                  _formatearPrecioConDecimales(venta.total),
                 ],
               ),
             ],
@@ -202,8 +191,8 @@ class DetalleVentaScreen extends StatelessWidget {
                 _buildInfoRow(Icons.calendar_today, 'Fecha', _formatFecha(venta.fecha)),
                 const SizedBox(height: 12),
                 _buildInfoRow(Icons.payment, 'Método de Pago', _getAllPaymentMethodsString(venta)),
-                const SizedBox(height: 12),
-                _buildInfoRow(Icons.person, 'Cliente', venta.cliente.nombre),
+                const SizedBox(height: 12),               
+                _buildInfoRow(Icons.person, 'Usuario', 'Admin'), // Placeholder para usuario
               ],
             ),
           ),
@@ -335,13 +324,9 @@ class DetalleVentaScreen extends StatelessWidget {
                       color: Colors.grey.shade600,
                     ),
                   ),
-                  trailing: Text(
-                    '\$${_formatearPrecio(producto.producto.precio * producto.cantidad)}',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.primaryColor,
-                    ),
+                  trailing: _formatearPrecioConDecimales(
+                    producto.producto.precio * producto.cantidad,
+                    color: Colors.black87,
                   ),
                 ),
               );
@@ -406,13 +391,9 @@ class DetalleVentaScreen extends StatelessWidget {
                       ),
                     ],
                   ),
-                  Text(
-                    '\$${_formatearPrecio(pago.monto)}',
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black87,
-                    ),
+                  _formatearPrecioConDecimales(
+                    pago.monto,
+                    color: Colors.black87,
                   ),
                 ],
               ),
@@ -430,14 +411,7 @@ class DetalleVentaScreen extends StatelessWidget {
                   fontWeight: FontWeight.w600,
                 ),
               ),
-              Text(
-                '\$${_formatearPrecio(venta.total)}',
-                style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.primaryColor,
-                ),
-              ),
+              _formatearPrecioConDecimales(venta.total),
             ],
           ),
         ],
@@ -513,8 +487,39 @@ class DetalleVentaScreen extends StatelessWidget {
 
   // Función para formatear precios
   String _formatearPrecio(double precio) {
-    return precio.toStringAsFixed(0).replaceAllMapped(
+    return precio.toStringAsFixed(2).replaceAllMapped(
         RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (match) => '${match[1]}.');
+  }
+
+  // Widget para formatear precios con decimales más pequeños y grises
+  Widget _formatearPrecioConDecimales(double precio, {Color? color}) {
+    final precioStr = precio.toStringAsFixed(2);
+    final partes = precioStr.split('.');
+    final parteEntera = partes[0].replaceAllMapped(
+        RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (match) => '${match[1]}.');
+    final parteDecimal = partes[1];
+    
+    return RichText(
+      text: TextSpan(
+        children: [
+          TextSpan(
+            text: '\$${parteEntera}',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: color ?? AppTheme.primaryColor,
+            ),
+          ),
+          TextSpan(
+            text: ',${parteDecimal}',
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey.shade400,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   // Función para formatear fecha manualmente
@@ -599,8 +604,6 @@ class DetalleVentaScreen extends StatelessWidget {
         return Icons.credit_card;
       case MetodoPago.cuentaCorriente:
         return Icons.receipt_long;
-      default:
-        return Icons.payment;
     }
   }
 

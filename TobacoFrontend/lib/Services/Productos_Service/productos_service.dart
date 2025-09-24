@@ -42,13 +42,14 @@ class ProductoService {
       final Map<String, dynamic> productoJson = producto.toJson();
 
       final headers = await AuthService.getAuthHeaders();
+      headers['Content-Type'] = 'application/json';
       final response = await Apihandler.client.post(
         Uri.parse('$baseUrl/Productos'),
         headers: headers,
         body: jsonEncode(productoJson),
       );
 
-      if (response.statusCode != 200) {
+      if (response.statusCode != 200 && response.statusCode != 201) {
         throw Exception(
             'Error al guardar el producto. Código de estado: ${response.statusCode}, Respuesta: ${response.body}');
       } else {
@@ -65,6 +66,7 @@ class ProductoService {
       final productoJson = producto.toJsonId();
 
       final headers = await AuthService.getAuthHeaders();
+      headers['Content-Type'] = 'application/json';
       final response = await Apihandler.client.put(
         Uri.parse('$baseUrl/Productos/${producto.id}'),
         headers: headers,

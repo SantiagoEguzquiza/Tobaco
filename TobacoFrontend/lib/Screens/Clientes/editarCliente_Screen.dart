@@ -122,7 +122,7 @@ class EditarClienteScreenState extends State<EditarClienteScreen> {
                     decoration: AppTheme.inputDecoration,
                     onChanged: (value) {
                       setState(() {
-                        widget.cliente.deuda = int.tryParse(value) ?? 0;
+                        widget.cliente.deuda = (int.tryParse(value) ?? 0) as String?;
                       });
                     },
                   ),

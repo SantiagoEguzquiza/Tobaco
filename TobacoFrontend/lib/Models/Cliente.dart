@@ -5,7 +5,7 @@ class Cliente {
   String nombre;
   String? direccion;
   int? telefono;
-  int? deuda;
+  String? deuda;
 
 
   Cliente(
@@ -24,8 +24,7 @@ class Cliente {
       telefono: json['telefono'] != null
           ? int.tryParse(json['telefono'].toString())
           : null,
-      deuda:
-          json['deuda'] != null ? int.tryParse(json['deuda'].toString()) : null,   
+      deuda: json['deuda'] as String?,   
     );
   }
 
@@ -35,7 +34,7 @@ class Cliente {
       'nombre': nombre,
       'direccion': direccion,
       'telefono': telefono?.toString(),
-      'deuda': deuda?.toString(),
+      'deuda': deuda,
     };
   }
 
@@ -45,7 +44,7 @@ class Cliente {
       'nombre': nombre,
       'direccion': direccion,
       'telefono': telefono?.toString(),
-      'deuda': deuda?.toString(),
+      'deuda': deuda,
       
     };
   }
