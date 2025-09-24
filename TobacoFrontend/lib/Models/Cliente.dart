@@ -29,13 +29,19 @@ class Cliente {
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'id': id,
+    Map<String, dynamic> json = {
       'nombre': nombre,
       'direccion': direccion,
       'telefono': telefono?.toString(),
       'deuda': deuda,
     };
+    
+    // Solo incluir el id si no es null (para actualizaciones)
+    if (id != null) {
+      json['id'] = id;
+    }
+    
+    return json;
   }
 
   Map<String, dynamic> toJsonId() {
