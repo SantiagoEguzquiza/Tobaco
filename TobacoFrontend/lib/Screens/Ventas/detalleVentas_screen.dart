@@ -192,7 +192,7 @@ class DetalleVentaScreen extends StatelessWidget {
                 const SizedBox(height: 12),
                 _buildInfoRow(Icons.payment, 'Método de Pago', _getAllPaymentMethodsString(venta)),
                 const SizedBox(height: 12),               
-                _buildInfoRow(Icons.person, 'Usuario', 'Admin'), // Placeholder para usuario
+                _buildInfoRow(Icons.person, 'Usuario', venta.usuario?.userName ?? 'No disponible'),
               ],
             ),
           ),
