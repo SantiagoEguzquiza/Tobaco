@@ -3,8 +3,8 @@
 import 'package:flutter/material.dart';
 import 'package:tobaco/Models/Cliente.dart';
 import 'package:tobaco/Screens/Clientes/detalleCliente_screen.dart';
-import 'package:tobaco/Screens/Clientes/editarCliente_Screen.dart';
-import 'package:tobaco/Screens/Clientes/nuevoCliente_screen.dart';
+import 'package:tobaco/Screens/Clientes/wizardNuevoCliente_screen.dart';
+import 'package:tobaco/Screens/Clientes/wizardEditarCliente_screen.dart';
 import 'package:tobaco/Services/Clientes_Service/clientes_provider.dart';
 import 'package:tobaco/Theme/app_theme.dart';
 import 'dart:developer';
@@ -82,7 +82,7 @@ class _ClientesScreenState extends State<ClientesScreen> {
                   await Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => const NuevoClienteScreen(),
+                      builder: (context) => const WizardNuevoClienteScreen(),
                     ),
                   );
                   _loadClientes();
@@ -194,7 +194,7 @@ class _ClientesScreenState extends State<ClientesScreen> {
                                 await Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (context) => EditarClienteScreen(
+                                    builder: (context) => WizardEditarClienteScreen(
                                       cliente: cliente,
                                     ),
                                   ),

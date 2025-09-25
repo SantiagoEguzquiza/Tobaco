@@ -311,7 +311,7 @@ class DetalleVentaScreen extends StatelessWidget {
                     ),
                   ),
                   title: Text(
-                    producto.producto.nombre,
+                    producto.nombre,
                     style: const TextStyle(
                       fontWeight: FontWeight.w600,
                       fontSize: 16,
@@ -325,7 +325,7 @@ class DetalleVentaScreen extends StatelessWidget {
                     ),
                   ),
                   trailing: _formatearPrecioConDecimales(
-                    producto.producto.precio * producto.cantidad,
+                    producto.precio * producto.cantidad,
                     color: Colors.black87,
                   ),
                 ),

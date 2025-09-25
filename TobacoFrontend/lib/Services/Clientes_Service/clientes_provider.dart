@@ -21,13 +21,15 @@ class ClienteProvider with ChangeNotifier {
     return _clientes;
   }
 
-  Future<void> crearCliente(Cliente cliente) async {
+  Future<Cliente?> crearCliente(Cliente cliente) async {
     try {
-      await _clienteService.crearCliente(cliente);
-      _clientes.add(cliente);
+      final clienteCreado = await _clienteService.crearCliente(cliente);
+      _clientes.add(clienteCreado);
       notifyListeners();
+      return clienteCreado;
     } catch (e) {
       debugPrint('Error: $e');
+      return null;
     }
   }
 

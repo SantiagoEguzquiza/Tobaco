@@ -56,7 +56,7 @@ class _SeleccionarProductosScreenState
         categorias = fetchedCategorias;
         productos = fetchedProductos;
         for (var ps in widget.productosYaSeleccionados) {
-          cantidades[ps.producto.id!] = ps.cantidad;
+          cantidades[ps.id] = ps.cantidad;
         }
         isLoading = false;
       });
@@ -726,7 +726,11 @@ class _SeleccionarProductosScreenState
                             productos.firstWhere((p) => p.id == e.key),
                       );
                       return ProductoSeleccionado(
-                          producto: producto, cantidad: e.value);
+                          id: producto.id!,
+                          nombre: producto.nombre,
+                          precio: producto.precio,
+                          cantidad: e.value,
+                          categoria: producto.categoriaNombre ?? '');
                     }).toList();
 
                     Navigator.pop(context, seleccionados);

@@ -5,9 +5,10 @@ import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:tobaco/Models/Cliente.dart';
 import 'package:tobaco/Models/ProductoSeleccionado.dart';
 import 'package:tobaco/Models/VentasProductos.dart';
-import 'package:tobaco/Screens/Clientes/nuevoCliente_screen.dart';
+import 'package:tobaco/Screens/Clientes/wizardNuevoCliente_screen.dart';
 import 'package:tobaco/Screens/Ventas/metodoPago_screen.dart';
 import 'package:tobaco/Screens/Ventas/seleccionarProducto_screen.dart';
+import 'package:tobaco/Screens/Ventas/seleccionarProductoConPreciosEspeciales_screen.dart';
 import 'package:tobaco/Services/Clientes_Service/clientes_provider.dart';
 import 'package:tobaco/Services/Ventas_Service/ventas_provider.dart';
 import 'package:tobaco/Theme/app_theme.dart';
@@ -123,7 +124,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
 
   double _calcularTotal() {
     return productosSeleccionados.fold(
-        0.0, (sum, ps) => sum + (ps.producto.precio * ps.cantidad));
+        0.0, (sum, ps) => sum + (ps.precio * ps.cantidad));
   }
 
   String _formatearPrecio(double precio) {
@@ -264,9 +265,11 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
       // Crear la venta
       final productos = productosSeleccionados
           .map((ps) => VentasProductos(
-                productoId: ps.producto.id!,
-                producto: ps.producto,
+                productoId: ps.id,
+                nombre: ps.nombre,
+                precio: ps.precio,
                 cantidad: ps.cantidad,
+                categoria: ps.categoria,
               ))
           .toList();
 
@@ -804,7 +807,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                                         context,
                                         MaterialPageRoute(
                                             builder: (context) =>
-                                                NuevoClienteScreen()),
+                                                const WizardNuevoClienteScreen()),
                                       );
                                     },
                                   ),
@@ -931,9 +934,10 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                                     context,
                                     MaterialPageRoute(
                                       builder: (context) =>
-                                          SeleccionarProductosScreen(
+                                          SeleccionarProductosConPreciosEspecialesScreen(
                                         productosYaSeleccionados:
                                             productosSeleccionados,
+                                        cliente: clienteSeleccionado,
                                       ),
                                     ),
                                   );
@@ -1036,7 +1040,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                               itemBuilder: (context, index) {
                                 final ps = productosSeleccionados[index];
                                 final subtotal =
-                                    ps.producto.precio * ps.cantidad;
+                                    ps.precio * ps.cantidad;
 
                                 return Container(
                                   margin: const EdgeInsets.only(bottom: 8),
@@ -1053,7 +1057,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                                     ),
                                   ),
                                   child: Slidable(
-                                    key: ValueKey(ps.producto.id),
+                                    key: ValueKey(ps.id),
                                     endActionPane: ActionPane(
                                       motion: const DrawerMotion(),
                                       extentRatio: 0.3,
@@ -1086,7 +1090,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                                                   CrossAxisAlignment.start,
                                               children: [
                                                 Text(
-                                                  ps.producto.nombre,
+                                                  ps.nombre,
                                                   style: const TextStyle(
                                                     fontSize: 16,
                                                     fontWeight: FontWeight.bold,
@@ -1101,7 +1105,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                                                 Row(
                                                   children: [
                                                     _formatearPrecioConDecimales(
-                                                        ps.producto.precio),
+                                                        ps.precio),
                                                     const SizedBox(width: 4),
                                                     Text(
                                                       'c/u',
