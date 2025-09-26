@@ -403,4 +403,142 @@ class AppTheme {
       contentPadding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
     );
   }
+
+  // SnackBar styling methods
+  static SnackBar successSnackBar(String message) {
+    return SnackBar(
+      content: Row(
+        children: [
+          const Icon(
+            Icons.check_circle,
+            color: Colors.white,
+            size: 20,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              message,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ],
+      ),
+      backgroundColor: const Color(0xFF4CAF50), // Green
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      margin: const EdgeInsets.all(16),
+      duration: const Duration(seconds: 3),
+      elevation: 4,
+    );
+  }
+
+  static SnackBar errorSnackBar(String message) {
+    return SnackBar(
+      content: Row(
+        children: [
+          const Icon(
+            Icons.error,
+            color: Colors.white,
+            size: 20,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              message,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ],
+      ),
+      backgroundColor: const Color(0xFFE53E3E), // Red
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      margin: const EdgeInsets.all(16),
+      duration: const Duration(seconds: 4),
+      elevation: 4,
+    );
+  }
+
+  static SnackBar warningSnackBar(String message) {
+    return SnackBar(
+      content: Row(
+        children: [
+          const Icon(
+            Icons.warning,
+            color: Colors.white,
+            size: 20,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              message,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ],
+      ),
+      backgroundColor: const Color(0xFFF6AD55), // Orange
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      margin: const EdgeInsets.all(16),
+      duration: const Duration(seconds: 4),
+      elevation: 4,
+    );
+  }
+
+  static SnackBar infoSnackBar(String message) {
+    return SnackBar(
+      content: Row(
+        children: [
+          const Icon(
+            Icons.info,
+            color: Colors.white,
+            size: 20,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              message,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ],
+      ),
+      backgroundColor: const Color(0xFF3182CE), // Blue
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      margin: const EdgeInsets.all(16),
+      duration: const Duration(seconds: 3),
+      elevation: 4,
+    );
+  }
+
+  // Helper method to show SnackBar with consistent styling
+  static void showSnackBar(BuildContext context, SnackBar snackBar) {
+    ScaffoldMessenger.of(context).showSnackBar(snackBar);
+  }
 }

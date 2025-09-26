@@ -545,21 +545,17 @@ class DetalleVentaScreen extends StatelessWidget {
       try {
         await VentasProvider().eliminarVenta(venta.id!);
         if (context.mounted) {
-          Navigator.of(context).pop();
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Venta eliminada correctamente'),
-              backgroundColor: Colors.green,
-            ),
+          Navigator.of(context).pop(true); // Return true to indicate deletion
+          AppTheme.showSnackBar(
+            context,
+            AppTheme.successSnackBar('Venta eliminada correctamente'),
           );
         }
       } catch (e) {
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error al eliminar venta: $e'),
-              backgroundColor: Colors.red,
-            ),
+          AppTheme.showSnackBar(
+            context,
+            AppTheme.errorSnackBar('Error al eliminar venta: $e'),
           );
         }
       }

@@ -338,11 +338,9 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
         });
         
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error al guardar la venta: $e'),
-              backgroundColor: Colors.red,
-            ),
+          AppTheme.showSnackBar(
+            context,
+            AppTheme.errorSnackBar('Error al guardar la venta: $e'),
           );
         }
         return;
@@ -353,16 +351,9 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
       });
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error al procesar la venta: $e'),
-            backgroundColor: Colors.red,
-            action: SnackBarAction(
-              label: 'Reintentar',
-              textColor: Colors.white,
-              onPressed: _confirmarVenta,
-            ),
-          ),
+        AppTheme.showSnackBar(
+          context,
+          AppTheme.errorSnackBar('Error al procesar la venta: $e'),
         );
       }
     }
@@ -968,12 +959,9 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                                     });
                                   }
                                 } catch (e) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                          'Error al seleccionar productos: $e'),
-                                      backgroundColor: Colors.red,
-                                    ),
+                                  AppTheme.showSnackBar(
+                                    context,
+                                    AppTheme.errorSnackBar('Error al seleccionar productos: $e'),
                                   );
                                 }
                               },

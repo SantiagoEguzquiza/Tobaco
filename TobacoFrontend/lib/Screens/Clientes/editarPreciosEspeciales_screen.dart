@@ -181,20 +181,16 @@ class _EditarPreciosEspecialesScreenState
       await _loadData();
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Precios especiales guardados exitosamente'),
-            backgroundColor: Colors.green,
-          ),
+        AppTheme.showSnackBar(
+          context,
+          AppTheme.successSnackBar('Precios especiales guardados exitosamente'),
         );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error al guardar: $e'),
-            backgroundColor: Colors.red,
-          ),
+        AppTheme.showSnackBar(
+          context,
+          AppTheme.errorSnackBar('Error al guardar: $e'),
         );
       }
     } finally {

@@ -131,13 +131,15 @@ class _PreciosEspecialesScreenState extends State<PreciosEspecialesScreen> {
     if (confirmed == true) {
       try {
         await PrecioEspecialService.deletePrecioEspecial(precioEspecial.id!);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Precio especial eliminado exitosamente')),
+        AppTheme.showSnackBar(
+          context,
+          AppTheme.successSnackBar('Precio especial eliminado exitosamente'),
         );
         _loadData();
       } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al eliminar: $e')),
+        AppTheme.showSnackBar(
+          context,
+          AppTheme.errorSnackBar('Error al eliminar: $e'),
         );
       }
     }

@@ -70,9 +70,9 @@ class DetalleClienteScreen extends StatelessWidget {
                             scheme: 'tel', path: cliente.telefono.toString());
                         final success = await launchUrl(launchUri);
                         if (!success && context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                                content: Text('Could not launch $launchUri')),
+                          AppTheme.showSnackBar(
+                            context,
+                            AppTheme.errorSnackBar('No se pudo abrir $launchUri'),
                           );
                         }
                       },
@@ -93,10 +93,9 @@ class DetalleClienteScreen extends StatelessWidget {
                             Uri.parse('https://wa.me/${cliente.telefono}');
                         final success = await launchUrl(whatsappUri);
                         if (!success && context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                                content:
-                                    Text('Could not launch $whatsappUri')),
+                          AppTheme.showSnackBar(
+                            context,
+                            AppTheme.errorSnackBar('No se pudo abrir $whatsappUri'),
                           );
                         }
                       },

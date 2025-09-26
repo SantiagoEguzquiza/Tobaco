@@ -345,13 +345,17 @@ class _VentasScreenState extends State<VentasScreen> {
         ],
       ),
       child: InkWell(
-        onTap: () {
-          Navigator.push(
+        onTap: () async {
+          final result = await Navigator.push(
             context,
             MaterialPageRoute(
               builder: (context) => DetalleVentaScreen(venta: venta),
             ),
           );
+          // If a venta was deleted, refresh the list
+          if (result == true) {
+            _loadVentas();
+          }
         },
         child: Container(
           decoration: BoxDecoration(
@@ -648,20 +652,16 @@ class _VentasScreenState extends State<VentasScreen> {
           ventas.remove(venta);
         });
 
-        scaffoldMessenger.showSnackBar(
-          const SnackBar(
-            content: Text('Venta eliminada correctamente'),
-            backgroundColor: Colors.green,
-          ),
+        AppTheme.showSnackBar(
+          context,
+          AppTheme.successSnackBar('Venta eliminada correctamente'),
         );
       } catch (e) {
         if (!mounted) return;
 
-        scaffoldMessenger.showSnackBar(
-          SnackBar(
-            content: Text('Error al eliminar venta: $e'),
-            backgroundColor: Colors.red,
-          ),
+        AppTheme.showSnackBar(
+          context,
+          AppTheme.errorSnackBar('Error al eliminar venta: $e'),
         );
       }
     }

@@ -261,11 +261,9 @@ class EditarProductoScreenState extends State<EditarProductoScreen> {
                         onPressed: () async {
                           // Validar campos requeridos
                           if (nombreController.text.trim().isEmpty) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('El nombre del producto es requerido'),
-                                backgroundColor: Colors.red,
-                              ),
+                            AppTheme.showSnackBar(
+                              context,
+                              AppTheme.warningSnackBar('El nombre del producto es requerido'),
                             );
                             return;
                           }
@@ -273,11 +271,9 @@ class EditarProductoScreenState extends State<EditarProductoScreen> {
                           // Validar que la cantidad sea un número válido
                           final cantidadValue = double.tryParse(cantidadController.text.trim());
                           if (cantidadValue == null || cantidadValue < 0) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('La cantidad debe ser un número válido mayor o igual a 0'),
-                                backgroundColor: Colors.red,
-                              ),
+                            AppTheme.showSnackBar(
+                              context,
+                              AppTheme.warningSnackBar('La cantidad debe ser un número válido mayor o igual a 0'),
                             );
                             return;
                           }
@@ -285,11 +281,9 @@ class EditarProductoScreenState extends State<EditarProductoScreen> {
                           // Validar que el precio sea un número válido
                           final precioValue = double.tryParse(precioController.text.trim());
                           if (precioValue == null || precioValue <= 0) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('El precio debe ser un número válido mayor a 0'),
-                                backgroundColor: Colors.red,
-                              ),
+                            AppTheme.showSnackBar(
+                              context,
+                              AppTheme.warningSnackBar('El precio debe ser un número válido mayor a 0'),
                             );
                             return;
                           }
@@ -303,10 +297,9 @@ class EditarProductoScreenState extends State<EditarProductoScreen> {
 
                             // Acción para confirmar los cambios
                             if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Cambios confirmados'),
-                                ),
+                              AppTheme.showSnackBar(
+                                context,
+                                AppTheme.successSnackBar('Cambios confirmados'),
                               );
                             }
                           } catch (e) {
@@ -314,9 +307,9 @@ class EditarProductoScreenState extends State<EditarProductoScreen> {
                             debugPrint(
                                 'Error al editar el producto: $e'); // Registro del error
                             if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                    content: Text('Error: ${e.toString()}')),
+                              AppTheme.showSnackBar(
+                                context,
+                                AppTheme.errorSnackBar('Error: ${e.toString()}'),
                               );
                             }
                           }
