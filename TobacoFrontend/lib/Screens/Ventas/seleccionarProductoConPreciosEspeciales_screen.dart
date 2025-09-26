@@ -132,6 +132,7 @@ class _SeleccionarProductosConPreciosEspecialesScreenState
         precio: precioFinal,
         cantidad: cantidad,
         categoria: producto.categoriaNombre ?? '',
+        categoriaId: producto.categoriaId,
       );
 
       final existingIndex = widget.productosYaSeleccionados
@@ -159,6 +160,10 @@ class _SeleccionarProductosConPreciosEspecialesScreenState
         cantidadControllers[producto.id!]?.text = '0';
       });
     }
+  }
+
+  List<ProductoSeleccionado> _getProductosSeleccionados() {
+    return widget.productosYaSeleccionados;
   }
 
   Widget _formatearPrecioConDecimales(double precio) {
@@ -234,6 +239,14 @@ class _SeleccionarProductosConPreciosEspecialesScreenState
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.secondaryColor,
+      appBar: AppBar(
+        backgroundColor: AppTheme.primaryColor,
+        foregroundColor: Colors.white,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context, widget.productosYaSeleccionados),
+        ),
+      ),
       body: SafeArea(
         child: Column(
           children: [
@@ -682,6 +695,18 @@ class _SeleccionarProductosConPreciosEspecialesScreenState
                             ),
             ),
           ],
+        ),
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () {
+          final productosSeleccionados = _getProductosSeleccionados();
+          Navigator.pop(context, productosSeleccionados);
+        },
+        backgroundColor: AppTheme.primaryColor,
+        icon: const Icon(Icons.check, color: Colors.white),
+        label: Text(
+          'Continuar (${_getProductosSeleccionados().length})',
+          style: const TextStyle(color: Colors.white),
         ),
       ),
     );

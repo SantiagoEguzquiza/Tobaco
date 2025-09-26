@@ -4,6 +4,7 @@ class ProductoSeleccionado {
   double precio;
   double cantidad;
   String categoria;
+  int categoriaId; // Agregar el ID de la categoría
 
   ProductoSeleccionado({
     required this.id,
@@ -11,6 +12,7 @@ class ProductoSeleccionado {
     required this.precio,
     required this.cantidad,
     required this.categoria,
+    required this.categoriaId,
   });
 
   factory ProductoSeleccionado.fromJson(Map<String, dynamic> json) {
@@ -20,6 +22,7 @@ class ProductoSeleccionado {
       precio: (json['precio'] as num).toDouble(),
       cantidad: (json['cantidad'] as num).toDouble(),
       categoria: json['categoria'] ?? '',
+      categoriaId: json['categoriaId'] ?? 0,
     );
   }
 
@@ -30,6 +33,7 @@ class ProductoSeleccionado {
       'precio': precio,
       'cantidad': cantidad,
       'categoria': categoria,
+      'categoriaId': categoriaId,
     };
   }
 }

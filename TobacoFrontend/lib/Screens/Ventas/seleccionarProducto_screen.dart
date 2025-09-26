@@ -730,7 +730,8 @@ class _SeleccionarProductosScreenState
                           nombre: producto.nombre,
                           precio: producto.precio,
                           cantidad: e.value,
-                          categoria: producto.categoriaNombre ?? '');
+                          categoria: producto.categoriaNombre ?? '',
+                          categoriaId: producto.categoriaId);
                     }).toList();
 
                     Navigator.pop(context, seleccionados);

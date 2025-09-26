@@ -280,7 +280,7 @@ class _WizardNuevoClienteScreenState extends State<WizardNuevoClienteScreen> {
               controller: _deudaController,
               decoration: const InputDecoration(
                 labelText: 'Deuda',
-                hintText: 'Ingresa el monto de la deuda (opcional)',
+                hintText: 'Ingresa el monto de la deuda',
                 prefixIcon: Icon(Icons.attach_money),
                 border: OutlineInputBorder(),
               ),

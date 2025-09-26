@@ -32,6 +32,8 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
   List<ProductoSeleccionado> productosSeleccionados = [];
   Timer? _debounceTimer;
   String? errorMessage;
+  final VentasProvider _ventasProvider = VentasProvider();
+  final ClienteProvider _clientesProvider = ClienteProvider();
 
   @override
   void initState() {
@@ -270,6 +272,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                 precio: ps.precio,
                 cantidad: ps.cantidad,
                 categoria: ps.categoria,
+                categoriaId: ps.categoriaId,
               ))
           .toList();
 
@@ -300,33 +303,49 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
       }
 
       // Guardar la venta en la base de datos
-      await VentasProvider().crearVenta(ventaConPagos);
-
-      // Mostrar animación de confirmación solo si se guardó la venta
-      if (mounted) {
-        showGeneralDialog(
-          context: context,
-          barrierDismissible: false,
-          barrierColor: Colors.transparent,
-          transitionDuration: const Duration(milliseconds: 0),
-          pageBuilder: (context, animation, secondaryAnimation) {
-            return AnnotatedRegion<SystemUiOverlayStyle>(
-              value: SystemUiOverlayStyle.light.copyWith(
-                statusBarColor: Colors.green,
-                systemNavigationBarColor: Colors.green,
-              ),
-              child: Scaffold(
-                backgroundColor: Colors.transparent,
-                body: VentaConfirmadaAnimacion(
-                  onFinish: () {
-                    Navigator.of(context).pop(); // cerrar animación
-                    Navigator.of(context).pop(); // volver atrás
-                  },
+      try {
+        await _ventasProvider.crearVenta(ventaConPagos);
+        
+        // Mostrar animación de confirmación solo si se guardó la venta
+        if (mounted) {
+          showGeneralDialog(
+            context: context,
+            barrierDismissible: false,
+            barrierColor: Colors.transparent,
+            transitionDuration: const Duration(milliseconds: 0),
+            pageBuilder: (context, animation, secondaryAnimation) {
+              return AnnotatedRegion<SystemUiOverlayStyle>(
+                value: SystemUiOverlayStyle.light.copyWith(
+                  statusBarColor: Colors.green,
+                  systemNavigationBarColor: Colors.green,
                 ),
-              ),
-            );
-          },
-        );
+                child: Scaffold(
+                  backgroundColor: Colors.transparent,
+                  body: VentaConfirmadaAnimacion(
+                    onFinish: () {
+                      Navigator.of(context).pop(); // cerrar animación
+                      Navigator.of(context).pop(); // volver atrás
+                    },
+                  ),
+                ),
+              );
+            },
+          );
+        }
+      } catch (e) {
+        setState(() {
+          isProcessingVenta = false;
+        });
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error al guardar la venta: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
       }
     } catch (e) {
       setState(() {

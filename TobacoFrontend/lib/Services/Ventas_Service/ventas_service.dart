@@ -17,8 +17,14 @@ class VentasService {
 
       if (response.statusCode == 200) {
         final List<dynamic> ventasJson = jsonDecode(response.body);
-
-        return ventasJson.map((json) => Ventas.fromJson(json)).toList();
+        
+        // Debug: Imprimir la estructura de datos recibida
+        debugPrint('Datos recibidos del backend: ${jsonEncode(ventasJson)}');
+        
+        return ventasJson.map((json) {
+          debugPrint('Procesando venta individual: ${jsonEncode(json)}');
+          return Ventas.fromJson(json);
+        }).toList();
       } else {
         throw Exception(
           'Error al obtener las ventas. Código de estado: ${response.statusCode}',
@@ -34,11 +40,21 @@ class VentasService {
     try {
       final headers = await AuthService.getAuthHeaders();
       headers['Content-Type'] = 'application/json';
+      
+      // Debug: Imprimir los datos que se están enviando
+      final ventaJson = venta.toJson();
+      debugPrint('Enviando venta: ${jsonEncode(ventaJson)}');
+      debugPrint('URL: $baseUrl/Pedidos');
+      debugPrint('Headers: $headers');
+      
       final response = await Apihandler.client.post(
         Uri.parse('$baseUrl/Pedidos'),
         headers: headers,
-        body: jsonEncode(venta.toJson()),
+        body: jsonEncode(ventaJson),
       );
+
+      debugPrint('Respuesta del servidor: ${response.statusCode}');
+      debugPrint('Cuerpo de la respuesta: ${response.body}');
 
       if (response.statusCode != 200) {
         throw Exception(
