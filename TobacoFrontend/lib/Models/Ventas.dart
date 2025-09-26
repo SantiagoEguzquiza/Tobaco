@@ -31,12 +31,12 @@ class Ventas {
 
   factory Ventas.fromJson(Map<String, dynamic> json) => Ventas(
         id: json['id'],
-        clienteId: json['clienteId'],
+        clienteId: json['clienteId'] ?? 0,
         cliente: Cliente.fromJson(json['cliente']),
-        ventasProductos: (json['pedidoProductos'] as List)
-            .map((e) => VentasProductos.fromJson(e))
-            .toList(),
-        total: (json['total'] as num).toDouble(),
+        ventasProductos: (json['pedidoProductos'] as List?)
+            ?.map((e) => VentasProductos.fromJson(e))
+            .toList() ?? [],
+        total: (json['total'] as num?)?.toDouble() ?? 0.0,
         fecha: DateTime.parse(json['fecha']),
         metodoPago: json['metodoPago'] != null
             ? MetodoPago.values[json['metodoPago'] as int]

@@ -5,9 +5,10 @@ import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:tobaco/Models/Cliente.dart';
 import 'package:tobaco/Models/ProductoSeleccionado.dart';
 import 'package:tobaco/Models/VentasProductos.dart';
-import 'package:tobaco/Screens/Clientes/nuevoCliente_screen.dart';
+import 'package:tobaco/Screens/Clientes/wizardNuevoCliente_screen.dart';
 import 'package:tobaco/Screens/Ventas/metodoPago_screen.dart';
 import 'package:tobaco/Screens/Ventas/seleccionarProducto_screen.dart';
+import 'package:tobaco/Screens/Ventas/seleccionarProductoConPreciosEspeciales_screen.dart';
 import 'package:tobaco/Services/Clientes_Service/clientes_provider.dart';
 import 'package:tobaco/Services/Ventas_Service/ventas_provider.dart';
 import 'package:tobaco/Theme/app_theme.dart';
@@ -31,6 +32,8 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
   List<ProductoSeleccionado> productosSeleccionados = [];
   Timer? _debounceTimer;
   String? errorMessage;
+  final VentasProvider _ventasProvider = VentasProvider();
+  final ClienteProvider _clientesProvider = ClienteProvider();
 
   @override
   void initState() {
@@ -123,7 +126,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
 
   double _calcularTotal() {
     return productosSeleccionados.fold(
-        0.0, (sum, ps) => sum + (ps.producto.precio * ps.cantidad));
+        0.0, (sum, ps) => sum + (ps.precio * ps.cantidad));
   }
 
   String _formatearPrecio(double precio) {
@@ -264,9 +267,12 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
       // Crear la venta
       final productos = productosSeleccionados
           .map((ps) => VentasProductos(
-                productoId: ps.producto.id!,
-                producto: ps.producto,
+                productoId: ps.id,
+                nombre: ps.nombre,
+                precio: ps.precio,
                 cantidad: ps.cantidad,
+                categoria: ps.categoria,
+                categoriaId: ps.categoriaId,
               ))
           .toList();
 
@@ -297,33 +303,49 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
       }
 
       // Guardar la venta en la base de datos
-      await VentasProvider().crearVenta(ventaConPagos);
-
-      // Mostrar animación de confirmación solo si se guardó la venta
-      if (mounted) {
-        showGeneralDialog(
-          context: context,
-          barrierDismissible: false,
-          barrierColor: Colors.transparent,
-          transitionDuration: const Duration(milliseconds: 0),
-          pageBuilder: (context, animation, secondaryAnimation) {
-            return AnnotatedRegion<SystemUiOverlayStyle>(
-              value: SystemUiOverlayStyle.light.copyWith(
-                statusBarColor: Colors.green,
-                systemNavigationBarColor: Colors.green,
-              ),
-              child: Scaffold(
-                backgroundColor: Colors.transparent,
-                body: VentaConfirmadaAnimacion(
-                  onFinish: () {
-                    Navigator.of(context).pop(); // cerrar animación
-                    Navigator.of(context).pop(); // volver atrás
-                  },
+      try {
+        await _ventasProvider.crearVenta(ventaConPagos);
+        
+        // Mostrar animación de confirmación solo si se guardó la venta
+        if (mounted) {
+          showGeneralDialog(
+            context: context,
+            barrierDismissible: false,
+            barrierColor: Colors.transparent,
+            transitionDuration: const Duration(milliseconds: 0),
+            pageBuilder: (context, animation, secondaryAnimation) {
+              return AnnotatedRegion<SystemUiOverlayStyle>(
+                value: SystemUiOverlayStyle.light.copyWith(
+                  statusBarColor: Colors.green,
+                  systemNavigationBarColor: Colors.green,
                 ),
-              ),
-            );
-          },
-        );
+                child: Scaffold(
+                  backgroundColor: Colors.transparent,
+                  body: VentaConfirmadaAnimacion(
+                    onFinish: () {
+                      Navigator.of(context).pop(); // cerrar animación
+                      Navigator.of(context).pop(); // volver atrás
+                    },
+                  ),
+                ),
+              );
+            },
+          );
+        }
+      } catch (e) {
+        setState(() {
+          isProcessingVenta = false;
+        });
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error al guardar la venta: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
       }
     } catch (e) {
       setState(() {
@@ -804,7 +826,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                                         context,
                                         MaterialPageRoute(
                                             builder: (context) =>
-                                                NuevoClienteScreen()),
+                                                const WizardNuevoClienteScreen()),
                                       );
                                     },
                                   ),
@@ -931,9 +953,10 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                                     context,
                                     MaterialPageRoute(
                                       builder: (context) =>
-                                          SeleccionarProductosScreen(
+                                          SeleccionarProductosConPreciosEspecialesScreen(
                                         productosYaSeleccionados:
                                             productosSeleccionados,
+                                        cliente: clienteSeleccionado,
                                       ),
                                     ),
                                   );
@@ -1036,7 +1059,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                               itemBuilder: (context, index) {
                                 final ps = productosSeleccionados[index];
                                 final subtotal =
-                                    ps.producto.precio * ps.cantidad;
+                                    ps.precio * ps.cantidad;
 
                                 return Container(
                                   margin: const EdgeInsets.only(bottom: 8),
@@ -1053,7 +1076,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                                     ),
                                   ),
                                   child: Slidable(
-                                    key: ValueKey(ps.producto.id),
+                                    key: ValueKey(ps.id),
                                     endActionPane: ActionPane(
                                       motion: const DrawerMotion(),
                                       extentRatio: 0.3,
@@ -1086,7 +1109,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                                                   CrossAxisAlignment.start,
                                               children: [
                                                 Text(
-                                                  ps.producto.nombre,
+                                                  ps.nombre,
                                                   style: const TextStyle(
                                                     fontSize: 16,
                                                     fontWeight: FontWeight.bold,
@@ -1101,7 +1124,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                                                 Row(
                                                   children: [
                                                     _formatearPrecioConDecimales(
-                                                        ps.producto.precio),
+                                                        ps.precio),
                                                     const SizedBox(width: 4),
                                                     Text(
                                                       'c/u',
