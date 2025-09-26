@@ -220,14 +220,12 @@ class _FormaPagoScreenState extends State<FormaPagoScreen> {
                           });
                           Navigator.of(context).pop();
                         } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                monto == null || monto <= 0
-                                    ? 'Ingrese un monto válido'
-                                    : 'El monto no puede ser mayor al restante',
-                              ),
-                              backgroundColor: Colors.red,
+                          AppTheme.showSnackBar(
+                            context,
+                            AppTheme.warningSnackBar(
+                              monto == null || monto <= 0
+                                  ? 'Ingrese un monto válido'
+                                  : 'El monto no puede ser mayor al restante',
                             ),
                           );
                         }

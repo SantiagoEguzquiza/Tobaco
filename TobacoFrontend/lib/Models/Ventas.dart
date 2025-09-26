@@ -1,7 +1,7 @@
 import 'package:tobaco/Models/Cliente.dart';
 import 'package:tobaco/Models/VentasProductos.dart';
 import 'package:tobaco/Models/metodoPago.dart';
-
+import 'package:tobaco/Models/User.dart';
 import 'package:tobaco/Models/ventasPago.dart';
 
 class Ventas {
@@ -13,6 +13,8 @@ class Ventas {
   DateTime fecha;
   List<VentaPago>? pagos;
   MetodoPago? metodoPago;
+  int? usuarioId;
+  User? usuario;
 
   Ventas({
     this.id,
@@ -23,16 +25,18 @@ class Ventas {
     required this.fecha,
     this.metodoPago,
     this.pagos,
+    this.usuarioId,
+    this.usuario,
   });
 
   factory Ventas.fromJson(Map<String, dynamic> json) => Ventas(
         id: json['id'],
-        clienteId: json['clienteId'],
+        clienteId: json['clienteId'] ?? 0,
         cliente: Cliente.fromJson(json['cliente']),
-        ventasProductos: (json['pedidoProductos'] as List)
-            .map((e) => VentasProductos.fromJson(e))
-            .toList(),
-        total: (json['total'] as num).toDouble(),
+        ventasProductos: (json['pedidoProductos'] as List?)
+            ?.map((e) => VentasProductos.fromJson(e))
+            .toList() ?? [],
+        total: (json['total'] as num?)?.toDouble() ?? 0.0,
         fecha: DateTime.parse(json['fecha']),
         metodoPago: json['metodoPago'] != null
             ? MetodoPago.values[json['metodoPago'] as int]
@@ -42,6 +46,8 @@ class Ventas {
                 .map((e) => VentaPago.fromJson(e))
                 .toList()
             : null,
+        usuarioId: json['usuarioId'],
+        usuario: json['usuario'] != null ? User.fromJson(json['usuario']) : null,
       );
 
   Map<String, dynamic> toJson() => {
@@ -52,5 +58,7 @@ class Ventas {
         'fecha': fecha.toIso8601String(),
         'metodoPago': metodoPago?.index ?? 0,
         'ventaPagos': pagos?.map((e) => e.toJson()).toList() ?? [],
+        'usuarioId': usuarioId,
+        'usuario': usuario?.toJson(),
       };    
 }

@@ -28,7 +28,7 @@ class ClienteService {
     }
   }
 
-  Future<void> crearCliente(Cliente cliente) async {
+  Future<Cliente> crearCliente(Cliente cliente) async {
     try {
       final headers = await AuthService.getAuthHeaders();
       headers['Content-Type'] = 'application/json';
@@ -43,6 +43,9 @@ class ClienteService {
             'Error al guardar el cliente. Código de estado: ${response.statusCode}, Respuesta: ${response.body}');
       } else {
         debugPrint('Cliente guardado exitosamente');
+        // Parsear la respuesta para obtener el cliente creado con el ID
+        final clienteCreado = Cliente.fromJson(jsonDecode(response.body));
+        return clienteCreado;
       }
     } catch (e) {
       debugPrint('Error al guardar el cliente: $e');

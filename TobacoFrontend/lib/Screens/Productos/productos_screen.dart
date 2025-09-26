@@ -477,29 +477,17 @@ class _ProductosScreenState extends State<ProductosScreen> {
                                                                  
                                                                  // Mostrar mensaje de éxito
                                                                  if (mounted) {
-                                                                   ScaffoldMessenger.of(context).showSnackBar(
-                                                                     SnackBar(
-                                                                       content: Text('Categoría "${categoria.nombre}" eliminada exitosamente'),
-                                                                       backgroundColor: Colors.green,
-                                                                       behavior: SnackBarBehavior.floating,
-                                                                       shape: RoundedRectangleBorder(
-                                                                         borderRadius: BorderRadius.circular(10),
-                                                                       ),
-                                                                     ),
+                                                                   AppTheme.showSnackBar(
+                                                                     context,
+                                                                     AppTheme.successSnackBar('Categoría "${categoria.nombre}" eliminada exitosamente'),
                                                                    );
                                                                  }
                                                                } catch (e) {
                                                                  // Mostrar mensaje de error si falla la eliminación
                                                                  if (mounted) {
-                                                                   ScaffoldMessenger.of(context).showSnackBar(
-                                                                     SnackBar(
-                                                                       content: Text('Error al eliminar la categoría: $e'),
-                                                                       backgroundColor: Colors.red,
-                                                                       behavior: SnackBarBehavior.floating,
-                                                                       shape: RoundedRectangleBorder(
-                                                                         borderRadius: BorderRadius.circular(10),
-                                                                       ),
-                                                                     ),
+                                                                   AppTheme.showSnackBar(
+                                                                     context,
+                                                                     AppTheme.errorSnackBar('Error al eliminar la categoría: $e'),
                                                                    );
                                                                  }
                                                                  Navigator.of(context).pop();
@@ -635,17 +623,9 @@ class _ProductosScreenState extends State<ProductosScreen> {
                           child: ElevatedButton.icon(
                             onPressed: () async {
                               if (categorias.isEmpty) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: const Text(
-                                        'Primero debes crear una categoría'),
-                                    duration: const Duration(seconds: 3),
-                                    backgroundColor: Colors.red,
-                                    behavior: SnackBarBehavior.floating,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                  ),
+                                AppTheme.showSnackBar(
+                                  context,
+                                  AppTheme.warningSnackBar('Primero debes crear una categoría'),
                                 );
                                 return;
                               }
@@ -892,8 +872,8 @@ class _ProductosScreenState extends State<ProductosScreen> {
                             color: Colors.transparent,
                             child: InkWell(
                               borderRadius: BorderRadius.circular(16),
-                              onTap: () {
-                                Navigator.push(
+                              onTap: () async {
+                                final result = await Navigator.push(
                                   context,
                                   MaterialPageRoute(
                                     builder: (context) => DetalleProductoScreen(
@@ -901,6 +881,10 @@ class _ProductosScreenState extends State<ProductosScreen> {
                                     ),
                                   ),
                                 );
+                                // If a product was deleted, refresh the list
+                                if (result == true) {
+                                  _loadProductos();
+                                }
                               },
                               child: Padding(
                                 padding: const EdgeInsets.all(16),
@@ -1075,12 +1059,42 @@ class _ProductosScreenState extends State<ProductosScreen> {
                                                                     ProductoProvider>(
                                                                 context,
                                                                 listen: false);
-                                                        await productoProvider
-                                                            .eliminarProducto(
-                                                                producto.id!);
-                                                        _loadProductos();
-                                                        Navigator.of(context)
-                                                            .pop();
+                                                        
+                                                        if (producto.id != null) {
+                                                          try {
+                                                            // Intentar eliminación física primero
+                                                            await productoProvider.eliminarProducto(producto.id!);
+                                                            
+                                                            // Si llegamos aquí, la eliminación fue exitosa (sin ventas vinculadas)
+                                                            AppTheme.showSnackBar(
+                                                              context,
+                                                              AppTheme.successSnackBar('Producto eliminado con éxito'),
+                                                            );
+                                                            _loadProductos();
+                                                            Navigator.of(context).pop();
+                                                            
+                                                          } catch (e) {
+                                                            // Si es un error 409 (Conflict) - producto con ventas vinculadas
+                                                            if (e.toString().contains('ventas vinculadas') || 
+                                                                e.toString().contains('Conflict')) {
+                                                              Navigator.of(context).pop(); // Cerrar el diálogo de confirmación
+                                                              _showDeactivateDialog(context, producto);
+                                                            } else {
+                                                              // Otros errores
+                                                              AppTheme.showSnackBar(
+                                                                context,
+                                                                AppTheme.errorSnackBar(e.toString().replaceFirst('Exception: ', '')),
+                                                              );
+                                                              Navigator.of(context).pop();
+                                                            }
+                                                          }
+                                                        } else {
+                                                          AppTheme.showSnackBar(
+                                                            context,
+                                                            AppTheme.errorSnackBar('Error: ID del producto no válido'),
+                                                          );
+                                                          Navigator.of(context).pop();
+                                                        }
                                                       },
                                                       style: ElevatedButton
                                                           .styleFrom(
@@ -1113,5 +1127,113 @@ class _ProductosScreenState extends State<ProductosScreen> {
               ),
             ),
     );
+  }
+
+  void _showDeactivateDialog(BuildContext context, Producto producto) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Row(
+            children: [
+              Icon(
+                Icons.warning_amber_rounded,
+                color: Colors.orange,
+                size: 28,
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text(
+                  'No se puede eliminar',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'El producto "${producto.nombre}" no se puede eliminar porque tiene ventas vinculadas.',
+                style: const TextStyle(fontSize: 16),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                '¿Desea desactivarlo en su lugar?',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Icon(
+                    Icons.check_circle_outline,
+                    color: Colors.blue,
+                    size: 16,
+                  ),
+                  const SizedBox(width: 8),
+                  const Expanded(
+                    child: Text(
+                      'El producto se ocultará de los catálogos pero se mantendrá en las ventas existentes',
+                      style: TextStyle(fontSize: 14),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                Navigator.of(context).pop();
+                await _deactivateProduct(context, producto);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orange,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: const Text('Desactivar'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _deactivateProduct(BuildContext context, Producto producto) async {
+    if (producto.id != null) {
+      final productoProvider = Provider.of<ProductoProvider>(context, listen: false);
+      final errorMessage = await productoProvider
+          .desactivarProductoConMensaje(producto.id!);
+      
+      if (errorMessage == null) {
+        AppTheme.showSnackBar(
+          context,
+          AppTheme.successSnackBar('Producto desactivado exitosamente. Ya no aparecerá en los catálogos.'),
+        );
+        _loadProductos();
+      } else {
+        AppTheme.showSnackBar(
+          context,
+          AppTheme.errorSnackBar(errorMessage),
+        );
+      }
+    }
   }
 }

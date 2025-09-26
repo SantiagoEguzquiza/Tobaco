@@ -29,13 +29,41 @@ class ProductoProvider with ChangeNotifier {
     }
   }
 
-  Future<void> eliminarProducto(int id) async {
+  Future<bool> eliminarProducto(int id) async {
     try {
       await _productoService.eliminarProducto(id);
       _productos.removeWhere((producto) => producto.id == id);
       notifyListeners();
+      return true; // Éxito
     } catch (e) {
       debugPrint('Error: $e');
+      rethrow; // Re-lanzar para que el UI pueda manejar el error
+    }
+  }
+
+  Future<String?> eliminarProductoConMensaje(int id) async {
+    try {
+      await _productoService.eliminarProducto(id);
+      _productos.removeWhere((producto) => producto.id == id);
+      notifyListeners();
+      return null; // Sin error
+    } catch (e) {
+      debugPrint('Error al eliminar producto: $e');
+      final errorMessage = e.toString();
+      
+      // Verificar si es un error de validación (ventas o precios especiales)
+      if (errorMessage.contains('ventas vinculadas') || 
+          errorMessage.contains('precios especiales') ||
+          errorMessage.contains('No se puede eliminar el producto')) {
+        // Extraer solo el mensaje sin "Exception: "
+        final cleanMessage = errorMessage.replaceFirst('Exception: ', '');
+        debugPrint('Mensaje de validación detectado: $cleanMessage');
+        return cleanMessage;
+      } else {
+        // Para otros errores, re-lanzar la excepción
+        debugPrint('Error no es de validación, re-lanzando: $errorMessage');
+        rethrow;
+      }
     }
   }
 
@@ -49,6 +77,40 @@ class ProductoProvider with ChangeNotifier {
       }
     } catch (e) {
       debugPrint('Error: $e');
+    }
+  }
+
+  Future<String?> desactivarProductoConMensaje(int id) async {
+    try {
+      await _productoService.desactivarProducto(id);
+      _productos.removeWhere((producto) => producto.id == id);
+      notifyListeners();
+      return null; // Sin error
+    } catch (e) {
+      debugPrint('Error al desactivar producto: $e');
+      final errorMessage = e.toString();
+      
+      // Extraer solo el mensaje sin "Exception: "
+      final cleanMessage = errorMessage.replaceFirst('Exception: ', '');
+      debugPrint('Mensaje de error: $cleanMessage');
+      return cleanMessage;
+    }
+  }
+
+  Future<String?> activarProductoConMensaje(int id) async {
+    try {
+      await _productoService.activarProducto(id);
+      // Recargar la lista para incluir el producto activado
+      await obtenerProductos();
+      return null; // Sin error
+    } catch (e) {
+      debugPrint('Error al activar producto: $e');
+      final errorMessage = e.toString();
+      
+      // Extraer solo el mensaje sin "Exception: "
+      final cleanMessage = errorMessage.replaceFirst('Exception: ', '');
+      debugPrint('Mensaje de error: $cleanMessage');
+      return cleanMessage;
     }
   }
 }

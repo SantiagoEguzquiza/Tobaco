@@ -192,7 +192,7 @@ class DetalleVentaScreen extends StatelessWidget {
                 const SizedBox(height: 12),
                 _buildInfoRow(Icons.payment, 'Método de Pago', _getAllPaymentMethodsString(venta)),
                 const SizedBox(height: 12),               
-                _buildInfoRow(Icons.person, 'Usuario', 'Admin'), // Placeholder para usuario
+                _buildInfoRow(Icons.person, 'Usuario', venta.usuario?.userName ?? 'No disponible'),
               ],
             ),
           ),
@@ -311,7 +311,7 @@ class DetalleVentaScreen extends StatelessWidget {
                     ),
                   ),
                   title: Text(
-                    producto.producto.nombre,
+                    producto.nombre,
                     style: const TextStyle(
                       fontWeight: FontWeight.w600,
                       fontSize: 16,
@@ -325,7 +325,7 @@ class DetalleVentaScreen extends StatelessWidget {
                     ),
                   ),
                   trailing: _formatearPrecioConDecimales(
-                    producto.producto.precio * producto.cantidad,
+                    producto.precio * producto.cantidad,
                     color: Colors.black87,
                   ),
                 ),
@@ -545,21 +545,17 @@ class DetalleVentaScreen extends StatelessWidget {
       try {
         await VentasProvider().eliminarVenta(venta.id!);
         if (context.mounted) {
-          Navigator.of(context).pop();
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Venta eliminada correctamente'),
-              backgroundColor: Colors.green,
-            ),
+          Navigator.of(context).pop(true); // Return true to indicate deletion
+          AppTheme.showSnackBar(
+            context,
+            AppTheme.successSnackBar('Venta eliminada correctamente'),
           );
         }
       } catch (e) {
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error al eliminar venta: $e'),
-              backgroundColor: Colors.red,
-            ),
+          AppTheme.showSnackBar(
+            context,
+            AppTheme.errorSnackBar('Error al eliminar venta: $e'),
           );
         }
       }

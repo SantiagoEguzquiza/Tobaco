@@ -3,6 +3,8 @@ import 'package:tobaco/Models/Cliente.dart';
 import 'package:tobaco/Services/Clientes_Service/clientes_provider.dart';
 import 'package:tobaco/Theme/app_theme.dart'; // Importa el tema
 import 'package:url_launcher/url_launcher.dart';
+import 'preciosEspeciales_screen.dart';
+import 'editarPreciosEspeciales_screen.dart';
 
 class DetalleClienteScreen extends StatelessWidget {
   final Cliente cliente;
@@ -64,69 +66,13 @@ class DetalleClienteScreen extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 4.0),
                     child: ElevatedButton(
                       onPressed: () async {
-                        final confirm = await showDialog<bool>(
-                          context: context,
-                          builder: (BuildContext context) {
-                            return AlertDialog(
-                              title: const Text('Confirmar eliminación'),
-                              content: const Text(
-                                  '¿Está seguro de que desea eliminar este cliente?'),
-                              actions: [
-                                TextButton(
-                                  onPressed: () =>
-                                      Navigator.of(context).pop(false),
-                                  child: const Text('Cancelar'),
-                                ),
-                                TextButton(
-                                  onPressed: () =>
-                                      Navigator.of(context).pop(true),
-                                  child: const Text('Eliminar'),
-                                ),
-                              ],
-                            );
-                          },
-                        );
-
-                        if (confirm == true) {
-                          await ClienteProvider().eliminarCliente(cliente.id!);
-                          if (context.mounted) {
-                            Navigator.of(context).pop();
-                          }
-                        }
-                      },
-                      style: AppTheme.elevatedButtonStyle(
-                        const Color.fromARGB(255, 255, 141, 141),
-                      ),
-                      child:
-                          Image.asset('Assets/images/borrar.png', height: 30),
-                    ),
-                  ),
-                ),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                    child: ElevatedButton(
-                      onPressed: () {},
-                      style: AppTheme.elevatedButtonStyle(
-                        const Color.fromARGB(255, 251, 247, 135),
-                      ),
-                      child:
-                          Image.asset('Assets/images/editar.png', height: 30),
-                    ),
-                  ),
-                ),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                    child: ElevatedButton(
-                      onPressed: () async {
                         final Uri launchUri = Uri(
                             scheme: 'tel', path: cliente.telefono.toString());
                         final success = await launchUrl(launchUri);
                         if (!success && context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                                content: Text('Could not launch $launchUri')),
+                          AppTheme.showSnackBar(
+                            context,
+                            AppTheme.errorSnackBar('No se pudo abrir $launchUri'),
                           );
                         }
                       },
@@ -147,10 +93,9 @@ class DetalleClienteScreen extends StatelessWidget {
                             Uri.parse('https://wa.me/${cliente.telefono}');
                         final success = await launchUrl(whatsappUri);
                         if (!success && context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                                content:
-                                    Text('Could not launch $whatsappUri')),
+                          AppTheme.showSnackBar(
+                            context,
+                            AppTheme.errorSnackBar('No se pudo abrir $whatsappUri'),
                           );
                         }
                       },
@@ -163,6 +108,27 @@ class DetalleClienteScreen extends StatelessWidget {
                   ),
                 ),
               ],
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => PreciosEspecialesScreen(cliente: cliente),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.price_change),
+                label: const Text('Precios Especiales'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.purple,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+              ),
             ),
             const SizedBox(height: 10),
             SizedBox(

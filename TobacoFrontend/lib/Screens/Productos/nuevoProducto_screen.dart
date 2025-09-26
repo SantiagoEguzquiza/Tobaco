@@ -206,21 +206,17 @@ class _NuevoProductoScreenState extends State<NuevoProductoScreen> {
                             onPressed: () async {
                               // Validar campos requeridos
                               if (nombreController.text.trim().isEmpty) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('El nombre del producto es requerido'),
-                                    backgroundColor: Colors.red,
-                                  ),
+                                AppTheme.showSnackBar(
+                                  context,
+                                  AppTheme.warningSnackBar('El nombre del producto es requerido'),
                                 );
                                 return;
                               }
 
                               if (cantidadController.text.trim().isEmpty) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('La cantidad es requerida'),
-                                    backgroundColor: Colors.red,
-                                  ),
+                                AppTheme.showSnackBar(
+                                  context,
+                                  AppTheme.warningSnackBar('La cantidad es requerida'),
                                 );
                                 return;
                               }
@@ -228,21 +224,17 @@ class _NuevoProductoScreenState extends State<NuevoProductoScreen> {
                               // Validar que la cantidad sea un número válido
                               final cantidadValue = double.tryParse(cantidadController.text.trim());
                               if (cantidadValue == null || cantidadValue < 0) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('La cantidad debe ser un número válido mayor o igual a 0'),
-                                    backgroundColor: Colors.red,
-                                  ),
+                                AppTheme.showSnackBar(
+                                  context,
+                                  AppTheme.warningSnackBar('La cantidad debe ser un número válido mayor o igual a 0'),
                                 );
                                 return;
                               }
 
                               if (precioController.text.trim().isEmpty) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('El precio es requerido'),
-                                    backgroundColor: Colors.red,
-                                  ),
+                                AppTheme.showSnackBar(
+                                  context,
+                                  AppTheme.warningSnackBar('El precio es requerido'),
                                 );
                                 return;
                               }
@@ -250,11 +242,9 @@ class _NuevoProductoScreenState extends State<NuevoProductoScreen> {
                               // Validar que el precio sea un número válido
                               final precioValue = double.tryParse(precioController.text.trim());
                               if (precioValue == null || precioValue <= 0) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('El precio debe ser un número válido mayor a 0'),
-                                    backgroundColor: Colors.red,
-                                  ),
+                                AppTheme.showSnackBar(
+                                  context,
+                                  AppTheme.warningSnackBar('El precio debe ser un número válido mayor a 0'),
                                 );
                                 return;
                               }
@@ -278,16 +268,16 @@ class _NuevoProductoScreenState extends State<NuevoProductoScreen> {
                                         listen: false)
                                     .crearProducto(producto);
                                 if (!context.mounted) return;
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                      content:
-                                          Text('Producto guardado con éxito')),
+                                AppTheme.showSnackBar(
+                                  context,
+                                  AppTheme.successSnackBar('Producto guardado con éxito'),
                                 );
                                 Navigator.pop(context);
                               } catch (e) {
                                 if (!context.mounted) return;
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text('Error: $e')),
+                                AppTheme.showSnackBar(
+                                  context,
+                                  AppTheme.errorSnackBar('Error: $e'),
                                 );
                               }
                             },

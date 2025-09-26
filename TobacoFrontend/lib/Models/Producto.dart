@@ -6,6 +6,7 @@ class Producto {
   int categoriaId;
   String? categoriaNombre;
   bool half;
+  bool isActive;
 
   Producto({
     required this.id,
@@ -15,6 +16,7 @@ class Producto {
     required this.categoriaId,
     this.categoriaNombre,
     required this.half,
+    this.isActive = true,
   });
 
   factory Producto.fromJson(Map<String, dynamic> json) {
@@ -29,7 +31,8 @@ class Producto {
           : 0.0,
       categoriaId: json['categoriaId'] as int,
       categoriaNombre: json['categoriaNombre'] as String ?,
-      half: json['half'] ?? false, 
+      half: json['half'] ?? false,
+      isActive: json['isActive'] ?? true, 
     );
   }
   Map<String, dynamic> toJson() {
@@ -40,6 +43,7 @@ class Producto {
       'categoriaId': categoriaId,
       'categoriaNombre': categoriaNombre ?? '',
       'half': half,
+      'isActive': isActive,
     };
     
     // Solo incluir id si no es null (para productos existentes)
@@ -59,6 +63,7 @@ class Producto {
       'categoriaId': categoriaId,
       'categoriaNombre': categoriaNombre,
       'half': half,
+      'isActive': isActive,
     };
   }
 }
