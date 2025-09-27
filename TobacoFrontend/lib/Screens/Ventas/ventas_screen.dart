@@ -586,11 +586,7 @@ class _VentasScreenState extends State<VentasScreen> {
     );
   }
 
-  // Función para formatear precios
-  String _formatearPrecio(double precio) {
-    return precio.toStringAsFixed(2).replaceAllMapped(
-        RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (match) => '${match[1]}.');
-  }
+ 
 
   // Widget para formatear precios con decimales más pequeños y grises
   Widget _formatearPrecioConDecimales(double precio, {Color? color}) {

@@ -46,7 +46,14 @@ class _ProductosScreenState extends State<ProductosScreen> {
     _loadProductos();
   }
 
+  @override
+  void dispose() {
+    super.dispose();
+  }
+
   Future<void> _loadProductos() async {
+    if (!mounted) return;
+    
     setState(() {
       isLoading = true;
       errorMessage = null;
@@ -63,16 +70,20 @@ class _ProductosScreenState extends State<ProductosScreen> {
       await productoProvider.obtenerProductos();
       await categoriasProvider.obtenerCategorias();
 
-      setState(() {
-        productos = productoProvider.productos;
-        categorias = categoriasProvider.categorias;
-        isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          productos = productoProvider.productos;
+          categorias = categoriasProvider.categorias;
+          isLoading = false;
+        });
+      }
     } catch (e) {
-      setState(() {
-        isLoading = false;
-        errorMessage = 'Error al cargar los Productos: $e';
-      });
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+          errorMessage = 'Error al cargar los Productos: $e';
+        });
+      }
       log('Error al cargar los Productos: $e', level: 1000);
     }
   }
@@ -346,175 +357,253 @@ class _ProductosScreenState extends State<ProductosScreen> {
                                                       );
                                                     },
                                                   ),
-                                                   IconButton(
-                                                     icon: const Icon(
-                                                         Icons.delete,
-                                                         color: Colors.red),
-                                                     onPressed: () {
-                                                       // Verificar si la categoría tiene productos asociados
-                                                       final productosAsociados = productos.where(
-                                                         (producto) => producto.categoriaNombre == categoria.nombre
-                                                       ).toList();
-                                                       
-                                                       if (productosAsociados.isNotEmpty) {
-                                                         // Mostrar mensaje de error si hay productos asociados
-                                                         showDialog(
-                                                           context: context,
-                                                           builder: (context) => AlertDialog(
-                                                             shape: RoundedRectangleBorder(
-                                                               borderRadius: BorderRadius.circular(16),
-                                                             ),
-                                                             title: Row(
-                                                               children: [
-                                                                 Icon(
-                                                                   Icons.warning_amber_rounded,
-                                                                   color: Colors.orange,
-                                                                   size: 28,
-                                                                 ),
-                                                                 const SizedBox(width: 12),
-                                                                 const Expanded(
-                                                                   child: Text(
-                                                                     'No se puede eliminar',
-                                                                     style: TextStyle(
-                                                                       fontSize: 18,
-                                                                       fontWeight: FontWeight.bold,
-                                                                     ),
-                                                                   ),
-                                                                 ),
-                                                               ],
-                                                             ),
-                                                             content: Column(
-                                                               mainAxisSize: MainAxisSize.min,
-                                                               crossAxisAlignment: CrossAxisAlignment.start,
-                                                               children: [
-                                                                 Text(
-                                                                   'La categoría "${categoria.nombre}" no se puede eliminar porque tiene ${productosAsociados.length} producto${productosAsociados.length == 1 ? '' : 's'} asociado${productosAsociados.length == 1 ? '' : 's'}.',
-                                                                   style: const TextStyle(fontSize: 16),
-                                                                 ),
-                                                                 const SizedBox(height: 16),
-                                                                 const Text(
-                                                                   'Para eliminar esta categoría:',
-                                                                   style: TextStyle(
-                                                                     fontWeight: FontWeight.w600,
-                                                                     fontSize: 14,
-                                                                   ),
-                                                                 ),
-                                                                 const SizedBox(height: 8),
-                                                                 Row(
-                                                                   children: [
-                                                                     Icon(
-                                                                       Icons.check_circle_outline,
-                                                                       color: Colors.green,
-                                                                       size: 16,
-                                                                     ),
-                                                                     const SizedBox(width: 8),
-                                                                     const Expanded(
-                                                                       child: Text(
-                                                                         'Elimina o mueve todos los productos de esta categoría',
-                                                                         style: TextStyle(fontSize: 14),
-                                                                       ),
-                                                                     ),
-                                                                   ],
-                                                                 ),
-                                                                 const SizedBox(height: 4),
-                                                                 Row(
-                                                                   children: [
-                                                                     Icon(
-                                                                       Icons.check_circle_outline,
-                                                                       color: Colors.green,
-                                                                       size: 16,
-                                                                     ),
-                                                                     const SizedBox(width: 8),
-                                                                     const Expanded(
-                                                                       child: Text(
-                                                                         'Luego intenta eliminar la categoría nuevamente',
-                                                                         style: TextStyle(fontSize: 14),
-                                                                       ),
-                                                                     ),
-                                                                   ],
-                                                                 ),
-                                                               ],
-                                                             ),
-                                                             actions: [
-                                                               ElevatedButton(
-                                                                 onPressed: () => Navigator.of(context).pop(),
-                                                                 style: ElevatedButton.styleFrom(
-                                                                   backgroundColor: AppTheme.primaryColor,
-                                                                   foregroundColor: Colors.white,
-                                                                   shape: RoundedRectangleBorder(
-                                                                     borderRadius: BorderRadius.circular(8),
-                                                                   ),
-                                                                 ),
-                                                                 child: const Text('Entendido'),
-                                                               ),
-                                                             ],
-                                                           ),
-                                                         );
-                                                       } else {
-                                                         // Si no hay productos asociados, proceder con la eliminación
-                                                         showDialog(
-                                                           context: context,
-                                                           builder: (context) =>
-                                                               AppTheme
-                                                                   .alertDialogStyle(
-                                                             title:
-                                                                 'Eliminar categoría',
-                                                             content:
-                                                                 '¿Estás seguro de que deseas eliminar la categoría "${categoria.nombre}"?',
-                                                             onConfirm: () async {
-                                                               try {
-                                                                 await CategoriasProvider()
-                                                                     .eliminarCategoria(
-                                                                         categoria
-                                                                             .id!);
-                                                                 Navigator.of(
-                                                                         context)
-                                                                     .pop();
-                                                                 Navigator.of(
-                                                                         context)
-                                                                     .pop();
-                                                                 _loadProductos();
-                                                                 
-                                                                 // Mostrar mensaje de éxito
-                                                                 if (mounted) {
-                                                                   ScaffoldMessenger.of(context).showSnackBar(
-                                                                     SnackBar(
-                                                                       content: Text('Categoría "${categoria.nombre}" eliminada exitosamente'),
-                                                                       backgroundColor: Colors.green,
-                                                                       behavior: SnackBarBehavior.floating,
-                                                                       shape: RoundedRectangleBorder(
-                                                                         borderRadius: BorderRadius.circular(10),
-                                                                       ),
-                                                                     ),
-                                                                   );
-                                                                 }
-                                                               } catch (e) {
-                                                                 // Mostrar mensaje de error si falla la eliminación
-                                                                 if (mounted) {
-                                                                   ScaffoldMessenger.of(context).showSnackBar(
-                                                                     SnackBar(
-                                                                       content: Text('Error al eliminar la categoría: $e'),
-                                                                       backgroundColor: Colors.red,
-                                                                       behavior: SnackBarBehavior.floating,
-                                                                       shape: RoundedRectangleBorder(
-                                                                         borderRadius: BorderRadius.circular(10),
-                                                                       ),
-                                                                     ),
-                                                                   );
-                                                                 }
-                                                                 Navigator.of(context).pop();
-                                                               }
-                                                             },
-                                                             onCancel: () {
-                                                               Navigator.of(
-                                                                       context)
-                                                                   .pop();
-                                                             },
-                                                           ),
-                                                         );
-                                                       }
-                                                     },
-                                                   ),
+                                                  IconButton(
+                                                    icon: const Icon(
+                                                        Icons.delete,
+                                                        color: Colors.red),
+                                                    onPressed: () {
+                                                      // Verificar si la categoría tiene productos asociados
+                                                      final productosAsociados =
+                                                          productos
+                                                              .where((producto) =>
+                                                                  producto
+                                                                      .categoriaNombre ==
+                                                                  categoria
+                                                                      .nombre)
+                                                              .toList();
+
+                                                      if (productosAsociados
+                                                          .isNotEmpty) {
+                                                        // Mostrar mensaje de error si hay productos asociados
+                                                        showDialog(
+                                                          context: context,
+                                                          builder: (context) =>
+                                                              AlertDialog(
+                                                            shape:
+                                                                RoundedRectangleBorder(
+                                                              borderRadius:
+                                                                  BorderRadius
+                                                                      .circular(
+                                                                          16),
+                                                            ),
+                                                            title: Row(
+                                                              children: [
+                                                                Icon(
+                                                                  Icons
+                                                                      .warning_amber_rounded,
+                                                                  color: Colors
+                                                                      .orange,
+                                                                  size: 28,
+                                                                ),
+                                                                const SizedBox(
+                                                                    width: 12),
+                                                                const Expanded(
+                                                                  child: Text(
+                                                                    'No se puede eliminar',
+                                                                    style:
+                                                                        TextStyle(
+                                                                      fontSize:
+                                                                          18,
+                                                                      fontWeight:
+                                                                          FontWeight
+                                                                              .bold,
+                                                                    ),
+                                                                  ),
+                                                                ),
+                                                              ],
+                                                            ),
+                                                            content: Column(
+                                                              mainAxisSize:
+                                                                  MainAxisSize
+                                                                      .min,
+                                                              crossAxisAlignment:
+                                                                  CrossAxisAlignment
+                                                                      .start,
+                                                              children: [
+                                                                Text(
+                                                                  'La categoría "${categoria.nombre}" no se puede eliminar porque tiene ${productosAsociados.length} producto${productosAsociados.length == 1 ? '' : 's'} asociado${productosAsociados.length == 1 ? '' : 's'}.',
+                                                                  style: const TextStyle(
+                                                                      fontSize:
+                                                                          16),
+                                                                ),
+                                                                const SizedBox(
+                                                                    height: 16),
+                                                                const Text(
+                                                                  'Para eliminar esta categoría:',
+                                                                  style:
+                                                                      TextStyle(
+                                                                    fontWeight:
+                                                                        FontWeight
+                                                                            .w600,
+                                                                    fontSize:
+                                                                        14,
+                                                                  ),
+                                                                ),
+                                                                const SizedBox(
+                                                                    height: 8),
+                                                                Row(
+                                                                  children: [
+                                                                    Icon(
+                                                                      Icons
+                                                                          .check_circle_outline,
+                                                                      color: Colors
+                                                                          .green,
+                                                                      size: 16,
+                                                                    ),
+                                                                    const SizedBox(
+                                                                        width:
+                                                                            8),
+                                                                    const Expanded(
+                                                                      child:
+                                                                          Text(
+                                                                        'Elimina o mueve todos los productos de esta categoría',
+                                                                        style: TextStyle(
+                                                                            fontSize:
+                                                                                14),
+                                                                      ),
+                                                                    ),
+                                                                  ],
+                                                                ),
+                                                                const SizedBox(
+                                                                    height: 4),
+                                                                Row(
+                                                                  children: [
+                                                                    Icon(
+                                                                      Icons
+                                                                          .check_circle_outline,
+                                                                      color: Colors
+                                                                          .green,
+                                                                      size: 16,
+                                                                    ),
+                                                                    const SizedBox(
+                                                                        width:
+                                                                            8),
+                                                                    const Expanded(
+                                                                      child:
+                                                                          Text(
+                                                                        'Luego intenta eliminar la categoría nuevamente',
+                                                                        style: TextStyle(
+                                                                            fontSize:
+                                                                                14),
+                                                                      ),
+                                                                    ),
+                                                                  ],
+                                                                ),
+                                                              ],
+                                                            ),
+                                                            actions: [
+                                                              ElevatedButton(
+                                                                onPressed: () =>
+                                                                    Navigator.of(
+                                                                            context)
+                                                                        .pop(),
+                                                                style: ElevatedButton
+                                                                    .styleFrom(
+                                                                  backgroundColor:
+                                                                      AppTheme
+                                                                          .primaryColor,
+                                                                  foregroundColor:
+                                                                      Colors
+                                                                          .white,
+                                                                  shape:
+                                                                      RoundedRectangleBorder(
+                                                                    borderRadius:
+                                                                        BorderRadius
+                                                                            .circular(8),
+                                                                  ),
+                                                                ),
+                                                                child: const Text(
+                                                                    'Entendido'),
+                                                              ),
+                                                            ],
+                                                          ),
+                                                        );
+                                                      } else {
+                                                        // Si no hay productos asociados, proceder con la eliminación
+                                                        showDialog(
+                                                          context: context,
+                                                          builder: (context) =>
+                                                              AppTheme
+                                                                  .alertDialogStyle(
+                                                            title:
+                                                                'Eliminar categoría',
+                                                            content:
+                                                                '¿Estás seguro de que deseas eliminar la categoría "${categoria.nombre}"?',
+                                                            onConfirm:
+                                                                () async {
+                                                              try {
+                                                                await CategoriasProvider()
+                                                                    .eliminarCategoria(
+                                                                        categoria
+                                                                            .id!);
+                                                                Navigator.of(
+                                                                        context)
+                                                                    .pop();
+                                                                Navigator.of(
+                                                                        context)
+                                                                    .pop();
+                                                                _loadProductos();
+
+                                                                // Mostrar mensaje de éxito
+                                                                if (mounted) {
+                                                                  ScaffoldMessenger.of(
+                                                                          context)
+                                                                      .showSnackBar(
+                                                                    SnackBar(
+                                                                      content: Text(
+                                                                          'Categoría "${categoria.nombre}" eliminada exitosamente'),
+                                                                      backgroundColor:
+                                                                          Colors
+                                                                              .green,
+                                                                      behavior:
+                                                                          SnackBarBehavior
+                                                                              .floating,
+                                                                      shape:
+                                                                          RoundedRectangleBorder(
+                                                                        borderRadius:
+                                                                            BorderRadius.circular(10),
+                                                                      ),
+                                                                    ),
+                                                                  );
+                                                                }
+                                                              } catch (e) {
+                                                                // Mostrar mensaje de error si falla la eliminación
+                                                                if (mounted) {
+                                                                  ScaffoldMessenger.of(
+                                                                          context)
+                                                                      .showSnackBar(
+                                                                    SnackBar(
+                                                                      content: Text(
+                                                                          'Error al eliminar la categoría: $e'),
+                                                                      backgroundColor:
+                                                                          Colors
+                                                                              .red,
+                                                                      behavior:
+                                                                          SnackBarBehavior
+                                                                              .floating,
+                                                                      shape:
+                                                                          RoundedRectangleBorder(
+                                                                        borderRadius:
+                                                                            BorderRadius.circular(10),
+                                                                      ),
+                                                                    ),
+                                                                  );
+                                                                }
+                                                                Navigator.of(
+                                                                        context)
+                                                                    .pop();
+                                                              }
+                                                            },
+                                                            onCancel: () {
+                                                              Navigator.of(
+                                                                      context)
+                                                                  .pop();
+                                                            },
+                                                          ),
+                                                        );
+                                                      }
+                                                    },
+                                                  ),
                                                 ],
                                               ),
                                             );
@@ -649,7 +738,7 @@ class _ProductosScreenState extends State<ProductosScreen> {
                                 );
                                 return;
                               }
-                              final result = await Navigator.push(
+                              await Navigator.push(
                                 context,
                                 MaterialPageRoute(
                                   builder: (context) =>
@@ -716,9 +805,11 @@ class _ProductosScreenState extends State<ProductosScreen> {
                                   color: Colors.grey.shade400,
                                 ),
                                 onPressed: () {
-                                  setState(() {
-                                    searchQuery = '';
-                                  });
+                                  if (mounted) {
+                                    setState(() {
+                                      searchQuery = '';
+                                    });
+                                  }
                                 },
                               )
                             : null,
@@ -742,9 +833,11 @@ class _ProductosScreenState extends State<ProductosScreen> {
                         ),
                       ),
                       onChanged: (value) {
-                        setState(() {
-                          searchQuery = value;
-                        });
+                        if (mounted) {
+                          setState(() {
+                            searchQuery = value;
+                          });
+                        }
                       },
                     ),
                   ),
@@ -800,9 +893,11 @@ class _ProductosScreenState extends State<ProductosScreen> {
                               ),
                               selected: isSelected,
                               onSelected: (selected) {
-                                setState(() {
-                                  selectedCategory = categoria.nombre;
-                                });
+                                if (mounted) {
+                                  setState(() {
+                                    selectedCategory = categoria.nombre;
+                                  });
+                                }
                               },
                               backgroundColor: Colors.white,
                               selectedColor: _parseColor(categoria.colorHex),
