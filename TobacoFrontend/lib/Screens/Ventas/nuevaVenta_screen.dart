@@ -129,6 +129,23 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
         0.0, (sum, ps) => sum + (ps.precio * ps.cantidad));
   }
 
+  double _calcularTotalConDescuento() {
+    final subtotal = _calcularTotal();
+    if (clienteSeleccionado != null && clienteSeleccionado!.descuentoGlobal > 0) {
+      final descuento = subtotal * (clienteSeleccionado!.descuentoGlobal / 100);
+      return subtotal - descuento;
+    }
+    return subtotal;
+  }
+
+  double _calcularDescuento() {
+    if (clienteSeleccionado != null && clienteSeleccionado!.descuentoGlobal > 0) {
+      final subtotal = _calcularTotal();
+      return subtotal * (clienteSeleccionado!.descuentoGlobal / 100);
+    }
+    return 0.0;
+  }
+
   String _formatearPrecio(double precio) {
     return precio.toStringAsFixed(2).replaceAllMapped(
         RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (match) => '${match[1]}.');
@@ -249,8 +266,9 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
       builder: (BuildContext context) {
         return AppTheme.confirmDialogStyle(
           title: 'Confirmar Venta',
-          content:
-              '¿Está seguro de que desea finalizar la venta por \$${_formatearPrecio(_calcularTotal())}?',
+          content: clienteSeleccionado != null && clienteSeleccionado!.descuentoGlobal > 0
+              ? '¿Está seguro de que desea finalizar la venta?\n\nSubtotal: \$${_formatearPrecio(_calcularTotal())}\nDescuento (${clienteSeleccionado!.descuentoGlobal.toStringAsFixed(1)}%): -\$${_formatearPrecio(_calcularDescuento())}\nTotal: \$${_formatearPrecio(_calcularTotalConDescuento())}'
+              : '¿Está seguro de que desea finalizar la venta por \$${_formatearPrecio(_calcularTotalConDescuento())}?',
           onConfirm: () => Navigator.of(context).pop(true),
           onCancel: () => Navigator.of(context).pop(false),
         );
@@ -280,7 +298,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
         clienteId: clienteSeleccionado!.id!,
         cliente: clienteSeleccionado!,
         ventasProductos: productos,
-        total: _calcularTotal(),
+        total: _calcularTotalConDescuento(),
         fecha: DateTime.now(),
       );
 
@@ -1258,6 +1276,45 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+                            // Mostrar descuento si aplica
+                            if (clienteSeleccionado != null && clienteSeleccionado!.descuentoGlobal > 0) ...[
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.local_offer,
+                                    size: 16,
+                                    color: Colors.green.shade600,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'Descuento ${clienteSeleccionado!.descuentoGlobal.toStringAsFixed(1)}%',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.green.shade600,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Subtotal: \$${_formatearPrecio(_calcularTotal())}',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey.shade600,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Descuento: -\$${_formatearPrecio(_calcularDescuento())}',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.red.shade600,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                            ],
+                            
                             Text(
                               'Total',
                               style: TextStyle(
@@ -1267,7 +1324,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                               ),
                             ),
                             _formatearPrecioConDecimales(
-                              _calcularTotal(),
+                              _calcularTotalConDescuento(),
                               color: AppTheme.primaryColor,
                               fontSize: 22.0,
                             ),

@@ -28,6 +28,27 @@ class ClienteService {
     }
   }
 
+  Future<Cliente> obtenerClientePorId(int id) async {
+    try {
+      final headers = await AuthService.getAuthHeaders();
+      final response = await Apihandler.client.get(
+        Uri.parse('$baseUrl/Clientes/$id'),
+        headers: headers,
+      );
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> clienteJson = jsonDecode(response.body);
+        return Cliente.fromJson(clienteJson);
+      } else {
+        throw Exception(
+            'Error al obtener el cliente. Código de estado: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('Error al obtener el cliente: $e');
+      rethrow;
+    }
+  }
+
   Future<Cliente> crearCliente(Cliente cliente) async {
     try {
       final headers = await AuthService.getAuthHeaders();
@@ -127,6 +148,38 @@ class ClienteService {
       }
     } catch (e) {
       debugPrint('Error al obtener los clientes: $e');
+      rethrow;
+    }
+  }
+
+  Future<Map<String, dynamic>> obtenerClientesPaginados(int page, int pageSize) async {
+    try {
+      final headers = await AuthService.getAuthHeaders();
+      final response = await Apihandler.client.get(
+        Uri.parse('$baseUrl/Clientes/paginados?page=$page&pageSize=$pageSize'),
+        headers: headers,
+      );
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = jsonDecode(response.body);
+        final List<dynamic> clientesJson = data['clientes'];
+        final List<Cliente> clientes = clientesJson.map((json) => Cliente.fromJson(json)).toList();
+        
+        return {
+          'clientes': clientes,
+          'totalCount': data['totalCount'],
+          'page': data['page'],
+          'pageSize': data['pageSize'],
+          'totalPages': data['totalPages'],
+          'hasNextPage': data['hasNextPage'],
+          'hasPreviousPage': data['hasPreviousPage'],
+        };
+      } else {
+        throw Exception(
+            'Error al obtener los clientes paginados. Código de estado: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('Error al obtener los clientes paginados: $e');
       rethrow;
     }
   }

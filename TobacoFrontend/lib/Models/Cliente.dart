@@ -8,6 +8,7 @@ class Cliente {
   String? direccion;
   int? telefono;
   String? deuda;
+  double descuentoGlobal;
   List<PrecioEspecial> preciosEspeciales;
 
 
@@ -17,6 +18,7 @@ class Cliente {
       required this.direccion,
       this.telefono,
       this.deuda,
+      this.descuentoGlobal = 0.0,
       this.preciosEspeciales = const [],
       });
 
@@ -36,6 +38,7 @@ class Cliente {
           ? int.tryParse(json['telefono'].toString())
           : null,
       deuda: json['deuda'] as String?,
+      descuentoGlobal: (json['descuentoGlobal'] as num?)?.toDouble() ?? 0.0,
       preciosEspeciales: precios,
     );
   }
@@ -46,6 +49,7 @@ class Cliente {
       'direccion': direccion,
       'telefono': telefono?.toString(),
       'deuda': deuda,
+      'descuentoGlobal': descuentoGlobal,
     };
     
     // Solo incluir el id si no es null (para actualizaciones)
@@ -63,7 +67,7 @@ class Cliente {
       'direccion': direccion,
       'telefono': telefono?.toString(),
       'deuda': deuda,
-      
+      'descuentoGlobal': descuentoGlobal,
     };
   }
 }

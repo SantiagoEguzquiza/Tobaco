@@ -348,13 +348,18 @@ class _PreciosEspecialesScreenState extends State<PreciosEspecialesScreen> {
               ),
             ),
             const SizedBox(height: 8),
-            Text(
-              'Este cliente no tiene precios especiales configurados',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey.shade600,
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Text(
+                'Este cliente no tiene precios especiales configurados',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey.shade600,
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
-              textAlign: TextAlign.center,
             ),
             const SizedBox(height: 20),
             Container(
@@ -369,11 +374,16 @@ class _PreciosEspecialesScreenState extends State<PreciosEspecialesScreen> {
                 children: [
                   Icon(Icons.info_outline, size: 16, color: Colors.grey.shade600),
                   const SizedBox(width: 8),
-                  Text(
-                    'Usa el botón de gestión desde el detalle del cliente',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey.shade600,
+                  Flexible(
+                    child: Text(
+                      'Usa el botón de gestión desde el detalle del cliente',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade600,
+                      ),
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ],

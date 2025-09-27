@@ -384,42 +384,51 @@ class _EditarPreciosEspecialesScreenState
                     ),
                   ],
                 ),
-                child: TextField(
-                  decoration: InputDecoration(
-                    hintText: 'Buscar productos por nombre...',
-                    hintStyle: TextStyle(
-                      color: Colors.grey.shade400,
-                      fontSize: 16,
-                    ),
-                    prefixIcon: Icon(
-                      Icons.search,
-                      color: AppTheme.primaryColor,
-                      size: 24,
-                    ),
-                    suffixIcon: searchQuery.isNotEmpty
-                        ? IconButton(
-                            icon: Icon(
-                              Icons.clear,
-                              color: Colors.grey.shade400,
-                            ),
-                            onPressed: () {
-                              setState(() {
-                                searchQuery = '';
-                              });
-                            },
-                          )
-                        : null,
-                    border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 16,
+                child: Theme(
+                  data: Theme.of(context).copyWith(
+                    textSelectionTheme: TextSelectionThemeData(
+                      selectionColor: AppTheme.primaryColor.withOpacity(0.3),
+                      selectionHandleColor: AppTheme.primaryColor,
+                      cursorColor: AppTheme.primaryColor,
                     ),
                   ),
-                  onChanged: (value) {
-                    setState(() {
-                      searchQuery = value;
-                    });
-                  },
+                  child: TextField(
+                    decoration: InputDecoration(
+                      hintText: 'Buscar productos por nombre...',
+                      hintStyle: TextStyle(
+                        color: Colors.grey.shade400,
+                        fontSize: 16,
+                      ),
+                      prefixIcon: Icon(
+                        Icons.search,
+                        color: AppTheme.primaryColor,
+                        size: 24,
+                      ),
+                      suffixIcon: searchQuery.isNotEmpty
+                          ? IconButton(
+                              icon: Icon(
+                                Icons.clear,
+                                color: Colors.grey.shade400,
+                              ),
+                              onPressed: () {
+                                setState(() {
+                                  searchQuery = '';
+                                });
+                              },
+                            )
+                          : null,
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 16,
+                      ),
+                    ),
+                    onChanged: (value) {
+                      setState(() {
+                        searchQuery = value;
+                      });
+                    },
+                  ),
                 ),
               ),
 
@@ -643,27 +652,54 @@ class _EditarPreciosEspecialesScreenState
                                             borderRadius:
                                                 BorderRadius.circular(8),
                                           ),
-                                          child: TextField(
-                                            controller:
-                                                precioControllers[producto.id!],
-                                            keyboardType: const TextInputType
-                                                .numberWithOptions(
-                                                decimal: true),
-                                            textAlign: TextAlign.center,
-                                            style: const TextStyle(
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.w500,
+                                          child: Theme(
+                                            data: Theme.of(context).copyWith(
+                                              inputDecorationTheme: const InputDecorationTheme(
+                                                border: InputBorder.none,
+                                                enabledBorder: InputBorder.none,
+                                                focusedBorder: InputBorder.none,
+                                                errorBorder: InputBorder.none,
+                                                focusedErrorBorder: InputBorder.none,
+                                                disabledBorder: InputBorder.none,
+                                              ),
                                             ),
-                                            decoration: const InputDecoration(
-                                              hintText: '0.00',
-                                              border: InputBorder.none,
-                                              contentPadding:
-                                                  EdgeInsets.symmetric(
-                                                      horizontal: 8),
+                                            child: Center(
+                                              child: Theme(
+                                                data: Theme.of(context).copyWith(
+                                                  textSelectionTheme: TextSelectionThemeData(
+                                                    selectionColor: AppTheme.primaryColor.withOpacity(0.3),
+                                                    selectionHandleColor: AppTheme.primaryColor,
+                                                    cursorColor: AppTheme.primaryColor,
+                                                  ),
+                                                ),
+                                                child: TextField(
+                                                  controller:
+                                                      precioControllers[producto.id!],
+                                                  keyboardType: const TextInputType
+                                                      .numberWithOptions(
+                                                      decimal: true),
+                                                  textAlign: TextAlign.center,
+                                                  style: const TextStyle(
+                                                    fontSize: 14,
+                                                    fontWeight: FontWeight.w500,
+                                                  ),
+                                                  decoration: const InputDecoration(
+                                                    hintText: '0.00',
+                                                    border: InputBorder.none,
+                                                    enabledBorder: InputBorder.none,
+                                                    focusedBorder: InputBorder.none,
+                                                    errorBorder: InputBorder.none,
+                                                    focusedErrorBorder: InputBorder.none,
+                                                    disabledBorder: InputBorder.none,
+                                                    contentPadding: EdgeInsets.zero,
+                                                    isDense: true,
+                                                  ),
+                                                  onChanged: (value) =>
+                                                      _onPrecioChanged(
+                                                          producto.id!, value),
+                                                ),
+                                              ),
                                             ),
-                                            onChanged: (value) =>
-                                                _onPrecioChanged(
-                                                    producto.id!, value),
                                           ),
                                         ),
                                       ],

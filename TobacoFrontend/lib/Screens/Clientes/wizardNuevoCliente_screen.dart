@@ -21,6 +21,7 @@ class _WizardNuevoClienteScreenState extends State<WizardNuevoClienteScreen> {
   final _telefonoController = TextEditingController();
   final _direccionController = TextEditingController();
   final _deudaController = TextEditingController();
+  final _descuentoGlobalController = TextEditingController();
   
   Cliente? _clienteCreado;
   bool _isLoading = false;
@@ -35,11 +36,17 @@ class _WizardNuevoClienteScreenState extends State<WizardNuevoClienteScreen> {
     _telefonoController.dispose();
     _direccionController.dispose();
     _deudaController.dispose();
+    _descuentoGlobalController.dispose();
     super.dispose();
   }
 
   Future<void> _crearCliente() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate()) {
+      setState(() {
+        _errorMessage = 'Por favor, completa todos los campos obligatorios marcados con *';
+      });
+      return;
+    }
 
     setState(() {
       _isLoading = true;
@@ -52,7 +59,10 @@ class _WizardNuevoClienteScreenState extends State<WizardNuevoClienteScreen> {
         nombre: _nombreController.text.trim(),
         telefono: int.tryParse(_telefonoController.text.trim()),
         direccion: _direccionController.text.trim(),
-        deuda: _deudaController.text.trim().isNotEmpty ? _deudaController.text.trim() : null,
+        deuda: _deudaController.text.trim().isNotEmpty ? _deudaController.text.trim() : "0",
+        descuentoGlobal: _descuentoGlobalController.text.trim().isEmpty 
+            ? 0.0 
+            : double.tryParse(_descuentoGlobalController.text.trim()) ?? 0.0,
         preciosEspeciales: [],
       );
 
@@ -71,20 +81,20 @@ class _WizardNuevoClienteScreenState extends State<WizardNuevoClienteScreen> {
         );
       } else {
         setState(() {
-          _errorMessage = 'Error al crear el cliente';
+          _errorMessage = 'Error al crear el cliente. Verifica que todos los datos sean correctos.';
           _isLoading = false;
         });
       }
     } catch (e) {
       setState(() {
-        _errorMessage = 'Error: $e';
+        _errorMessage = 'Error al crear el cliente: ${e.toString().replaceAll('Exception: ', '')}';
         _isLoading = false;
       });
     }
   }
 
   void _finalizarWizard() {
-    Navigator.pop(context, _clienteCreado);
+    Navigator.pop(context, true);
   }
 
   void _anteriorPaso() {
@@ -100,29 +110,54 @@ class _WizardNuevoClienteScreenState extends State<WizardNuevoClienteScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(_currentStep == 0 ? 'Nuevo Cliente' : 'Precios Especiales'),
+        title: Text(
+          _currentStep == 0 ? 'Nuevo Cliente' : 'Precios Especiales',
+          style: const TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
+          ),
+        ),
         backgroundColor: AppTheme.primaryColor,
         foregroundColor: Colors.white,
+        elevation: 0,
+        centerTitle: true,
         leading: _currentStep == 0 
             ? IconButton(
-                icon: const Icon(Icons.close),
+                icon: const Icon(Icons.close, color: Colors.white),
                 onPressed: () => Navigator.pop(context),
               )
             : IconButton(
-                icon: const Icon(Icons.arrow_back),
+                icon: const Icon(Icons.arrow_back, color: Colors.white),
                 onPressed: _anteriorPaso,
               ),
         actions: _currentStep == 1 
             ? [
-                TextButton(
-                  onPressed: _finalizarWizard,
-                  child: const Text(
-                    'Finalizar',
-                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                Padding(
+                  padding: const EdgeInsets.only(right: 16.0),
+                  child: TextButton(
+                    onPressed: _finalizarWizard,
+                    style: TextButton.styleFrom(
+                      backgroundColor: Colors.white.withOpacity(0.2),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                    ),
+                    child: const Text(
+                      'Finalizar',
+                      style: TextStyle(
+                        color: Colors.white, 
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
                   ),
                 ),
               ]
-            : null,
+            : [
+                // Espacio vacío para balancear cuando no hay botón Finalizar
+                const SizedBox(width: 48),
+              ],
       ),
       body: Column(
         children: [
@@ -198,13 +233,21 @@ class _WizardNuevoClienteScreenState extends State<WizardNuevoClienteScreen> {
   }
 
   Widget _buildPasoDatosBasicos() {
-    return Padding(
+    return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+      child: Theme(
+        data: Theme.of(context).copyWith(
+          textSelectionTheme: TextSelectionThemeData(
+            selectionColor: AppTheme.primaryColor.withOpacity(0.3),
+            selectionHandleColor: AppTheme.primaryColor,
+            cursorColor: AppTheme.primaryColor,
+          ),
+        ),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
             const Text(
               'Información del Cliente',
               style: TextStyle(
@@ -245,17 +288,18 @@ class _WizardNuevoClienteScreenState extends State<WizardNuevoClienteScreen> {
             TextFormField(
               controller: _telefonoController,
               decoration: const InputDecoration(
-                labelText: 'Teléfono',
+                labelText: 'Teléfono *',
                 hintText: 'Ingresa el teléfono del cliente',
                 prefixIcon: Icon(Icons.phone),
                 border: OutlineInputBorder(),
               ),
               keyboardType: TextInputType.phone,
               validator: (value) {
-                if (value != null && value.isNotEmpty) {
-                  if (int.tryParse(value) == null) {
-                    return 'Ingresa un teléfono válido';
-                  }
+                if (value == null || value.trim().isEmpty) {
+                  return 'El teléfono es obligatorio';
+                }
+                if (int.tryParse(value.trim()) == null) {
+                  return 'Ingresa un teléfono válido';
                 }
                 return null;
               },
@@ -266,12 +310,18 @@ class _WizardNuevoClienteScreenState extends State<WizardNuevoClienteScreen> {
             TextFormField(
               controller: _direccionController,
               decoration: const InputDecoration(
-                labelText: 'Dirección',
+                labelText: 'Dirección *',
                 hintText: 'Ingresa la dirección del cliente',
                 prefixIcon: Icon(Icons.location_on),
                 border: OutlineInputBorder(),
               ),
               maxLines: 2,
+              validator: (value) {
+                if (value == null || value.trim().isEmpty) {
+                  return 'La dirección es obligatoria';
+                }
+                return null;
+              },
             ),
             const SizedBox(height: 20),
             
@@ -289,6 +339,32 @@ class _WizardNuevoClienteScreenState extends State<WizardNuevoClienteScreen> {
                 if (value != null && value.isNotEmpty) {
                   if (double.tryParse(value) == null) {
                     return 'Ingresa un monto válido';
+                  }
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 20),
+            
+            // Campo Descuento Global
+            TextFormField(
+              controller: _descuentoGlobalController,
+              decoration: const InputDecoration(
+                labelText: 'Descuento Global (%)',
+                hintText: 'Ingresa el porcentaje de descuento global',
+                prefixIcon: Icon(Icons.percent),
+                border: OutlineInputBorder(),
+                suffixText: '%',
+              ),
+              keyboardType: TextInputType.numberWithOptions(decimal: true),
+              validator: (value) {
+                if (value != null && value.trim().isNotEmpty) {
+                  final descuento = double.tryParse(value.trim());
+                  if (descuento == null) {
+                    return 'Ingresa un porcentaje válido';
+                  }
+                  if (descuento < 0 || descuento > 100) {
+                    return 'El descuento debe estar entre 0 y 100';
                   }
                 }
                 return null;
@@ -321,7 +397,7 @@ class _WizardNuevoClienteScreenState extends State<WizardNuevoClienteScreen> {
               const SizedBox(height: 20),
             ],
             
-            const Spacer(),
+            const SizedBox(height: 30),
             
             // Botón Siguiente
             SizedBox(
@@ -362,6 +438,7 @@ class _WizardNuevoClienteScreenState extends State<WizardNuevoClienteScreen> {
               ),
             ),
           ],
+        ),
         ),
       ),
     );
