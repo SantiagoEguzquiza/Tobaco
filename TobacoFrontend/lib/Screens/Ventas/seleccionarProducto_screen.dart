@@ -180,6 +180,10 @@ class _SeleccionarProductosScreenState
 
   @override
   Widget build(BuildContext context) {
+    // Detectar si el teclado está visible
+    final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
+    final isKeyboardVisible = keyboardHeight > 0;
+    
     if (selectedCategory == null && categorias.isNotEmpty) {
       selectedCategory = categorias.first.nombre;
     }
@@ -196,6 +200,7 @@ class _SeleccionarProductosScreenState
           (a, b) => a.nombre.toLowerCase().compareTo(b.nombre.toLowerCase()));
 
     return Scaffold(
+        resizeToAvoidBottomInset: false,
       appBar: AppBar(
         centerTitle: true,
         title: const Text('Nueva venta', style: AppTheme.appBarTitleStyle),
@@ -745,8 +750,13 @@ class _SeleccionarProductosScreenState
             ),
           ],
         ),
-        child: SafeArea(
-          child: Row(
+        child: Container(
+          padding: EdgeInsets.only(
+            bottom: isKeyboardVisible ? keyboardHeight : 0,
+          ),
+          child: SafeArea(
+            top: false,
+            child: Row(
             children: [
               // Información de productos seleccionados
               Expanded(
@@ -807,6 +817,7 @@ class _SeleccionarProductosScreenState
               ),
             ],
           ),
+        ),
         ),
       ),
     );

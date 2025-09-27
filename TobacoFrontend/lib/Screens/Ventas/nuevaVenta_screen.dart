@@ -389,7 +389,12 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Detectar si el teclado está visible
+    final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
+    final isKeyboardVisible = keyboardHeight > 0;
+    
     return Scaffold(
+        resizeToAvoidBottomInset: false,
         appBar: AppBar(
           centerTitle: true,
           title: const Text('Nueva Venta'),
@@ -1290,8 +1295,13 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                     ),
                   ],
                 ),
-                child: SafeArea(
-                  child: Row(
+                child: Container(
+                  padding: EdgeInsets.only(
+                    bottom: isKeyboardVisible ? keyboardHeight : 0,
+                  ),
+                  child: SafeArea(
+                    top: false,
+                    child: Row(
                     children: [
                       // Información del total
                       Expanded(
@@ -1398,6 +1408,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                       ),
                     ],
                   ),
+                ),
                 ),
               )
             : null);
