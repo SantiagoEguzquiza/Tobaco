@@ -5,12 +5,13 @@ import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:tobaco/Models/Cliente.dart';
 import 'package:tobaco/Models/ProductoSeleccionado.dart';
 import 'package:tobaco/Models/VentasProductos.dart';
+import 'package:tobaco/Models/PrecioEspecial.dart';
 import 'package:tobaco/Screens/Clientes/wizardNuevoCliente_screen.dart';
 import 'package:tobaco/Screens/Ventas/metodoPago_screen.dart';
 import 'package:tobaco/Screens/Ventas/seleccionarProducto_screen.dart';
-import 'package:tobaco/Screens/Ventas/seleccionarProductoConPreciosEspeciales_screen.dart';
 import 'package:tobaco/Services/Clientes_Service/clientes_provider.dart';
 import 'package:tobaco/Services/Ventas_Service/ventas_provider.dart';
+import 'package:tobaco/Services/PrecioEspecialService.dart';
 import 'package:tobaco/Theme/app_theme.dart';
 import 'package:tobaco/Models/Ventas.dart';
 import 'package:tobaco/Theme/confirmAnimation.dart';
@@ -30,10 +31,9 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
   bool isLoadingClientes = false;
   bool isProcessingVenta = false;
   List<ProductoSeleccionado> productosSeleccionados = [];
+  Map<int, double> preciosEspeciales = {}; // Cache de precios especiales
   Timer? _debounceTimer;
   String? errorMessage;
-  final VentasProvider _ventasProvider = VentasProvider();
-  final ClienteProvider _clientesProvider = ClienteProvider();
 
   @override
   void initState() {
@@ -53,6 +53,23 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
     _debounceTimer = Timer(const Duration(milliseconds: 500), () {
       buscarClientes(_searchController.text);
     });
+  }
+
+  Future<void> _cargarPreciosEspeciales() async {
+    if (clienteSeleccionado == null) return;
+
+    try {
+      final precios = await PrecioEspecialService.getPreciosEspecialesByCliente(clienteSeleccionado!.id!);
+      setState(() {
+        preciosEspeciales.clear();
+        for (var precio in precios) {
+          preciosEspeciales[precio.productoId] = precio.precio;
+        }
+      });
+    } catch (e) {
+      // Si hay error cargando precios especiales, continuar sin ellos
+      print('Error cargando precios especiales: $e');
+    }
   }
 
   void buscarClientes(String query) async {
@@ -98,6 +115,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
       errorMessage = null;
     });
     _searchController.clear();
+    _cargarPreciosEspeciales(); // Cargar precios especiales del cliente
   }
 
   void cambiarCliente() {
@@ -107,6 +125,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
       isSearching = true;
       errorMessage = null;
       productosSeleccionados = [];
+      preciosEspeciales.clear(); // Limpiar precios especiales
     });
     _searchController.clear();
   }
@@ -260,15 +279,13 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
   Future<void> _confirmarVenta() async {
     if (!_puedeConfirmarVenta()) return;
 
-    // Mostrar diálogo de confirmación
+    // Mostrar diálogo de confirmación simple
     final confirmar = await showDialog<bool>(
       context: context,
       builder: (BuildContext context) {
         return AppTheme.confirmDialogStyle(
           title: 'Confirmar Venta',
-          content: clienteSeleccionado != null && clienteSeleccionado!.descuentoGlobal > 0
-              ? '¿Está seguro de que desea finalizar la venta?\n\nSubtotal: \$${_formatearPrecio(_calcularTotal())}\nDescuento (${clienteSeleccionado!.descuentoGlobal.toStringAsFixed(1)}%): -\$${_formatearPrecio(_calcularDescuento())}\nTotal: \$${_formatearPrecio(_calcularTotalConDescuento())}'
-              : '¿Está seguro de que desea finalizar la venta por \$${_formatearPrecio(_calcularTotalConDescuento())}?',
+          content: '¿Está seguro de que desea finalizar la venta por \$${_formatearPrecio(_calcularTotalConDescuento())}?',
           onConfirm: () => Navigator.of(context).pop(true),
           onCancel: () => Navigator.of(context).pop(false),
         );
@@ -321,47 +338,33 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
       }
 
       // Guardar la venta en la base de datos
-      try {
-        await _ventasProvider.crearVenta(ventaConPagos);
-        
-        // Mostrar animación de confirmación solo si se guardó la venta
-        if (mounted) {
-          showGeneralDialog(
-            context: context,
-            barrierDismissible: false,
-            barrierColor: Colors.transparent,
-            transitionDuration: const Duration(milliseconds: 0),
-            pageBuilder: (context, animation, secondaryAnimation) {
-              return AnnotatedRegion<SystemUiOverlayStyle>(
-                value: SystemUiOverlayStyle.light.copyWith(
-                  statusBarColor: Colors.green,
-                  systemNavigationBarColor: Colors.green,
+      await VentasProvider().crearVenta(ventaConPagos);
+
+      // Mostrar animación de confirmación solo si se guardó la venta
+      if (mounted) {
+        showGeneralDialog(
+          context: context,
+          barrierDismissible: false,
+          barrierColor: Colors.transparent,
+          transitionDuration: const Duration(milliseconds: 0),
+          pageBuilder: (context, animation, secondaryAnimation) {
+            return AnnotatedRegion<SystemUiOverlayStyle>(
+              value: SystemUiOverlayStyle.light.copyWith(
+                statusBarColor: Colors.green,
+                systemNavigationBarColor: Colors.green,
+              ),
+              child: Scaffold(
+                backgroundColor: Colors.transparent,
+                body: VentaConfirmadaAnimacion(
+                  onFinish: () {
+                    Navigator.of(context).pop(); // cerrar animación
+                    Navigator.of(context).pop(); // volver atrás
+                  },
                 ),
-                child: Scaffold(
-                  backgroundColor: Colors.transparent,
-                  body: VentaConfirmadaAnimacion(
-                    onFinish: () {
-                      Navigator.of(context).pop(); // cerrar animación
-                      Navigator.of(context).pop(); // volver atrás
-                    },
-                  ),
-                ),
-              );
-            },
-          );
-        }
-      } catch (e) {
-        setState(() {
-          isProcessingVenta = false;
-        });
-        
-        if (mounted) {
-          AppTheme.showSnackBar(
-            context,
-            AppTheme.errorSnackBar('Error al guardar la venta: $e'),
-          );
-        }
-        return;
+              ),
+            );
+          },
+        );
       }
     } catch (e) {
       setState(() {
@@ -369,9 +372,16 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
       });
 
       if (mounted) {
-        AppTheme.showSnackBar(
-          context,
-          AppTheme.errorSnackBar('Error al procesar la venta: $e'),
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al procesar la venta: $e'),
+            backgroundColor: Colors.red,
+            action: SnackBarAction(
+              label: 'Reintentar',
+              textColor: Colors.white,
+              onPressed: _confirmarVenta,
+            ),
+          ),
         );
       }
     }
@@ -962,7 +972,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                                     context,
                                     MaterialPageRoute(
                                       builder: (context) =>
-                                          SeleccionarProductosConPreciosEspecialesScreen(
+                                          SeleccionarProductosScreen(
                                         productosYaSeleccionados:
                                             productosSeleccionados,
                                         cliente: clienteSeleccionado,
@@ -977,9 +987,12 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                                     });
                                   }
                                 } catch (e) {
-                                  AppTheme.showSnackBar(
-                                    context,
-                                    AppTheme.errorSnackBar('Error al seleccionar productos: $e'),
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                          'Error al seleccionar productos: $e'),
+                                      backgroundColor: Colors.red,
+                                    ),
                                   );
                                 }
                               },
