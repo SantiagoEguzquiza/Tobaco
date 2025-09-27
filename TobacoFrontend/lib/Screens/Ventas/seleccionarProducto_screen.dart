@@ -3,16 +3,21 @@ import 'package:flutter/services.dart';
 import 'package:tobaco/Models/Categoria.dart';
 import 'package:tobaco/Models/Producto.dart';
 import 'package:tobaco/Models/ProductoSeleccionado.dart';
+import 'package:tobaco/Models/Cliente.dart';
+import 'package:tobaco/Models/PrecioEspecial.dart';
 import 'package:tobaco/Services/Categoria_Service/categoria_provider.dart';
 import 'package:tobaco/Services/Productos_Service/productos_provider.dart';
+import 'package:tobaco/Services/PrecioEspecialService.dart';
 import 'package:tobaco/Theme/app_theme.dart';
 
 class SeleccionarProductosScreen extends StatefulWidget {
   final List<ProductoSeleccionado> productosYaSeleccionados;
+  final Cliente? cliente;
 
   const SeleccionarProductosScreen({
     super.key,
     required this.productosYaSeleccionados,
+    this.cliente,
   });
 
   @override
@@ -25,6 +30,7 @@ class _SeleccionarProductosScreenState
   List<Producto> productos = [];
   final Map<int, double> cantidades = {};
   final Map<int, TextEditingController> cantidadControllers = {};
+  final Map<int, double> preciosEspeciales = {}; // Cache de precios especiales
   List<Categoria> categorias = [];
   String? selectedCategory;
   bool isLoading = true;
@@ -52,6 +58,11 @@ class _SeleccionarProductosScreenState
       final List<Categoria> fetchedCategorias =
           await categoriasProvider.obtenerCategorias();
 
+      // Cargar precios especiales si hay un cliente seleccionado
+      if (widget.cliente != null) {
+        await _loadPreciosEspeciales();
+      }
+
       setState(() {
         categorias = fetchedCategorias;
         productos = fetchedProductos;
@@ -67,6 +78,34 @@ class _SeleccionarProductosScreenState
       });
       debugPrint('Error al cargar los Productos: $e');
     }
+  }
+
+  Future<void> _loadPreciosEspeciales() async {
+    if (widget.cliente == null) return;
+
+    try {
+      final precios = await PrecioEspecialService.getPreciosEspecialesByCliente(widget.cliente!.id!);
+      setState(() {
+        preciosEspeciales.clear();
+        for (var precio in precios) {
+          preciosEspeciales[precio.productoId] = precio.precio;
+        }
+      });
+    } catch (e) {
+      // Si hay error cargando precios especiales, continuar sin ellos
+      print('Error cargando precios especiales: $e');
+    }
+  }
+
+  double _getPrecioFinal(Producto producto) {
+    if (widget.cliente != null && preciosEspeciales.containsKey(producto.id)) {
+      return preciosEspeciales[producto.id]!;
+    }
+    return producto.precio;
+  }
+
+  bool _tienePrecioEspecial(Producto producto) {
+    return widget.cliente != null && preciosEspeciales.containsKey(producto.id);
   }
 
   // Función para formatear precios con decimales más pequeños y grises
@@ -107,7 +146,7 @@ class _SeleccionarProductosScreenState
         (p) => p.id == e.key,
         orElse: () => throw Exception('Producto no encontrado'),
       );
-      return producto.precio * e.value;
+      return _getPrecioFinal(producto) * e.value;
     }).fold<double>(0.0, (a, b) => a + b);
 
     final totalStr = total.toStringAsFixed(2);
@@ -499,7 +538,7 @@ class _SeleccionarProductosScreenState
                                     const SizedBox(height: 4),
                                     Row(
                                       children: [
-                                        _formatearPrecioConDecimales(producto.precio),
+                                        _formatearPrecioConDecimales(_getPrecioFinal(producto)),
                                         const SizedBox(width: 4),
                                         Text(
                                           'c/u',
@@ -509,6 +548,24 @@ class _SeleccionarProductosScreenState
                                             fontWeight: FontWeight.w500,
                                           ),
                                         ),
+                                        if (_tienePrecioEspecial(producto)) ...[
+                                          const SizedBox(width: 8),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                            decoration: BoxDecoration(
+                                              color: Colors.green,
+                                              borderRadius: BorderRadius.circular(10),
+                                            ),
+                                            child: const Text(
+                                              'ESPECIAL',
+                                              style: TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
                                       ],
                                     ),
                                   ],
@@ -728,7 +785,7 @@ class _SeleccionarProductosScreenState
                       return ProductoSeleccionado(
                           id: producto.id!,
                           nombre: producto.nombre,
-                          precio: producto.precio,
+                          precio: _getPrecioFinal(producto),
                           cantidad: e.value,
                           categoria: producto.categoriaNombre ?? '',
                           categoriaId: producto.categoriaId);

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../Services/Auth_Service/auth_provider.dart';
+import '../../Widgets/custom_loading_widget.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -482,14 +483,35 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
     if (_formKey.currentState!.validate()) {
       authProvider.clearError();
       
-      final success = await authProvider.login(
-        _userNameController.text.trim(),
-        _passwordController.text,
+      // Mostrar pantalla de carga personalizada
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const DialogLoadingWidget(
+          message: 'Iniciando sesión...',
+        ),
       );
+      
+      try {
+        final success = await authProvider.login(
+          _userNameController.text.trim(),
+          _passwordController.text,
+        );
 
-      if (success && mounted) {
-        // Navigate to main menu
-        Navigator.of(context).pushReplacementNamed('/menu');
+        // Cerrar el diálogo de carga
+        if (mounted) {
+          Navigator.of(context).pop();
+        }
+
+        if (success && mounted) {
+          // Navigate to main menu
+          Navigator.of(context).pushReplacementNamed('/menu');
+        }
+      } catch (e) {
+        // Cerrar el diálogo de carga en caso de error
+        if (mounted) {
+          Navigator.of(context).pop();
+        }
       }
     }
   }

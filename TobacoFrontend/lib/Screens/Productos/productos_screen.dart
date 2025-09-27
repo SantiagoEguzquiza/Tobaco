@@ -11,6 +11,7 @@ import 'package:tobaco/Services/Categoria_Service/categoria_provider.dart';
 import 'package:tobaco/Services/Productos_Service/productos_provider.dart';
 import 'package:tobaco/Theme/app_theme.dart'; // Importa el tema
 import 'package:tobaco/Helpers/color_picker.dart';
+import 'package:tobaco/Utils/loading_utils.dart';
 import 'dart:developer';
 
 class ProductosScreen extends StatefulWidget {
@@ -75,6 +76,16 @@ class _ProductosScreenState extends State<ProductosScreen> {
       });
       log('Error al cargar los Productos: $e', level: 1000);
     }
+  }
+
+  Future<void> _loadProductosWithLoading() async {
+    await LoadingUtils.executeWithLoading(
+      context,
+      () async {
+        await _loadProductos();
+      },
+      loadingMessage: 'Cargando productos...',
+    );
   }
 
   @override
@@ -196,7 +207,7 @@ class _ProductosScreenState extends State<ProductosScreen> {
                                     colorHex: selectedColor,
                                   ));
                                   Navigator.of(context).pop();
-                                  _loadProductos();
+                                  _loadProductosWithLoading();
                                 }
                               },
                               confirmText: 'Agregar',
@@ -332,7 +343,7 @@ class _ProductosScreenState extends State<ProductosScreen> {
                                                                             .pop();
                                                                         Navigator.of(context)
                                                                             .pop();
-                                                                        _loadProductos();
+                                                                        _loadProductosWithLoading();
                                                                       }
                                                                     },
                                                                     child: const Text(
@@ -473,7 +484,7 @@ class _ProductosScreenState extends State<ProductosScreen> {
                                                                  Navigator.of(
                                                                          context)
                                                                      .pop();
-                                                                 _loadProductos();
+                                                                 _loadProductosWithLoading();
                                                                  
                                                                  // Mostrar mensaje de éxito
                                                                  if (mounted) {
@@ -532,7 +543,7 @@ class _ProductosScreenState extends State<ProductosScreen> {
         ],
       ),
       body: isLoading
-          ? Center(
+          ? const Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -540,11 +551,11 @@ class _ProductosScreenState extends State<ProductosScreen> {
                     valueColor:
                         AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
                   ),
-                  const SizedBox(height: 16),
+                  SizedBox(height: 16),
                   Text(
                     'Cargando productos...',
                     style: TextStyle(
-                      color: Colors.grey.shade600,
+                      color: Colors.grey,
                       fontSize: 16,
                     ),
                   ),
@@ -636,7 +647,9 @@ class _ProductosScreenState extends State<ProductosScreen> {
                                       const NuevoProductoScreen(),
                                 ),
                               );
-                              _loadProductos();
+                              if (result == true) {
+                                _loadProductosWithLoading();
+                              }
                             },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppTheme.primaryColor,
@@ -883,7 +896,7 @@ class _ProductosScreenState extends State<ProductosScreen> {
                                 );
                                 // If a product was deleted, refresh the list
                                 if (result == true) {
-                                  _loadProductos();
+                                  _loadProductosWithLoading();
                                 }
                               },
                               child: Padding(
@@ -1003,7 +1016,7 @@ class _ProductosScreenState extends State<ProductosScreen> {
                                               size: 20,
                                             ),
                                             onPressed: () async {
-                                              await Navigator.push(
+                                              final result = await Navigator.push(
                                                 context,
                                                 MaterialPageRoute(
                                                   builder: (context) =>
@@ -1012,7 +1025,9 @@ class _ProductosScreenState extends State<ProductosScreen> {
                                                   ),
                                                 ),
                                               );
-                                              _loadProductos();
+                                              if (result == true) {
+                                                _loadProductosWithLoading();
+                                              }
                                             },
                                           ),
                                         ),
@@ -1070,7 +1085,7 @@ class _ProductosScreenState extends State<ProductosScreen> {
                                                               context,
                                                               AppTheme.successSnackBar('Producto eliminado con éxito'),
                                                             );
-                                                            _loadProductos();
+                                                            _loadProductosWithLoading();
                                                             Navigator.of(context).pop();
                                                             
                                                           } catch (e) {
@@ -1227,7 +1242,7 @@ class _ProductosScreenState extends State<ProductosScreen> {
           context,
           AppTheme.successSnackBar('Producto desactivado exitosamente. Ya no aparecerá en los catálogos.'),
         );
-        _loadProductos();
+        _loadProductosWithLoading();
       } else {
         AppTheme.showSnackBar(
           context,
