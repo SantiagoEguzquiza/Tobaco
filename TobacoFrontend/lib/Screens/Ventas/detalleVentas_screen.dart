@@ -400,6 +400,42 @@ class DetalleVentaScreen extends StatelessWidget {
             )).toList(),
             const Divider(height: 20),
           ],
+          // Mostrar descuento si aplica
+          if (venta.cliente.descuentoGlobal > 0) ...[
+            const SizedBox(height: 10),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Icons.local_offer,
+                      size: 16,
+                      color: Colors.green.shade600,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Descuento Global (${venta.cliente.descuentoGlobal.toStringAsFixed(1)}%):',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.green.shade600,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+                Text(
+                  '-\$${_formatearPrecio(_calcularDescuento())}',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.red.shade600,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+          ],
           // Total de la venta
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -489,6 +525,16 @@ class DetalleVentaScreen extends StatelessWidget {
   String _formatearPrecio(double precio) {
     return precio.toStringAsFixed(2).replaceAllMapped(
         RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (match) => '${match[1]}.');
+  }
+
+  double _calcularDescuento() {
+    if (venta.cliente.descuentoGlobal > 0) {
+      // Calcular el subtotal sumando todos los productos
+      final subtotal = venta.ventasProductos.fold(
+        0.0, (sum, producto) => sum + (producto.precio * producto.cantidad));
+      return subtotal * (venta.cliente.descuentoGlobal / 100);
+    }
+    return 0.0;
   }
 
   // Widget para formatear precios con decimales más pequeños y grises
