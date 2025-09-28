@@ -28,6 +28,7 @@ class _ProductosScreenState extends State<ProductosScreen> {
   String? errorMessage;
   List<Producto> productos = [];
   List<Categoria> categorias = [];
+  final TextEditingController _searchController = TextEditingController();
 
   // Helper method to safely parse color hex
   Color _parseColor(String colorHex) {
@@ -45,6 +46,12 @@ class _ProductosScreenState extends State<ProductosScreen> {
   void initState() {
     super.initState();
     _loadProductos();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadProductos() async {
@@ -696,6 +703,7 @@ class _ProductosScreenState extends State<ProductosScreen> {
                       ],
                     ),
                     child: TextField(
+                      controller: _searchController,
                       cursorColor: AppTheme.primaryColor,
                       style: const TextStyle(fontSize: 16),
                       decoration: InputDecoration(
@@ -719,6 +727,7 @@ class _ProductosScreenState extends State<ProductosScreen> {
                                   setState(() {
                                     searchQuery = '';
                                   });
+                                  _searchController.clear();
                                 },
                               )
                             : null,

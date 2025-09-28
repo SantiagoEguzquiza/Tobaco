@@ -36,11 +36,22 @@ class _SeleccionarProductosScreenState
   bool isLoading = true;
   String? errorMessage;
   String searchQuery = '';
+  final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     loadProductos();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    // Dispose de los controllers de cantidad
+    for (var controller in cantidadControllers.values) {
+      controller.dispose();
+    }
+    super.dispose();
   }
 
   Future<void> loadProductos() async {
@@ -293,6 +304,7 @@ class _SeleccionarProductosScreenState
                           ],
                         ),
                         child: TextField(
+                          controller: _searchController,
                           decoration: InputDecoration(
                             hintText: 'Buscar productos por nombre...',
                             hintStyle: TextStyle(
@@ -318,6 +330,7 @@ class _SeleccionarProductosScreenState
                                           selectedCategory = categorias.first.nombre;
                                         }
                                       });
+                                      _searchController.clear();
                                     },
                                   )
                                 : null,
