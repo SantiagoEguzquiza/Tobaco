@@ -113,4 +113,13 @@ class ProductoProvider with ChangeNotifier {
       return cleanMessage;
     }
   }
+
+  Future<Map<String, dynamic>> obtenerProductosPaginados(int page, int pageSize) async {
+    try {
+      return await _productoService.obtenerProductosPaginados(page, pageSize);
+    } catch (e) {
+      debugPrint('Error al obtener productos paginados: $e');
+      rethrow;
+    }
+  }
 }

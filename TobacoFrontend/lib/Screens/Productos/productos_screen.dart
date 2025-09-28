@@ -29,6 +29,15 @@ class _ProductosScreenState extends State<ProductosScreen> {
   List<Producto> productos = [];
   List<Categoria> categorias = [];
 
+  // Variables para infinite scroll
+  bool _isLoadingMore = false;
+  bool _hasMoreData = true;
+  int _currentPage = 1;
+  final int _pageSize = 20;
+  
+  // ScrollController para detectar cuando llegar al final
+  final ScrollController _scrollController = ScrollController();
+
   // Helper method to safely parse color hex
   Color _parseColor(String colorHex) {
     try {
@@ -45,12 +54,29 @@ class _ProductosScreenState extends State<ProductosScreen> {
   void initState() {
     super.initState();
     _loadProductos();
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >= 
+        _scrollController.position.maxScrollExtent - 200) {
+      _cargarMasProductos();
+    }
   }
 
   Future<void> _loadProductos() async {
     setState(() {
       isLoading = true;
       errorMessage = null;
+      _currentPage = 1;
+      productos.clear();
+      _hasMoreData = true;
     });
 
     try {
@@ -60,13 +86,16 @@ class _ProductosScreenState extends State<ProductosScreen> {
       final categoriasProvider =
           Provider.of<CategoriasProvider>(context, listen: false);
 
-      // Obtener productos y categorías
-      await productoProvider.obtenerProductos();
+      // Obtener categorías
       await categoriasProvider.obtenerCategorias();
 
+      // Obtener primera página de productos
+      final data = await productoProvider.obtenerProductosPaginados(_currentPage, _pageSize);
+
       setState(() {
-        productos = productoProvider.productos;
+        productos = List<Producto>.from(data['productos']);
         categorias = categoriasProvider.categorias;
+        _hasMoreData = data['hasNextPage'];
         isLoading = false;
       });
     } catch (e) {
@@ -75,6 +104,33 @@ class _ProductosScreenState extends State<ProductosScreen> {
         errorMessage = 'Error al cargar los Productos: $e';
       });
       log('Error al cargar los Productos: $e', level: 1000);
+    }
+  }
+
+  Future<void> _cargarMasProductos() async {
+    if (_isLoadingMore || !_hasMoreData) return;
+    
+    setState(() {
+      _isLoadingMore = true;
+    });
+
+    try {
+      final productoProvider =
+          Provider.of<ProductoProvider>(context, listen: false);
+      
+      final data = await productoProvider.obtenerProductosPaginados(_currentPage + 1, _pageSize);
+      
+      setState(() {
+        productos.addAll(List<Producto>.from(data['productos']));
+        _currentPage++;
+        _hasMoreData = data['hasNextPage'];
+        _isLoadingMore = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoadingMore = false;
+      });
+      log('Error al cargar más productos: $e', level: 1000);
     }
   }
 
@@ -563,6 +619,7 @@ class _ProductosScreenState extends State<ProductosScreen> {
               ),
             )
           : SingleChildScrollView(
+              controller: _scrollController,
               padding: const EdgeInsets.all(16.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -865,8 +922,11 @@ class _ProductosScreenState extends State<ProductosScreen> {
                     ListView.builder(
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
-                      itemCount: filteredProductos.length,
+                      itemCount: filteredProductos.length + (_isLoadingMore ? 1 : 0),
                       itemBuilder: (context, index) {
+                        if (index == filteredProductos.length) {
+                          return _buildLoadingIndicator();
+                        }
                         final producto = filteredProductos[index];
                         return Container(
                           margin: const EdgeInsets.only(bottom: 12),
@@ -1250,5 +1310,16 @@ class _ProductosScreenState extends State<ProductosScreen> {
         );
       }
     }
+  }
+
+  Widget _buildLoadingIndicator() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      child: const Center(
+        child: CircularProgressIndicator(
+          valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
+        ),
+      ),
+    );
   }
 }
