@@ -400,6 +400,42 @@ class DetalleVentaScreen extends StatelessWidget {
             )).toList(),
             const Divider(height: 20),
           ],
+          // Mostrar descuento si aplica
+          if (venta.cliente.descuentoGlobal > 0) ...[
+            const SizedBox(height: 10),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Icons.local_offer,
+                      size: 16,
+                      color: Colors.green.shade600,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Descuento Global (${venta.cliente.descuentoGlobal.toStringAsFixed(1)}%):',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.green.shade600,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+                Text(
+                  '-\$${_formatearPrecio(_calcularDescuento())}',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.red.shade600,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+          ],
           // Total de la venta
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -491,6 +527,16 @@ class DetalleVentaScreen extends StatelessWidget {
         RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (match) => '${match[1]}.');
   }
 
+  double _calcularDescuento() {
+    if (venta.cliente.descuentoGlobal > 0) {
+      // Calcular el subtotal sumando todos los productos
+      final subtotal = venta.ventasProductos.fold(
+        0.0, (sum, producto) => sum + (producto.precio * producto.cantidad));
+      return subtotal * (venta.cliente.descuentoGlobal / 100);
+    }
+    return 0.0;
+  }
+
   // Widget para formatear precios con decimales más pequeños y grises
   Widget _formatearPrecioConDecimales(double precio, {Color? color}) {
     final precioStr = precio.toStringAsFixed(2);
@@ -545,21 +591,17 @@ class DetalleVentaScreen extends StatelessWidget {
       try {
         await VentasProvider().eliminarVenta(venta.id!);
         if (context.mounted) {
-          Navigator.of(context).pop();
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Venta eliminada correctamente'),
-              backgroundColor: Colors.green,
-            ),
+          Navigator.of(context).pop(true); // Return true to indicate deletion
+          AppTheme.showSnackBar(
+            context,
+            AppTheme.successSnackBar('Venta eliminada correctamente'),
           );
         }
       } catch (e) {
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error al eliminar venta: $e'),
-              backgroundColor: Colors.red,
-            ),
+          AppTheme.showSnackBar(
+            context,
+            AppTheme.errorSnackBar('Error al eliminar venta: $e'),
           );
         }
       }

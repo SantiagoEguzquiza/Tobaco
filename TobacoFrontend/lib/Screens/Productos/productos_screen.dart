@@ -11,6 +11,7 @@ import 'package:tobaco/Services/Categoria_Service/categoria_provider.dart';
 import 'package:tobaco/Services/Productos_Service/productos_provider.dart';
 import 'package:tobaco/Theme/app_theme.dart'; // Importa el tema
 import 'package:tobaco/Helpers/color_picker.dart';
+import 'package:tobaco/Utils/loading_utils.dart';
 import 'dart:developer';
 
 class ProductosScreen extends StatefulWidget {
@@ -28,6 +29,15 @@ class _ProductosScreenState extends State<ProductosScreen> {
   List<Producto> productos = [];
   List<Categoria> categorias = [];
 
+  // Variables para infinite scroll
+  bool _isLoadingMore = false;
+  bool _hasMoreData = true;
+  int _currentPage = 1;
+  final int _pageSize = 20;
+  
+  // ScrollController para detectar cuando llegar al final
+  final ScrollController _scrollController = ScrollController();
+
   // Helper method to safely parse color hex
   Color _parseColor(String colorHex) {
     try {
@@ -44,12 +54,29 @@ class _ProductosScreenState extends State<ProductosScreen> {
   void initState() {
     super.initState();
     _loadProductos();
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >= 
+        _scrollController.position.maxScrollExtent - 200) {
+      _cargarMasProductos();
+    }
   }
 
   Future<void> _loadProductos() async {
     setState(() {
       isLoading = true;
       errorMessage = null;
+      _currentPage = 1;
+      productos.clear();
+      _hasMoreData = true;
     });
 
     try {
@@ -59,13 +86,16 @@ class _ProductosScreenState extends State<ProductosScreen> {
       final categoriasProvider =
           Provider.of<CategoriasProvider>(context, listen: false);
 
-      // Obtener productos y categorías
-      await productoProvider.obtenerProductos();
+      // Obtener categorías
       await categoriasProvider.obtenerCategorias();
 
+      // Obtener primera página de productos
+      final data = await productoProvider.obtenerProductosPaginados(_currentPage, _pageSize);
+
       setState(() {
-        productos = productoProvider.productos;
+        productos = List<Producto>.from(data['productos']);
         categorias = categoriasProvider.categorias;
+        _hasMoreData = data['hasNextPage'];
         isLoading = false;
       });
     } catch (e) {
@@ -75,6 +105,43 @@ class _ProductosScreenState extends State<ProductosScreen> {
       });
       log('Error al cargar los Productos: $e', level: 1000);
     }
+  }
+
+  Future<void> _cargarMasProductos() async {
+    if (_isLoadingMore || !_hasMoreData) return;
+    
+    setState(() {
+      _isLoadingMore = true;
+    });
+
+    try {
+      final productoProvider =
+          Provider.of<ProductoProvider>(context, listen: false);
+      
+      final data = await productoProvider.obtenerProductosPaginados(_currentPage + 1, _pageSize);
+      
+      setState(() {
+        productos.addAll(List<Producto>.from(data['productos']));
+        _currentPage++;
+        _hasMoreData = data['hasNextPage'];
+        _isLoadingMore = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoadingMore = false;
+      });
+      log('Error al cargar más productos: $e', level: 1000);
+    }
+  }
+
+  Future<void> _loadProductosWithLoading() async {
+    await LoadingUtils.executeWithLoading(
+      context,
+      () async {
+        await _loadProductos();
+      },
+      loadingMessage: 'Cargando productos...',
+    );
   }
 
   @override
@@ -196,7 +263,7 @@ class _ProductosScreenState extends State<ProductosScreen> {
                                     colorHex: selectedColor,
                                   ));
                                   Navigator.of(context).pop();
-                                  _loadProductos();
+                                  _loadProductosWithLoading();
                                 }
                               },
                               confirmText: 'Agregar',
@@ -332,7 +399,7 @@ class _ProductosScreenState extends State<ProductosScreen> {
                                                                             .pop();
                                                                         Navigator.of(context)
                                                                             .pop();
-                                                                        _loadProductos();
+                                                                        _loadProductosWithLoading();
                                                                       }
                                                                     },
                                                                     child: const Text(
@@ -473,33 +540,21 @@ class _ProductosScreenState extends State<ProductosScreen> {
                                                                  Navigator.of(
                                                                          context)
                                                                      .pop();
-                                                                 _loadProductos();
+                                                                 _loadProductosWithLoading();
                                                                  
                                                                  // Mostrar mensaje de éxito
                                                                  if (mounted) {
-                                                                   ScaffoldMessenger.of(context).showSnackBar(
-                                                                     SnackBar(
-                                                                       content: Text('Categoría "${categoria.nombre}" eliminada exitosamente'),
-                                                                       backgroundColor: Colors.green,
-                                                                       behavior: SnackBarBehavior.floating,
-                                                                       shape: RoundedRectangleBorder(
-                                                                         borderRadius: BorderRadius.circular(10),
-                                                                       ),
-                                                                     ),
+                                                                   AppTheme.showSnackBar(
+                                                                     context,
+                                                                     AppTheme.successSnackBar('Categoría "${categoria.nombre}" eliminada exitosamente'),
                                                                    );
                                                                  }
                                                                } catch (e) {
                                                                  // Mostrar mensaje de error si falla la eliminación
                                                                  if (mounted) {
-                                                                   ScaffoldMessenger.of(context).showSnackBar(
-                                                                     SnackBar(
-                                                                       content: Text('Error al eliminar la categoría: $e'),
-                                                                       backgroundColor: Colors.red,
-                                                                       behavior: SnackBarBehavior.floating,
-                                                                       shape: RoundedRectangleBorder(
-                                                                         borderRadius: BorderRadius.circular(10),
-                                                                       ),
-                                                                     ),
+                                                                   AppTheme.showSnackBar(
+                                                                     context,
+                                                                     AppTheme.errorSnackBar('Error al eliminar la categoría: $e'),
                                                                    );
                                                                  }
                                                                  Navigator.of(context).pop();
@@ -544,7 +599,7 @@ class _ProductosScreenState extends State<ProductosScreen> {
         ],
       ),
       body: isLoading
-          ? Center(
+          ? const Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -552,11 +607,11 @@ class _ProductosScreenState extends State<ProductosScreen> {
                     valueColor:
                         AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
                   ),
-                  const SizedBox(height: 16),
+                  SizedBox(height: 16),
                   Text(
                     'Cargando productos...',
                     style: TextStyle(
-                      color: Colors.grey.shade600,
+                      color: Colors.grey,
                       fontSize: 16,
                     ),
                   ),
@@ -564,6 +619,7 @@ class _ProductosScreenState extends State<ProductosScreen> {
               ),
             )
           : SingleChildScrollView(
+              controller: _scrollController,
               padding: const EdgeInsets.all(16.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -635,17 +691,9 @@ class _ProductosScreenState extends State<ProductosScreen> {
                           child: ElevatedButton.icon(
                             onPressed: () async {
                               if (categorias.isEmpty) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: const Text(
-                                        'Primero debes crear una categoría'),
-                                    duration: const Duration(seconds: 3),
-                                    backgroundColor: Colors.red,
-                                    behavior: SnackBarBehavior.floating,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                  ),
+                                AppTheme.showSnackBar(
+                                  context,
+                                  AppTheme.warningSnackBar('Primero debes crear una categoría'),
                                 );
                                 return;
                               }
@@ -656,7 +704,9 @@ class _ProductosScreenState extends State<ProductosScreen> {
                                       const NuevoProductoScreen(),
                                 ),
                               );
-                              _loadProductos();
+                              if (result == true) {
+                                _loadProductosWithLoading();
+                              }
                             },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppTheme.primaryColor,
@@ -872,8 +922,11 @@ class _ProductosScreenState extends State<ProductosScreen> {
                     ListView.builder(
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
-                      itemCount: filteredProductos.length,
+                      itemCount: filteredProductos.length + (_isLoadingMore ? 1 : 0),
                       itemBuilder: (context, index) {
+                        if (index == filteredProductos.length) {
+                          return _buildLoadingIndicator();
+                        }
                         final producto = filteredProductos[index];
                         return Container(
                           margin: const EdgeInsets.only(bottom: 12),
@@ -892,8 +945,8 @@ class _ProductosScreenState extends State<ProductosScreen> {
                             color: Colors.transparent,
                             child: InkWell(
                               borderRadius: BorderRadius.circular(16),
-                              onTap: () {
-                                Navigator.push(
+                              onTap: () async {
+                                final result = await Navigator.push(
                                   context,
                                   MaterialPageRoute(
                                     builder: (context) => DetalleProductoScreen(
@@ -901,6 +954,10 @@ class _ProductosScreenState extends State<ProductosScreen> {
                                     ),
                                   ),
                                 );
+                                // If a product was deleted, refresh the list
+                                if (result == true) {
+                                  _loadProductosWithLoading();
+                                }
                               },
                               child: Padding(
                                 padding: const EdgeInsets.all(16),
@@ -1019,7 +1076,7 @@ class _ProductosScreenState extends State<ProductosScreen> {
                                               size: 20,
                                             ),
                                             onPressed: () async {
-                                              await Navigator.push(
+                                              final result = await Navigator.push(
                                                 context,
                                                 MaterialPageRoute(
                                                   builder: (context) =>
@@ -1028,7 +1085,9 @@ class _ProductosScreenState extends State<ProductosScreen> {
                                                   ),
                                                 ),
                                               );
-                                              _loadProductos();
+                                              if (result == true) {
+                                                _loadProductosWithLoading();
+                                              }
                                             },
                                           ),
                                         ),
@@ -1075,12 +1134,42 @@ class _ProductosScreenState extends State<ProductosScreen> {
                                                                     ProductoProvider>(
                                                                 context,
                                                                 listen: false);
-                                                        await productoProvider
-                                                            .eliminarProducto(
-                                                                producto.id!);
-                                                        _loadProductos();
-                                                        Navigator.of(context)
-                                                            .pop();
+                                                        
+                                                        if (producto.id != null) {
+                                                          try {
+                                                            // Intentar eliminación física primero
+                                                            await productoProvider.eliminarProducto(producto.id!);
+                                                            
+                                                            // Si llegamos aquí, la eliminación fue exitosa (sin ventas vinculadas)
+                                                            AppTheme.showSnackBar(
+                                                              context,
+                                                              AppTheme.successSnackBar('Producto eliminado con éxito'),
+                                                            );
+                                                            _loadProductosWithLoading();
+                                                            Navigator.of(context).pop();
+                                                            
+                                                          } catch (e) {
+                                                            // Si es un error 409 (Conflict) - producto con ventas vinculadas
+                                                            if (e.toString().contains('ventas vinculadas') || 
+                                                                e.toString().contains('Conflict')) {
+                                                              Navigator.of(context).pop(); // Cerrar el diálogo de confirmación
+                                                              _showDeactivateDialog(context, producto);
+                                                            } else {
+                                                              // Otros errores
+                                                              AppTheme.showSnackBar(
+                                                                context,
+                                                                AppTheme.errorSnackBar(e.toString().replaceFirst('Exception: ', '')),
+                                                              );
+                                                              Navigator.of(context).pop();
+                                                            }
+                                                          }
+                                                        } else {
+                                                          AppTheme.showSnackBar(
+                                                            context,
+                                                            AppTheme.errorSnackBar('Error: ID del producto no válido'),
+                                                          );
+                                                          Navigator.of(context).pop();
+                                                        }
                                                       },
                                                       style: ElevatedButton
                                                           .styleFrom(
@@ -1112,6 +1201,125 @@ class _ProductosScreenState extends State<ProductosScreen> {
                 ],
               ),
             ),
+    );
+  }
+
+  void _showDeactivateDialog(BuildContext context, Producto producto) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Row(
+            children: [
+              Icon(
+                Icons.warning_amber_rounded,
+                color: Colors.orange,
+                size: 28,
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text(
+                  'No se puede eliminar',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'El producto "${producto.nombre}" no se puede eliminar porque tiene ventas vinculadas.',
+                style: const TextStyle(fontSize: 16),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                '¿Desea desactivarlo en su lugar?',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Icon(
+                    Icons.check_circle_outline,
+                    color: Colors.blue,
+                    size: 16,
+                  ),
+                  const SizedBox(width: 8),
+                  const Expanded(
+                    child: Text(
+                      'El producto se ocultará de los catálogos pero se mantendrá en las ventas existentes',
+                      style: TextStyle(fontSize: 14),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                Navigator.of(context).pop();
+                await _deactivateProduct(context, producto);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orange,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: const Text('Desactivar'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _deactivateProduct(BuildContext context, Producto producto) async {
+    if (producto.id != null) {
+      final productoProvider = Provider.of<ProductoProvider>(context, listen: false);
+      final errorMessage = await productoProvider
+          .desactivarProductoConMensaje(producto.id!);
+      
+      if (errorMessage == null) {
+        AppTheme.showSnackBar(
+          context,
+          AppTheme.successSnackBar('Producto desactivado exitosamente. Ya no aparecerá en los catálogos.'),
+        );
+        _loadProductosWithLoading();
+      } else {
+        AppTheme.showSnackBar(
+          context,
+          AppTheme.errorSnackBar(errorMessage),
+        );
+      }
+    }
+  }
+
+  Widget _buildLoadingIndicator() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      child: const Center(
+        child: CircularProgressIndicator(
+          valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
+        ),
+      ),
     );
   }
 }

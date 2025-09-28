@@ -145,13 +145,10 @@ class _SeleccionarProductosConPreciosEspecialesScreenState
       }
 
       // Mostrar mensaje de éxito
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            '${producto.nombre} agregado a la venta${_tienePrecioEspecial(producto) ? ' (precio especial aplicado)' : ''}',
-          ),
-          backgroundColor: AppTheme.primaryColor,
-          duration: const Duration(seconds: 2),
+      AppTheme.showSnackBar(
+        context,
+        AppTheme.successSnackBar(
+          '${producto.nombre} agregado a la venta${_tienePrecioEspecial(producto) ? ' (precio especial aplicado)' : ''}',
         ),
       );
 

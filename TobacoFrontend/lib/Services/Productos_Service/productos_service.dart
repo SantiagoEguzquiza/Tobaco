@@ -103,15 +103,102 @@ class ProductoService {
         headers: headers,
       );
 
-      if (response.statusCode != 200) {
+      if (response.statusCode == 200) {
+        debugPrint('Producto eliminado exitosamente');
+      } else if (response.statusCode == 409) {
+        // Manejar conflicto (producto con ventas vinculadas)
+        final responseBody = jsonDecode(response.body);
+        final message = responseBody['message'] ?? 'No se puede eliminar el producto';
+        debugPrint('Error de conflicto recibido: $message');
+        throw Exception(message);
+      } else if (response.statusCode == 400) {
+        // Manejar error de validación
+        final responseBody = jsonDecode(response.body);
+        final message = responseBody['message'] ?? 'No se puede eliminar el producto';
+        debugPrint('Error de validación recibido: $message');
+        throw Exception(message);
+      } else {
+        debugPrint('Error del servidor: ${response.statusCode} - ${response.body}');
         throw Exception(
             'Error al eliminar el producto. Código de estado: ${response.statusCode}');
-      } else {
-        debugPrint('Producto eliminado exitosamente');
       }
     } catch (e) {
       debugPrint('Error al eliminar el producto: $e');
       rethrow; 
+    }
+  }
+
+  Future<void> desactivarProducto(int id) async {
+    try {
+      final headers = await AuthService.getAuthHeaders();
+      final response = await Apihandler.client.post(
+        Uri.parse('$baseUrl/Productos/$id/deactivate'),
+        headers: headers,
+      );
+
+      if (response.statusCode == 200) {
+        debugPrint('Producto desactivado exitosamente');
+      } else {
+        final responseBody = jsonDecode(response.body);
+        final message = responseBody['message'] ?? 'Error al desactivar el producto';
+        throw Exception(message);
+      }
+    } catch (e) {
+      debugPrint('Error al desactivar el producto: $e');
+      rethrow; 
+    }
+  }
+
+  Future<void> activarProducto(int id) async {
+    try {
+      final headers = await AuthService.getAuthHeaders();
+      final response = await Apihandler.client.post(
+        Uri.parse('$baseUrl/Productos/$id/activate'),
+        headers: headers,
+      );
+
+      if (response.statusCode == 200) {
+        debugPrint('Producto activado exitosamente');
+      } else {
+        final responseBody = jsonDecode(response.body);
+        final message = responseBody['message'] ?? 'Error al activar el producto';
+        throw Exception(message);
+      }
+    } catch (e) {
+      debugPrint('Error al activar el producto: $e');
+      rethrow; 
+    }
+  }
+
+  Future<Map<String, dynamic>> obtenerProductosPaginados(int page, int pageSize) async {
+    try {
+      final headers = await AuthService.getAuthHeaders();
+      final response = await Apihandler.client.get(
+        Uri.parse('$baseUrl/Productos/paginados?page=$page&pageSize=$pageSize'),
+        headers: headers,
+      );
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = jsonDecode(response.body);
+        final List<dynamic> productosJson = data['productos'];
+        final List<Producto> productos = productosJson.map((json) => Producto.fromJson(json)).toList();
+        
+        return {
+          'productos': productos,
+          'totalItems': data['totalItems'],
+          'totalPages': data['totalPages'],
+          'currentPage': data['currentPage'],
+          'pageSize': data['pageSize'],
+          'hasNextPage': data['hasNextPage'],
+          'hasPreviousPage': data['hasPreviousPage'],
+        };
+      } else {
+        throw Exception(
+            'Error al obtener los productos paginados. Código de estado: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('Error al obtener los productos paginados: $e');
+      rethrow;
     }
   }
 }

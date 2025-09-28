@@ -5,12 +5,13 @@ import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:tobaco/Models/Cliente.dart';
 import 'package:tobaco/Models/ProductoSeleccionado.dart';
 import 'package:tobaco/Models/VentasProductos.dart';
+import 'package:tobaco/Models/PrecioEspecial.dart';
 import 'package:tobaco/Screens/Clientes/wizardNuevoCliente_screen.dart';
 import 'package:tobaco/Screens/Ventas/metodoPago_screen.dart';
 import 'package:tobaco/Screens/Ventas/seleccionarProducto_screen.dart';
-import 'package:tobaco/Screens/Ventas/seleccionarProductoConPreciosEspeciales_screen.dart';
 import 'package:tobaco/Services/Clientes_Service/clientes_provider.dart';
 import 'package:tobaco/Services/Ventas_Service/ventas_provider.dart';
+import 'package:tobaco/Services/PrecioEspecialService.dart';
 import 'package:tobaco/Theme/app_theme.dart';
 import 'package:tobaco/Models/Ventas.dart';
 import 'package:tobaco/Theme/confirmAnimation.dart';
@@ -30,10 +31,9 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
   bool isLoadingClientes = false;
   bool isProcessingVenta = false;
   List<ProductoSeleccionado> productosSeleccionados = [];
+  Map<int, double> preciosEspeciales = {}; // Cache de precios especiales
   Timer? _debounceTimer;
   String? errorMessage;
-  final VentasProvider _ventasProvider = VentasProvider();
-  final ClienteProvider _clientesProvider = ClienteProvider();
 
   @override
   void initState() {
@@ -53,6 +53,23 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
     _debounceTimer = Timer(const Duration(milliseconds: 500), () {
       buscarClientes(_searchController.text);
     });
+  }
+
+  Future<void> _cargarPreciosEspeciales() async {
+    if (clienteSeleccionado == null) return;
+
+    try {
+      final precios = await PrecioEspecialService.getPreciosEspecialesByCliente(clienteSeleccionado!.id!);
+      setState(() {
+        preciosEspeciales.clear();
+        for (var precio in precios) {
+          preciosEspeciales[precio.productoId] = precio.precio;
+        }
+      });
+    } catch (e) {
+      // Si hay error cargando precios especiales, continuar sin ellos
+      print('Error cargando precios especiales: $e');
+    }
   }
 
   void buscarClientes(String query) async {
@@ -98,6 +115,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
       errorMessage = null;
     });
     _searchController.clear();
+    _cargarPreciosEspeciales(); // Cargar precios especiales del cliente
   }
 
   void cambiarCliente() {
@@ -107,6 +125,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
       isSearching = true;
       errorMessage = null;
       productosSeleccionados = [];
+      preciosEspeciales.clear(); // Limpiar precios especiales
     });
     _searchController.clear();
   }
@@ -127,6 +146,23 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
   double _calcularTotal() {
     return productosSeleccionados.fold(
         0.0, (sum, ps) => sum + (ps.precio * ps.cantidad));
+  }
+
+  double _calcularTotalConDescuento() {
+    final subtotal = _calcularTotal();
+    if (clienteSeleccionado != null && clienteSeleccionado!.descuentoGlobal > 0) {
+      final descuento = subtotal * (clienteSeleccionado!.descuentoGlobal / 100);
+      return subtotal - descuento;
+    }
+    return subtotal;
+  }
+
+  double _calcularDescuento() {
+    if (clienteSeleccionado != null && clienteSeleccionado!.descuentoGlobal > 0) {
+      final subtotal = _calcularTotal();
+      return subtotal * (clienteSeleccionado!.descuentoGlobal / 100);
+    }
+    return 0.0;
   }
 
   String _formatearPrecio(double precio) {
@@ -243,14 +279,13 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
   Future<void> _confirmarVenta() async {
     if (!_puedeConfirmarVenta()) return;
 
-    // Mostrar diálogo de confirmación
+    // Mostrar diálogo de confirmación simple
     final confirmar = await showDialog<bool>(
       context: context,
       builder: (BuildContext context) {
         return AppTheme.confirmDialogStyle(
           title: 'Confirmar Venta',
-          content:
-              '¿Está seguro de que desea finalizar la venta por \$${_formatearPrecio(_calcularTotal())}?',
+          content: '¿Está seguro de que desea finalizar la venta por \$${_formatearPrecio(_calcularTotalConDescuento())}?',
           onConfirm: () => Navigator.of(context).pop(true),
           onCancel: () => Navigator.of(context).pop(false),
         );
@@ -280,7 +315,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
         clienteId: clienteSeleccionado!.id!,
         cliente: clienteSeleccionado!,
         ventasProductos: productos,
-        total: _calcularTotal(),
+        total: _calcularTotalConDescuento(),
         fecha: DateTime.now(),
       );
 
@@ -303,49 +338,33 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
       }
 
       // Guardar la venta en la base de datos
-      try {
-        await _ventasProvider.crearVenta(ventaConPagos);
-        
-        // Mostrar animación de confirmación solo si se guardó la venta
-        if (mounted) {
-          showGeneralDialog(
-            context: context,
-            barrierDismissible: false,
-            barrierColor: Colors.transparent,
-            transitionDuration: const Duration(milliseconds: 0),
-            pageBuilder: (context, animation, secondaryAnimation) {
-              return AnnotatedRegion<SystemUiOverlayStyle>(
-                value: SystemUiOverlayStyle.light.copyWith(
-                  statusBarColor: Colors.green,
-                  systemNavigationBarColor: Colors.green,
+      await VentasProvider().crearVenta(ventaConPagos);
+
+      // Mostrar animación de confirmación solo si se guardó la venta
+      if (mounted) {
+        showGeneralDialog(
+          context: context,
+          barrierDismissible: false,
+          barrierColor: Colors.transparent,
+          transitionDuration: const Duration(milliseconds: 0),
+          pageBuilder: (context, animation, secondaryAnimation) {
+            return AnnotatedRegion<SystemUiOverlayStyle>(
+              value: SystemUiOverlayStyle.light.copyWith(
+                statusBarColor: Colors.green,
+                systemNavigationBarColor: Colors.green,
+              ),
+              child: Scaffold(
+                backgroundColor: Colors.transparent,
+                body: VentaConfirmadaAnimacion(
+                  onFinish: () {
+                    Navigator.of(context).pop(); // cerrar animación
+                    Navigator.of(context).pop(); // volver atrás
+                  },
                 ),
-                child: Scaffold(
-                  backgroundColor: Colors.transparent,
-                  body: VentaConfirmadaAnimacion(
-                    onFinish: () {
-                      Navigator.of(context).pop(); // cerrar animación
-                      Navigator.of(context).pop(); // volver atrás
-                    },
-                  ),
-                ),
-              );
-            },
-          );
-        }
-      } catch (e) {
-        setState(() {
-          isProcessingVenta = false;
-        });
-        
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error al guardar la venta: $e'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-        return;
+              ),
+            );
+          },
+        );
       }
     } catch (e) {
       setState(() {
@@ -953,7 +972,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                                     context,
                                     MaterialPageRoute(
                                       builder: (context) =>
-                                          SeleccionarProductosConPreciosEspecialesScreen(
+                                          SeleccionarProductosScreen(
                                         productosYaSeleccionados:
                                             productosSeleccionados,
                                         cliente: clienteSeleccionado,
@@ -1270,6 +1289,45 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+                            // Mostrar descuento si aplica
+                            if (clienteSeleccionado != null && clienteSeleccionado!.descuentoGlobal > 0) ...[
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.local_offer,
+                                    size: 16,
+                                    color: Colors.green.shade600,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'Descuento ${clienteSeleccionado!.descuentoGlobal.toStringAsFixed(1)}%',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.green.shade600,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Subtotal: \$${_formatearPrecio(_calcularTotal())}',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey.shade600,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Descuento: -\$${_formatearPrecio(_calcularDescuento())}',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.red.shade600,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                            ],
+                            
                             Text(
                               'Total',
                               style: TextStyle(
@@ -1279,7 +1337,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                               ),
                             ),
                             _formatearPrecioConDecimales(
-                              _calcularTotal(),
+                              _calcularTotalConDescuento(),
                               color: AppTheme.primaryColor,
                               fontSize: 22.0,
                             ),

@@ -84,4 +84,13 @@ class ClienteProvider with ChangeNotifier {
     }
     return _clientesConDeuda;
   }
+
+  Future<Map<String, dynamic>> obtenerClientesConDeudaPaginados(int page, int pageSize) async {
+    try {
+      return await _clienteService.obtenerClientesConDeudaPaginados(page, pageSize);
+    } catch (e) {
+      debugPrint('Error al obtener clientes con deuda paginados: $e');
+      rethrow;
+    }
+  }
 }
