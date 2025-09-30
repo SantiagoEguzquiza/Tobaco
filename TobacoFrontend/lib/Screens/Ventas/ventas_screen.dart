@@ -21,6 +21,15 @@ class _VentasScreenState extends State<VentasScreen> {
   List<Ventas> ventas = [];
   late ScaffoldMessengerState scaffoldMessenger;
 
+  // Variables para infinite scroll
+  bool _isLoadingMore = false;
+  bool _hasMoreData = true;
+  int _currentPage = 1;
+  final int _pageSize = 20;
+  
+  // ScrollController para detectar cuando llegar al final
+  final ScrollController _scrollController = ScrollController();
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -31,20 +40,38 @@ class _VentasScreenState extends State<VentasScreen> {
   void initState() {
     super.initState();
     _loadVentas();
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >= 
+        _scrollController.position.maxScrollExtent - 200) {
+      _cargarMasVentas();
+    }
   }
 
   Future<void> _loadVentas() async {
     setState(() {
       isLoading = true;
       errorMessage = null;
+      _currentPage = 1;
+      ventas.clear();
+      _hasMoreData = true;
     });
 
     try {
       final ventasProvider = VentasProvider();
-      final List<Ventas> fetchedVentas = await ventasProvider.obtenerVentas();
+      final data = await ventasProvider.obtenerVentasPaginadas(_currentPage, _pageSize);
       if (!mounted) return;
       setState(() {
-        ventas = fetchedVentas;
+        ventas = List<Ventas>.from(data['pedidos']);
+        _hasMoreData = data['hasNextPage'];
         isLoading = false;
       });
     } catch (e) {
@@ -54,6 +81,32 @@ class _VentasScreenState extends State<VentasScreen> {
         errorMessage = 'Error al cargar los pedidos: $e';
       });
       debugPrint('Error al cargar los pedidos: $e');
+    }
+  }
+
+  Future<void> _cargarMasVentas() async {
+    if (_isLoadingMore || !_hasMoreData) return;
+    
+    setState(() {
+      _isLoadingMore = true;
+    });
+
+    try {
+      final ventasProvider = VentasProvider();
+      final data = await ventasProvider.obtenerVentasPaginadas(_currentPage + 1, _pageSize);
+      if (!mounted) return;
+      setState(() {
+        ventas.addAll(List<Ventas>.from(data['pedidos']));
+        _currentPage++;
+        _hasMoreData = data['hasNextPage'];
+        _isLoadingMore = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoadingMore = false;
+      });
+      debugPrint('Error al cargar más ventas: $e');
     }
   }
 
@@ -312,8 +365,12 @@ class _VentasScreenState extends State<VentasScreen> {
           ),
           Expanded(
             child: ListView.builder(
-              itemCount: filteredVentas.length,
+              controller: _scrollController,
+              itemCount: filteredVentas.length + (_isLoadingMore ? 1 : 0),
               itemBuilder: (context, index) {
+                if (index == filteredVentas.length) {
+                  return _buildLoadingIndicator();
+                }
                 final venta = filteredVentas[index];
                 return _buildVentaCard(venta, index);
               },
@@ -665,5 +722,16 @@ class _VentasScreenState extends State<VentasScreen> {
         );
       }
     }
+  }
+
+  Widget _buildLoadingIndicator() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      child: const Center(
+        child: CircularProgressIndicator(
+          valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
+        ),
+      ),
+    );
   }
 }

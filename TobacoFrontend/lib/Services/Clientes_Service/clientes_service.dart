@@ -183,5 +183,37 @@ class ClienteService {
       rethrow;
     }
   }
+
+  Future<Map<String, dynamic>> obtenerClientesConDeudaPaginados(int page, int pageSize) async {
+    try {
+      final headers = await AuthService.getAuthHeaders();
+      final response = await Apihandler.client.get(
+        Uri.parse('$baseUrl/Clientes/con-deuda/paginados?page=$page&pageSize=$pageSize'),
+        headers: headers,
+      );
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = jsonDecode(response.body);
+        final List<dynamic> clientesJson = data['clientes'];
+        final List<Cliente> clientes = clientesJson.map((json) => Cliente.fromJson(json)).toList();
+        
+        return {
+          'clientes': clientes,
+          'totalItems': data['totalItems'],
+          'currentPage': data['currentPage'],
+          'pageSize': data['pageSize'],
+          'totalPages': data['totalPages'],
+          'hasNextPage': data['hasNextPage'],
+          'hasPreviousPage': data['hasPreviousPage'],
+        };
+      } else {
+        throw Exception(
+            'Error al obtener los clientes con deuda paginados. Código de estado: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('Error al obtener los clientes con deuda paginados: $e');
+      rethrow;
+    }
+  }
   
 }
