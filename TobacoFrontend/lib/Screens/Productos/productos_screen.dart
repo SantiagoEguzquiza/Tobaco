@@ -61,6 +61,7 @@ class _ProductosScreenState extends State<ProductosScreen> {
   @override
   void dispose() {
     _scrollController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -69,12 +70,6 @@ class _ProductosScreenState extends State<ProductosScreen> {
         _scrollController.position.maxScrollExtent - 200) {
       _cargarMasProductos();
     }
-  }
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
   }
 
   Future<void> _loadProductos() async {
