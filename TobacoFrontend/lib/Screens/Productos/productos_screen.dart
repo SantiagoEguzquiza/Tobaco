@@ -28,6 +28,7 @@ class _ProductosScreenState extends State<ProductosScreen> {
   String? errorMessage;
   List<Producto> productos = [];
   List<Categoria> categorias = [];
+  final TextEditingController _searchController = TextEditingController();
 
   // Variables para infinite scroll
   bool _isLoadingMore = false;
@@ -68,6 +69,12 @@ class _ProductosScreenState extends State<ProductosScreen> {
         _scrollController.position.maxScrollExtent - 200) {
       _cargarMasProductos();
     }
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadProductos() async {
@@ -151,16 +158,23 @@ class _ProductosScreenState extends State<ProductosScreen> {
       selectedCategory = categorias.first.nombre;
     }
 
-    final filteredProductos = productos.where((producto) {
-      final matchesSearchQuery =
-          producto.nombre.toLowerCase().contains(searchQuery.toLowerCase());
-      final matchesCategory = selectedCategory == null ||
-          producto.categoriaNombre == selectedCategory;
-
-      return matchesSearchQuery && matchesCategory;
-    }).toList()
-      ..sort(
-          (a, b) => a.nombre.toLowerCase().compareTo(b.nombre.toLowerCase()));
+    // Lógica de filtrado: búsqueda global vs filtro por categoría
+    List<Producto> filteredProductos;
+    
+    if (searchQuery.isNotEmpty) {
+      // Modo búsqueda global: buscar en todo el catálogo
+      filteredProductos = productos.where((producto) {
+        return producto.nombre.toLowerCase().contains(searchQuery.toLowerCase());
+      }).toList();
+    } else {
+      // Modo categoría: filtrar por categoría seleccionada
+      filteredProductos = productos.where((producto) {
+        return selectedCategory == null || producto.categoriaNombre == selectedCategory;
+      }).toList();
+    }
+    
+    // Ordenar alfabéticamente
+    filteredProductos.sort((a, b) => a.nombre.toLowerCase().compareTo(b.nombre.toLowerCase()));
 
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
@@ -746,6 +760,7 @@ class _ProductosScreenState extends State<ProductosScreen> {
                       ],
                     ),
                     child: TextField(
+                      controller: _searchController,
                       cursorColor: AppTheme.primaryColor,
                       style: const TextStyle(fontSize: 16),
                       decoration: InputDecoration(
@@ -769,6 +784,7 @@ class _ProductosScreenState extends State<ProductosScreen> {
                                   setState(() {
                                     searchQuery = '';
                                   });
+                                  _searchController.clear();
                                 },
                               )
                             : null,
@@ -801,8 +817,8 @@ class _ProductosScreenState extends State<ProductosScreen> {
 
                   const SizedBox(height: 20),
 
-                  // Filtros de categoría
-                  if (categorias.isNotEmpty) ...[
+                  // Filtros de categoría (solo mostrar cuando NO hay búsqueda activa)
+                  if (categorias.isNotEmpty && searchQuery.isEmpty) ...[
                     const Text(
                       'Categorías',
                       style: TextStyle(
@@ -887,7 +903,7 @@ class _ProductosScreenState extends State<ProductosScreen> {
                           const SizedBox(height: 16),
                           Text(
                             searchQuery.isNotEmpty
-                                ? 'No se encontraron productos'
+                                ? 'Sin resultados'
                                 : 'No hay productos disponibles',
                             style: TextStyle(
                               fontSize: 18,
@@ -898,7 +914,7 @@ class _ProductosScreenState extends State<ProductosScreen> {
                           const SizedBox(height: 8),
                           Text(
                             searchQuery.isNotEmpty
-                                ? 'Intenta con otros términos de búsqueda'
+                                ? 'No se encontraron productos que coincidan con "$searchQuery"'
                                 : 'Crea tu primer producto para comenzar',
                             style: TextStyle(
                               fontSize: 14,
@@ -910,13 +926,62 @@ class _ProductosScreenState extends State<ProductosScreen> {
                       ),
                     ),
                   ] else ...[
-                    const Text(
-                      'Productos',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: AppTheme.textColor,
-                      ),
+                    // Indicador de búsqueda global o título normal
+                    Row(
+                      children: [
+                        if (searchQuery.isNotEmpty) ...[
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: AppTheme.primaryColor.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: AppTheme.primaryColor.withOpacity(0.3),
+                                width: 1,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.search,
+                                  size: 16,
+                                  color: AppTheme.primaryColor,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Búsqueda global',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppTheme.primaryColor,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              '${filteredProductos.length} resultado${filteredProductos.length == 1 ? '' : 's'}',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
+                          ),
+                        ] else ...[
+                          const Text(
+                            'Productos',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.textColor,
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                     const SizedBox(height: 12),
                     ListView.builder(
