@@ -141,4 +141,58 @@ class VentasService {
       rethrow;
     }
   }
+
+  Future<Ventas> obtenerVentaPorId(int id) async {
+    try {
+      final headers = await AuthService.getAuthHeaders();
+      final response = await Apihandler.client.get(
+        Uri.parse('$baseUrl/Pedidos/$id'),
+        headers: headers,
+      );
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> ventaJson = jsonDecode(response.body);
+        return Ventas.fromJson(ventaJson);
+      } else {
+        throw Exception(
+            'Error al obtener la venta. Código de estado: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('Error al obtener la venta: $e');
+      rethrow;
+    }
+  }
+
+  Future<Ventas> obtenerUltimaVenta() async {
+    try {
+      final headers = await AuthService.getAuthHeaders();
+      final response = await Apihandler.client.get(
+        Uri.parse('$baseUrl/Pedidos'),
+        headers: headers,
+      );
+
+      if (response.statusCode == 200) {
+        final List<dynamic> ventasJson = jsonDecode(response.body);
+        
+        if (ventasJson.isEmpty) {
+          throw Exception('No hay ventas disponibles');
+        }
+        
+        // Ordenar por fecha descendente y tomar la primera (más reciente)
+        ventasJson.sort((a, b) {
+          final fechaA = DateTime.parse(a['fecha']);
+          final fechaB = DateTime.parse(b['fecha']);
+          return fechaB.compareTo(fechaA);
+        });
+        
+        return Ventas.fromJson(ventasJson.first);
+      } else {
+        throw Exception(
+            'Error al obtener la última venta. Código de estado: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('Error al obtener la última venta: $e');
+      rethrow;
+    }
+  }
 }

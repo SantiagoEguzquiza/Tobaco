@@ -666,7 +666,8 @@ class _FormaPagoScreenState extends State<FormaPagoScreen> {
                             _puedeConfirmarPago() ? AppTheme.addGreenColor : Colors.grey),
                         icon: const Icon(Icons.check_circle, color: Colors.white),
                         label: const Text(
-                          'Confirmar Pago',
+                           'Confirmar Pago',
+                           
                           style: TextStyle(
                             fontSize: 16,
                             color: Colors.white,
