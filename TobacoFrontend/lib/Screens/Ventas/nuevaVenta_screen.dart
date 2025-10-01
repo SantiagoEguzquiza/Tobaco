@@ -143,6 +143,34 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
     });
   }
 
+  Future<void> _editarProducto(int index) async {
+    try {
+      final productoId = productosSeleccionados[index].id;
+      
+      final resultado = await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => SeleccionarProductosScreen(
+            productosYaSeleccionados: productosSeleccionados,
+            cliente: clienteSeleccionado,
+            scrollToProductId: productoId, // Pasar el ID del producto para hacer scroll
+          ),
+        ),
+      );
+
+      if (resultado != null && resultado is List<ProductoSeleccionado>) {
+        setState(() {
+          productosSeleccionados = resultado;
+        });
+      }
+    } catch (e) {
+      AppTheme.showSnackBar(
+        context,
+        AppTheme.errorSnackBar('Error al editar productos: $e'),
+      );
+    }
+  }
+
   double _calcularTotal() {
     return productosSeleccionados.fold(
         0.0, (sum, ps) => sum + (ps.precio * ps.cantidad));
@@ -1087,146 +1115,97 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                                 ),
                               ],
                             ),
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 10,
-                              ),
-                              child: Row(
-                                children: [
-                                  // Información del producto
-                                  Expanded(
-                                    flex: 4,
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          ps.nombre,
-                                          style: const TextStyle(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.bold,
-                                            color:
-                                                AppTheme.primaryColor,
-                                          ),
-                                          overflow:
-                                              TextOverflow.ellipsis,
-                                          maxLines: 1,
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Row(
-                                          children: [
-                                            _formatearPrecioConDecimales(
-                                                ps.precio),
-                                            const SizedBox(width: 4),
-                                            Text(
-                                              'c/u',
-                                              style: TextStyle(
-                                                fontSize: 14,
-                                                color: Colors
-                                                    .grey.shade600,
-                                                fontWeight:
-                                                    FontWeight.w500,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-
-                                  // Controles de cantidad compactos
-                                  Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      // Botón menos
-                                      IconButton(
-                                        icon: const Icon(
-                                          Icons.remove,
-                                          color: Colors.red,
-                                          size: 18,
-                                        ),
-                                        onPressed: () {
-                                          final nuevaCantidad =
-                                              ps.cantidad - 1;
-                                          if (nuevaCantidad >= 0.5) {
-                                            _actualizarCantidad(
-                                                index, nuevaCantidad);
-                                          } else {
-                                            _eliminarProducto(index);
-                                          }
-                                        },
-                                        constraints:
-                                            const BoxConstraints(
-                                          minWidth: 32,
-                                          minHeight: 32,
-                                        ),
-                                      ),
-
-                                      // Campo cantidad
-                                      Container(
-                                        width: 60,
-                                        height: 32,
-                                        decoration: BoxDecoration(
-                                          border: Border.all(
-                                              color:
-                                                  Colors.grey.shade300),
-                                          borderRadius:
-                                              BorderRadius.circular(6),
-                                          color: Colors.white,
-                                        ),
-                                        child: Center(
-                                          child: Text(
-                                            ps.cantidad % 1 == 0
-                                                ? ps.cantidad
-                                                    .toInt()
-                                                    .toString()
-                                                : ps.cantidad
-                                                    .toStringAsFixed(1),
+                            child: InkWell(
+                              onTap: () => _editarProducto(index),
+                              borderRadius: BorderRadius.circular(12),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 10,
+                                ),
+                                child: Row(
+                                  children: [
+                                    // Información del producto
+                                    Expanded(
+                                      flex: 4,
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            ps.nombre,
                                             style: const TextStyle(
-                                              fontSize: 14,
-                                              fontWeight:
-                                                  FontWeight.bold,
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.bold,
+                                              color:
+                                                  AppTheme.primaryColor,
                                             ),
                                             overflow:
                                                 TextOverflow.ellipsis,
                                             maxLines: 1,
                                           ),
-                                        ),
+                                          const SizedBox(height: 4),
+                                          Row(
+                                            children: [
+                                              _formatearPrecioConDecimales(
+                                                  ps.precio),
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                'c/u',
+                                                style: TextStyle(
+                                                  fontSize: 14,
+                                                  color: Colors
+                                                      .grey.shade600,
+                                                  fontWeight:
+                                                      FontWeight.w500,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
                                       ),
-
-                                      // Botón más
-                                      IconButton(
-                                        icon: const Icon(
-                                          Icons.add,
-                                          color: Colors.green,
-                                          size: 18,
-                                        ),
-                                        onPressed: () {
-                                          _actualizarCantidad(
-                                              index, ps.cantidad + 1);
-                                        },
-                                        constraints:
-                                            const BoxConstraints(
-                                          minWidth: 32,
-                                          minHeight: 32,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-
-                                  const SizedBox(width: 12),
-
-                                  // Subtotal
-                                  Expanded(
-                                    flex: 3,
-                                    child: _formatearPrecioConDecimales(
-                                      subtotal,
-                                      fontSize: 16,
-                                      color: Colors.black87,                                         
                                     ),
-                                  ),
-                                ],
+
+                                    // Cantidad (solo lectura)
+                                    Container(
+                                      width: 60,
+                                      height: 32,
+                                      decoration: BoxDecoration(
+                                        border: Border.all(
+                                            color: Colors.grey.shade300),
+                                        borderRadius: BorderRadius.circular(6),
+                                        color: Colors.white,
+                                      ),
+                                      child: Center(
+                                        child: Text(
+                                          ps.cantidad % 1 == 0
+                                              ? ps.cantidad
+                                                  .toInt()
+                                                  .toString()
+                                              : ps.cantidad
+                                                  .toStringAsFixed(1),
+                                          style: const TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.black,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+
+                                    const SizedBox(width: 12),
+
+                                    // Subtotal
+                                    Expanded(
+                                      flex: 3,
+                                      child: _formatearPrecioConDecimales(
+                                        subtotal,
+                                        fontSize: 16,
+                                        color: Colors.black87,                                         
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           ),
