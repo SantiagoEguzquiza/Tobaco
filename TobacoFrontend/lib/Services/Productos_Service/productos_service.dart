@@ -58,7 +58,7 @@ class ProductoService {
       debugPrint('Response Status: ${response.statusCode}');
       debugPrint('Response Body: ${response.body}');
 
-      if (response.statusCode != 200) {
+      if (response.statusCode != 200 && response.statusCode != 201) {
         throw Exception(
             'Error al guardar el producto. Código de estado: ${response.statusCode}, Respuesta: ${response.body}');
       } else {
@@ -167,6 +167,38 @@ class ProductoService {
     } catch (e) {
       debugPrint('Error al activar el producto: $e');
       rethrow; 
+    }
+  }
+
+  Future<Map<String, dynamic>> obtenerProductosPaginados(int page, int pageSize) async {
+    try {
+      final headers = await AuthService.getAuthHeaders();
+      final response = await Apihandler.client.get(
+        Uri.parse('$baseUrl/Productos/paginados?page=$page&pageSize=$pageSize'),
+        headers: headers,
+      );
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = jsonDecode(response.body);
+        final List<dynamic> productosJson = data['productos'];
+        final List<Producto> productos = productosJson.map((json) => Producto.fromJson(json)).toList();
+        
+        return {
+          'productos': productos,
+          'totalItems': data['totalItems'],
+          'totalPages': data['totalPages'],
+          'currentPage': data['currentPage'],
+          'pageSize': data['pageSize'],
+          'hasNextPage': data['hasNextPage'],
+          'hasPreviousPage': data['hasPreviousPage'],
+        };
+      } else {
+        throw Exception(
+            'Error al obtener los productos paginados. Código de estado: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('Error al obtener los productos paginados: $e');
+      rethrow;
     }
   }
 }

@@ -109,4 +109,36 @@ class VentasService {
       rethrow;
     }
   }
+
+  Future<Map<String, dynamic>> obtenerVentasPaginadas(int page, int pageSize) async {
+    try {
+      final headers = await AuthService.getAuthHeaders();
+      final response = await Apihandler.client.get(
+        Uri.parse('$baseUrl/Pedidos/paginados?page=$page&pageSize=$pageSize'),
+        headers: headers,
+      );
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = jsonDecode(response.body);
+        final List<dynamic> pedidosJson = data['pedidos'];
+        final List<Ventas> ventas = pedidosJson.map((json) => Ventas.fromJson(json)).toList();
+        
+        return {
+          'pedidos': ventas,
+          'totalItems': data['totalItems'],
+          'totalPages': data['totalPages'],
+          'currentPage': data['currentPage'],
+          'pageSize': data['pageSize'],
+          'hasNextPage': data['hasNextPage'],
+          'hasPreviousPage': data['hasPreviousPage'],
+        };
+      } else {
+        throw Exception(
+            'Error al obtener las ventas paginadas. Código de estado: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('Error al obtener las ventas paginadas: $e');
+      rethrow;
+    }
+  }
 }

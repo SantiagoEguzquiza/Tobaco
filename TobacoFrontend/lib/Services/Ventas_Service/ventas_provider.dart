@@ -52,7 +52,13 @@ class VentasProvider with ChangeNotifier {
     }
   }
 
-  
-
+  Future<Map<String, dynamic>> obtenerVentasPaginadas(int page, int pageSize) async {
+    try {
+      return await _ventasService.obtenerVentasPaginadas(page, pageSize);
+    } catch (e) {
+      debugPrint('Error al obtener ventas paginadas: $e');
+      rethrow;
+    }
+  }
 
 }

@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:tobaco/Models/Producto.dart';
+import 'package:tobaco/Models/ProductQuantityPrice.dart';
 import 'package:tobaco/Services/Categoria_Service/categoria_provider.dart';
 import 'package:tobaco/Services/Productos_Service/productos_provider.dart';
 import 'package:tobaco/Theme/app_theme.dart';
 import 'package:tobaco/Models/Categoria.dart';
+import 'package:tobaco/Widgets/QuantityPriceWidget.dart';
 
 class EditarProductoScreen extends StatefulWidget {
   final Producto producto;
@@ -22,6 +24,7 @@ class EditarProductoScreenState extends State<EditarProductoScreen> {
   late TextEditingController halfController;
 
   Categoria? categoriaSeleccionada;
+  List<ProductQuantityPrice> quantityPrices = [];
 
   // Helper method to safely parse color hex
   Color _parseColor(String colorHex) {
@@ -47,6 +50,16 @@ class EditarProductoScreenState extends State<EditarProductoScreen> {
     halfController =
         TextEditingController(text: widget.producto.half.toString());
 
+    // Initialize quantity prices
+    quantityPrices = List.from(widget.producto.quantityPrices);
+    if (quantityPrices.isEmpty) {
+      // Add default unit price if none exists
+      quantityPrices.add(ProductQuantityPrice(
+        productId: widget.producto.id ?? 0,
+        quantity: 1,
+        totalPrice: widget.producto.precio,
+      ));
+    }
     
     Future.microtask(() {
       if (!mounted) return;
@@ -230,6 +243,16 @@ class EditarProductoScreenState extends State<EditarProductoScreen> {
                       ),
                     ],
                   ),
+                  const SizedBox(height: 24),
+                  QuantityPriceWidget(
+                    quantityPrices: quantityPrices,
+                    onChanged: (prices) {
+                      setState(() {
+                        quantityPrices = prices;
+                        widget.producto.quantityPrices = prices;
+                      });
+                    },
+                  ),
                   const SizedBox(height: 80), // Espacio para los botones
                 ],
               ),
@@ -286,6 +309,36 @@ class EditarProductoScreenState extends State<EditarProductoScreen> {
                               AppTheme.warningSnackBar('El precio debe ser un número válido mayor a 0'),
                             );
                             return;
+                          }
+
+                          // Validar precios por cantidad (solo packs, cantidad >= 2)
+                          if (quantityPrices.isNotEmpty) {
+                            // Verificar que no hay cantidades duplicadas
+                            final quantities = quantityPrices.map((qp) => qp.quantity).toList();
+                            if (quantities.length != quantities.toSet().length) {
+                              AppTheme.showSnackBar(
+                                context,
+                                AppTheme.warningSnackBar('No puede haber cantidades duplicadas'),
+                              );
+                              return;
+                            }
+
+                            // Verificar que todos los precios son válidos y cantidades >= 2
+                            if (quantityPrices.any((qp) => qp.totalPrice <= 0)) {
+                              AppTheme.showSnackBar(
+                                context,
+                                AppTheme.warningSnackBar('Todos los precios deben ser mayores a 0'),
+                              );
+                              return;
+                            }
+
+                            if (quantityPrices.any((qp) => qp.quantity < 2)) {
+                              AppTheme.showSnackBar(
+                                context,
+                                AppTheme.warningSnackBar('Las cantidades deben ser >= 2 para packs'),
+                              );
+                              return;
+                            }
                           }
 
                           try {

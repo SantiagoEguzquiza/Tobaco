@@ -25,7 +25,8 @@ class ProductoProvider with ChangeNotifier {
       // Recargar la lista completa para obtener el ID real del servidor
       await obtenerProductos();
     } catch (e) {
-      debugPrint('Error: $e');
+      debugPrint('Error al crear producto: $e');
+      rethrow; // Propagar el error para que la UI pueda manejarlo
     }
   }
 
@@ -76,7 +77,8 @@ class ProductoProvider with ChangeNotifier {
         notifyListeners();
       }
     } catch (e) {
-      debugPrint('Error: $e');
+      debugPrint('Error al editar producto: $e');
+      rethrow; // Propagar el error para que la UI pueda manejarlo
     }
   }
 
@@ -111,6 +113,15 @@ class ProductoProvider with ChangeNotifier {
       final cleanMessage = errorMessage.replaceFirst('Exception: ', '');
       debugPrint('Mensaje de error: $cleanMessage');
       return cleanMessage;
+    }
+  }
+
+  Future<Map<String, dynamic>> obtenerProductosPaginados(int page, int pageSize) async {
+    try {
+      return await _productoService.obtenerProductosPaginados(page, pageSize);
+    } catch (e) {
+      debugPrint('Error al obtener productos paginados: $e');
+      rethrow;
     }
   }
 }

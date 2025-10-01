@@ -225,29 +225,6 @@ class _ClientesScreenState extends State<ClientesScreen> {
             color: AppTheme.primaryColor,
           ),
         ),
-        actions: [
-          Container(
-            margin: const EdgeInsets.only(right: 16),
-            decoration: BoxDecoration(
-              color: AppTheme.primaryColor.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: IconButton(
-              icon: const Icon(Icons.add, color: AppTheme.primaryColor),
-              onPressed: () async {
-                final result = await Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const WizardNuevoClienteScreen(),
-                  ),
-                );
-                if (result == true) {
-                  _cargarClientes();
-                }
-              },
-            ),
-          )
-        ],
       ),
       body: _isLoading && _clientes.isEmpty
           ? Center(
