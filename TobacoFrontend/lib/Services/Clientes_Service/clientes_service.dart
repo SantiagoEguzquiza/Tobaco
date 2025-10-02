@@ -215,5 +215,25 @@ class ClienteService {
       rethrow;
     }
   }
+
+  Future<Map<String, dynamic>> obtenerDetalleDeuda(int clienteId) async {
+    try {
+      final headers = await AuthService.getAuthHeaders();
+      final response = await Apihandler.client.get(
+        Uri.parse('$baseUrl/Clientes/$clienteId/deuda'),
+        headers: headers,
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        throw Exception(
+            'Error al obtener el detalle de deuda. Código de estado: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('Error al obtener el detalle de deuda: $e');
+      rethrow;
+    }
+  }
   
 }

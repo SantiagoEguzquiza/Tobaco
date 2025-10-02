@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:tobaco/Models/Cliente.dart';
 import 'package:tobaco/Services/Clientes_Service/clientes_provider.dart';
 import 'package:tobaco/Theme/app_theme.dart';
+import 'package:tobaco/Screens/Deudas/detalleDeudas_screen.dart';
 import 'dart:developer';
 
 class DeudasScreen extends StatefulWidget {
@@ -39,6 +40,44 @@ class _DeudasScreenState extends State<DeudasScreen> {
     _searchController.dispose();
     _scrollController.dispose();
     super.dispose();
+  }
+
+  String _formatearPrecio(double precio) {
+    return precio.toStringAsFixed(2);
+  }
+
+  double _parsearDeuda(String? deuda) {
+    if (deuda == null || deuda.isEmpty) return 0.0;
+    
+    // El backend envía formatos como "1000,000", "2500,250", etc.
+    // Vamos a tratar TODOS los casos como si la coma fuera decimal
+    // y solo convertir a formato estándar con 2 decimales
+    
+    if (deuda.contains(',')) {
+      List<String> partes = deuda.split(',');
+      
+      if (partes.length == 2) {
+        String parteEntera = partes[0];
+        String parteDecimal = partes[1];
+        
+        // Siempre convertir la coma a punto decimal
+        // Si tiene más de 2 dígitos, tomar solo los primeros 2
+        String decimalesFinales;
+        if (parteDecimal.length >= 2) {
+          decimalesFinales = parteDecimal.substring(0, 2);
+        } else {
+          // Si tiene menos de 2, rellenar con ceros
+          decimalesFinales = parteDecimal.padRight(2, '0');
+        }
+        
+        String numeroCorregido = '$parteEntera.$decimalesFinales';
+        return double.tryParse(numeroCorregido) ?? 0.0;
+      }
+    }
+    
+    // Para otros formatos, usar la lógica normal
+    String deudaLimpia = deuda.replaceAll(',', '');
+    return double.tryParse(deudaLimpia) ?? 0.0;
   }
 
   void _onScroll() {
@@ -361,7 +400,12 @@ class _DeudasScreenState extends State<DeudasScreen> {
         child: InkWell(
           borderRadius: BorderRadius.circular(15),
           onTap: () {
-            // TODO: Navegar a detalles del cliente o cobrar deuda
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => DetalleDeudaScreen(cliente: cliente),
+              ),
+            );
           },
           child: Padding(
             padding: const EdgeInsets.all(16),
@@ -394,7 +438,7 @@ class _DeudasScreenState extends State<DeudasScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Deuda: \$${cliente.deuda ?? '0.00'}',
+                        'Deuda: \$${_formatearPrecio(_parsearDeuda(cliente.deuda))}',
                         style: TextStyle(
                           fontSize: 14,
                           color: Colors.grey.shade600,

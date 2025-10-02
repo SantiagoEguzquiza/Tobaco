@@ -61,4 +61,13 @@ class VentasProvider with ChangeNotifier {
     }
   }
 
+  Future<Map<String, dynamic>> obtenerVentasCuentaCorrientePorClienteId(int clienteId, int page, int pageSize) async {
+    try {
+      return await _ventasService.obtenerVentasCuentaCorrientePorClienteId(clienteId, page, pageSize);
+    } catch (e) {
+      debugPrint('Error al obtener ventas con cuenta corriente: $e');
+      rethrow;
+    }
+  }
+
 }
