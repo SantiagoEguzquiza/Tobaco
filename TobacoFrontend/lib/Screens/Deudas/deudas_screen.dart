@@ -399,13 +399,18 @@ class _DeudasScreenState extends State<DeudasScreen> {
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(15),
-          onTap: () {
-            Navigator.push(
+          onTap: () async {
+            final result = await Navigator.push(
               context,
               MaterialPageRoute(
                 builder: (context) => DetalleDeudaScreen(cliente: cliente),
               ),
             );
+            
+            // Si regresamos con true, significa que se saldó una deuda y debemos refrescar
+            if (result == true) {
+              _loadClientes();
+            }
           },
           child: Padding(
             padding: const EdgeInsets.all(16),

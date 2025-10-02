@@ -86,24 +86,6 @@ class AbonosProvider with ChangeNotifier {
     }
   }
 
-  Future<bool> eliminarAbono(int id) async {
-    _setLoading(true);
-    _clearError();
-    
-    try {
-      await _abonosService.eliminarAbono(id);
-      _abonos.removeWhere((abono) => abono.id == id);
-      notifyListeners();
-      return true;
-    } catch (e) {
-      _setError('Error al eliminar el abono: $e');
-      debugPrint('Error: $e');
-      return false;
-    } finally {
-      _setLoading(false);
-    }
-  }
-
   Future<Abono?> saldarDeuda(int clienteId, double monto, DateTime fecha, String? nota) async {
     _setLoading(true);
     _clearError();
@@ -134,6 +116,23 @@ class AbonosProvider with ChangeNotifier {
 
   void _clearError() {
     _errorMessage = null;
+  }
+
+  Future<bool> eliminarAbono(int id) async {
+    _setLoading(true);
+    _clearError();
+    try {
+      await _abonosService.eliminarAbono(id);
+      // Remover el abono de la lista local
+      _abonos.removeWhere((abono) => abono.id == id);
+      return true;
+    } catch (e) {
+      _setError(e.toString());
+      debugPrint('Error en AbonosProvider.eliminarAbono: $_errorMessage');
+      return false;
+    } finally {
+      _setLoading(false);
+    }
   }
 
   void clearAbonos() {

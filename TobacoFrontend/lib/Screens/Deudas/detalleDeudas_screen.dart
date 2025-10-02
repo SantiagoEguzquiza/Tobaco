@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:tobaco/Models/Cliente.dart';
 import 'package:tobaco/Models/Ventas.dart';
 import 'package:tobaco/Models/Abono.dart';
+import 'package:tobaco/Models/metodoPago.dart';
 import 'package:tobaco/Services/Clientes_Service/clientes_provider.dart';
 import 'package:tobaco/Services/Ventas_Service/ventas_provider.dart';
 import 'package:tobaco/Services/Abonos_Service/abonos_provider.dart';
@@ -189,17 +190,20 @@ class _DetalleDeudaScreenState extends State<DetalleDeudaScreen>
   void _mostrarModalSaldarDeuda() {
     final TextEditingController montoController = TextEditingController();
     final TextEditingController notaController = TextEditingController();
+    String? errorMessage;
     
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        return AppTheme.minimalAlertDialog(
-          title: 'Saldar Deuda',
-          content: Container(
-            padding: const EdgeInsets.only(bottom: 16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AppTheme.minimalAlertDialog(
+              title: 'Saldar Deuda',
+              content: Container(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
                 // Información del cliente y deuda actual
                 Container(
                   padding: const EdgeInsets.all(16),
@@ -242,6 +246,39 @@ class _DetalleDeudaScreenState extends State<DetalleDeudaScreen>
                   ),
                 ),
                 const SizedBox(height: 20),
+                
+                // Mensaje de error
+                if (errorMessage != null) ...[
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.red.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.red.withOpacity(0.3)),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.error_outline,
+                          color: Colors.red.shade600,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            errorMessage!,
+                            style: TextStyle(
+                              color: Colors.red.shade600,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
                 
                 // Campo monto
                 TextField(
@@ -322,19 +359,22 @@ class _DetalleDeudaScreenState extends State<DetalleDeudaScreen>
                           final monto = double.tryParse(montoController.text);
                           final deudaActual = _parsearDeuda(widget.cliente.deuda);
                           
+                          // Limpiar error previo
+                          setState(() {
+                            errorMessage = null;
+                          });
+                          
                           if (monto == null || monto <= 0) {
-                            AppTheme.showSnackBar(
-                              context,
-                              AppTheme.warningSnackBar('Ingrese un monto válido'),
-                            );
+                            setState(() {
+                              errorMessage = 'Ingrese un monto válido';
+                            });
                             return;
                           }
                           
                           if (monto > deudaActual) {
-                            AppTheme.showSnackBar(
-                              context,
-                              AppTheme.warningSnackBar('El monto no puede ser mayor a la deuda actual'),
-                            );
+                            setState(() {
+                              errorMessage = 'El monto no puede ser mayor a la deuda actual';
+                            });
                             return;
                           }
                           
@@ -364,6 +404,8 @@ class _DetalleDeudaScreenState extends State<DetalleDeudaScreen>
               ],
             ),
           ),
+            );
+          },
         );
       },
     );
@@ -381,16 +423,35 @@ class _DetalleDeudaScreenState extends State<DetalleDeudaScreen>
       
       if (abonoCreado != null) {
         // Actualizar la deuda del cliente localmente
-        final nuevaDeuda = _parsearDeuda(widget.cliente.deuda) - monto;
+        final deudaActual = _parsearDeuda(widget.cliente.deuda);
+        final nuevaDeuda = deudaActual - monto;
         widget.cliente.deuda = nuevaDeuda.toStringAsFixed(2);
         
         // Recargar los datos
         await _loadData();
         
+        // Mostrar mensaje de éxito
         AppTheme.showSnackBar(
           context,
           AppTheme.successSnackBar('Abono registrado exitosamente'),
         );
+        
+        // Si la deuda quedó en 0 o menos, navegar de vuelta a la pantalla principal
+        if (nuevaDeuda <= 0) {
+          // Esperar un poco para que el usuario vea el mensaje de éxito
+          await Future.delayed(const Duration(milliseconds: 1500));
+          
+          // Navegar de vuelta a la pantalla de deudas con indicación de refrescar
+          if (mounted) {
+            Navigator.of(context).pop(true); // true indica que debe refrescar
+            
+            // Mostrar mensaje de deuda saldada
+            AppTheme.showSnackBar(
+              context,
+              AppTheme.successSnackBar('¡Deuda completamente saldada!'),
+            );
+          }
+        }
       }
     } catch (e) {
       AppTheme.showSnackBar(
@@ -662,6 +723,19 @@ class _DetalleDeudaScreenState extends State<DetalleDeudaScreen>
   }
 
   Widget _buildVentaCard(Ventas venta) {
+    // Calcular el monto específico pagado con cuenta corriente
+    double montoCuentaCorriente = 0.0;
+    if (venta.pagos != null && venta.pagos!.isNotEmpty) {
+      // Si tenemos pagos cargados, calcular el monto de cuenta corriente
+      montoCuentaCorriente = venta.pagos!
+          .where((pago) => pago.metodo.index == MetodoPago.cuentaCorriente.index)
+          .fold(0.0, (sum, pago) => sum + pago.monto);
+    } else if (venta.metodoPago == MetodoPago.cuentaCorriente) {
+      // Si no tenemos pagos cargados pero el método de pago es cuenta corriente,
+      // usar el total de la venta como monto de cuenta corriente
+      montoCuentaCorriente = venta.total;
+    }
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -714,6 +788,16 @@ class _DetalleDeudaScreenState extends State<DetalleDeudaScreen>
                           color: Colors.grey.shade600,
                         ),
                       ),
+                      if (venta.pagos != null && venta.pagos!.length > 1) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          'Total: \$${_formatearPrecio(venta.total)}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade500,
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -724,7 +808,7 @@ class _DetalleDeudaScreenState extends State<DetalleDeudaScreen>
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
-                    '\$${_formatearPrecio(venta.total)}',
+                    '\$${_formatearPrecio(montoCuentaCorriente)}',
                     style: TextStyle(
                       fontSize: 14,
                       color: Colors.orange.shade700,
@@ -807,20 +891,40 @@ class _DetalleDeudaScreenState extends State<DetalleDeudaScreen>
                     ],
                   ),
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.green.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    '\$${_formatearPrecio(_parsearDeuda(abono.monto))}',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.green.shade700,
-                      fontWeight: FontWeight.w600,
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        '\$${_formatearPrecio(_parsearDeuda(abono.monto))}',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.green.shade700,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ),
-                  ),
+                    const SizedBox(width: 8),
+                    GestureDetector(
+                      onTap: () => _mostrarConfirmacionEliminarAbono(abono),
+                      child: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: Colors.red.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(
+                          Icons.delete_outline,
+                          color: Colors.red.shade600,
+                          size: 18,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -879,5 +983,54 @@ class _DetalleDeudaScreenState extends State<DetalleDeudaScreen>
         ),
       ),
     );
+  }
+
+  void _mostrarConfirmacionEliminarAbono(Abono abono) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AppTheme.confirmDialogStyle(
+          title: 'Eliminar Abono',
+          content: '¿Está seguro de que desea eliminar este abono de \$${_formatearPrecio(_parsearDeuda(abono.monto))}?\n\nEsto restaurará la deuda del cliente.',
+          onConfirm: () async {
+            Navigator.of(context).pop();
+            await _eliminarAbono(abono);
+          },
+          onCancel: () => Navigator.of(context).pop(),
+        );
+      },
+    );
+  }
+
+  Future<void> _eliminarAbono(Abono abono) async {
+    try {
+      final abonosProvider = AbonosProvider();
+      final eliminado = await abonosProvider.eliminarAbono(abono.id!);
+      
+      if (eliminado) {
+        // Actualizar la deuda local del cliente
+        final montoAbono = _parsearDeuda(abono.monto);
+        final deudaActual = _parsearDeuda(widget.cliente.deuda);
+        widget.cliente.deuda = (deudaActual + montoAbono).toStringAsFixed(2);
+        
+        // Recargar todos los datos
+        await _loadData();
+        
+        AppTheme.showSnackBar(
+          context,
+          AppTheme.successSnackBar('Abono eliminado exitosamente'),
+        );
+      } else {
+        AppTheme.showSnackBar(
+          context,
+          AppTheme.errorSnackBar('Error al eliminar el abono'),
+        );
+      }
+    } catch (e) {
+      AppTheme.showSnackBar(
+        context,
+        AppTheme.errorSnackBar('Error al eliminar el abono: $e'),
+      );
+    }
   }
 }
