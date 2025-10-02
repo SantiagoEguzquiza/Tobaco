@@ -1,0 +1,2 @@
+C:/Users/emili/OneDrive/Escritorio/github/Tobaco/TobacoFrontend/android/app/.cxx/Debug/g511h334/x86/CMakeFiles/edit_cache.dir
+C:/Users/emili/OneDrive/Escritorio/github/Tobaco/TobacoFrontend/android/app/.cxx/Debug/g511h334/x86/CMakeFiles/rebuild_cache.dir

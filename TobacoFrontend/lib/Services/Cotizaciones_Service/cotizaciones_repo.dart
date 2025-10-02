@@ -12,8 +12,9 @@ class BcuRepository {
   }) async {
     try {
       final grupoName = _getGrupoName(grupo);
-      developer.log('Obteniendo cotizaciones del BCU - Grupo: $grupoName ($grupo)');
-      
+      developer
+          .log('Obteniendo cotizaciones del BCU - Grupo: $grupoName ($grupo)');
+
       // Usar el método SOAP correcto para obtener cotizaciones del grupo específico
       final raw = await BcuCotizacionesService.getCotizacionesCompletas(
         desde: desde,
@@ -23,19 +24,22 @@ class BcuRepository {
 
       final doc = xml.XmlDocument.parse(raw);
 
-    // Fault?
-    final fault = doc.findAllElements('Fault');
-    if (fault.isNotEmpty) {
-      final msg = fault.first.findAllElements('faultstring').map((e) => e.text).join(' ');
-      throw Exception('SOAP Fault: $msg');
-    }
+      // Fault?
+      final fault = doc.findAllElements('Fault');
+      if (fault.isNotEmpty) {
+        final msg = fault.first
+            .findAllElements('faultstring')
+            .map((e) => e.text)
+            .join(' ');
+        throw Exception('SOAP Fault: $msg');
+      }
 
       // Buscar cotizaciones de forma eficiente
       final out = <Cotizacion>[];
-      
+
       // Buscar directamente en elementos que contengan datos de cotizaciones
       final allElements = doc.findAllElements('*');
-      
+
       for (final element in allElements) {
         // Solo procesar elementos que tengan texto y no sean muy profundos
         if (element.text.trim().isNotEmpty && element.depth < 8) {
@@ -58,7 +62,9 @@ class BcuRepository {
     } catch (e) {
       developer.log('Error in getCotizaciones: $e');
       // Solo usar datos de prueba si hay un error de conexión crítico
-      if (e.toString().contains('SocketException') || e.toString().contains('TimeoutException') || e.toString().contains('HandshakeException')) {
+      if (e.toString().contains('SocketException') ||
+          e.toString().contains('TimeoutException') ||
+          e.toString().contains('HandshakeException')) {
         developer.log('Critical connection error, using test data as fallback');
         return _getTestCotizaciones();
       }
@@ -68,8 +74,9 @@ class BcuRepository {
 
   List<Cotizacion> _getTestCotizaciones() {
     final hoy = DateTime.now();
-    final fechaStr = '${hoy.year}-${hoy.month.toString().padLeft(2, '0')}-${hoy.day.toString().padLeft(2, '0')}';
-    
+    final fechaStr =
+        '${hoy.year}-${hoy.month.toString().padLeft(2, '0')}-${hoy.day.toString().padLeft(2, '0')}';
+
     return [
       // Moneda local uruguaya
       Cotizacion(
@@ -166,26 +173,40 @@ class BcuRepository {
       if (child is xml.XmlElement) {
         final key = child.name.local.toLowerCase();
         final value = child.text.trim();
-        
+
         if (value.isNotEmpty) {
           if (key.contains('fecha')) {
             fecha = value;
-          } else if (key == 'moneda' || key.contains('codmoneda') || key.contains('codigo')) {
+          } else if (key == 'moneda' ||
+              key.contains('codmoneda') ||
+              key.contains('codigo')) {
             moneda = int.tryParse(value);
-          } else if (key.contains('nombre') || key.contains('descripcion') || key.contains('desc')) {
+          } else if (key.contains('nombre') ||
+              key.contains('descripcion') ||
+              key.contains('desc')) {
             nombre = value;
-          } else if (key.contains('codigoiso') || key.contains('iso') || key.contains('codigo_iso')) {
+          } else if (key.contains('codigoiso') ||
+              key.contains('iso') ||
+              key.contains('codigo_iso')) {
             iso = value;
-          } else if (key == 'tcc' || key.contains('compra') || key.contains('tc_compra') || key.contains('tipo_cambio_compra')) {
+          } else if (key == 'tcc' ||
+              key.contains('compra') ||
+              key.contains('tc_compra') ||
+              key.contains('tipo_cambio_compra')) {
             tcc = double.tryParse(value.replaceAll(',', '.'));
-          } else if (key == 'tcv' || key.contains('venta') || key.contains('tc_venta') || key.contains('tipo_cambio_venta')) {
+          } else if (key == 'tcv' ||
+              key.contains('venta') ||
+              key.contains('tc_venta') ||
+              key.contains('tipo_cambio_venta')) {
             tcv = double.tryParse(value.replaceAll(',', '.'));
-          } else if (key.contains('valor') || key.contains('value') || key.contains('rate') || key.contains('precio')) {
-            // Si es un valor numérico, intentar asignarlo a tcc o tcv
+          } else if (key.contains('valor') ||
+              key.contains('value') ||
+              key.contains('rate') ||
+              key.contains('precio')) {
+            // Si es un valor numérico, asignarlo solo a tcc (tipo de cambio único)
             final numValue = double.tryParse(value.replaceAll(',', '.'));
-            if (numValue != null) {
-              if (tcc == null) tcc = numValue;
-              else if (tcv == null) tcv = numValue;
+            if (numValue != null && tcc == null) {
+              tcc = numValue;
             }
           }
         }
@@ -198,32 +219,30 @@ class BcuRepository {
       if (nombre == null || nombre.isEmpty) {
         nombre = _getMonedaName(moneda);
       }
-      
+
       // Mapear códigos de moneda a códigos ISO correctos
       if (iso == null || iso.isEmpty) {
         iso = _getMonedaIso(moneda);
       }
-      
+
       // Solo crear cotización si tenemos al menos un valor de cotización
       if (tcc != null || tcv != null) {
         return Cotizacion(
-          fecha: fecha, 
-          moneda: moneda, 
-          nombre: nombre, 
-          codigoIso: iso, 
-          tcc: tcc, 
-          tcv: tcv
-        );
+            fecha: fecha,
+            moneda: moneda,
+            nombre: nombre,
+            codigoIso: iso,
+            tcc: tcc,
+            tcv: tcv);
       }
     }
 
     return null;
   }
 
-
   String _getMonedaName(int? moneda) {
     if (moneda == null) return 'Moneda Desconocida';
-    
+
     switch (moneda) {
       case 0:
       case 858:
@@ -253,7 +272,7 @@ class BcuRepository {
 
   String _getMonedaIso(int? moneda) {
     if (moneda == null) return '';
-    
+
     switch (moneda) {
       case 0:
       case 858:
