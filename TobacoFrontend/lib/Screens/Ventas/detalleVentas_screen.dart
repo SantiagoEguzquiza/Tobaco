@@ -397,7 +397,7 @@ class DetalleVentaScreen extends StatelessWidget {
                   ),
                 ],
               ),
-            )).toList(),
+            )),
             const Divider(height: 20),
           ],
           // Mostrar descuento si aplica
@@ -549,7 +549,7 @@ class DetalleVentaScreen extends StatelessWidget {
       text: TextSpan(
         children: [
           TextSpan(
-            text: '\$${parteEntera}',
+            text: '\$$parteEntera',
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
@@ -557,7 +557,7 @@ class DetalleVentaScreen extends StatelessWidget {
             ),
           ),
           TextSpan(
-            text: ',${parteDecimal}',
+            text: ',$parteDecimal',
             style: TextStyle(
               fontSize: 14,
               color: Colors.grey.shade400,

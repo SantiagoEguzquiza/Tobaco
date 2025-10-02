@@ -5,10 +5,10 @@ class ColorPicker extends StatefulWidget {
   final Function(String) onColorSelected;
 
   const ColorPicker({
-    Key? key,
+    super.key,
     required this.selectedColor,
     required this.onColorSelected,
-  }) : super(key: key);
+  });
 
   @override
   _ColorPickerState createState() => _ColorPickerState();

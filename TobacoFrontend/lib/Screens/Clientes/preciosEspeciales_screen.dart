@@ -10,7 +10,7 @@ import 'editarPreciosEspeciales_screen.dart';
 class PreciosEspecialesScreen extends StatefulWidget {
   final Cliente cliente;
 
-  const PreciosEspecialesScreen({Key? key, required this.cliente}) : super(key: key);
+  const PreciosEspecialesScreen({super.key, required this.cliente});
 
   @override
   State<PreciosEspecialesScreen> createState() => _PreciosEspecialesScreenState();

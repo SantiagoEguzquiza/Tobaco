@@ -4,7 +4,6 @@ import 'package:tobaco/Models/Ventas.dart';
 import 'package:tobaco/Models/metodoPago.dart';
 import 'package:tobaco/Models/ventasPago.dart';
 import 'package:tobaco/Theme/app_theme.dart';
-import 'package:tobaco/Screens/Ventas/resumenVenta_screen.dart';
 
 class FormaPagoScreen extends StatefulWidget {
   final Ventas venta;
@@ -79,7 +78,7 @@ class _FormaPagoScreenState extends State<FormaPagoScreen> {
       text: TextSpan(
         children: [
           TextSpan(
-            text: '\$${parteEntera}',
+            text: '\$$parteEntera',
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
@@ -87,7 +86,7 @@ class _FormaPagoScreenState extends State<FormaPagoScreen> {
             ),
           ),
           TextSpan(
-            text: ',${parteDecimal}',
+            text: ',$parteDecimal',
             style: TextStyle(
               fontSize: 14,
               color: Colors.grey.shade400,

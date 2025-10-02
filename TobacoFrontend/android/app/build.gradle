@@ -25,24 +25,24 @@ if (flutterVersionName == null) {
 
 android {
     namespace = "com.example.tobaco"
-    compileSdkVersion 35
-    ndkVersion "25.1.8937393"
+    compileSdkVersion flutter.compileSdkVersion
+    ndkVersion flutter.ndkVersion
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
     }
 
     kotlinOptions {
-        jvmTarget = "11"
+        jvmTarget = '11'
     }
 
     defaultConfig {
         applicationId "com.example.tobaco"
         minSdkVersion flutter.minSdkVersion
-        targetSdkVersion 35
-        versionCode 1
-        versionName "1.0"
+        targetSdkVersion flutter.targetSdkVersion
+        versionCode flutterVersionCode.toInteger()
+        versionName flutterVersionName
     }
 
     buildTypes {

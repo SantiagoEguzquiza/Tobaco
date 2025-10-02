@@ -3,11 +3,12 @@ import 'package:tobaco/Models/Ventas.dart';
 import 'package:tobaco/Models/metodoPago.dart';
 import 'package:tobaco/Theme/app_theme.dart';
 import 'package:tobaco/Services/Ventas_Service/ventas_service.dart';
+import 'package:tobaco/Services/PDF_Service/pdf_service.dart';
 
 class ResumenVentaScreen extends StatefulWidget {
   const ResumenVentaScreen({
-    Key? key,
-  }) : super(key: key);
+    super.key,
+  });
 
   @override
   State<ResumenVentaScreen> createState() => _ResumenVentaScreenState();
@@ -387,7 +388,7 @@ class _ResumenVentaScreenState extends State<ResumenVentaScreen> {
                       _getMetodoPagoText(pago.metodo),
                       '\$${_formatearPrecio(pago.monto)}',
                     ),
-                  )).toList(),
+                  )),
                   const Divider(height: 20),
                 ],
                 // Mostrar descuento si aplica
@@ -434,9 +435,7 @@ class _ResumenVentaScreenState extends State<ResumenVentaScreen> {
           children: [
             Expanded(
               child: ElevatedButton.icon(
-                onPressed: () {
-                  // TODO: Implementar funcionalidad de impresión
-                },
+                onPressed: () => _showPrintOptions(context),
                 icon: const Icon(Icons.print, size: 20),
                 label: const Text('Imprimir'),
                 style: ElevatedButton.styleFrom(
@@ -541,7 +540,7 @@ class _ResumenVentaScreenState extends State<ResumenVentaScreen> {
       text: TextSpan(
         children: [
           TextSpan(
-            text: '\$${parteEntera}',
+            text: '\$$parteEntera',
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
@@ -549,7 +548,7 @@ class _ResumenVentaScreenState extends State<ResumenVentaScreen> {
             ),
           ),
           TextSpan(
-            text: ',${parteDecimal}',
+            text: ',$parteDecimal',
             style: TextStyle(
               fontSize: 14,
               color: Colors.grey.shade400,
@@ -605,4 +604,161 @@ class _ResumenVentaScreenState extends State<ResumenVentaScreen> {
         return Icons.receipt_long;
     }
   }
+
+  // Función para mostrar las opciones de impresión
+  void _showPrintOptions(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (BuildContext context) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(20),
+              topRight: Radius.circular(20),
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const Padding(
+                padding: EdgeInsets.all(16),
+                child: Text(
+                  'Opciones de Impresión',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              ListTile(
+                leading: const Icon(Icons.print, color: Colors.blue),
+                title: const Text('Imprimir PDF'),
+                subtitle: const Text('Abrir diálogo de impresión'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _handlePrintOption('print');
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.message, color: Colors.green),
+                title: const Text('Enviar por WhatsApp'),
+                subtitle: const Text('Enviar al cliente por WhatsApp'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _handlePrintOption('whatsapp');
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.share, color: Colors.orange),
+                title: const Text('Compartir PDF'),
+                subtitle: const Text('Compartir con otras aplicaciones'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _handlePrintOption('share');
+                },
+              ),
+              const SizedBox(height: 20),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // Función para manejar las opciones de impresión
+  Future<void> _handlePrintOption(String option) async {
+    if (venta == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No hay información de venta para procesar'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    try {
+      // Mostrar indicador de carga
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          return const AlertDialog(
+            content: Row(
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(width: 20),
+                Text('Procesando...'),
+              ],
+            ),
+          );
+        },
+      );
+
+      // Ejecutar la acción correspondiente
+      switch (option) {
+        case 'print':
+          await PDFService.generateAndShowVentaPDF(venta!, context);
+          break;
+        case 'whatsapp':
+          await PDFService.sendPDFViaWhatsApp(venta!, context);
+          break;
+        case 'share':
+          await PDFService.saveVentaPDF(venta!, context);
+          break;
+      }
+
+      // Cerrar el diálogo de carga
+      if (context.mounted) {
+        Navigator.of(context).pop();
+        
+        // Mostrar mensaje de éxito
+        String message = '';
+        switch (option) {
+          case 'print':
+            message = 'PDF listo para imprimir';
+            break;
+          case 'whatsapp':
+            message = 'WhatsApp abierto para enviar';
+            break;
+          case 'share':
+            message = 'PDF listo para compartir';
+            break;
+        }
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(message),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      // Cerrar el diálogo de carga si está abierto
+      if (context.mounted) {
+        Navigator.of(context).pop();
+        
+        // Mostrar mensaje de error
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
 }

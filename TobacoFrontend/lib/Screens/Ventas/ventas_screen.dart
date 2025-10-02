@@ -665,7 +665,7 @@ class _VentasScreenState extends State<VentasScreen> {
       text: TextSpan(
         children: [
           TextSpan(
-            text: '\$${parteEntera}',
+            text: '\$$parteEntera',
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
@@ -673,7 +673,7 @@ class _VentasScreenState extends State<VentasScreen> {
             ),
           ),
           TextSpan(
-            text: ',${parteDecimal}',
+            text: ',$parteDecimal',
             style: TextStyle(
               fontSize: 12,
               color: Colors.grey.shade400,

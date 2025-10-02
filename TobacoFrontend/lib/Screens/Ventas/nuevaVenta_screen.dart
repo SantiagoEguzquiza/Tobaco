@@ -5,7 +5,6 @@ import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:tobaco/Models/Cliente.dart';
 import 'package:tobaco/Models/ProductoSeleccionado.dart';
 import 'package:tobaco/Models/VentasProductos.dart';
-import 'package:tobaco/Models/PrecioEspecial.dart';
 import 'package:tobaco/Screens/Clientes/wizardNuevoCliente_screen.dart';
 import 'package:tobaco/Screens/Ventas/metodoPago_screen.dart';
 import 'package:tobaco/Screens/Ventas/seleccionarProducto_screen.dart';
@@ -188,7 +187,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
       text: TextSpan(
         children: [
           TextSpan(
-            text: '\$${parteEntera}',
+            text: '\$$parteEntera',
             style: TextStyle(
               fontSize: baseFontSize,
               fontWeight: FontWeight.w500,
@@ -196,7 +195,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
             ),
           ),
           TextSpan(
-            text: ',${parteDecimal}',
+            text: ',$parteDecimal',
             style: TextStyle(
               fontSize: decimalFontSize,
               color: Colors.grey.shade400,

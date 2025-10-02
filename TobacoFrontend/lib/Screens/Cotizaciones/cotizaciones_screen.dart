@@ -13,7 +13,7 @@ class CotizacionesScreen extends StatefulWidget {
 class _CotizacionesScreenState extends State<CotizacionesScreen> {
   int _selectedGroup = 2; // 1 int, 2 locales, 3 tasas, 0 todos
   int _selectedDays = 7;
-  List<int> _selectedCurrencies = [2222]; // USD por defecto
+  final List<int> _selectedCurrencies = [2222]; // USD por defecto
 
   final Map<int, String> _groups = {
     0: 'Todas',
@@ -407,7 +407,7 @@ class _CotizacionesScreenState extends State<CotizacionesScreen> {
                                                 crossAxisAlignment: CrossAxisAlignment.start,
                                                 children: [
                                                   Text(
-                                                    '${c.nombre ?? 'Moneda ${c.moneda}'}',
+                                                    c.nombre ?? 'Moneda ${c.moneda}',
                                                     style: const TextStyle(
                                                       fontSize: 16,
                                                       fontWeight: FontWeight.bold,
