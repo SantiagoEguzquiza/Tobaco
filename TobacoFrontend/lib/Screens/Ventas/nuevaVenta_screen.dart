@@ -5,7 +5,6 @@ import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:tobaco/Models/Cliente.dart';
 import 'package:tobaco/Models/ProductoSeleccionado.dart';
 import 'package:tobaco/Models/VentasProductos.dart';
-import 'package:tobaco/Models/PrecioEspecial.dart';
 import 'package:tobaco/Screens/Clientes/wizardNuevoCliente_screen.dart';
 import 'package:tobaco/Screens/Ventas/metodoPago_screen.dart';
 import 'package:tobaco/Screens/Ventas/seleccionarProducto_screen.dart';
@@ -337,6 +336,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                 cantidad: ps.cantidad,
                 categoria: ps.categoria,
                 categoriaId: ps.categoriaId,
+                precioFinalCalculado: ps.precio * ps.cantidad, // Precio temporal, se calculará en el backend
               ))
           .toList();
 

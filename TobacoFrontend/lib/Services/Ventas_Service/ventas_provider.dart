@@ -39,24 +39,33 @@ class VentasProvider with ChangeNotifier {
     }
   }
 
-  Future<void> editarVenta(Ventas venta) async {
-    try {
-      await _ventasService.editarVenta(venta);
-      int index = _ventas.indexWhere((c) => c.id == venta.id);
-      if (index != -1) {
-        _ventas[index] = venta;
-        notifyListeners();
-      }
-    } catch (e) {
-      debugPrint('Error: $e');
-    }
-  }
 
   Future<Map<String, dynamic>> obtenerVentasPaginadas(int page, int pageSize) async {
     try {
       return await _ventasService.obtenerVentasPaginadas(page, pageSize);
     } catch (e) {
       debugPrint('Error al obtener ventas paginadas: $e');
+      rethrow;
+    }
+  }
+
+  Future<Map<String, dynamic>> obtenerVentasPorCliente(
+    int clienteId, {
+    int pageNumber = 1,
+    int pageSize = 10,
+    DateTime? dateFrom,
+    DateTime? dateTo,
+  }) async {
+    try {
+      return await _ventasService.obtenerVentasPorCliente(
+        clienteId,
+        pageNumber: pageNumber,
+        pageSize: pageSize,
+        dateFrom: dateFrom,
+        dateTo: dateTo,
+      );
+    } catch (e) {
+      debugPrint('Error al obtener ventas por cliente: $e');
       rethrow;
     }
   }

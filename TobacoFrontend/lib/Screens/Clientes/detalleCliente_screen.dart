@@ -3,6 +3,7 @@ import 'package:tobaco/Models/Cliente.dart';
 import 'package:tobaco/Theme/app_theme.dart'; // Importa el tema
 import 'package:url_launcher/url_launcher.dart';
 import 'preciosEspeciales_screen.dart';
+import 'historialVentas_screen.dart';
 
 class DetalleClienteScreen extends StatelessWidget {
   final Cliente cliente;
@@ -387,6 +388,21 @@ class DetalleClienteScreen extends StatelessWidget {
               context,
               MaterialPageRoute(
                 builder: (context) => PreciosEspecialesScreen(cliente: cliente),
+              ),
+            );
+          },
+        ),
+        const SizedBox(height: 12),
+        _buildAdditionalActionButton(
+          icon: Icons.history,
+          label: 'Historial de Ventas',
+          description: 'Ver todas las ventas realizadas a este cliente',
+          color: Colors.orange,
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => HistorialVentasScreen(cliente: cliente),
               ),
             );
           },

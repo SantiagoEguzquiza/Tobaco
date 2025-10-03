@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:tobaco/Models/Ventas.dart';
+import 'package:tobaco/Models/VentasProductos.dart';
 import 'package:tobaco/Models/metodoPago.dart';
 import 'package:tobaco/Services/Ventas_Service/ventas_provider.dart';
 import 'package:tobaco/Theme/app_theme.dart';
@@ -293,40 +294,55 @@ class DetalleVentaScreen extends StatelessWidget {
                     ),
                   ),
                 ),
-                child: ListTile(
-                  contentPadding: const EdgeInsets.symmetric(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
                     horizontal: 20,
-                    vertical: 8,
+                    vertical: 12,
                   ),
-                  leading: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.orange.shade50,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(
-                      Icons.inventory_2,
-                      color: Colors.orange.shade700,
-                      size: 24,
-                    ),
-                  ),
-                  title: Text(
-                    producto.nombre,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 16,
-                    ),
-                  ),
-                  subtitle: Text(
-                    'Cantidad: ${producto.cantidad}',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey.shade600,
-                    ),
-                  ),
-                  trailing: _formatearPrecioConDecimales(
-                    producto.precio * producto.cantidad,
-                    color: Colors.black87,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.orange.shade50,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Icon(
+                              Icons.inventory_2,
+                              color: Colors.orange.shade700,
+                              size: 24,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  producto.nombre,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Cantidad: ${producto.cantidad}',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.grey.shade600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          _buildPrecioConDescuento(producto),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
               );
@@ -536,6 +552,22 @@ class DetalleVentaScreen extends StatelessWidget {
     }
     return 0.0;
   }
+
+
+
+  // Widget para mostrar precio simple
+  Widget _buildPrecioConDescuento(VentasProductos producto) {
+    // Usar directamente el precio final calculado del backend
+    return Text(
+      '\$${_formatearPrecio(producto.precioFinalCalculado)}',
+      style: const TextStyle(
+        fontSize: 16,
+        fontWeight: FontWeight.bold,
+        color: Colors.black87,
+      ),
+    );
+  }
+
 
   // Widget para formatear precios con decimales más pequeños y grises
   Widget _formatearPrecioConDecimales(double precio, {Color? color}) {

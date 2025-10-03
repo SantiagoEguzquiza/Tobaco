@@ -4,7 +4,6 @@ import 'package:tobaco/Models/Categoria.dart';
 import 'package:tobaco/Models/Producto.dart';
 import 'package:tobaco/Models/ProductoSeleccionado.dart';
 import 'package:tobaco/Models/Cliente.dart';
-import 'package:tobaco/Models/PrecioEspecial.dart';
 import 'package:tobaco/Models/PricingResult.dart';
 import 'package:tobaco/Services/Categoria_Service/categoria_provider.dart';
 import 'package:tobaco/Services/Productos_Service/productos_provider.dart';
@@ -157,7 +156,10 @@ class _SeleccionarProductosScreenState
 
   double _getPrecioFinal(Producto producto) {
     final cantidad = cantidades[producto.id] ?? 0;
-    if (cantidad <= 0) return producto.precio;
+    if (cantidad <= 0) {
+      // Cuando no hay cantidad, devolver precio base (sin descuento global - se aplica en backend)
+      return producto.precio;
+    }
     
     final cacheKey = '${producto.id}_${cantidad.toInt()}';
     
@@ -172,13 +174,12 @@ class _SeleccionarProductosScreenState
           ? preciosEspeciales[producto.id]
           : null;
       
-      final globalDiscount = widget.cliente?.descuentoGlobal;
-      
+      // No pasar globalDiscount al PricingService - se maneja en el backend
       final pricingResult = PricingService.calculateOptimalPricing(
         producto,
         cantidad.toInt(),
         specialPrice: specialPrice,
-        globalDiscount: globalDiscount,
+        globalDiscount: null, // El backend se encarga del descuento global
       );
       
       // Cache the result
@@ -203,7 +204,8 @@ class _SeleccionarProductosScreenState
   }
 
   double _getPrecioUnitarioReal(Producto producto) {
-    // Este método devuelve el precio unitario base, no el total
+    // Este método devuelve el precio unitario base, considerando solo precios especiales
+    // El descuento global se aplica en el backend al confirmar la venta
     if (widget.cliente != null && preciosEspeciales.containsKey(producto.id)) {
       return preciosEspeciales[producto.id]!;
     }
@@ -219,6 +221,7 @@ class _SeleccionarProductosScreenState
     }
     
     final precioTotal = _getPrecioFinal(producto);
+    // El precioTotal ya incluye todos los descuentos (cantidad, precio especial, global)
     return precioTotal / cantidad;
   }
 

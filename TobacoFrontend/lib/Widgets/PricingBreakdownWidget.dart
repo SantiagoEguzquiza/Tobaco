@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:tobaco/Models/PricingResult.dart';
-import 'package:tobaco/Theme/app_theme.dart';
 
 class PricingBreakdownWidget extends StatelessWidget {
   final PricingResult pricingResult;
