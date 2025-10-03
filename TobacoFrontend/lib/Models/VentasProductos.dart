@@ -5,6 +5,7 @@ class VentasProductos {
   double cantidad;
   String categoria;
   int categoriaId; // Agregar el ID de la categoría
+  double precioFinalCalculado; // Precio final después de todos los descuentos
 
   VentasProductos({
     required this.productoId,
@@ -13,6 +14,7 @@ class VentasProductos {
     required this.cantidad,
     required this.categoria,
     required this.categoriaId,
+    required this.precioFinalCalculado,
   });
 
   factory VentasProductos.fromJson(Map<String, dynamic> json) {
@@ -27,6 +29,7 @@ class VentasProductos {
       cantidad: (json['cantidad'] as num?)?.toDouble() ?? 0.0,
       categoria: producto['categoriaNombre'] ?? '',
       categoriaId: producto['categoriaId'] ?? 0,
+      precioFinalCalculado: (json['precioFinalCalculado'] as num?)?.toDouble() ?? 0.0,
     );
   }
 
@@ -42,5 +45,6 @@ class VentasProductos {
           'half': false,
         },
         'cantidad': cantidad,
+        'precioFinalCalculado': precioFinalCalculado,
       };
 }

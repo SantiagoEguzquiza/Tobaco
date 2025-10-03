@@ -12,18 +12,35 @@ class CategoriasProvider with ChangeNotifier {
 
   bool isLoading = false;
 
-  Future<List<Categoria>> obtenerCategorias() async {
+  Future<List<Categoria>> obtenerCategorias({bool silent = false}) async {
     try {
-      isLoading = true;
-      notifyListeners();
+      // Solo actualizar isLoading si realmente cambió y no es modo silencioso
+      if (!isLoading && !silent) {
+        isLoading = true;
+        // Usar WidgetsBinding para evitar notifyListeners durante build
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          notifyListeners();
+        });
+      }
       
       _categorias = await _categoriaService.obtenerCategorias();
       
-      isLoading = false;
-      notifyListeners();
+      // Solo actualizar isLoading si realmente cambió y no es modo silencioso
+      if (isLoading && !silent) {
+        isLoading = false;
+        // Usar WidgetsBinding para evitar notifyListeners durante build
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          notifyListeners();
+        });
+      }
     } catch (e) {
-      isLoading = false;
-      notifyListeners();
+      if (isLoading && !silent) {
+        isLoading = false;
+        // Usar WidgetsBinding para evitar notifyListeners durante build
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          notifyListeners();
+        });
+      }
       debugPrint('Error: $e');
     }
     return _categorias;
@@ -31,34 +48,42 @@ class CategoriasProvider with ChangeNotifier {
 
   Future<void> agregarCategoria(Categoria categoria) async {
     try {
-      isLoading = true;
-      notifyListeners();
+      if (!isLoading) {
+        isLoading = true;
+        notifyListeners();
+      }
       
       await _categoriaService.crearCategoria(categoria);
-      await obtenerCategorias();
+      await obtenerCategorias(silent: true);
       
-      isLoading = false;
-      notifyListeners();
     } catch (e) {
-      isLoading = false;
-      notifyListeners();
+      if (isLoading) {
+        isLoading = false;
+        notifyListeners();
+      }
       debugPrint('Error al agregar categoría: $e');
     }
   }
 
   Future<void> eliminarCategoria(int id) async {
     try {
-      isLoading = true;
-      notifyListeners();
+      if (!isLoading) {
+        isLoading = true;
+        notifyListeners();
+      }
       
       await _categoriaService.eliminarCategoria(id);
       _categorias.removeWhere((cat) => cat.id == id);
       
-      isLoading = false;
-      notifyListeners();
+      if (isLoading) {
+        isLoading = false;
+        notifyListeners();
+      }
     } catch (e) {
-      isLoading = false;
-      notifyListeners();
+      if (isLoading) {
+        isLoading = false;
+        notifyListeners();
+      }
       debugPrint('Error al eliminar categoría: $e');
     }
   }
@@ -77,8 +102,10 @@ class CategoriasProvider with ChangeNotifier {
 
   Future<void> reordenarCategorias(List<Categoria> nuevasCategorias) async {
     try {
-      isLoading = true;
-      notifyListeners();
+      if (!isLoading) {
+        isLoading = true;
+        notifyListeners();
+      }
       
       // Crear lista de DTOs para el reordenamiento
       final categoriaOrders = nuevasCategorias.asMap().entries.map((entry) {
@@ -94,11 +121,15 @@ class CategoriasProvider with ChangeNotifier {
       // Actualizar la lista local
       _categorias = List.from(nuevasCategorias);
       
-      isLoading = false;
-      notifyListeners();
+      if (isLoading) {
+        isLoading = false;
+        notifyListeners();
+      }
     } catch (e) {
-      isLoading = false;
-      notifyListeners();
+      if (isLoading) {
+        isLoading = false;
+        notifyListeners();
+      }
       debugPrint('Error al reordenar categorías: $e');
       rethrow; // Re-lanzar para manejar el error en la UI
     }

@@ -337,6 +337,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                 cantidad: ps.cantidad,
                 categoria: ps.categoria,
                 categoriaId: ps.categoriaId,
+                precioFinalCalculado: ps.precio * ps.cantidad, // Precio temporal, se calculará en el backend
               ))
           .toList();
 

@@ -61,4 +61,25 @@ class VentasProvider with ChangeNotifier {
     }
   }
 
+  Future<Map<String, dynamic>> obtenerVentasPorCliente(
+    int clienteId, {
+    int pageNumber = 1,
+    int pageSize = 10,
+    DateTime? dateFrom,
+    DateTime? dateTo,
+  }) async {
+    try {
+      return await _ventasService.obtenerVentasPorCliente(
+        clienteId,
+        pageNumber: pageNumber,
+        pageSize: pageSize,
+        dateFrom: dateFrom,
+        dateTo: dateTo,
+      );
+    } catch (e) {
+      debugPrint('Error al obtener ventas por cliente: $e');
+      rethrow;
+    }
+  }
+
 }

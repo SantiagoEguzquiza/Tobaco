@@ -88,17 +88,25 @@ class _ProductosScreenState extends State<ProductosScreen> {
       final categoriasProvider =
           Provider.of<CategoriasProvider>(context, listen: false);
 
-      // Obtener categorías
-      await categoriasProvider.obtenerCategorias();
+      // Obtener categorías y productos en paralelo para evitar múltiples notifyListeners
+      final futures = await Future.wait([
+        categoriasProvider.obtenerCategorias(silent: true), // Modo silencioso para evitar notifyListeners durante build
+        productoProvider.obtenerProductosPaginados(_currentPage, _pageSize),
+      ]);
 
-      // Obtener primera página de productos
-      final data = await productoProvider.obtenerProductosPaginados(_currentPage, _pageSize);
+      final categoriasData = futures[0] as List<Categoria>;
+      final productosData = futures[1] as Map<String, dynamic>;
 
       setState(() {
-        productos = List<Producto>.from(data['productos']);
-        categorias = categoriasProvider.categorias;
-        _hasMoreData = data['hasNextPage'];
+        productos = List<Producto>.from(productosData['productos']);
+        categorias = categoriasData;
+        _hasMoreData = productosData['hasNextPage'];
         isLoading = false;
+        
+        // Seleccionar la primera categoría por defecto si no hay ninguna seleccionada
+        if (selectedCategory == null && categoriasData.isNotEmpty) {
+          selectedCategory = categoriasData.first.nombre;
+        }
       });
     } catch (e) {
       setState(() {
@@ -148,10 +156,6 @@ class _ProductosScreenState extends State<ProductosScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Selecciona la primera categoría por defecto si no hay ninguna seleccionada y hay categorías cargadas
-    if (selectedCategory == null && categorias.isNotEmpty) {
-      selectedCategory = categorias.first.nombre;
-    }
 
     // Lógica de filtrado: búsqueda global vs filtro por categoría
     List<Producto> filteredProductos;
@@ -265,8 +269,8 @@ class _ProductosScreenState extends State<ProductosScreen> {
                               onCancel: () => Navigator.of(context).pop(),
                               onConfirm: () async {
                                 if (newCategoryName.trim().isNotEmpty) {
-                                  await CategoriasProvider()
-                                      .agregarCategoria(Categoria(
+                                  final categoriasProvider = Provider.of<CategoriasProvider>(context, listen: false);
+                                  await categoriasProvider.agregarCategoria(Categoria(
                                     id: null,
                                     nombre: newCategoryName,
                                     colorHex: selectedColor,
@@ -397,7 +401,8 @@ class _ProductosScreenState extends State<ProductosScreen> {
                                                                       if (editedName
                                                                           .trim()
                                                                           .isNotEmpty) {
-                                                                        await CategoriasProvider()
+                                                                        final categoriasProvider = Provider.of<CategoriasProvider>(context, listen: false);
+                                                                        await categoriasProvider
                                                                             .editarCategoria(
                                                                           categoria
                                                                               .id!,
@@ -539,7 +544,8 @@ class _ProductosScreenState extends State<ProductosScreen> {
                                                                  '¿Estás seguro de que deseas eliminar la categoría "${categoria.nombre}"?',
                                                              onConfirm: () async {
                                                                try {
-                                                                 await CategoriasProvider()
+                                                                 final categoriasProvider = Provider.of<CategoriasProvider>(context, listen: false);
+                                                                 await categoriasProvider
                                                                      .eliminarCategoria(
                                                                          categoria
                                                                              .id!);

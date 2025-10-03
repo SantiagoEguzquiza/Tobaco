@@ -195,4 +195,53 @@ class VentasService {
       rethrow;
     }
   }
+
+  Future<Map<String, dynamic>> obtenerVentasPorCliente(
+    int clienteId, {
+    int pageNumber = 1,
+    int pageSize = 10,
+    DateTime? dateFrom,
+    DateTime? dateTo,
+  }) async {
+    try {
+      final headers = await AuthService.getAuthHeaders();
+      
+      // Construir la URL con parámetros de consulta
+      final uri = Uri.parse('$baseUrl/Pedidos/por-cliente/$clienteId').replace(
+        queryParameters: {
+          'pageNumber': pageNumber.toString(),
+          'pageSize': pageSize.toString(),
+          if (dateFrom != null) 'dateFrom': dateFrom.toIso8601String(),
+          if (dateTo != null) 'dateTo': dateTo.toIso8601String(),
+        },
+      );
+      
+      final response = await Apihandler.client.get(
+        uri,
+        headers: headers,
+      );
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = jsonDecode(response.body);
+        final List<dynamic> pedidosJson = data['pedidos'];
+        final List<Ventas> ventas = pedidosJson.map((json) => Ventas.fromJson(json)).toList();
+        
+        return {
+          'pedidos': ventas,
+          'totalItems': data['totalItems'],
+          'totalPages': data['totalPages'],
+          'currentPage': data['currentPage'],
+          'pageSize': data['pageSize'],
+          'hasNextPage': data['hasNextPage'],
+          'hasPreviousPage': data['hasPreviousPage'],
+        };
+      } else {
+        throw Exception(
+            'Error al obtener las ventas del cliente. Código de estado: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('Error al obtener las ventas del cliente: $e');
+      rethrow;
+    }
+  }
 }
