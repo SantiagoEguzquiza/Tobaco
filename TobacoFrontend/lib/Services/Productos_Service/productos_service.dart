@@ -58,7 +58,7 @@ class ProductoService {
       debugPrint('Response Status: ${response.statusCode}');
       debugPrint('Response Body: ${response.body}');
 
-      if (response.statusCode != 200) {
+      if (response.statusCode != 200 && response.statusCode != 201) {
         throw Exception(
             'Error al guardar el producto. Código de estado: ${response.statusCode}, Respuesta: ${response.body}');
       } else {

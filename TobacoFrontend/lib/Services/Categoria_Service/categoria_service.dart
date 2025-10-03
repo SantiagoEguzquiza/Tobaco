@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:tobaco/Helpers/api_handler.dart';
 import 'package:tobaco/Models/Categoria.dart';
+import 'package:tobaco/Models/CategoriaReorderDTO.dart';
 import 'package:tobaco/Services/Auth_Service/auth_service.dart';
 
 class CategoriaService {
@@ -95,6 +96,27 @@ class CategoriaService {
       }
     } catch (e) {
       debugPrint('Error al editar categoría: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> reordenarCategorias(List<CategoriaReorderDTO> categoriaOrders) async {
+    try {
+      final headers = await AuthService.getAuthHeaders();
+      final response = await Apihandler.client.put(
+        Uri.parse('$baseUrl/Categoria/reordenar'),
+        headers: headers,
+        body: jsonEncode(categoriaOrders.map((co) => co.toJson()).toList()),
+      );
+
+      if (response.statusCode != 200) {
+        throw Exception(
+            'Error al reordenar categorías. Código de estado: ${response.statusCode}, Respuesta: ${response.body}');
+      } else {
+        debugPrint('Categorías reordenadas exitosamente');
+      }
+    } catch (e) {
+      debugPrint('Error al reordenar categorías: $e');
       rethrow;
     }
   }

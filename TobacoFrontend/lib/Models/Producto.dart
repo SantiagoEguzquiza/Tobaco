@@ -1,3 +1,5 @@
+import 'ProductQuantityPrice.dart';
+
 class Producto {
   int? id;
   String nombre;
@@ -7,6 +9,7 @@ class Producto {
   String? categoriaNombre;
   bool half;
   bool isActive;
+  List<ProductQuantityPrice> quantityPrices;
 
   Producto({
     required this.id,
@@ -17,6 +20,7 @@ class Producto {
     this.categoriaNombre,
     required this.half,
     this.isActive = true,
+    this.quantityPrices = const [],
   });
 
   factory Producto.fromJson(Map<String, dynamic> json) {
@@ -30,9 +34,14 @@ class Producto {
           ? double.tryParse(json['precio'].toString()) ?? 0.0
           : 0.0,
       categoriaId: json['categoriaId'] as int,
-      categoriaNombre: json['categoriaNombre'] as String ?,
+      categoriaNombre: json['categoriaNombre'] as String?,
       half: json['half'] ?? false,
-      isActive: json['isActive'] ?? true, 
+      isActive: json['isActive'] ?? true,
+      quantityPrices: json['quantityPrices'] != null
+          ? (json['quantityPrices'] as List)
+              .map((e) => ProductQuantityPrice.fromJson(e))
+              .toList()
+          : [],
     );
   }
   Map<String, dynamic> toJson() {
@@ -44,6 +53,7 @@ class Producto {
       'categoriaNombre': categoriaNombre ?? '',
       'half': half,
       'isActive': isActive,
+      'quantityPrices': quantityPrices.map((qp) => qp.toJson()).toList(),
     };
     
     // Solo incluir id si no es null (para productos existentes)
@@ -64,6 +74,7 @@ class Producto {
       'categoriaNombre': categoriaNombre,
       'half': half,
       'isActive': isActive,
+      'quantityPrices': quantityPrices.map((qp) => qp.toJson()).toList(),
     };
   }
 }
