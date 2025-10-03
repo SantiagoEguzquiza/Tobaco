@@ -15,6 +15,7 @@ import 'package:tobaco/Services/PrecioEspecialService.dart';
 import 'package:tobaco/Theme/app_theme.dart';
 import 'package:tobaco/Models/Ventas.dart';
 import 'package:tobaco/Theme/confirmAnimation.dart';
+import 'package:tobaco/Screens/Ventas/resumenVenta_screen.dart';
 
 class NuevaVentaScreen extends StatefulWidget {
   const NuevaVentaScreen({super.key});
@@ -386,7 +387,11 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                 body: VentaConfirmadaAnimacion(
                   onFinish: () {
                     Navigator.of(context).pop(); // cerrar animación
-                    Navigator.of(context).pop(); // volver atrás
+                    Navigator.of(context).pushReplacement(
+                      MaterialPageRoute(
+                        builder: (context) => ResumenVentaScreen(),
+                      ),
+                    );
                   },
                 ),
               ),
