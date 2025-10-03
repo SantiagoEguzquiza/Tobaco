@@ -68,27 +68,6 @@ class VentasService {
     }
   }
 
-  Future<void> editarVenta(Ventas venta) async {
-    try {
-      final headers = await AuthService.getAuthHeaders();
-      headers['Content-Type'] = 'application/json';
-      final response = await Apihandler.client.put(
-        Uri.parse('$baseUrl/Pedidos/${venta.id}'),
-        headers: headers,
-        body: jsonEncode(venta.toJson()),
-      );
-
-      if (response.statusCode != 200) {
-        throw Exception(
-            'Error al editar la venta. Código de estado: ${response.statusCode}');
-      } else {
-        debugPrint('Venta editada exitosamente');
-      }
-    } catch (e) {
-      debugPrint('Error al editar la venta: $e');
-      rethrow;
-    }
-  }
 
   Future<void> eliminarVenta(int id) async {
     try {

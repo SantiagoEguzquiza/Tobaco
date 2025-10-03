@@ -70,7 +70,6 @@ class PricingService {
     // Dynamic programming approach
     final dp = List<double>.filled(requestedQuantity + 1, double.infinity);
     final parent = List<int>.filled(requestedQuantity + 1, 0);
-    final usedQuantities = <int, int>{};
 
     // Initialize DP array
     dp[0] = 0;

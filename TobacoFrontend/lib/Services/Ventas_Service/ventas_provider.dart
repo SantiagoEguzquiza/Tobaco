@@ -39,18 +39,6 @@ class VentasProvider with ChangeNotifier {
     }
   }
 
-  Future<void> editarVenta(Ventas venta) async {
-    try {
-      await _ventasService.editarVenta(venta);
-      int index = _ventas.indexWhere((c) => c.id == venta.id);
-      if (index != -1) {
-        _ventas[index] = venta;
-        notifyListeners();
-      }
-    } catch (e) {
-      debugPrint('Error: $e');
-    }
-  }
 
   Future<Map<String, dynamic>> obtenerVentasPaginadas(int page, int pageSize) async {
     try {

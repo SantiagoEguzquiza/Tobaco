@@ -4,7 +4,6 @@ import 'package:tobaco/Models/Categoria.dart';
 import 'package:tobaco/Models/Producto.dart';
 import 'package:tobaco/Models/ProductoSeleccionado.dart';
 import 'package:tobaco/Models/Cliente.dart';
-import 'package:tobaco/Models/PrecioEspecial.dart';
 import 'package:tobaco/Models/PricingResult.dart';
 import 'package:tobaco/Services/Categoria_Service/categoria_provider.dart';
 import 'package:tobaco/Services/Productos_Service/productos_provider.dart';

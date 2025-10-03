@@ -23,7 +23,6 @@ class _HistorialVentasScreenState extends State<HistorialVentasScreen> {
   bool _isLoading = false;
   bool _isLoadingMore = false;
   int _currentPage = 1;
-  int _totalPages = 1;
   int _totalItems = 0;
   bool _hasNextPage = false;
   
@@ -74,7 +73,6 @@ class _HistorialVentasScreenState extends State<HistorialVentasScreen> {
         setState(() {
           _ventas = List<Ventas>.from(result['pedidos']);
           _totalItems = result['totalItems'];
-          _totalPages = result['totalPages'];
           _hasNextPage = result['hasNextPage'];
           _isLoading = false;
         });
