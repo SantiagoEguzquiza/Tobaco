@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../Services/Auth_Service/auth_provider.dart';
 import '../../Widgets/custom_loading_widget.dart';
+import '../menu_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -44,6 +45,11 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
     ));
     
     _animationController.forward();
+    
+    // Check if user is already authenticated
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkExistingAuth();
+    });
   }
 
   @override
@@ -311,67 +317,85 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
               },
             ),
 
-            // Login Button
+            // Login Button / Loading
             Consumer<AuthProvider>(
               builder: (context, authProvider, child) {
-                return Container(
+                return AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
                   width: double.infinity,
                   height: 48,
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF2E7D32), Color(0xFF1B5E20)],
-                    ),
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF2E7D32).withOpacity(0.3),
-                        blurRadius: 10,
-                        offset: const Offset(0, 5),
-                      ),
-                    ],
-                  ),
-                  child: ElevatedButton(
-                    onPressed: authProvider.isLoading
-                        ? null
-                        : () => _handleLogin(context, authProvider),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.transparent,
-                      shadowColor: Colors.transparent,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                    ),
-                    child: authProvider.isLoading
-                        ? const SizedBox(
-                            height: 24,
-                            width: 24,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2.5,
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  child: authProvider.isLoading
+                      ? Container(
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFF2E7D32), Color(0xFF1B5E20)],
                             ),
-                          )
-                        : const Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.login,
-                                color: Colors.white,
-                                size: 24,
-                              ),
-                              SizedBox(width: 12),
-                              Text(
-                                'INICIAR SESIÓN',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                  fontFamily: 'Raleway',
-                                  letterSpacing: 1.0,
-                                ),
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFF2E7D32).withOpacity(0.3),
+                                blurRadius: 10,
+                                offset: const Offset(0, 5),
                               ),
                             ],
                           ),
-                  ),
+                          child: const Center(
+                            child: SizedBox(
+                              height: 30,
+                              width: 30,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 3.0,
+                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                              ),
+                            ),
+                          ),
+                        )
+                      : Container(
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFF2E7D32), Color(0xFF1B5E20)],
+                            ),
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFF2E7D32).withOpacity(0.3),
+                                blurRadius: 10,
+                                offset: const Offset(0, 5),
+                              ),
+                            ],
+                          ),
+                          child: ElevatedButton(
+                            onPressed: () => _handleLogin(context, authProvider),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.transparent,
+                              shadowColor: Colors.transparent,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                            ),
+                            child: const Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.login,
+                                  color: Colors.white,
+                                  size: 24,
+                                ),
+                                SizedBox(width: 12),
+                                Text(
+                                  'INICIAR SESIÓN',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                    fontFamily: 'Raleway',
+                                    letterSpacing: 1.0,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
                 );
               },
             ),
@@ -483,36 +507,39 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
     if (_formKey.currentState!.validate()) {
       authProvider.clearError();
       
-      // Mostrar pantalla de carga personalizada
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => const DialogLoadingWidget(
-          message: 'Iniciando sesión...',
-        ),
-      );
-      
       try {
         final success = await authProvider.login(
           _userNameController.text.trim(),
           _passwordController.text,
         );
 
-        // Cerrar el diálogo de carga
-        if (mounted) {
-          Navigator.of(context).pop();
-        }
-
         if (success && mounted) {
-          // Navigate to main menu
-          Navigator.of(context).pushReplacementNamed('/menu');
+          // Navigate to main menu using direct navigation instead of named routes
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (context) => const MenuScreen()),
+          );
         }
+        // Error messages are already displayed in the UI, no need for SnackBar
       } catch (e) {
-        // Cerrar el diálogo de carga en caso de error
-        if (mounted) {
-          Navigator.of(context).pop();
-        }
+        // Error messages are already displayed in the UI, no need for SnackBar
       }
+    }
+  }
+
+  Future<void> _checkExistingAuth() async {
+    try {
+      final authProvider = context.read<AuthProvider>();
+      await authProvider.initializeAuth();
+      
+      if (authProvider.isAuthenticated && mounted) {
+        // User is already authenticated, navigate to menu
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const MenuScreen()),
+        );
+      }
+    } catch (e) {
+      // If there's an error checking auth, just stay on login screen
+      // The user can manually log in
     }
   }
 }

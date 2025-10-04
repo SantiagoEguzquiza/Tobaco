@@ -7,6 +7,7 @@ import 'package:tobaco/Screens/Clientes/wizardNuevoCliente_screen.dart';
 import 'package:tobaco/Screens/Clientes/wizardEditarCliente_screen.dart';
 import 'package:tobaco/Screens/Clientes/detalleCliente_screen.dart';
 import 'package:tobaco/Theme/app_theme.dart';
+import 'package:tobaco/Theme/dialogs.dart';
 import 'package:tobaco/Utils/loading_utils.dart';
 
 class ClientesScreen extends StatefulWidget {
@@ -163,23 +164,10 @@ class _ClientesScreenState extends State<ClientesScreen> {
   }
 
   Future<void> _eliminarCliente(Cliente cliente) async {
-    final confirmacion = await showDialog<bool>(
+    final confirmacion = await AppDialogs.showDeleteConfirmationDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Confirmar eliminación'),
-        content: Text('¿Está seguro de que desea eliminar al cliente "${cliente.nombre}"?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Eliminar'),
-          ),
-        ],
-      ),
+      title: 'Eliminar Cliente',
+      itemName: cliente.nombre,
     );
 
     if (confirmacion == true) {

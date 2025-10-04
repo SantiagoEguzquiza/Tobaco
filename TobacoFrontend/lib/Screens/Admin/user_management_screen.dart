@@ -5,6 +5,7 @@ import '../../Services/Auth_Service/auth_provider.dart';
 import '../../Services/Auth_Service/auth_service.dart';
 import '../../Models/User.dart';
 import '../../Theme/app_theme.dart';
+import '../../Theme/dialogs.dart';
 
 // Helper function to check if a user is the last active admin
 bool _isLastAdmin(User user, UserProvider userProvider) {
@@ -20,129 +21,25 @@ bool _isLastAdmin(User user, UserProvider userProvider) {
 
 // Show warning dialog for last admin role change
 void _showLastAdminRoleChangeWarningDialog(BuildContext context) {
-  showDialog(
+  AppDialogs.showWarningDialog(
     context: context,
-    builder: (context) => AlertDialog(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
-      title: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Colors.orange.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: const Icon(
-              Icons.warning_amber_rounded,
-              color: Colors.orange,
-              size: 24,
-            ),
-          ),
-          const SizedBox(width: 12),
-          const Expanded(
-            child: Text(
-              'No se puede cambiar el rol',
-              style: TextStyle(
-                color: Colors.orange,
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
-              ),
-            ),
-          ),
-        ],
-      ),
-      content: const Text(
-        'No puedes cambiar el rol del último administrador a empleado.\n\n'
+    title: 'No se puede cambiar el rol',
+    message: 'No puedes cambiar el rol del último administrador a empleado.\n\n'
         'Esto evitaría que cualquier persona pueda acceder a las funciones administrativas de la aplicación.\n\n'
         'Para realizar esta acción, primero crea otro usuario administrador.',
-        style: TextStyle(
-          fontSize: 16,
-          height: 1.5,
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          style: TextButton.styleFrom(
-            foregroundColor: Colors.orange,
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-          ),
-          child: const Text(
-            'Entendido',
-            style: TextStyle(
-              fontWeight: FontWeight.w600,
-              fontSize: 16,
-            ),
-          ),
-        ),
-      ],
-    ),
+    buttonText: 'Entendido',
   );
 }
 
 // Show warning dialog for last admin deactivation
 void _showLastAdminDeactivationWarningDialog(BuildContext context) {
-  showDialog(
+  AppDialogs.showWarningDialog(
     context: context,
-    builder: (context) => AlertDialog(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
-      title: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Colors.orange.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: const Icon(
-              Icons.warning_amber_rounded,
-              color: Colors.orange,
-              size: 24,
-            ),
-          ),
-          const SizedBox(width: 12),
-          const Expanded(
-            child: Text(
-              'No se puede desactivar',
-              style: TextStyle(
-                color: Colors.orange,
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
-              ),
-            ),
-          ),
-        ],
-      ),
-      content: const Text(
-        'No puedes desactivar tu cuenta porque eres el último administrador activo en el sistema.\n\n'
+    title: 'No se puede desactivar',
+    message: 'No puedes desactivar tu cuenta porque eres el último administrador activo en el sistema.\n\n'
         'Esto evitaría que cualquier persona pueda acceder a las funciones administrativas de la aplicación.\n\n'
         'Para realizar esta acción, primero crea otro usuario administrador.',
-        style: TextStyle(
-          fontSize: 16,
-          height: 1.5,
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          style: TextButton.styleFrom(
-            foregroundColor: Colors.orange,
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-          ),
-          child: const Text(
-            'Entendido',
-            style: TextStyle(
-              fontWeight: FontWeight.w600,
-              fontSize: 16,
-            ),
-          ),
-        ),
-      ],
-    ),
+    buttonText: 'Entendido',
   );
 }
 
@@ -182,65 +79,13 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
 
   // Show warning dialog for last admin
   void _showLastAdminWarningDialog(BuildContext context) {
-    showDialog(
+    AppDialogs.showWarningDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.orange.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Icon(
-                Icons.warning_amber_rounded,
-                color: Colors.orange,
-                size: 24,
-              ),
-            ),
-            const SizedBox(width: 12),
-            const Expanded(
-              child: Text(
-                'No se puede realizar esta acción',
-                style: TextStyle(
-                  color: Colors.orange,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
-                ),
-              ),
-            ),
-          ],
-        ),
-        content: const Text(
-          'No puedes desactivar o eliminar el último administrador del sistema.\n\n'
+      title: 'No se puede realizar esta acción',
+      message: 'No puedes desactivar o eliminar el último administrador del sistema.\n\n'
           'Esto evitaría que cualquier persona pueda acceder a las funciones administrativas de la aplicación.\n\n'
           'Para realizar esta acción, primero crea otro usuario administrador.',
-          style: TextStyle(
-            fontSize: 16,
-            height: 1.5,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            style: TextButton.styleFrom(
-              foregroundColor: Colors.orange,
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            ),
-            child: const Text(
-              'Entendido',
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-                fontSize: 16,
-              ),
-            ),
-          ),
-        ],
-      ),
+      buttonText: 'Entendido',
     );
   }
 
@@ -265,43 +110,43 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
         return Theme(
       data: Theme.of(context).copyWith(
         colorScheme: Theme.of(context).colorScheme.copyWith(
-          primary: const Color(0xFF2E7D32),
-          secondary: const Color(0xFF2E7D32),
+          primary: AppTheme.primaryColor,
+          secondary: AppTheme.primaryColor,
           surface: Colors.white,
         ),
-        textSelectionTheme: const TextSelectionThemeData(
-          selectionColor: Color(0xFF2E7D32),
-          cursorColor: Color(0xFF2E7D32),
-          selectionHandleColor: Color(0xFF2E7D32),
+        textSelectionTheme: TextSelectionThemeData(
+          selectionColor: AppTheme.primaryColor,
+          cursorColor: AppTheme.primaryColor,
+          selectionHandleColor: AppTheme.primaryColor,
         ),
         inputDecorationTheme: InputDecorationTheme(
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: Color(0xFF2E7D32), width: 2),
+            borderSide: BorderSide(color: AppTheme.primaryColor, width: 2),
           ),
-          focusColor: const Color(0xFF2E7D32),
+          focusColor: AppTheme.primaryColor,
         ),
         textButtonTheme: TextButtonThemeData(
           style: TextButton.styleFrom(
-            foregroundColor: const Color(0xFF2E7D32),
+            foregroundColor: AppTheme.primaryColor,
           ),
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF2E7D32),
+            backgroundColor: AppTheme.primaryColor,
             foregroundColor: Colors.white,
           ),
         ),
         switchTheme: SwitchThemeData(
           thumbColor: WidgetStateProperty.resolveWith<Color>((states) {
             if (states.contains(WidgetState.selected)) {
-              return const Color(0xFF2E7D32);
+              return AppTheme.primaryColor;
             }
             return Colors.grey;
           }),
           trackColor: WidgetStateProperty.resolveWith<Color>((states) {
             if (states.contains(WidgetState.selected)) {
-              return const Color(0xFF2E7D32).withOpacity(0.5);
+              return AppTheme.primaryColor.withOpacity(0.5);
             }
             return Colors.grey.withOpacity(0.3);
           }),
@@ -309,7 +154,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
         checkboxTheme: CheckboxThemeData(
           fillColor: WidgetStateProperty.resolveWith<Color>((states) {
             if (states.contains(WidgetState.selected)) {
-              return const Color(0xFF2E7D32);
+              return AppTheme.primaryColor;
             }
             return Colors.grey;
           }),
@@ -317,23 +162,23 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
         radioTheme: RadioThemeData(
           fillColor: WidgetStateProperty.resolveWith<Color>((states) {
             if (states.contains(WidgetState.selected)) {
-              return const Color(0xFF2E7D32);
+              return AppTheme.primaryColor;
             }
             return Colors.grey;
           }),
         ),
         sliderTheme: SliderThemeData(
-          activeTrackColor: const Color(0xFF2E7D32),
-          thumbColor: const Color(0xFF2E7D32),
+          activeTrackColor: AppTheme.primaryColor,
+          thumbColor: AppTheme.primaryColor,
           inactiveTrackColor: Colors.grey.withOpacity(0.3),
         ),
-        progressIndicatorTheme: const ProgressIndicatorThemeData(
-          color: Color(0xFF2E7D32),
+        progressIndicatorTheme: ProgressIndicatorThemeData(
+          color: AppTheme.primaryColor,
         ),
         chipTheme: ChipThemeData(
-          backgroundColor: const Color(0xFF2E7D32).withOpacity(0.1),
-          labelStyle: const TextStyle(color: Color(0xFF2E7D32)),
-          side: BorderSide(color: const Color(0xFF2E7D32).withOpacity(0.3)),
+          backgroundColor: AppTheme.primaryColor.withOpacity(0.1),
+          labelStyle: TextStyle(color: AppTheme.primaryColor),
+          side: BorderSide(color: AppTheme.primaryColor.withOpacity(0.3)),
         ),
       ),
       child: Scaffold(
@@ -348,7 +193,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
             fontSize: 20,
           ),
         ),
-        backgroundColor: const Color(0xFF2E7D32), // Dark green
+        backgroundColor: AppTheme.primaryColor,
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
         centerTitle: true,
@@ -360,14 +205,14 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const CircularProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF2E7D32)),
+                  CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
                   ),
                   const SizedBox(height: 16),
                   Text(
                     'Procesando...',
                     style: AppTheme.cardSubtitleStyle.copyWith(
-                      color: const Color(0xFF2E7D32),
+                      color: AppTheme.primaryColor,
                       fontSize: 16,
                     ),
                   ),
@@ -445,7 +290,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                         icon: const Icon(Icons.refresh),
                         label: const Text('Reintentar'),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF2E7D32),
+                          backgroundColor: AppTheme.primaryColor,
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                           shape: RoundedRectangleBorder(
@@ -488,12 +333,12 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                               Container(
                                 padding: const EdgeInsets.all(8),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFF2E7D32).withOpacity(0.1),
+                                  color: AppTheme.primaryColor.withOpacity(0.1),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: const Icon(
                                   Icons.people,
-                                  color: Color(0xFF2E7D32),
+                                  color: AppTheme.primaryColor,
                                   size: 24,
                                 ),
                               ),
@@ -505,7 +350,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                                     Text(
                                       'Usuarios del Sistema',
                                       style: AppTheme.appBarTitleStyle.copyWith(
-                                        color: const Color(0xFF1B5E20),
+                                        color: AppTheme.primaryColor,
                                         fontWeight: FontWeight.bold,
                                         fontSize: 22,
                                       ),
@@ -514,7 +359,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                                     Text(
                                       '${userProvider.users.length} usuarios registrados',
                                       style: AppTheme.cardSubtitleStyle.copyWith(
-                                        color: const Color(0xFF4CAF50),
+                                        color: AppTheme.primaryColor,
                                         fontSize: 14,
                                         fontWeight: FontWeight.w500,
                                       ),
@@ -533,7 +378,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                       icon: const Icon(Icons.person_add, size: 20),
                       label: const Text('Nuevo Usuario'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF2E7D32),
+                        backgroundColor: AppTheme.primaryColor,
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
@@ -633,19 +478,19 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
               height: 48,
               decoration: BoxDecoration(
                 color: user.isAdmin 
-                    ? const Color(0xFF2E7D32).withOpacity(0.1)
+                    ? AppTheme.primaryColor.withOpacity(0.1)
                     : Colors.grey.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
                   color: user.isAdmin 
-                      ? const Color(0xFF2E7D32).withOpacity(0.3)
+                      ? AppTheme.primaryColor.withOpacity(0.3)
                       : Colors.grey.withOpacity(0.3),
                   width: 1,
                 ),
               ),
               child: Icon(
                 user.isAdmin ? Icons.admin_panel_settings : Icons.person,
-                color: user.isAdmin ? const Color(0xFF2E7D32) : Colors.grey[600],
+                color: user.isAdmin ? AppTheme.primaryColor : Colors.grey[600],
                 size: 24,
               ),
             ),
@@ -660,7 +505,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                     user.userName,
                     style: AppTheme.appBarTitleStyle.copyWith(
                       fontWeight: FontWeight.bold,
-                      color: const Color(0xFF1B5E20),
+                      color: AppTheme.primaryColor,
                       fontSize: 18,
                     ),
                     overflow: TextOverflow.ellipsis,
@@ -670,7 +515,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                     Text(
                       user.email!,
                       style: AppTheme.cardSubtitleStyle.copyWith(
-                        color: const Color(0xFF4CAF50),
+                        color: AppTheme.primaryColor,
                         fontSize: 14,
                       ),
                       overflow: TextOverflow.ellipsis,
@@ -688,12 +533,12 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                         ),
                         decoration: BoxDecoration(
                           color: user.isAdmin 
-                              ? const Color(0xFF2E7D32).withOpacity(0.1)
+                              ? AppTheme.primaryColor.withOpacity(0.1)
                               : Colors.grey.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(
                             color: user.isAdmin 
-                                ? const Color(0xFF2E7D32).withOpacity(0.3)
+                                ? AppTheme.primaryColor.withOpacity(0.3)
                                 : Colors.grey.withOpacity(0.3),
                             width: 1,
                           ),
@@ -705,7 +550,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                               user.isAdmin ? Icons.admin_panel_settings : Icons.person,
                               size: 14,
                               color: user.isAdmin 
-                                  ? const Color(0xFF2E7D32)
+                                  ? AppTheme.primaryColor
                                   : Colors.grey[600],
                             ),
                             const SizedBox(width: 4),
@@ -713,7 +558,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                               user.role,
                               style: AppTheme.cardSubtitleStyle.copyWith(
                                 color: user.isAdmin 
-                                    ? const Color(0xFF2E7D32)
+                                    ? AppTheme.primaryColor
                                     : Colors.grey[600],
                                 fontWeight: FontWeight.w600,
                                 fontSize: 12,
@@ -828,7 +673,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                     value: 'edit',
                     child: Row(
                       children: [
-                        Icon(Icons.edit, size: 20, color: Color(0xFF2E7D32)),
+                        Icon(Icons.edit, size: 20, color: AppTheme.primaryColor),
                         SizedBox(width: 8),
                         Text('Editar'),
                       ],
@@ -904,7 +749,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                 ),
                 child: const Icon(
                   Icons.more_vert,
-                  color: Color(0xFF2E7D32),
+                  color: AppTheme.primaryColor,
                   size: 20,
                 ),
               ),
@@ -939,13 +784,13 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
       builder: (context) => Theme(
         data: Theme.of(context).copyWith(
           colorScheme: Theme.of(context).colorScheme.copyWith(
-            primary: const Color(0xFF2E7D32),
-            secondary: const Color(0xFF2E7D32),
+            primary: AppTheme.primaryColor,
+            secondary: AppTheme.primaryColor,
           ),
           textSelectionTheme: const TextSelectionThemeData(
-            selectionColor: Color(0xFF2E7D32),
-            cursorColor: Color(0xFF2E7D32),
-            selectionHandleColor: Color(0xFF2E7D32),
+            selectionColor: AppTheme.primaryColor,
+            cursorColor: AppTheme.primaryColor,
+            selectionHandleColor: AppTheme.primaryColor,
           ),
         ),
         child: _CreateUserDialog(),
@@ -959,13 +804,13 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
       builder: (context) => Theme(
         data: Theme.of(context).copyWith(
           colorScheme: Theme.of(context).colorScheme.copyWith(
-            primary: const Color(0xFF2E7D32),
-            secondary: const Color(0xFF2E7D32),
+            primary: AppTheme.primaryColor,
+            secondary: AppTheme.primaryColor,
           ),
           textSelectionTheme: const TextSelectionThemeData(
-            selectionColor: Color(0xFF2E7D32),
-            cursorColor: Color(0xFF2E7D32),
-            selectionHandleColor: Color(0xFF2E7D32),
+            selectionColor: AppTheme.primaryColor,
+            cursorColor: AppTheme.primaryColor,
+            selectionHandleColor: AppTheme.primaryColor,
           ),
         ),
         child: _EditUserDialog(user: user),
@@ -1100,94 +945,24 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     }
   }
 
-  void _showDeleteUserDialog(BuildContext context, User user, UserProvider userProvider) {
+  void _showDeleteUserDialog(BuildContext context, User user, UserProvider userProvider) async {
     // Check if trying to delete the last admin
     if (_isLastAdmin(user, userProvider)) {
       _showLastAdminWarningDialog(context);
       return;
     }
 
-    showDialog(
+    final confirmado = await AppDialogs.showDeleteConfirmationDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        title: Row(
-          children: [
-            Icon(Icons.warning, color: Colors.red[400], size: 24),
-            const SizedBox(width: 8),
-            const Text(
-              'Eliminar Usuario',
-              style: TextStyle(
-                color: Color(0xFF1B5E20),
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '¿Estás seguro de que quieres eliminar permanentemente al usuario "${user.userName}"?',
-              style: const TextStyle(fontSize: 16),
-            ),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.red.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.red.withOpacity(0.3)),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.warning, color: Colors.red, size: 20),
-                  const SizedBox(width: 8),
-                  const Expanded(
-                    child: Text(
-                      'Esta acción no se puede deshacer. El usuario será eliminado permanentemente de la base de datos.',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.red,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            style: TextButton.styleFrom(
-              foregroundColor: Colors.grey[600],
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            ),
-            child: const Text('Cancelar'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.of(context).pop();
-              await _deleteUser(context, user, userProvider);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-            child: const Text('Eliminar'),
-          ),
-        ],
-      ),
+      title: 'Eliminar Usuario',
+      message: '¿Estás seguro de que quieres eliminar permanentemente al usuario "${user.userName}"? Esta acción no se puede deshacer.',
+      confirmText: 'Eliminar',
+      cancelText: 'Cancelar',
     );
+
+    if (confirmado) {
+      await _deleteUser(context, user, userProvider);
+    }
   }
 
   Future<void> _deleteUser(BuildContext context, User user, UserProvider userProvider) async {
@@ -1345,12 +1120,12 @@ class _CreateUserDialogState extends State<_CreateUserDialog> {
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: const Color(0xFF2E7D32).withOpacity(0.1),
+            color: AppTheme.primaryColor.withOpacity(0.1),
             borderRadius: BorderRadius.circular(8),
           ),
           child: const Icon(
             Icons.person_add,
-            color: Color(0xFF2E7D32),
+            color: AppTheme.primaryColor,
             size: 24,
           ),
         ),
@@ -1368,9 +1143,9 @@ class _CreateUserDialogState extends State<_CreateUserDialog> {
     content: SingleChildScrollView(
       child: TextSelectionTheme(
         data: const TextSelectionThemeData(
-          selectionColor: Color(0xFF2E7D32),
-          cursorColor: Color(0xFF2E7D32),
-          selectionHandleColor: Color(0xFF2E7D32),
+          selectionColor: AppTheme.primaryColor,
+          cursorColor: AppTheme.primaryColor,
+          selectionHandleColor: AppTheme.primaryColor,
         ),
         child: Form(
           key: _formKey,
@@ -1379,13 +1154,13 @@ class _CreateUserDialogState extends State<_CreateUserDialog> {
             children: [
               TextFormField(
                 controller: _userNameController,
-                cursorColor: const Color(0xFF2E7D32),
+                cursorColor: AppTheme.primaryColor,
                 style: const TextStyle(color: Colors.black),
                 onChanged: (value) => _clearFieldErrors(),
                 decoration: InputDecoration(
                   labelText: 'Nombre de Usuario',
                   labelStyle: TextStyle(
-                    color: _hasUserNameError ? Colors.red : const Color(0xFF2E7D32),
+                    color: _hasUserNameError ? Colors.red : AppTheme.primaryColor,
                   ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -1396,7 +1171,7 @@ class _CreateUserDialogState extends State<_CreateUserDialog> {
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide(
-                      color: _hasUserNameError ? Colors.red : const Color(0xFF2E7D32),
+                      color: _hasUserNameError ? Colors.red : AppTheme.primaryColor,
                       width: 2,
                     ),
                   ),
@@ -1410,9 +1185,9 @@ class _CreateUserDialogState extends State<_CreateUserDialog> {
                   ),
                   prefixIcon: Icon(
                     Icons.person, 
-                    color: _hasUserNameError ? Colors.red : const Color(0xFF2E7D32),
+                    color: _hasUserNameError ? Colors.red : AppTheme.primaryColor,
                   ),
-                  focusColor: const Color(0xFF2E7D32),
+                  focusColor: AppTheme.primaryColor,
                 ),
                 selectionControls: MaterialTextSelectionControls(),
                 validator: (value) {
@@ -1425,13 +1200,13 @@ class _CreateUserDialogState extends State<_CreateUserDialog> {
               const SizedBox(height: 16),
               TextFormField(
                 controller: _emailController,
-                cursorColor: const Color(0xFF2E7D32),
+                cursorColor: AppTheme.primaryColor,
                 style: const TextStyle(color: Colors.black),
                 onChanged: (value) => _clearFieldErrors(),
                 decoration: InputDecoration(
                   labelText: 'Email (Opcional)',
                   labelStyle: TextStyle(
-                    color: _hasEmailError ? Colors.red : const Color(0xFF2E7D32),
+                    color: _hasEmailError ? Colors.red : AppTheme.primaryColor,
                   ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -1442,7 +1217,7 @@ class _CreateUserDialogState extends State<_CreateUserDialog> {
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide(
-                      color: _hasEmailError ? Colors.red : const Color(0xFF2E7D32),
+                      color: _hasEmailError ? Colors.red : AppTheme.primaryColor,
                       width: 2,
                     ),
                   ),
@@ -1456,16 +1231,16 @@ class _CreateUserDialogState extends State<_CreateUserDialog> {
                   ),
                   prefixIcon: Icon(
                     Icons.email, 
-                    color: _hasEmailError ? Colors.red : const Color(0xFF2E7D32),
+                    color: _hasEmailError ? Colors.red : AppTheme.primaryColor,
                   ),
-                  focusColor: const Color(0xFF2E7D32),
+                  focusColor: AppTheme.primaryColor,
                 ),
                 selectionControls: MaterialTextSelectionControls(),
                 keyboardType: TextInputType.emailAddress,
               ),
               const SizedBox(height: 16),
               TextFormField(
-                cursorColor: const Color(0xFF2E7D32),
+                cursorColor: AppTheme.primaryColor,
                 controller: _passwordController,
                 style: const TextStyle(color: Colors.black),
                 onChanged: (value) {
@@ -1475,7 +1250,7 @@ class _CreateUserDialogState extends State<_CreateUserDialog> {
                 decoration: InputDecoration(
                   labelText: 'Contraseña',
                   labelStyle: TextStyle(
-                    color: _hasPasswordError ? Colors.red : const Color(0xFF2E7D32),
+                    color: _hasPasswordError ? Colors.red : AppTheme.primaryColor,
                   ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -1486,7 +1261,7 @@ class _CreateUserDialogState extends State<_CreateUserDialog> {
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide(
-                      color: _hasPasswordError ? Colors.red : const Color(0xFF2E7D32),
+                      color: _hasPasswordError ? Colors.red : AppTheme.primaryColor,
                       width: 2,
                     ),
                   ),
@@ -1500,12 +1275,12 @@ class _CreateUserDialogState extends State<_CreateUserDialog> {
                   ),
                   prefixIcon: Icon(
                     Icons.lock, 
-                    color: _hasPasswordError ? Colors.red : const Color(0xFF2E7D32),
+                    color: _hasPasswordError ? Colors.red : AppTheme.primaryColor,
                   ),
-                  focusColor: const Color(0xFF2E7D32),
+                  focusColor: AppTheme.primaryColor,
                   helperText: 'Mínimo 6 caracteres',
                   helperStyle: TextStyle(
-                    color: _hasPasswordError ? Colors.red : const Color(0xFF2E7D32),
+                    color: _hasPasswordError ? Colors.red : AppTheme.primaryColor,
                     fontSize: 12,
                   ),
                 ),
@@ -1557,22 +1332,22 @@ class _CreateUserDialogState extends State<_CreateUserDialog> {
                 style: const TextStyle(color: Colors.black),
                 decoration: InputDecoration(
                   labelText: 'Rol',
-                  labelStyle: const TextStyle(color: Color(0xFF2E7D32)),
+                  labelStyle: const TextStyle(color: AppTheme.primaryColor),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: const BorderSide(
-                      color: Color(0xFF2E7D32),
+                      color: AppTheme.primaryColor,
                       width: 2,
                     ),
                   ),
                   prefixIcon: const Icon(
                     Icons.admin_panel_settings,
-                    color: Color(0xFF2E7D32),
+                    color: AppTheme.primaryColor,
                   ),
-                  focusColor: const Color(0xFF2E7D32),
+                  focusColor: AppTheme.primaryColor,
                   isDense: true,
                   contentPadding: const EdgeInsets.symmetric(
                     horizontal: 12,
@@ -1624,7 +1399,7 @@ class _CreateUserDialogState extends State<_CreateUserDialog> {
                 ? null
                 : () => _createUser(context, userProvider),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF2E7D32),
+              backgroundColor: AppTheme.primaryColor,
               foregroundColor: Colors.white,
               padding:
                   const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -1858,12 +1633,12 @@ class _EditUserDialogState extends State<_EditUserDialog> {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF2E7D32).withOpacity(0.1),
+                    color: AppTheme.primaryColor.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: const Icon(
                     Icons.edit,
-                    color: Color(0xFF2E7D32),
+                    color: AppTheme.primaryColor,
                     size: 24,
                   ),
                 ),
@@ -1899,7 +1674,7 @@ class _EditUserDialogState extends State<_EditUserDialog> {
               decoration: InputDecoration(
                 labelText: 'Nombre de Usuario',
                 labelStyle: TextStyle(
-                  color: _hasUserNameError ? Colors.red : const Color(0xFF2E7D32),
+                  color: _hasUserNameError ? Colors.red : AppTheme.primaryColor,
                 ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -1910,7 +1685,7 @@ class _EditUserDialogState extends State<_EditUserDialog> {
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide(
-                    color: _hasUserNameError ? Colors.red : const Color(0xFF2E7D32),
+                    color: _hasUserNameError ? Colors.red : AppTheme.primaryColor,
                     width: 2,
                   ),
                 ),
@@ -1924,7 +1699,7 @@ class _EditUserDialogState extends State<_EditUserDialog> {
                 ),
                 prefixIcon: Icon(
                   Icons.person, 
-                  color: _hasUserNameError ? Colors.red : const Color(0xFF2E7D32),
+                  color: _hasUserNameError ? Colors.red : AppTheme.primaryColor,
                 ),
               ),
               validator: (value) {
@@ -1942,7 +1717,7 @@ class _EditUserDialogState extends State<_EditUserDialog> {
               decoration: InputDecoration(
                 labelText: 'Email',
                 labelStyle: TextStyle(
-                  color: _hasEmailError ? Colors.red : const Color(0xFF2E7D32),
+                  color: _hasEmailError ? Colors.red : AppTheme.primaryColor,
                 ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -1953,7 +1728,7 @@ class _EditUserDialogState extends State<_EditUserDialog> {
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide(
-                    color: _hasEmailError ? Colors.red : const Color(0xFF2E7D32),
+                    color: _hasEmailError ? Colors.red : AppTheme.primaryColor,
                     width: 2,
                   ),
                 ),
@@ -1967,7 +1742,7 @@ class _EditUserDialogState extends State<_EditUserDialog> {
                 ),
                 prefixIcon: Icon(
                   Icons.email, 
-                  color: _hasEmailError ? Colors.red : const Color(0xFF2E7D32),
+                  color: _hasEmailError ? Colors.red : AppTheme.primaryColor,
                 ),
               ),
               keyboardType: TextInputType.emailAddress,
@@ -1983,7 +1758,7 @@ class _EditUserDialogState extends State<_EditUserDialog> {
               decoration: InputDecoration(
                 labelText: 'Nueva Contraseña (Opcional)',
                 labelStyle: TextStyle(
-                  color: _hasPasswordError ? Colors.red : const Color(0xFF2E7D32),
+                  color: _hasPasswordError ? Colors.red : AppTheme.primaryColor,
                 ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -1994,7 +1769,7 @@ class _EditUserDialogState extends State<_EditUserDialog> {
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide(
-                    color: _hasPasswordError ? Colors.red : const Color(0xFF2E7D32),
+                    color: _hasPasswordError ? Colors.red : AppTheme.primaryColor,
                     width: 2,
                   ),
                 ),
@@ -2008,11 +1783,11 @@ class _EditUserDialogState extends State<_EditUserDialog> {
                 ),
                 prefixIcon: Icon(
                   Icons.lock, 
-                  color: _hasPasswordError ? Colors.red : const Color(0xFF2E7D32),
+                  color: _hasPasswordError ? Colors.red : AppTheme.primaryColor,
                 ),
                 helperText: 'Mín. 6 caracteres (vacío = mantener actual)',
                 helperStyle: TextStyle(
-                  color: _hasPasswordError ? Colors.red : const Color(0xFF2E7D32),
+                  color: _hasPasswordError ? Colors.red : AppTheme.primaryColor,
                   fontSize: 11,
                 ),
                 helperMaxLines: 2,
@@ -2061,15 +1836,15 @@ class _EditUserDialogState extends State<_EditUserDialog> {
               style: const TextStyle(color: Colors.black),
               decoration: InputDecoration(
                 labelText: 'Rol',
-                labelStyle: const TextStyle(color: Color(0xFF2E7D32)),
+                labelStyle: const TextStyle(color: AppTheme.primaryColor),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Color(0xFF2E7D32), width: 2),
+                  borderSide: const BorderSide(color: AppTheme.primaryColor, width: 2),
                 ),
-                prefixIcon: const Icon(Icons.admin_panel_settings, color: Color(0xFF2E7D32)),
+                prefixIcon: const Icon(Icons.admin_panel_settings, color: AppTheme.primaryColor),
                 isDense: true,
                 contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               ),
@@ -2194,7 +1969,7 @@ class _EditUserDialogState extends State<_EditUserDialog> {
                             ? null
                             : () => _updateUser(context, userProvider),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF2E7D32),
+                          backgroundColor: AppTheme.primaryColor,
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 12),
                           shape: RoundedRectangleBorder(

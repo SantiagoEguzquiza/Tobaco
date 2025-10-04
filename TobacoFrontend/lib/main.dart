@@ -46,7 +46,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: AppTheme.theme,
-      home: const AuthWrapper(),
+      home: const LoginScreen(),
       routes: {
         '/menu': (context) => const MenuScreen(),
         '/login': (context) => const LoginScreen(),
