@@ -10,6 +10,7 @@ import 'package:tobaco/Screens/Productos/nuevoProducto_screen.dart';
 import 'package:tobaco/Services/Categoria_Service/categoria_provider.dart';
 import 'package:tobaco/Services/Productos_Service/productos_provider.dart';
 import 'package:tobaco/Theme/app_theme.dart'; // Importa el tema
+import 'package:tobaco/Theme/dialogs.dart'; // Importa los diálogos centralizados
 import 'package:tobaco/Helpers/color_picker.dart';
 import 'package:tobaco/Utils/loading_utils.dart';
 import 'dart:developer';
@@ -533,55 +534,7 @@ class _ProductosScreenState extends State<ProductosScreen> {
                                                          );
                                                        } else {
                                                          // Si no hay productos asociados, proceder con la eliminación
-                                                         showDialog(
-                                                           context: context,
-                                                           builder: (context) =>
-                                                               AppTheme
-                                                                   .alertDialogStyle(
-                                                             title:
-                                                                 'Eliminar categoría',
-                                                             content:
-                                                                 '¿Estás seguro de que deseas eliminar la categoría "${categoria.nombre}"?',
-                                                             onConfirm: () async {
-                                                               try {
-                                                                 final categoriasProvider = Provider.of<CategoriasProvider>(context, listen: false);
-                                                                 await categoriasProvider
-                                                                     .eliminarCategoria(
-                                                                         categoria
-                                                                             .id!);
-                                                                 Navigator.of(
-                                                                         context)
-                                                                     .pop();
-                                                                 Navigator.of(
-                                                                         context)
-                                                                     .pop();
-                                                                 _loadProductosWithLoading();
-                                                                 
-                                                                 // Mostrar mensaje de éxito
-                                                                 if (mounted) {
-                                                                   AppTheme.showSnackBar(
-                                                                     context,
-                                                                     AppTheme.successSnackBar('Categoría "${categoria.nombre}" eliminada exitosamente'),
-                                                                   );
-                                                                 }
-                                                               } catch (e) {
-                                                                 // Mostrar mensaje de error si falla la eliminación
-                                                                 if (mounted) {
-                                                                   AppTheme.showSnackBar(
-                                                                     context,
-                                                                     AppTheme.errorSnackBar('Error al eliminar la categoría: $e'),
-                                                                   );
-                                                                 }
-                                                                 Navigator.of(context).pop();
-                                                               }
-                                                             },
-                                                             onCancel: () {
-                                                               Navigator.of(
-                                                                       context)
-                                                                   .pop();
-                                                             },
-                                                           ),
-                                                         );
+                                                         _eliminarCategoria(context, categoria);
                                                        }
                                                      },
                                                    ),
@@ -1170,87 +1123,7 @@ class _ProductosScreenState extends State<ProductosScreen> {
                                               color: Colors.red,
                                               size: 20,
                                             ),
-                                            onPressed: () {
-                                              showDialog(
-                                                context: context,
-                                                builder: (context) =>
-                                                    AlertDialog(
-                                                  shape: RoundedRectangleBorder(
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                            16),
-                                                  ),
-                                                  title: const Text(
-                                                      'Eliminar Producto'),
-                                                  content: Text(
-                                                    '¿Estás seguro de que deseas eliminar "${producto.nombre}"?',
-                                                  ),
-                                                  actions: [
-                                                    TextButton(
-                                                      onPressed: () =>
-                                                          Navigator.of(context)
-                                                              .pop(),
-                                                      child: const Text(
-                                                          'Cancelar'),
-                                                    ),
-                                                    ElevatedButton(
-                                                      onPressed: () async {
-                                                        final productoProvider =
-                                                            Provider.of<
-                                                                    ProductoProvider>(
-                                                                context,
-                                                                listen: false);
-                                                        
-                                                        if (producto.id != null) {
-                                                          try {
-                                                            // Intentar eliminación física primero
-                                                            await productoProvider.eliminarProducto(producto.id!);
-                                                            
-                                                            // Si llegamos aquí, la eliminación fue exitosa (sin ventas vinculadas)
-                                                            AppTheme.showSnackBar(
-                                                              context,
-                                                              AppTheme.successSnackBar('Producto eliminado con éxito'),
-                                                            );
-                                                            _loadProductosWithLoading();
-                                                            Navigator.of(context).pop();
-                                                            
-                                                          } catch (e) {
-                                                            // Si es un error 409 (Conflict) - producto con ventas vinculadas
-                                                            if (e.toString().contains('ventas vinculadas') || 
-                                                                e.toString().contains('Conflict')) {
-                                                              Navigator.of(context).pop(); // Cerrar el diálogo de confirmación
-                                                              _showDeactivateDialog(context, producto);
-                                                            } else {
-                                                              // Otros errores
-                                                              AppTheme.showSnackBar(
-                                                                context,
-                                                                AppTheme.errorSnackBar(e.toString().replaceFirst('Exception: ', '')),
-                                                              );
-                                                              Navigator.of(context).pop();
-                                                            }
-                                                          }
-                                                        } else {
-                                                          AppTheme.showSnackBar(
-                                                            context,
-                                                            AppTheme.errorSnackBar('Error: ID del producto no válido'),
-                                                          );
-                                                          Navigator.of(context).pop();
-                                                        }
-                                                      },
-                                                      style: ElevatedButton
-                                                          .styleFrom(
-                                                        backgroundColor:
-                                                            Colors.red,
-                                                        foregroundColor:
-                                                            Colors.white,
-                                                      ),
-                                                      child: const Text(
-                                                          'Eliminar'),
-                                                    ),
-                                                  ],
-                                                ),
-                                              );
-                                            },
+                                            onPressed: () => _eliminarProducto(context, producto),
                                           ),
                                         ),
                                       ],
@@ -1270,91 +1143,15 @@ class _ProductosScreenState extends State<ProductosScreen> {
     );
   }
 
-  void _showDeactivateDialog(BuildContext context, Producto producto) {
-    showDialog(
+  void _showDeactivateDialog(BuildContext context, Producto producto) async {
+    final confirmado = await AppDialogs.showDeactivateProductDialog(
       context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          title: Row(
-            children: [
-              Icon(
-                Icons.warning_amber_rounded,
-                color: Colors.orange,
-                size: 28,
-              ),
-              const SizedBox(width: 12),
-              const Expanded(
-                child: Text(
-                  'No se puede eliminar',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'El producto "${producto.nombre}" no se puede eliminar porque tiene ventas vinculadas.',
-                style: const TextStyle(fontSize: 16),
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                '¿Desea desactivarlo en su lugar?',
-                style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Icon(
-                    Icons.check_circle_outline,
-                    color: Colors.blue,
-                    size: 16,
-                  ),
-                  const SizedBox(width: 8),
-                  const Expanded(
-                    child: Text(
-                      'El producto se ocultará de los catálogos pero se mantendrá en las ventas existentes',
-                      style: TextStyle(fontSize: 14),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancelar'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                Navigator.of(context).pop();
-                await _deactivateProduct(context, producto);
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.orange,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              child: const Text('Desactivar'),
-            ),
-          ],
-        );
-      },
+      productName: producto.nombre,
     );
+
+    if (confirmado) {
+      await _deactivateProduct(context, producto);
+    }
   }
 
   Future<void> _deactivateProduct(BuildContext context, Producto producto) async {
@@ -1387,5 +1184,87 @@ class _ProductosScreenState extends State<ProductosScreen> {
         ),
       ),
     );
+  }
+
+  /// Función para eliminar un producto usando el diálogo centralizado
+  Future<void> _eliminarProducto(BuildContext context, Producto producto) async {
+    final confirmado = await AppDialogs.showDeleteConfirmationDialog(
+      context: context,
+      title: 'Eliminar Producto',
+      itemName: producto.nombre,
+    );
+
+    if (confirmado) {
+      final productoProvider = Provider.of<ProductoProvider>(context, listen: false);
+      
+      if (producto.id != null) {
+        try {
+          // Intentar eliminación física primero
+          await productoProvider.eliminarProducto(producto.id!);
+          
+          // Si llegamos aquí, la eliminación fue exitosa (sin ventas vinculadas)
+          AppTheme.showSnackBar(
+            context,
+            AppTheme.successSnackBar('Producto eliminado con éxito'),
+          );
+          _loadProductosWithLoading();
+          
+        } catch (e) {
+          // Si es un error 409 (Conflict) - producto con ventas vinculadas
+          if (e.toString().contains('ventas vinculadas') || 
+              e.toString().contains('Conflict')) {
+            _showDeactivateDialog(context, producto);
+          } else {
+            // Otros errores
+            AppTheme.showSnackBar(
+              context,
+              AppTheme.errorSnackBar(e.toString().replaceFirst('Exception: ', '')),
+            );
+          }
+        }
+      } else {
+        AppTheme.showSnackBar(
+          context,
+          AppTheme.errorSnackBar('Error: ID del producto no válido'),
+        );
+      }
+    }
+  }
+
+  /// Función para eliminar una categoría usando el diálogo centralizado
+  Future<void> _eliminarCategoria(BuildContext context, Categoria categoria) async {
+    final confirmado = await AppDialogs.showDeleteConfirmationDialog(
+      context: context,
+      title: 'Eliminar Categoría',
+      itemName: categoria.nombre,
+    );
+
+    if (confirmado) {
+      try {
+        final categoriasProvider = Provider.of<CategoriasProvider>(context, listen: false);
+        await categoriasProvider.eliminarCategoria(categoria.id!);
+        
+        // Cerrar el diálogo de categorías
+        Navigator.of(context).pop();
+        
+        _loadProductosWithLoading();
+        
+        // Mostrar mensaje de éxito
+        if (mounted) {
+          AppTheme.showSnackBar(
+            context,
+            AppTheme.successSnackBar('Categoría "${categoria.nombre}" eliminada exitosamente'),
+          );
+        }
+      } catch (e) {
+        // Mostrar mensaje de error si falla la eliminación
+        if (mounted) {
+          AppTheme.showSnackBar(
+            context,
+            AppTheme.errorSnackBar('Error al eliminar la categoría: $e'),
+          );
+        }
+      }
+    }
   }
 }

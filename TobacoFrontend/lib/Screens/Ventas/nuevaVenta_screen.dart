@@ -12,6 +12,7 @@ import 'package:tobaco/Services/Clientes_Service/clientes_provider.dart';
 import 'package:tobaco/Services/Ventas_Service/ventas_provider.dart';
 import 'package:tobaco/Services/PrecioEspecialService.dart';
 import 'package:tobaco/Theme/app_theme.dart';
+import 'package:tobaco/Theme/dialogs.dart';
 import 'package:tobaco/Models/Ventas.dart';
 import 'package:tobaco/Theme/confirmAnimation.dart';
 import 'package:tobaco/Screens/Ventas/resumenVenta_screen.dart';
@@ -308,16 +309,14 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
     if (!_puedeConfirmarVenta()) return;
 
     // Mostrar diálogo de confirmación simple
-    final confirmar = await showDialog<bool>(
+    final confirmar = await AppDialogs.showConfirmationDialog(
       context: context,
-      builder: (BuildContext context) {
-        return AppTheme.confirmDialogStyle(
-          title: 'Confirmar Venta',
-          content: '¿Está seguro de que desea finalizar la venta por \$${_formatearPrecio(_calcularTotalConDescuento())}?',
-          onConfirm: () => Navigator.of(context).pop(true),
-          onCancel: () => Navigator.of(context).pop(false),
-        );
-      },
+      title: 'Confirmar Venta',
+      message: '¿Está seguro de que desea finalizar la venta por \$${_formatearPrecio(_calcularTotalConDescuento())}?',
+      confirmText: 'Finalizar Venta',
+      cancelText: 'Cancelar',
+      icon: Icons.shopping_cart_checkout,
+      iconColor: Colors.green,
     );
 
     if (confirmar != true) return;

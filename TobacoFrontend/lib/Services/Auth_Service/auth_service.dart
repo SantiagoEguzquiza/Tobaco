@@ -20,6 +20,11 @@ class AuthService {
           'Content-Type': 'application/json',
         },
         body: jsonEncode(loginRequest.toJson()),
+      ).timeout(
+        const Duration(seconds: 30),
+        onTimeout: () {
+          throw Exception('Tiempo de espera agotado. Verifica tu conexión a internet.');
+        },
       );
 
       if (response.statusCode == 200) {

@@ -5,6 +5,7 @@ import '../../Models/PrecioEspecial.dart';
 import '../../Services/PrecioEspecialService.dart';
 import '../../Services/Productos_Service/productos_provider.dart';
 import '../../Theme/app_theme.dart';
+import '../../Theme/dialogs.dart';
 import 'editarPreciosEspeciales_screen.dart';
 
 class PreciosEspecialesScreen extends StatefulWidget {
@@ -110,22 +111,10 @@ class _PreciosEspecialesScreenState extends State<PreciosEspecialesScreen> {
   }
 
   Future<void> _eliminarPrecioEspecial(PrecioEspecial precioEspecial) async {
-    final confirmed = await showDialog<bool>(
+    final confirmed = await AppDialogs.showDeleteConfirmationDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Confirmar eliminación'),
-        content: Text('¿Estás seguro de que quieres eliminar el precio especial para ${precioEspecial.productoNombre}?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Eliminar'),
-          ),
-        ],
-      ),
+      title: 'Eliminar Precio Especial',
+      message: '¿Estás seguro de que quieres eliminar el precio especial para ${precioEspecial.productoNombre}?',
     );
 
     if (confirmed == true) {

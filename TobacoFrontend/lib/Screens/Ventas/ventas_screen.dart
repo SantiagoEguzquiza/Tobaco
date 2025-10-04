@@ -6,6 +6,7 @@ import 'package:tobaco/Screens/Ventas/nuevaVenta_screen.dart';
 import 'package:tobaco/Screens/Ventas/detalleVentas_screen.dart';
 import 'package:tobaco/Services/Ventas_Service/ventas_provider.dart';
 import 'package:tobaco/Theme/app_theme.dart';
+import 'package:tobaco/Theme/dialogs.dart';
 
 class VentasScreen extends StatefulWidget {
   const VentasScreen({super.key});
@@ -686,16 +687,10 @@ class _VentasScreenState extends State<VentasScreen> {
 
   // Función para confirmar eliminación de venta
   void _confirmDeleteVenta(Ventas venta) async {
-    final confirm = await showDialog<bool>(
+    final confirm = await AppDialogs.showDeleteConfirmationDialog(
       context: context,
-      builder: (BuildContext context) {
-        return AppTheme.confirmDialogStyle(
-          title: 'Confirmar Eliminación',
-          content: '¿Está seguro de que desea eliminar esta venta? Esta acción no se puede deshacer.',
-          onConfirm: () => Navigator.of(context).pop(true),
-          onCancel: () => Navigator.of(context).pop(false),
-        );
-      },
+      title: 'Eliminar Venta',
+      message: '¿Está seguro de que desea eliminar esta venta? Esta acción no se puede deshacer.',
     );
 
     if (confirm == true) {
