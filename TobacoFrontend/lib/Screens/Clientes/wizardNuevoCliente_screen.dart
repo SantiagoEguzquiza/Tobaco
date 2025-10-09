@@ -119,11 +119,7 @@ class _WizardNuevoClienteScreenState extends State<WizardNuevoClienteScreen> {
       appBar: AppBar(
         title: Text(
           _currentStep == 0 ? 'Nuevo Cliente' : 'Precios Especiales',
-          style: const TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
-          ),
+          style: AppTheme.appBarTitleStyle,
         ),
         backgroundColor: null, // Usar el tema
         foregroundColor: Colors.white,

@@ -10,6 +10,39 @@ class DetalleClienteScreen extends StatelessWidget {
 
   const DetalleClienteScreen({super.key, required this.cliente});
 
+  // Función para parsear correctamente los valores de deuda
+  double _parsearDeuda(String? deuda) {
+    if (deuda == null || deuda.isEmpty) return 0.0;
+    print('DEBUG - Valor deuda recibido: "$deuda"');
+    
+    // Si contiene coma, tratar como separador decimal
+    if (deuda.contains(',')) {
+      List<String> partes = deuda.split(',');
+      if (partes.length == 2) {
+        String parteEntera = partes[0];
+        String parteDecimal = partes[1];
+        
+        // Tomar máximo 2 decimales
+        String decimalesFinales;
+        if (parteDecimal.length >= 2) {
+          decimalesFinales = parteDecimal.substring(0, 2);
+        } else {
+          decimalesFinales = parteDecimal.padRight(2, '0');
+        }
+        
+        String numeroCorregido = '$parteEntera.$decimalesFinales';
+        print('DEBUG - Formato corregido: "$deuda" -> "$numeroCorregido"');
+        return double.tryParse(numeroCorregido) ?? 0.0;
+      }
+    }
+    
+    // Si no contiene coma, intentar parsear directamente
+    String deudaLimpia = deuda.replaceAll(',', '');
+    double? resultado = double.tryParse(deudaLimpia);
+    print('DEBUG - Valor limpio: "$deudaLimpia" -> $resultado');
+    return resultado ?? 0.0;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -20,11 +53,7 @@ class DetalleClienteScreen extends StatelessWidget {
         backgroundColor: null, // Usar el tema
         title: const Text(
           'Detalle del Cliente',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFFFFFFFF), // Blanco puro
-          ),
+          style: AppTheme.appBarTitleStyle,
         ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
@@ -116,17 +145,17 @@ class DetalleClienteScreen extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
-              color: double.tryParse(cliente.deuda ?? '0')! > 0
+              color: _parsearDeuda(cliente.deuda) > 0
                   ? Colors.red.withOpacity(0.1)
                   : Colors.green.withOpacity(0.1),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
-              double.tryParse(cliente.deuda ?? '0')! > 0 ? 'Tiene deuda' : 'Sin deuda',
+              _parsearDeuda(cliente.deuda) > 0 ? 'Tiene deuda' : 'Sin deuda',
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
-                color: double.tryParse(cliente.deuda ?? '0')! > 0
+                color: _parsearDeuda(cliente.deuda) > 0
                     ? Colors.red.shade700
                     : Colors.green.shade700,
               ),
@@ -179,8 +208,8 @@ class DetalleClienteScreen extends StatelessWidget {
           context: context,
           icon: Icons.account_balance_wallet,
           title: 'Deuda',
-          content: '\$${cliente.deuda ?? '0.00'}',
-          iconColor: double.tryParse(cliente.deuda ?? '0')! > 0 ? Colors.red : Colors.grey,
+          content: '\$${_parsearDeuda(cliente.deuda).toStringAsFixed(2)}',
+          iconColor: _parsearDeuda(cliente.deuda) > 0 ? Colors.red : Colors.grey,
         ),
       ],
     );

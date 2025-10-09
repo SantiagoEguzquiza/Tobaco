@@ -507,6 +507,8 @@ class MenuScreen extends StatelessWidget {
                           ),
                         ],
                       ),
+                      // Espacio adicional al final para evitar que se corten los últimos botones
+                      SizedBox(height: spacing * 2),
                     ],
                   ),
                 ),

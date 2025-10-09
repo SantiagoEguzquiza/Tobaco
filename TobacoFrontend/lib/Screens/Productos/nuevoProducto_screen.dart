@@ -6,9 +6,7 @@ import 'package:tobaco/Models/Producto.dart';
 import 'package:tobaco/Models/ProductQuantityPrice.dart';
 import 'package:tobaco/Services/Categoria_Service/categoria_provider.dart';
 import 'package:tobaco/Services/Productos_Service/productos_provider.dart';
-import 'package:tobaco/Theme/app_theme.dart'; // Importa el tema
-import 'package:tobaco/Theme/dialogs.dart';
-import 'package:tobaco/Helpers/api_handler.dart';
+import 'package:tobaco/Theme/app_theme.dart';
 import 'package:tobaco/Widgets/QuantityPriceWidget.dart';
 
 class NuevoProductoScreen extends StatefulWidget {
@@ -20,535 +18,604 @@ class NuevoProductoScreen extends StatefulWidget {
 
 class _NuevoProductoScreenState extends State<NuevoProductoScreen> {
   final nombreController = TextEditingController();
-  final cantidadController = TextEditingController();
+  final stockController = TextEditingController();
   final precioController = TextEditingController();
   final categoriaController = TextEditingController();
   final halfController = TextEditingController();
   List<ProductQuantityPrice> quantityPrices = [];
+  bool _isLoading = false;
 
   // Helper method to safely parse color hex
   Color _parseColor(String colorHex) {
     try {
       if (colorHex.isEmpty || colorHex.length < 7) {
-        return const Color(0xFF9E9E9E); // Default gray
+        return const Color(0xFF9E9E9E);
       }
       return Color(int.parse(colorHex.substring(1), radix: 16) + 0xFF000000);
     } catch (e) {
-      return const Color(0xFF9E9E9E); // Default gray on error
+      return const Color(0xFF9E9E9E);
     }
   }
 
   @override
   void initState() {
     super.initState();
-    // Cargar categorías al iniciar
-    Future.microtask(() =>
-        Provider.of<CategoriasProvider>(context, listen: false)
-            .obtenerCategorias());
+    Future.microtask(() async {
+      await Provider.of<CategoriasProvider>(context, listen: false)
+          .obtenerCategorias();
+      
+      // Seleccionar la primera categoría por defecto
+      if (mounted) {
+        final categorias = Provider.of<CategoriasProvider>(context, listen: false).categorias;
+        if (categorias.isNotEmpty) {
+          setState(() {
+            categoriaController.text = categorias.first.nombre;
+          });
+        }
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final List<Categoria> categorias =
         Provider.of<CategoriasProvider>(context).categorias;
 
     return Theme(
       data: Theme.of(context).copyWith(
-        colorScheme: Theme.of(context).colorScheme.copyWith(
-          primary: const Color(0xFF4CAF50),
-          secondary: const Color(0xFF66BB6A),
-          surface: Theme.of(context).brightness == Brightness.dark
-              ? const Color(0xFF1A1A1A)
-              : Colors.white,
-          background: Theme.of(context).brightness == Brightness.dark
-              ? const Color(0xFF0F0F0F)
-              : const Color(0xFFF8F9FA),
-        ),
         textSelectionTheme: TextSelectionThemeData(
-          cursorColor: Theme.of(context).brightness == Brightness.dark
-              ? Colors.white
-              : const Color(0xFF4CAF50),
-          selectionColor: Theme.of(context).brightness == Brightness.dark
-              ? const Color(0xFF4CAF50).withOpacity(0.3)
-              : const Color(0xFF4CAF50).withOpacity(0.2),
-        ),
-        inputDecorationTheme: InputDecorationTheme(
-          labelStyle: TextStyle(
-            color: Theme.of(context).brightness == Brightness.dark
-                ? Colors.white
-                : const Color(0xFF4CAF50),
-          ),
-          hintStyle: TextStyle(
-            color: Theme.of(context).brightness == Brightness.dark
-                ? Colors.grey.shade400
-                : Colors.grey.shade600,
-          ),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(
-              color: Theme.of(context).brightness == Brightness.dark
-                  ? Colors.grey.shade600
-                  : Colors.grey.shade300,
-            ),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(
-              color: Theme.of(context).brightness == Brightness.dark
-                  ? Colors.grey.shade600
-                  : Colors.grey.shade300,
-            ),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(
-              color: const Color(0xFF4CAF50),
-              width: 2,
-            ),
-          ),
-          filled: true,
-          fillColor: Theme.of(context).brightness == Brightness.dark
-              ? const Color(0xFF2A2A2A)
-              : Colors.white,
-        ),
-        elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF4CAF50),
-            foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-        ),
-        textButtonTheme: TextButtonThemeData(
-          style: TextButton.styleFrom(
-            foregroundColor: Theme.of(context).brightness == Brightness.dark
-                ? Colors.white
-                : Colors.black,
-          ),
+          cursorColor: AppTheme.primaryColor,
+          selectionColor: AppTheme.primaryColor.withOpacity(0.3),
+          selectionHandleColor: AppTheme.primaryColor,
         ),
       ),
       child: Scaffold(
-        backgroundColor: Theme.of(context).brightness == Brightness.dark
-            ? const Color(0xFF0F0F0F)
-            : const Color(0xFFF8F9FA),
-        appBar: AppBar(
-          centerTitle: true,
-          title: Text(
-            'Nuevo Producto',
-            style: TextStyle(
-              color: Theme.of(context).brightness == Brightness.dark
-                  ? Colors.white
-                  : Colors.white,
-            ),
-          ),
-          backgroundColor: Theme.of(context).brightness == Brightness.dark
-              ? Colors.black
-              : const Color(0xFF4CAF50),
-          iconTheme: IconThemeData(
-            color: Theme.of(context).brightness == Brightness.dark
-                ? Colors.white
-                : Colors.white,
-          ),
+      backgroundColor: isDark ? const Color(0xFF121212) : const Color(0xFFF5F5F5),
+      appBar: AppBar(
+        elevation: 0,
+        backgroundColor: AppTheme.primaryColor,
+        title: const Text(
+          'Nuevo Producto',
+          style: AppTheme.appBarTitleStyle,
         ),
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          return Stack(
-            children: [
-              // Scroll con campos
-              SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(
-                    16, 16, 16, 140), // espacio para botones
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                  child: IntrinsicHeight(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      body: Stack(
+        children: [
+          SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Información básica
+                _buildSectionCard(
+                  isDark: isDark,
+                  title: 'Información Básica',
+                  icon: Icons.info_outline,
+                  children: [
+                    _buildTextField(
+                      controller: nombreController,
+                      label: 'Nombre del producto',
+                      hint: 'Ej: Marlboro Rojo',
+                      icon: Icons.inventory_2_outlined,
+                      isDark: isDark,
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
                       children: [
-                        Text(
-                          'Nombre:',
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Theme.of(context).brightness == Brightness.dark
-                                ? Colors.white
-                                : Colors.black,
+                        Expanded(
+                          child: _buildTextField(
+                            controller: stockController,
+                            label: 'Stock disponible',
+                            hint: '0',
+                            icon: Icons.warehouse_outlined,
+                            isDark: isDark,
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            inputFormatters: [
+                              FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                            ],
                           ),
                         ),
-                        const SizedBox(height: 10),
-                        TextField(
-                          controller: nombreController,
-                          style: TextStyle(
-                            color: Theme.of(context).brightness == Brightness.dark
-                                ? Colors.white
-                                : Colors.black,
-                          ),
-                          decoration: AppTheme.inputDecoration.copyWith(
-                            hintText: 'Ingrese el nombre...',
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Cantidad:',
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Theme.of(context).brightness == Brightness.dark
-                                ? Colors.white
-                                : Colors.black,
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: _buildTextField(
+                            controller: precioController,
+                            label: 'Precio unitario',
+                            hint: '0.00',
+                            icon: Icons.attach_money,
+                            isDark: isDark,
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            inputFormatters: [
+                              FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                            ],
                           ),
                         ),
-                        const SizedBox(height: 10),
-                        TextField(
-                          controller: cantidadController,
-                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                          inputFormatters: [
-                            FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
-                          ],
-                          style: TextStyle(
-                            color: Theme.of(context).brightness == Brightness.dark
-                                ? Colors.white
-                                : Colors.black,
-                          ),
-                          decoration: AppTheme.inputDecoration.copyWith(
-                            hintText: 'Ingrese la cantidad...',
+                      ],
+                    ),
+                  ],
+                ),
+                
+                const SizedBox(height: 16),
+                
+                // Categoría
+                _buildSectionCard(
+                  isDark: isDark,
+                  title: 'Categoría',
+                  icon: Icons.category_outlined,
+                  children: [
+                    DropdownButtonFormField<Categoria>(
+                      value: categorias.isNotEmpty ? categorias.first : null,
+                      decoration: InputDecoration(
+                        hintText: 'Seleccione una categoría',
+                        hintStyle: TextStyle(
+                          color: isDark ? Colors.grey.shade500 : Colors.grey.shade600,
+                        ),
+                        filled: true,
+                        fillColor: isDark ? const Color(0xFF2A2A2A) : Colors.white,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: isDark ? const Color(0xFF404040) : Colors.grey.shade300,
                           ),
                         ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Precio:',
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Theme.of(context).brightness == Brightness.dark
-                                ? Colors.white
-                                : Colors.black,
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: isDark ? const Color(0xFF404040) : Colors.grey.shade300,
                           ),
                         ),
-                        const SizedBox(height: 10),
-                        TextField(
-                          controller: precioController,
-                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                          inputFormatters: [
-                            FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
-                          ],
-                          style: TextStyle(
-                            color: Theme.of(context).brightness == Brightness.dark
-                                ? Colors.white
-                                : Colors.black,
-                          ),
-                          decoration: AppTheme.inputDecoration.copyWith(
-                            hintText: 'Ingrese el precio...',
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(
+                            color: AppTheme.primaryColor,
+                            width: 2,
                           ),
                         ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Categoría:',
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Theme.of(context).brightness == Brightness.dark
-                                ? Colors.white
-                                : Colors.black,
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        DropdownButtonFormField<Categoria>(
-                          value:
-                              categorias.isNotEmpty ? categorias.first : null,
-                          style: TextStyle(
-                            color: Theme.of(context).brightness == Brightness.dark
-                                ? Colors.white
-                                : Colors.black,
-                          ),
-                          items: categorias.map((categoria) {
-                            return DropdownMenuItem<Categoria>(
-                              value: categoria,
-                              child: Row(
-                                children: [
-                                  Container(
-                                    width: 16,
-                                    height: 16,
-                                    decoration: BoxDecoration(
-                                      color: _parseColor(categoria.colorHex),
-                                      shape: BoxShape.circle,
-                                      border: Border.all(
-                                        color: Colors.grey.shade300,
-                                        width: 1,
-                                      ),
-                                    ),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                      ),
+                      dropdownColor: isDark ? const Color(0xFF2A2A2A) : Colors.white,
+                      style: TextStyle(
+                        color: isDark ? Colors.white : Colors.black87,
+                        fontSize: 16,
+                      ),
+                      icon: Icon(
+                        Icons.arrow_drop_down,
+                        color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                      ),
+                      items: categorias.map((categoria) {
+                        return DropdownMenuItem<Categoria>(
+                          value: categoria,
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 20,
+                                height: 20,
+                                decoration: BoxDecoration(
+                                  color: _parseColor(categoria.colorHex),
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
+                                    width: 1.5,
                                   ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    categoria.nombre,
-                                    style: TextStyle(
-                                      color: Theme.of(context).brightness == Brightness.dark
-                                          ? Colors.white
-                                          : Colors.black,
-                                    ),
-                                  ),
-                                ],
+                                ),
                               ),
-                            );
-                          }).toList(),
-                          onChanged: (value) {
-                            categoriaController.text =
-                                value != null ? value.nombre : '';
-                          },
-                          decoration: AppTheme.inputDecoration.copyWith(
-                            hintText: 'Seleccione una categoría...',
+                              const SizedBox(width: 12),
+                              Text(categoria.nombre),
+                            ],
                           ),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        categoriaController.text = value != null ? value.nombre : '';
+                      },
+                    ),
+                  ],
+                ),
+                
+                const SizedBox(height: 16),
+                
+                // Opciones
+                _buildSectionCard(
+                  isDark: isDark,
+                  title: 'Opciones',
+                  icon: Icons.settings_outlined,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF2A2A2A) : Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: isDark ? const Color(0xFF404040) : Colors.grey.shade300,
                         ),
-                        const SizedBox(height: 16),
-                        StatefulBuilder(
-                          builder: (context, setState) {
-                            return Row(
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: AppTheme.primaryColor.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(
+                              Icons.call_split,
+                              color: AppTheme.primaryColor,
+                              size: 20,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
                                   '¿Se puede vender medio?',
                                   style: TextStyle(
-                                    fontSize: 16,
-                                    color: Theme.of(context).brightness == Brightness.dark
-                                        ? Colors.white
-                                        : Colors.black,
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w500,
+                                    color: isDark ? Colors.white : Colors.black87,
                                   ),
                                 ),
-                                const SizedBox(width: 8),
-                                Checkbox(
-                                  value: halfController.text == 'true',
-                                  onChanged: (bool? value) {
-                                    setState(() {
-                                      halfController.text =
-                                          value == true ? 'true' : 'false';
-                                    });
-                                  },
-                                  shape: AppTheme.checkboxTheme.shape,
-                                  fillColor: AppTheme.checkboxTheme.fillColor,
-                                  checkColor: AppTheme.checkboxTheme.checkColor
-                                      ?.resolve({}),
-                                  side: AppTheme.checkboxTheme.side,
+                                Text(
+                                  'Permite vender fracciones del producto',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                                  ),
                                 ),
                               ],
-                            );
-                          },
-                        ),
-                        const SizedBox(height: 24),
-                        QuantityPriceWidget(
-                          quantityPrices: quantityPrices,
-                          onChanged: (prices) {
-                            setState(() {
-                              quantityPrices = prices;
-                            });
-                          },
-                        ),
-                        const Spacer(),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-
-              // Botones de acción
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 0,
-                child: SafeArea(
-                  top: false,
-                  child:                   Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 12),
-                    color: Theme.of(context).brightness == Brightness.dark
-                        ? const Color(0xFF0F0F0F)
-                        : Colors.white,
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: () => Navigator.pop(context),
-                            style: OutlinedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              side: BorderSide(
-                                color: Theme.of(context).brightness == Brightness.dark
-                                    ? Colors.grey.shade600
-                                    : Colors.grey,
-                              ),
-                            ),
-                            child: Text(
-                              'Volver',
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: Theme.of(context).brightness == Brightness.dark
-                                    ? Colors.white
-                                    : Colors.black,
-                              ),
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF4CAF50),
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            onPressed: () async {
-                              // Validar campos requeridos
-                              if (nombreController.text.trim().isEmpty) {
-                                AppTheme.showSnackBar(
-                                  context,
-                                  AppTheme.warningSnackBar('El nombre del producto es requerido'),
-                                );
-                                return;
-                              }
-
-                              if (cantidadController.text.trim().isEmpty) {
-                                AppTheme.showSnackBar(
-                                  context,
-                                  AppTheme.warningSnackBar('La cantidad es requerida'),
-                                );
-                                return;
-                              }
-
-                              // Validar que la cantidad sea un número válido
-                              final cantidadValue = double.tryParse(cantidadController.text.trim());
-                              if (cantidadValue == null || cantidadValue < 0) {
-                                AppTheme.showSnackBar(
-                                  context,
-                                  AppTheme.warningSnackBar('La cantidad debe ser un número válido mayor o igual a 0'),
-                                );
-                                return;
-                              }
-
-                              if (precioController.text.trim().isEmpty) {
-                                AppTheme.showSnackBar(
-                                  context,
-                                  AppTheme.warningSnackBar('El precio es requerido'),
-                                );
-                                return;
-                              }
-
-                              // Validar que el precio sea un número válido
-                              final precioValue = double.tryParse(precioController.text.trim());
-                              if (precioValue == null || precioValue <= 0) {
-                                AppTheme.showSnackBar(
-                                  context,
-                                  AppTheme.warningSnackBar('El precio debe ser un número válido mayor a 0'),
-                                );
-                                return;
-                              }
-
-                              // Validar precios por cantidad (solo packs, cantidad >= 2)
-                              if (quantityPrices.isNotEmpty) {
-                                // Verificar que no hay cantidades duplicadas
-                                final quantities = quantityPrices.map((qp) => qp.quantity).toList();
-                                if (quantities.length != quantities.toSet().length) {
-                                  AppTheme.showSnackBar(
-                                    context,
-                                    AppTheme.warningSnackBar('No puede haber cantidades duplicadas'),
-                                  );
-                                  return;
-                                }
-
-                                // Verificar que todos los precios son válidos y cantidades >= 2
-                                if (quantityPrices.any((qp) => qp.totalPrice <= 0)) {
-                                  AppTheme.showSnackBar(
-                                    context,
-                                    AppTheme.warningSnackBar('Todos los precios deben ser mayores a 0'),
-                                  );
-                                  return;
-                                }
-
-                                if (quantityPrices.any((qp) => qp.quantity < 2)) {
-                                  AppTheme.showSnackBar(
-                                    context,
-                                    AppTheme.warningSnackBar('Las cantidades deben ser >= 2 para packs'),
-                                  );
-                                  return;
-                                }
-                              }
-
-                              final selectedCategoria = categorias.firstWhere(
-                                (c) => c.nombre == categoriaController.text,
-                                orElse: () => categorias.first,
-                              );
-                              
-                              final producto = Producto(
-                                id: null,
-                                nombre: nombreController.text.trim(),
-                                cantidad: double.tryParse(cantidadController.text) ?? 0.0,
-                                precio: double.tryParse(precioController.text) ?? 0.0,
-                                categoriaId: selectedCategoria.id ?? 0,
-                                half: halfController.text == 'true',
-                                quantityPrices: quantityPrices,
-                              );
-
-                              // Debug: verificar qué se está enviando
-                              debugPrint('=== NUEVO PRODUCTO ===');
-                              debugPrint('Nombre: ${producto.nombre}');
-                              debugPrint('Cantidad packs: ${quantityPrices.length}');
-                              debugPrint('Packs: ${quantityPrices.map((qp) => 'Cant: ${qp.quantity}, Precio: ${qp.totalPrice}').toList()}');
-
-                              try {
-                                // Mostrar loading básico
-                                showDialog(
-                                  context: context,
-                                  barrierDismissible: false,
-                                  builder: (context) => const Center(
-                                    child: CircularProgressIndicator(
-                                      valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
-                                    ),
-                                  ),
-                                );
-                                
-                                await Provider.of<ProductoProvider>(context,
-                                        listen: false)
-                                    .crearProducto(producto);
-                                
-                                if (!context.mounted) return;
-                                
-                                // Cerrar loading
-                                Navigator.pop(context);
-                                
-                                AppTheme.showSnackBar(
-                                  context,
-                                  AppTheme.successSnackBar('Producto guardado con éxito'),
-                                );
-                                Navigator.pop(context, true); // Devolver true para indicar éxito
-                              } catch (e) {
-                                if (!context.mounted) return;
-                                
-                                // Cerrar loading
-                                Navigator.pop(context);
-                                
-                                if (Apihandler.isConnectionError(e)) {
-                                  await Apihandler.handleConnectionError(context, e);
-                                } else {
-                                  await AppDialogs.showErrorDialog(
-                                    context: context,
-                                    message: 'Error al crear producto: ${e.toString().replaceFirst('Exception: ', '')}',
-                                  );
-                                }
-                              }
+                          Switch(
+                            value: halfController.text == 'true',
+                            onChanged: (bool value) {
+                              setState(() {
+                                halfController.text = value ? 'true' : 'false';
+                              });
                             },
-                            child: const Text('Guardar',
-                                style: TextStyle(
-                                    fontSize: 16, color: Colors.white)),
+                            activeColor: AppTheme.primaryColor,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                
+                const SizedBox(height: 16),
+                
+                // Precios por cantidad (packs)
+                _buildSectionCard(
+                  isDark: isDark,
+                  title: 'Precios por Cantidad (Packs)',
+                  icon: Icons.local_offer_outlined,
+                  children: [
+                    QuantityPriceWidget(
+                      quantityPrices: quantityPrices,
+                      onChanged: (prices) {
+                        setState(() {
+                          quantityPrices = prices;
+                        });
+                      },
+                    ),
+                  ],
+                ),
+                
+                const SizedBox(height: 100), // Espacio para el botón flotante
+              ],
+            ),
+          ),
+          
+          // Botón flotante para guardar
+          Positioned(
+            left: 20,
+            right: 20,
+            bottom: 20,
+            child: SafeArea(
+              child: _isLoading
+                  ? Container(
+                      height: 56,
+                      decoration: BoxDecoration(
+                        color: AppTheme.primaryColor,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: const Center(
+                        child: SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 3,
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                           ),
                         ),
-                      ],
+                      ),
+                    )
+                  : ElevatedButton(
+                      onPressed: _guardarProducto,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primaryColor,
+                        foregroundColor: Colors.white,
+                        elevation: 8,
+                        shadowColor: AppTheme.primaryColor.withOpacity(0.5),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.check_circle_outline, size: 24),
+                          SizedBox(width: 8),
+                          Text(
+                            'Crear Producto',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ),
-              ),
-            ],
-          );
-        },
+            ),
+          ),
+        ],
       ),
       ),
     );
+  }
+
+  Widget _buildSectionCard({
+    required bool isDark,
+    required String title,
+    required IconData icon,
+    required List<Widget> children,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: isDark 
+                ? Colors.black.withOpacity(0.3) 
+                : Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    icon,
+                    color: AppTheme.primaryColor,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: isDark ? Colors.white : Colors.black87,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            ...children,
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String label,
+    required String hint,
+    required IconData icon,
+    required bool isDark,
+    TextInputType? keyboardType,
+    List<TextInputFormatter>? inputFormatters,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: isDark ? Colors.grey.shade300 : Colors.grey.shade700,
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: controller,
+          keyboardType: keyboardType,
+          inputFormatters: inputFormatters,
+          style: TextStyle(
+            color: isDark ? Colors.white : Colors.black87,
+            fontSize: 16,
+          ),
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: TextStyle(
+              color: isDark ? Colors.grey.shade600 : Colors.grey.shade400,
+            ),
+            prefixIcon: Icon(
+              icon,
+              color: AppTheme.primaryColor,
+              size: 20,
+            ),
+            filled: true,
+            fillColor: isDark ? const Color(0xFF2A2A2A) : Colors.white,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(
+                color: isDark ? const Color(0xFF404040) : Colors.grey.shade300,
+              ),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(
+                color: isDark ? const Color(0xFF404040) : Colors.grey.shade300,
+              ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(
+                color: AppTheme.primaryColor,
+                width: 2,
+              ),
+            ),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _guardarProducto() async {
+    final categorias = Provider.of<CategoriasProvider>(context, listen: false).categorias;
+
+    // Validaciones
+    if (nombreController.text.trim().isEmpty) {
+      AppTheme.showSnackBar(
+        context,
+        AppTheme.warningSnackBar('El nombre del producto es requerido'),
+      );
+      return;
+    }
+
+    if (stockController.text.trim().isEmpty) {
+      AppTheme.showSnackBar(
+        context,
+        AppTheme.warningSnackBar('El stock es requerido'),
+      );
+      return;
+    }
+
+    final stockValue = double.tryParse(stockController.text.trim());
+    if (stockValue == null || stockValue < 0) {
+      AppTheme.showSnackBar(
+        context,
+        AppTheme.warningSnackBar('El stock debe ser un número válido mayor o igual a 0'),
+      );
+      return;
+    }
+
+    if (precioController.text.trim().isEmpty) {
+      AppTheme.showSnackBar(
+        context,
+        AppTheme.warningSnackBar('El precio es requerido'),
+      );
+      return;
+    }
+
+    final precioValue = double.tryParse(precioController.text.trim());
+    if (precioValue == null || precioValue <= 0) {
+      AppTheme.showSnackBar(
+        context,
+        AppTheme.warningSnackBar('El precio debe ser un número válido mayor a 0'),
+      );
+      return;
+    }
+
+    if (categoriaController.text.trim().isEmpty) {
+      AppTheme.showSnackBar(
+        context,
+        AppTheme.warningSnackBar('Debe seleccionar una categoría'),
+      );
+      return;
+    }
+
+    // Validar precios por cantidad (solo packs, cantidad >= 2)
+    if (quantityPrices.isNotEmpty) {
+      // Verificar que no hay cantidades duplicadas
+      final quantities = quantityPrices.map((qp) => qp.quantity).toList();
+      if (quantities.length != quantities.toSet().length) {
+        AppTheme.showSnackBar(
+          context,
+          AppTheme.warningSnackBar('No puede haber cantidades duplicadas'),
+        );
+        return;
+      }
+
+      // Verificar que todos los precios son válidos y cantidades >= 2
+      if (quantityPrices.any((qp) => qp.totalPrice <= 0)) {
+        AppTheme.showSnackBar(
+          context,
+          AppTheme.warningSnackBar('Los precios deben ser mayores a 0'),
+        );
+        return;
+      }
+
+      if (quantityPrices.any((qp) => qp.quantity < 2)) {
+        AppTheme.showSnackBar(
+          context,
+          AppTheme.warningSnackBar('Las cantidades deben ser >= 2 para packs'),
+        );
+        return;
+      }
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      final selectedCategoria = categorias.firstWhere(
+        (c) => c.nombre == categoriaController.text,
+        orElse: () => categorias.first,
+      );
+      
+      final producto = Producto(
+        id: null,
+        nombre: nombreController.text.trim(),
+        stock: double.tryParse(stockController.text) ?? 0.0,
+        precio: double.tryParse(precioController.text) ?? 0.0,
+        categoriaId: selectedCategoria.id ?? 0,
+        half: halfController.text == 'true',
+        quantityPrices: quantityPrices,
+      );
+
+      await Provider.of<ProductoProvider>(context, listen: false)
+          .crearProducto(producto);
+
+      if (mounted) {
+        AppTheme.showSnackBar(
+          context,
+          AppTheme.successSnackBar('Producto creado exitosamente'),
+        );
+        Navigator.pop(context, true);
+      }
+    } catch (e) {
+      if (mounted) {
+        AppTheme.showSnackBar(
+          context,
+          AppTheme.errorSnackBar(e.toString()),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 }

@@ -76,14 +76,14 @@ class _VentasScreenState extends State<VentasScreen> {
       if (!mounted) return;
       
       setState(() {
-        ventas = List<Ventas>.from(data['pedidos']);
+        ventas = List<Ventas>.from(data['ventas']);
         _hasMoreData = data['hasNextPage'];
         isLoading = false;
       });
     } catch (e) {
       if (!mounted) return;
       
-      debugPrint('Error al cargar los pedidos: $e');
+      debugPrint('Error al cargar las ventas: $e');
       
       if (Apihandler.isConnectionError(e)) {
         setState(() {
@@ -94,7 +94,7 @@ class _VentasScreenState extends State<VentasScreen> {
       } else {
         setState(() {
           isLoading = false;
-          errorMessage = 'Error al cargar los pedidos: $e';
+          errorMessage = 'Error al cargar las ventas: $e';
         });
         await AppDialogs.showErrorDialog(
           context: context,
@@ -117,7 +117,7 @@ class _VentasScreenState extends State<VentasScreen> {
       if (!mounted) return;
       
       setState(() {
-        ventas.addAll(List<Ventas>.from(data['pedidos']));
+        ventas.addAll(List<Ventas>.from(data['ventas']));
         _currentPage++;
         _hasMoreData = data['hasNextPage'];
         _isLoadingMore = false;

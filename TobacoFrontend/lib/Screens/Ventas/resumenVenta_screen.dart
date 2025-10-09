@@ -101,7 +101,9 @@ class _ResumenVentaScreenState extends State<ResumenVentaScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            CircularProgressIndicator(),
+            CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
+            ),
             SizedBox(height: 16),
             Text('Cargando información de la venta...'),
           ],

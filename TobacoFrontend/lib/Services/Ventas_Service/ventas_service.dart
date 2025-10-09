@@ -12,7 +12,7 @@ class VentasService {
     try {
       final headers = await AuthService.getAuthHeaders();
       final response = await Apihandler.client.get(
-        Uri.parse('$baseUrl/Pedidos'),
+        Uri.parse('$baseUrl/Ventas'),
         headers: headers,
       ).timeout(_timeoutDuration);
 
@@ -45,11 +45,11 @@ class VentasService {
       // Debug: Imprimir los datos que se están enviando
       final ventaJson = venta.toJson();
       debugPrint('Enviando venta: ${jsonEncode(ventaJson)}');
-      debugPrint('URL: $baseUrl/Pedidos');
+      debugPrint('URL: $baseUrl/Ventas');
       debugPrint('Headers: $headers');
       
       final response = await Apihandler.client.post(
-        Uri.parse('$baseUrl/Pedidos'),
+        Uri.parse('$baseUrl/Ventas'),
         headers: headers,
         body: jsonEncode(ventaJson),
       ).timeout(_timeoutDuration);
@@ -69,12 +69,11 @@ class VentasService {
     }
   }
 
-
   Future<void> eliminarVenta(int id) async {
     try {
       final headers = await AuthService.getAuthHeaders();
       final response = await Apihandler.client.delete(
-        Uri.parse('$baseUrl/Pedidos/$id'),
+        Uri.parse('$baseUrl/Ventas/$id'),
         headers: headers,
       ).timeout(_timeoutDuration);
 
@@ -94,17 +93,17 @@ class VentasService {
     try {
       final headers = await AuthService.getAuthHeaders();
       final response = await Apihandler.client.get(
-        Uri.parse('$baseUrl/Pedidos/paginados?page=$page&pageSize=$pageSize'),
+        Uri.parse('$baseUrl/Ventas/paginados?page=$page&pageSize=$pageSize'),
         headers: headers,
       ).timeout(_timeoutDuration);
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = jsonDecode(response.body);
-        final List<dynamic> pedidosJson = data['pedidos'];
-        final List<Ventas> ventas = pedidosJson.map((json) => Ventas.fromJson(json)).toList();
+        final List<dynamic> ventasJson = data['ventas'];
+        final List<Ventas> ventas = ventasJson.map((json) => Ventas.fromJson(json)).toList();
         
         return {
-          'pedidos': ventas,
+          'ventas': ventas,
           'totalItems': data['totalItems'],
           'totalPages': data['totalPages'],
           'currentPage': data['currentPage'],
@@ -126,7 +125,7 @@ class VentasService {
     try {
       final headers = await AuthService.getAuthHeaders();
       final response = await Apihandler.client.get(
-        Uri.parse('$baseUrl/Pedidos/$id'),
+        Uri.parse('$baseUrl/Ventas/$id'),
         headers: headers,
       ).timeout(_timeoutDuration);
 
@@ -147,7 +146,7 @@ class VentasService {
     try {
       final headers = await AuthService.getAuthHeaders();
       final response = await Apihandler.client.get(
-        Uri.parse('$baseUrl/Pedidos'),
+        Uri.parse('$baseUrl/Ventas'),
         headers: headers,
       ).timeout(_timeoutDuration);
 
@@ -187,7 +186,7 @@ class VentasService {
       final headers = await AuthService.getAuthHeaders();
       
       // Construir la URL con parámetros de consulta
-      final uri = Uri.parse('$baseUrl/Pedidos/por-cliente/$clienteId').replace(
+      final uri = Uri.parse('$baseUrl/Ventas/por-cliente/$clienteId').replace(
         queryParameters: {
           'pageNumber': pageNumber.toString(),
           'pageSize': pageSize.toString(),
@@ -203,11 +202,11 @@ class VentasService {
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = jsonDecode(response.body);
-        final List<dynamic> pedidosJson = data['pedidos'];
-        final List<Ventas> ventas = pedidosJson.map((json) => Ventas.fromJson(json)).toList();
+        final List<dynamic> ventasJson = data['ventas'];
+        final List<Ventas> ventas = ventasJson.map((json) => Ventas.fromJson(json)).toList();
         
         return {
-          'pedidos': ventas,
+          'ventas': ventas,
           'totalItems': data['totalItems'],
           'totalPages': data['totalPages'],
           'currentPage': data['currentPage'],
@@ -221,6 +220,42 @@ class VentasService {
       }
     } catch (e) {
       debugPrint('Error al obtener las ventas del cliente: $e');
+      rethrow;
+    }
+  }
+
+  Future<Map<String, dynamic>> obtenerVentasCuentaCorrientePorClienteId(
+    int clienteId, 
+    int page, 
+    int pageSize
+  ) async {
+    try {
+      final headers = await AuthService.getAuthHeaders();
+      final response = await Apihandler.client.get(
+        Uri.parse('$baseUrl/Clientes/$clienteId/ventas-cc?page=$page&pageSize=$pageSize'),
+        headers: headers,
+      ).timeout(_timeoutDuration);
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = jsonDecode(response.body);
+        final List<dynamic> ventasJson = data['ventas'];
+        final List<Ventas> ventas = ventasJson.map((json) => Ventas.fromJson(json)).toList();
+        
+        return {
+          'ventas': ventas,
+          'totalItems': data['totalItems'],
+          'totalPages': data['totalPages'],
+          'currentPage': data['currentPage'],
+          'pageSize': data['pageSize'],
+          'hasNextPage': data['hasNextPage'],
+          'hasPreviousPage': data['hasPreviousPage'],
+        };
+      } else {
+        throw Exception(
+            'Error al obtener las ventas con cuenta corriente. Código de estado: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('Error al obtener las ventas con cuenta corriente: $e');
       rethrow;
     }
   }

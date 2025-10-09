@@ -163,11 +163,7 @@ class _PreciosEspecialesScreenState extends State<PreciosEspecialesScreen> {
         backgroundColor: null, // Usar el tema
         title: const Text(
           'Precios Especiales',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFFFFFFFF), // Blanco puro
-          ),
+          style: AppTheme.appBarTitleStyle,
         ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),

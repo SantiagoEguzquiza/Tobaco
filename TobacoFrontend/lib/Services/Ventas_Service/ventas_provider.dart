@@ -40,12 +40,30 @@ class VentasProvider with ChangeNotifier {
     }
   }
 
-
-  Future<Map<String, dynamic>> obtenerVentasPaginadas(int page, int pageSize) async {
+  Future<Map<String, dynamic>> obtenerVentasPaginadas(
+      int page, int pageSize) async {
     try {
       return await _ventasService.obtenerVentasPaginadas(page, pageSize);
     } catch (e) {
       debugPrint('Error al obtener ventas paginadas: $e');
+      rethrow;
+    }
+  }
+
+  Future<Ventas> obtenerVentaPorId(int id) async {
+    try {
+      return await _ventasService.obtenerVentaPorId(id);
+    } catch (e) {
+      debugPrint('Error al obtener venta por ID: $e');
+      rethrow;
+    }
+  }
+
+  Future<Ventas> obtenerUltimaVenta() async {
+    try {
+      return await _ventasService.obtenerUltimaVenta();
+    } catch (e) {
+      debugPrint('Error al obtener última venta: $e');
       rethrow;
     }
   }
@@ -71,4 +89,14 @@ class VentasProvider with ChangeNotifier {
     }
   }
 
+  Future<Map<String, dynamic>> obtenerVentasCuentaCorrientePorClienteId(
+      int clienteId, int page, int pageSize) async {
+    try {
+      return await _ventasService.obtenerVentasCuentaCorrientePorClienteId(
+          clienteId, page, pageSize);
+    } catch (e) {
+      debugPrint('Error al obtener ventas con cuenta corriente: $e');
+      rethrow;
+    }
+  }
 }

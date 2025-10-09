@@ -264,11 +264,7 @@ class _ClientesScreenState extends State<ClientesScreen> {
         backgroundColor: null, // Usar el tema
         title: const Text(
           'Clientes',
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFFFFFFFF), // Blanco puro
-          ),
+          style: AppTheme.appBarTitleStyle,
         ),
       ),
       body: _isLoading && _clientes.isEmpty

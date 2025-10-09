@@ -228,9 +228,9 @@ class AppTheme {
   );
 
   static const TextStyle appBarTitleStyle = TextStyle(
-    fontSize: 28,
+    fontSize: 20,
     color: Color(0xFFFFFFFF), // Blanco puro para títulos
-    fontWeight: FontWeight.bold,
+    fontWeight: FontWeight.w600,
   );
 
   static const TextStyle sectionTitleStyle = TextStyle(

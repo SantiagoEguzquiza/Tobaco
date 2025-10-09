@@ -813,16 +813,33 @@ class _FormaPagoScreenState extends State<FormaPagoScreen> {
       final ventaPagos = pagosParciales.map((pago) => 
         VentaPago(
           id: 0, // Asigna el valor adecuado para 'id'
-          pedidoId: widget.venta.id ?? 0, // Asegúrate de que 'widget.venta.id' existe y es correcto
+          ventaId: widget.venta.id ?? 0, // Asegúrate de que 'widget.venta.id' existe y es correcto
           metodo: pago.metodo, 
           monto: pago.monto
         )
       ).toList();
       
-      // Actualizar la venta con la lista de pagos
-      widget.venta.pagos = ventaPagos;
+      // Determinar el método de pago principal de la venta
+      MetodoPago metodoPagoPrincipal;
+      if (pagosParciales.length == 1) {
+        // Si hay solo un pago, usar ese método
+        metodoPagoPrincipal = pagosParciales.first.metodo;
+      } else {
+        // Si hay múltiples pagos, priorizar cuenta corriente si existe
+        if (pagosParciales.any((pago) => pago.metodo == MetodoPago.cuentaCorriente)) {
+          metodoPagoPrincipal = MetodoPago.cuentaCorriente;
+        } else {
+          // Si no hay cuenta corriente, usar el primer método
+          metodoPagoPrincipal = pagosParciales.first.metodo;
+        }
+      }
       
-      Navigator.pop(context, widget.venta); // Devolver la venta actualizada
+      // Actualizar la venta con la lista de pagos y método principal
+      widget.venta.pagos = ventaPagos;
+      widget.venta.metodoPago = metodoPagoPrincipal;
+      
+      // Devolver la venta actualizada
+      Navigator.pop(context, widget.venta);
     }
   }
 }

@@ -99,4 +99,13 @@ class ClienteProvider with ChangeNotifier {
       rethrow;
     }
   }
+
+  Future<Map<String, dynamic>> obtenerDetalleDeuda(int clienteId) async {
+    try {
+      return await _clienteService.obtenerDetalleDeuda(clienteId);
+    } catch (e) {
+      debugPrint('Error al obtener detalle de deuda: $e');
+      rethrow;
+    }
+  }
 }

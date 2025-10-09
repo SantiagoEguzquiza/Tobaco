@@ -75,6 +75,7 @@ class _ProductosScreenState extends State<ProductosScreen> {
     }
   }
 
+  
   Future<void> _loadProductos() async {
     if (!mounted) return;
     
@@ -209,11 +210,7 @@ class _ProductosScreenState extends State<ProductosScreen> {
         backgroundColor: null, // Usar el tema
         title: const Text(
           'Productos',
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFFFFFFFF), // Blanco puro
-          ),
+          style: AppTheme.appBarTitleStyle,
         ),
         actions: [
           Container(
@@ -646,7 +643,7 @@ class _ProductosScreenState extends State<ProductosScreen> {
                                               ),
                                               const SizedBox(width: 4),
                                               Text(
-                                                'Cantidad: ${producto.cantidad}',
+                                                'Stock: ${producto.stock}',
                                                 style: TextStyle(
                                                   fontSize: 14,
                                                   color: Theme.of(context).brightness == Brightness.dark
