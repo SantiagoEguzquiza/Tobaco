@@ -8,6 +8,7 @@ import 'package:tobaco/Services/Clientes_Service/clientes_provider.dart';
 import 'package:tobaco/Services/Ventas_Service/ventas_provider.dart';
 import 'package:tobaco/Services/Abonos_Service/abonos_provider.dart';
 import 'package:tobaco/Theme/app_theme.dart';
+import 'package:tobaco/Theme/dialogs.dart';
 import 'dart:developer';
 
 class DetalleDeudaScreen extends StatefulWidget {
@@ -191,19 +192,26 @@ class _DetalleDeudaScreenState extends State<DetalleDeudaScreen>
     final TextEditingController montoController = TextEditingController();
     final TextEditingController notaController = TextEditingController();
     String? errorMessage;
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     
     showDialog(
       context: context,
-      builder: (BuildContext context) {
+      builder: (BuildContext dialogContext) {
         return StatefulBuilder(
           builder: (context, setState) {
             return AppTheme.minimalAlertDialog(
               title: 'Saldar Deuda',
-              content: Container(
-                padding: const EdgeInsets.only(bottom: 16),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
+              content: TextSelectionTheme(
+                data: TextSelectionThemeData(
+                  cursorColor: AppTheme.primaryColor,
+                  selectionColor: AppTheme.primaryColor.withOpacity(0.3),
+                  selectionHandleColor: AppTheme.primaryColor,
+                ),
+                child: Container(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
                 // Información del cliente y deuda actual
                 Container(
                   padding: const EdgeInsets.all(16),
@@ -287,17 +295,28 @@ class _DetalleDeudaScreenState extends State<DetalleDeudaScreen>
                   inputFormatters: [
                     FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
                   ],
+                  style: TextStyle(
+                    color: isDarkMode ? Colors.white : Colors.black,
+                  ),
                   decoration: InputDecoration(
                     labelText: 'Monto a abonar',
                     hintText: 'Ingrese el monto',
                     prefixText: '\$ ',
+                    labelStyle: TextStyle(
+                      color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade700,
+                    ),
+                    hintStyle: TextStyle(
+                      color: isDarkMode ? Colors.grey.shade600 : Colors.grey.shade400,
+                    ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
                       borderSide: const BorderSide(color: AppTheme.primaryColor),
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(color: Colors.grey),
+                      borderSide: BorderSide(
+                        color: isDarkMode ? Colors.grey.shade700 : Colors.grey.shade400,
+                      ),
                     ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
@@ -310,16 +329,27 @@ class _DetalleDeudaScreenState extends State<DetalleDeudaScreen>
                 TextField(
                   controller: notaController,
                   maxLines: 2,
+                  style: TextStyle(
+                    color: isDarkMode ? Colors.white : Colors.black,
+                  ),
                   decoration: InputDecoration(
                     labelText: 'Nota (opcional)',
                     hintText: 'Ingrese una nota...',
+                    labelStyle: TextStyle(
+                      color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade700,
+                    ),
+                    hintStyle: TextStyle(
+                      color: isDarkMode ? Colors.grey.shade600 : Colors.grey.shade400,
+                    ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
                       borderSide: const BorderSide(color: AppTheme.primaryColor),
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(color: Colors.grey),
+                      borderSide: BorderSide(
+                        color: isDarkMode ? Colors.grey.shade700 : Colors.grey.shade400,
+                      ),
                     ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
@@ -335,17 +365,20 @@ class _DetalleDeudaScreenState extends State<DetalleDeudaScreen>
                       child: OutlinedButton(
                         onPressed: () => Navigator.of(context).pop(),
                         style: OutlinedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          side: const BorderSide(color: Colors.grey, width: 1.5),
+                          backgroundColor: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+                          side: BorderSide(
+                            color: isDarkMode ? Colors.grey.shade700 : Colors.grey.shade400, 
+                            width: 1.5
+                          ),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
                           padding: const EdgeInsets.symmetric(vertical: 14),
                         ),
-                        child: const Text(
+                        child: Text(
                           'Cancelar',
                           style: TextStyle(
-                            color: Colors.black,
+                            color: isDarkMode ? Colors.white : Colors.black,
                             fontWeight: FontWeight.w400,
                             fontSize: 16,
                           ),
@@ -401,9 +434,10 @@ class _DetalleDeudaScreenState extends State<DetalleDeudaScreen>
                     ),
                   ],
                 ),
-              ],
-            ),
-          ),
+                    ],
+                  ),
+                ),
+              ),
             );
           },
         );
@@ -463,34 +497,32 @@ class _DetalleDeudaScreenState extends State<DetalleDeudaScreen>
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
+      backgroundColor: isDarkMode ? const Color(0xFF121212) : Colors.grey.shade50,
       appBar: AppBar(
         centerTitle: true,
         elevation: 0,
-        backgroundColor: Colors.transparent,
+        backgroundColor: null, // Usar el tema
         title: const Text(
           'Detalle de Deuda',
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: AppTheme.primaryColor,
-          ),
+          style: AppTheme.appBarTitleStyle,
         ),
       ),
       body: isLoadingDetalle
-          ? const Center(
+          ? Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  CircularProgressIndicator(
+                  const CircularProgressIndicator(
                     valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
                   ),
-                  SizedBox(height: 16),
+                  const SizedBox(height: 16),
                   Text(
                     'Cargando detalles...',
                     style: TextStyle(
-                      color: Colors.grey,
+                      color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
                       fontSize: 16,
                     ),
                   ),
@@ -500,17 +532,17 @@ class _DetalleDeudaScreenState extends State<DetalleDeudaScreen>
           : Column(
               children: [
                 // Header con información del cliente
-                _buildHeaderSection(),
+                _buildHeaderSection(isDarkMode),
                 
                 // Tabs
                 Container(
                   margin: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
                     borderRadius: BorderRadius.circular(15),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
+                        color: Colors.black.withOpacity(isDarkMode ? 0.3 : 0.05),
                         blurRadius: 10,
                         offset: const Offset(0, 2),
                       ),
@@ -523,7 +555,7 @@ class _DetalleDeudaScreenState extends State<DetalleDeudaScreen>
                       borderRadius: BorderRadius.circular(15),
                     ),
                     labelColor: Colors.white,
-                    unselectedLabelColor: Colors.grey,
+                    unselectedLabelColor: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
                     tabs: [
                       Tab(
                         child: Row(
@@ -554,8 +586,8 @@ class _DetalleDeudaScreenState extends State<DetalleDeudaScreen>
                   child: TabBarView(
                     controller: _tabController,
                     children: [
-                      _buildVentasTab(),
-                      _buildAbonosTab(),
+                      _buildVentasTab(isDarkMode),
+                      _buildAbonosTab(isDarkMode),
                     ],
                   ),
                 ),
@@ -573,13 +605,16 @@ class _DetalleDeudaScreenState extends State<DetalleDeudaScreen>
     );
   }
 
-  Widget _buildHeaderSection() {
+  Widget _buildHeaderSection(bool isDarkMode) {
     return Container(
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [
+          colors: isDarkMode ? [
+            const Color(0xFF1A1A1A),
+            const Color(0xFF2A2A2A),
+          ] : [
             AppTheme.primaryColor.withOpacity(0.1),
             AppTheme.secondaryColor.withOpacity(0.3),
           ],
@@ -588,9 +623,18 @@ class _DetalleDeudaScreenState extends State<DetalleDeudaScreen>
         ),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: AppTheme.primaryColor.withOpacity(0.2),
+          color: isDarkMode 
+            ? const Color(0xFF404040)
+            : AppTheme.primaryColor.withOpacity(0.2),
           width: 1,
         ),
+        boxShadow: isDarkMode ? [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.3),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ] : null,
       ),
       child: Column(
         children: [
@@ -615,10 +659,10 @@ class _DetalleDeudaScreenState extends State<DetalleDeudaScreen>
                   children: [
                     Text(
                       widget.cliente.nombre,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
-                        color: AppTheme.primaryColor,
+                        color: isDarkMode ? Colors.white : AppTheme.primaryColor,
                       ),
                     ),
                     Text(
@@ -635,7 +679,7 @@ class _DetalleDeudaScreenState extends State<DetalleDeudaScreen>
                         'Tel: ${widget.cliente.telefono}',
                         style: TextStyle(
                           fontSize: 14,
-                          color: Colors.grey.shade600,
+                          color: isDarkMode ? Colors.grey.shade300 : Colors.grey.shade600,
                         ),
                       ),
                     ],
@@ -664,7 +708,7 @@ class _DetalleDeudaScreenState extends State<DetalleDeudaScreen>
     );
   }
 
-  Widget _buildVentasTab() {
+  Widget _buildVentasTab(bool isDarkMode) {
     if (isLoadingVentas) {
       return const Center(
         child: CircularProgressIndicator(
@@ -675,6 +719,7 @@ class _DetalleDeudaScreenState extends State<DetalleDeudaScreen>
 
     if (ventasCC.isEmpty) {
       return _buildEmptyState(
+        isDarkMode: isDarkMode,
         icon: Icons.receipt_long,
         title: 'No hay ventas con cuenta corriente',
         subtitle: 'Este cliente no tiene ventas pendientes de pago',
@@ -690,12 +735,12 @@ class _DetalleDeudaScreenState extends State<DetalleDeudaScreen>
         }
         
         final venta = ventasCC[index];
-        return _buildVentaCard(venta);
+        return _buildVentaCard(venta, isDarkMode);
       },
     );
   }
 
-  Widget _buildAbonosTab() {
+  Widget _buildAbonosTab(bool isDarkMode) {
     if (isLoadingAbonos) {
       return const Center(
         child: CircularProgressIndicator(
@@ -706,6 +751,7 @@ class _DetalleDeudaScreenState extends State<DetalleDeudaScreen>
 
     if (abonos.isEmpty) {
       return _buildEmptyState(
+        isDarkMode: isDarkMode,
         icon: Icons.payment,
         title: 'No hay abonos registrados',
         subtitle: 'Este cliente aún no ha realizado ningún abono',
@@ -717,12 +763,12 @@ class _DetalleDeudaScreenState extends State<DetalleDeudaScreen>
       itemCount: abonos.length,
       itemBuilder: (context, index) {
         final abono = abonos[index];
-        return _buildAbonoCard(abono);
+        return _buildAbonoCard(abono, isDarkMode);
       },
     );
   }
 
-  Widget _buildVentaCard(Ventas venta) {
+  Widget _buildVentaCard(Ventas venta, bool isDarkMode) {
     // Calcular el monto específico pagado con cuenta corriente
     double montoCuentaCorriente = 0.0;
     if (venta.pagos != null && venta.pagos!.isNotEmpty) {
@@ -739,11 +785,11 @@ class _DetalleDeudaScreenState extends State<DetalleDeudaScreen>
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
         borderRadius: BorderRadius.circular(15),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withOpacity(isDarkMode ? 0.3 : 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -785,7 +831,7 @@ class _DetalleDeudaScreenState extends State<DetalleDeudaScreen>
                         _formatearFecha(venta.fecha),
                         style: TextStyle(
                           fontSize: 14,
-                          color: Colors.grey.shade600,
+                          color: isDarkMode ? Colors.grey.shade300 : Colors.grey.shade600,
                         ),
                       ),
                       if (venta.pagos != null && venta.pagos!.length > 1) ...[
@@ -794,7 +840,7 @@ class _DetalleDeudaScreenState extends State<DetalleDeudaScreen>
                           'Total: \$${_formatearPrecio(venta.total)}',
                           style: TextStyle(
                             fontSize: 12,
-                            color: Colors.grey.shade500,
+                            color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade500,
                           ),
                         ),
                       ],
@@ -824,15 +870,15 @@ class _DetalleDeudaScreenState extends State<DetalleDeudaScreen>
     );
   }
 
-  Widget _buildAbonoCard(Abono abono) {
+  Widget _buildAbonoCard(Abono abono, bool isDarkMode) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
         borderRadius: BorderRadius.circular(15),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withOpacity(isDarkMode ? 0.3 : 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -874,7 +920,7 @@ class _DetalleDeudaScreenState extends State<DetalleDeudaScreen>
                         _formatearFecha(abono.fecha),
                         style: TextStyle(
                           fontSize: 14,
-                          color: Colors.grey.shade600,
+                          color: isDarkMode ? Colors.grey.shade300 : Colors.grey.shade600,
                         ),
                       ),
                       if (abono.nota.isNotEmpty) ...[
@@ -883,7 +929,7 @@ class _DetalleDeudaScreenState extends State<DetalleDeudaScreen>
                           abono.nota,
                           style: TextStyle(
                             fontSize: 12,
-                            color: Colors.grey.shade500,
+                            color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade500,
                             fontStyle: FontStyle.italic,
                           ),
                         ),
@@ -934,7 +980,12 @@ class _DetalleDeudaScreenState extends State<DetalleDeudaScreen>
     );
   }
 
-  Widget _buildEmptyState({required IconData icon, required String title, required String subtitle}) {
+  Widget _buildEmptyState({
+    required bool isDarkMode, 
+    required IconData icon, 
+    required String title, 
+    required String subtitle
+  }) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -942,13 +993,13 @@ class _DetalleDeudaScreenState extends State<DetalleDeudaScreen>
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: Colors.grey.shade100,
+              color: isDarkMode ? Colors.grey.shade800 : Colors.grey.shade100,
               shape: BoxShape.circle,
             ),
             child: Icon(
               icon,
               size: 60,
-              color: Colors.grey.shade400,
+              color: isDarkMode ? Colors.grey.shade600 : Colors.grey.shade400,
             ),
           ),
           const SizedBox(height: 16),
@@ -956,7 +1007,7 @@ class _DetalleDeudaScreenState extends State<DetalleDeudaScreen>
             title,
             style: TextStyle(
               fontSize: 18,
-              color: Colors.grey.shade600,
+              color: isDarkMode ? Colors.grey.shade300 : Colors.grey.shade600,
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -965,7 +1016,7 @@ class _DetalleDeudaScreenState extends State<DetalleDeudaScreen>
             subtitle,
             style: TextStyle(
               fontSize: 14,
-              color: Colors.grey.shade400,
+              color: isDarkMode ? Colors.grey.shade500 : Colors.grey.shade400,
             ),
             textAlign: TextAlign.center,
           ),
@@ -985,21 +1036,18 @@ class _DetalleDeudaScreenState extends State<DetalleDeudaScreen>
     );
   }
 
-  void _mostrarConfirmacionEliminarAbono(Abono abono) {
-    showDialog(
+  void _mostrarConfirmacionEliminarAbono(Abono abono) async {
+    final confirmar = await AppDialogs.showDeleteConfirmationDialog(
       context: context,
-      builder: (BuildContext context) {
-        return AppTheme.confirmDialogStyle(
-          title: 'Eliminar Abono',
-          content: '¿Está seguro de que desea eliminar este abono de \$${_formatearPrecio(_parsearDeuda(abono.monto))}?\n\nEsto restaurará la deuda del cliente.',
-          onConfirm: () async {
-            Navigator.of(context).pop();
-            await _eliminarAbono(abono);
-          },
-          onCancel: () => Navigator.of(context).pop(),
-        );
-      },
+      title: 'Eliminar Abono',
+      message: '¿Está seguro de que desea eliminar este abono de \$${_formatearPrecio(_parsearDeuda(abono.monto))}?\n\nEsto restaurará la deuda del cliente.',
+      confirmText: 'Eliminar',
+      cancelText: 'Cancelar',
     );
+
+    if (confirmar) {
+      await _eliminarAbono(abono);
+    }
   }
 
   Future<void> _eliminarAbono(Abono abono) async {

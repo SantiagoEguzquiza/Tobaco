@@ -6,6 +6,7 @@ import '../../Services/Auth_Service/auth_service.dart';
 import '../../Models/User.dart';
 import '../../Theme/app_theme.dart';
 import '../../Theme/dialogs.dart';
+import '../../Theme/headers.dart';
 import '../../Helpers/api_handler.dart';
 
 // Helper function to check if a user is the last active admin
@@ -569,101 +570,44 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
 
                   return Column(
                     children: [
-                      // Header with add button
-                      Container(
-                        margin: const EdgeInsets.all(16),
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).brightness == Brightness.dark
-                              ? const Color(0xFF1A1A1A)
-                              : Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Theme.of(context).brightness ==
-                                      Brightness.dark
-                                  ? Colors.black.withOpacity(0.3)
-                                  : Colors.black.withOpacity(0.08),
-                              blurRadius: 12,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
+                      // Header
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                        child: HeaderSimple(
+                          leadingIcon: Icons.people,
+                          title: 'Usuarios del Sistema',
+                          subtitle: '${userProvider.users.length} usuarios registrados',
                         ),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.all(8),
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFF4CAF50)
-                                              .withOpacity(0.1),
-                                          borderRadius:
-                                              BorderRadius.circular(8),
-                                        ),
-                                        child: const Icon(
-                                          Icons.people,
-                                          color: Color(0xFF4CAF50),
-                                          size: 24,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              'Usuarios del Sistema',
-                                              style: AppTheme.appBarTitleStyle
-                                                  .copyWith(
-                                                color: Theme.of(context)
-                                                            .brightness ==
-                                                        Brightness.dark
-                                                    ? const Color(0xFFE0E0E0)
-                                                    : const Color(0xFF1B5E20),
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: 22,
-                                              ),
-                                            ),
-                                            const SizedBox(height: 4),
-                                            Text(
-                                              '${userProvider.users.length} usuarios registrados',
-                                              style: AppTheme.cardSubtitleStyle
-                                                  .copyWith(
-                                                color: const Color(0xFF4CAF50),
-                                                fontSize: 14,
-                                                fontWeight: FontWeight.w500,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
+                      ),
+                      
+                      // Add user button
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                        child: SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: () => _showCreateUserDialog(context),
+                            icon: const Icon(Icons.person_add, size: 20),
+                            label: const Text(
+                              'Nuevo Usuario',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
-                            const SizedBox(width: 16),
-                            ElevatedButton.icon(
-                              onPressed: () => _showCreateUserDialog(context),
-                              icon: const Icon(Icons.person_add, size: 20),
-                              label: const Text('Nuevo Usuario'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF4CAF50),
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 16, vertical: 12),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.primaryColor,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
                               ),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24, 
+                                vertical: 16,
+                              ),
+                              elevation: 2,
                             ),
-                          ],
+                          ),
                         ),
                       ),
 

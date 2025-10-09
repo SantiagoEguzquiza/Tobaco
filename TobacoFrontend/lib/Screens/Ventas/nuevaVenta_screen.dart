@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:tobaco/Models/Cliente.dart';
 import 'package:tobaco/Models/ProductoSeleccionado.dart';
 import 'package:tobaco/Models/VentasProductos.dart';
@@ -17,6 +16,8 @@ import 'package:tobaco/Theme/headers.dart';
 import 'package:tobaco/Models/Ventas.dart';
 import 'package:tobaco/Theme/confirmAnimation.dart';
 import 'package:tobaco/Screens/Ventas/resumenVenta_screen.dart';
+// Nuevos widgets modulares
+import 'NuevaVenta/widgets/widgets.dart';
 
 class NuevaVentaScreen extends StatefulWidget {
   const NuevaVentaScreen({super.key});
@@ -391,39 +392,6 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
     _searchController.clear();
   }
 
-  void _eliminarProducto(int index) {
-    setState(() {
-      productosSeleccionados.removeAt(index);
-    });
-  }
-
-  Future<void> _editarProducto(int index) async {
-    try {
-      final productoId = productosSeleccionados[index].id;
-      
-      final resultado = await Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => SeleccionarProductosScreen(
-            productosYaSeleccionados: productosSeleccionados,
-            cliente: clienteSeleccionado,
-            scrollToProductId: productoId,
-          ),
-        ),
-      );
-
-      if (resultado != null && resultado is List<ProductoSeleccionado>) {
-        setState(() {
-          productosSeleccionados = resultado;
-        });
-      }
-    } catch (e) {
-      AppTheme.showSnackBar(
-        context,
-        AppTheme.errorSnackBar('Error al editar productos: $e'),
-      );
-    }
-  }
 
   double _calcularTotal() {
     return productosSeleccionados.fold(
@@ -452,39 +420,6 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
         RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (match) => '${match[1]}.');
   }
 
-  Widget _formatearPrecioConDecimales(double precio,
-      {Color? color, double? fontSize}) {
-    final precioStr = precio.toStringAsFixed(2);
-    final partes = precioStr.split('.');
-    final parteEntera = partes[0].replaceAllMapped(
-        RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (match) => '${match[1]}.');
-    final parteDecimal = partes[1];
-
-    final baseFontSize = fontSize ?? 14.0;
-    final decimalFontSize = baseFontSize * 0.7;
-
-    return RichText(
-      text: TextSpan(
-        children: [
-          TextSpan(
-            text: '\$${parteEntera}',
-            style: TextStyle(
-              fontSize: baseFontSize,
-              fontWeight: FontWeight.w500,
-              color: color ?? Colors.grey.shade600,
-            ),
-          ),
-          TextSpan(
-            text: ',${parteDecimal}',
-            style: TextStyle(
-              fontSize: decimalFontSize,
-              color: Colors.grey.shade400,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   bool _puedeConfirmarVenta() {
     return clienteSeleccionado != null &&
@@ -600,188 +535,14 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
     }
   }
 
-  Widget _buildProductoItem(ProductoSeleccionado ps, int index) {
-    final subtotal = ps.precio * ps.cantidad;
-    
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      decoration: BoxDecoration(
-        color: index % 2 == 0
-            ? (Theme.of(context).brightness == Brightness.dark
-                ? const Color(0xFF2A2A2A)
-                : Colors.white)
-            : (Theme.of(context).brightness == Brightness.dark
-                ? const Color(0xFF1A1A1A)
-                : AppTheme.primaryColor.withOpacity(0.1)),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: Theme.of(context).brightness == Brightness.dark
-              ? const Color(0xFF404040)
-              : AppTheme.primaryColor.withOpacity(0.2),
-          width: 1,
-        ),
-      ),
-      child: Slidable(
-        key: ValueKey(ps.id),
-        endActionPane: ActionPane(
-          motion: const DrawerMotion(),
-          extentRatio: 0.3,
-          children: [
-            SlidableAction(
-              onPressed: (_) => _eliminarProducto(index),
-              backgroundColor: Colors.red,
-              icon: Icons.delete,
-              label: 'Eliminar',
-              borderRadius: const BorderRadius.only(
-                topRight: Radius.circular(12),
-                bottomRight: Radius.circular(12),
-              ),
-            ),
-          ],
-        ),
-        child: InkWell(
-          onTap: () => _editarProducto(index),
-          borderRadius: BorderRadius.circular(12),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            child: Row(
-              children: [
-                Expanded(
-                  flex: 4,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        ps.nombre,
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).brightness == Brightness.dark
-                              ? Colors.white
-                              : AppTheme.primaryColor,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                        maxLines: 1,
-                      ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          _formatearPrecioConDecimales(ps.precio),
-                          const SizedBox(width: 4),
-                          Text(
-                            'c/u',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Theme.of(context).brightness == Brightness.dark
-                                  ? Colors.grey.shade400
-                                  : Colors.grey.shade600,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  width: 60,
-                  height: 32,
-                  decoration: BoxDecoration(
-                    border: Border.all(
-                        color: Theme.of(context).brightness == Brightness.dark
-                            ? Colors.grey.shade600
-                            : Colors.grey.shade300),
-                    borderRadius: BorderRadius.circular(6),
-                    color: Theme.of(context).brightness == Brightness.dark
-                        ? const Color(0xFF1A1A1A)
-                        : Colors.white,
-                  ),
-                  child: Center(
-                    child: Text(
-                      ps.cantidad % 1 == 0
-                          ? ps.cantidad.toInt().toString()
-                          : ps.cantidad.toStringAsFixed(1),
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).brightness == Brightness.dark
-                            ? Colors.white
-                            : Colors.black,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  flex: 3,
-                  child: _formatearPrecioConDecimales(
-                    subtotal,
-                    fontSize: 16,
-                    color: Theme.of(context).brightness == Brightness.dark
-                        ? Colors.white
-                        : Colors.black87,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildEmptyProductState() {
-    return SizedBox(
-      height: 300,
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: AppTheme.secondaryColor,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.shopping_cart_outlined,
-                size: 60,
-                color: AppTheme.primaryColor,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'No hay productos seleccionados',
-              style: TextStyle(
-                fontSize: 18,
-                color: Colors.grey.shade600,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Toca "Agregar productos" para comenzar',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey.shade500,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
-    final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
-    final isKeyboardVisible = keyboardHeight > 0;
-    
     return Scaffold(
       resizeToAvoidBottomInset: false,
       appBar: AppBar(
         centerTitle: true,
-        title: const Text('Nueva Venta'),
+        title: const Text('Nueva Venta', style: AppTheme.appBarTitleStyle),
       ),
       body: SafeArea(
         child: Column(
@@ -789,13 +550,12 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
             // Contenido principal
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16.0),
                 child: Column(
                   children: [
                     if (isSearching) ...[
                       // Barra de búsqueda
-                      Container(
-                        margin: const EdgeInsets.only(bottom: 8),
+                      Padding(
+                        padding: const EdgeInsets.all(16.0),
                         child: HeaderConBuscador(
                           leadingIcon: Icons.people,
                           title: 'Buscar Cliente',
@@ -873,202 +633,83 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                         _buildEmptyState('No hay clientes disponibles'),
                     ] else ...[
                       // Cliente seleccionado
-                      Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: Theme.of(context).brightness == Brightness.dark
-                                ? [
-                                    const Color(0xFF2A2A2A),
-                                    const Color(0xFF1A1A1A),
-                                  ]
-                                : [
-                                    AppTheme.primaryColor.withOpacity(0.1),
-                                    AppTheme.secondaryColor.withOpacity(0.3),
-                                  ],
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                          ),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: Theme.of(context).brightness == Brightness.dark
-                                ? const Color(0xFF404040)
-                                : AppTheme.primaryColor.withOpacity(0.2),
-                            width: 1,
-                          ),
-                          boxShadow: Theme.of(context).brightness == Brightness.dark ? [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.3),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
-                            ),
-                          ] : null,
-                        ),
-                        child: Column(
-                          children: [
-                            // Información del cliente
-                            Padding(
-                              padding: const EdgeInsets.all(20),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(12),
-                                    decoration: BoxDecoration(
-                                      color: AppTheme.primaryColor,
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: const Icon(
-                                      Icons.person,
-                                      color: Colors.white,
-                                      size: 24,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 16),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          clienteSeleccionado!.nombre,
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 24,
-                                            color: Theme.of(context).brightness == Brightness.dark
-                                                ? Colors.white
-                                                : AppTheme.primaryColor,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 4),
-                                        if (clienteSeleccionado!.deuda != null &&
-                                            double.tryParse(clienteSeleccionado!.deuda!.toString()) != null &&
-                                            double.parse(clienteSeleccionado!.deuda!.toString()) > 0) ...[
-                                          Text(
-                                            'Deuda: \$${_formatearPrecio(double.parse(clienteSeleccionado!.deuda!.toString()))}',
-                                            style: TextStyle(
-                                              color: Colors.red.shade600,
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                          ),
-                                        ] else ...[
-                                          Text(
-                                            'Cliente Seleccionado',
-                                            style: TextStyle(
-                                              fontSize: 14,
-                                              color: Theme.of(context).brightness == Brightness.dark
-                                                  ? Colors.grey.shade400
-                                                  : Colors.grey.shade600,
-                                              fontWeight: FontWeight.w500,
-                                            ),
-                                          ),
-                                        ]
-                                      ],
-                                    ),
-                                  ),
-                                  Container(
-                                    decoration: BoxDecoration(
-                                      color: AppTheme.primaryColor.withOpacity(0.1),
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: IconButton(
-                                      icon: Icon(
-                                        Icons.edit,
-                                        color: AppTheme.primaryColor,
-                                        size: 20,
-                                      ),
-                                      onPressed: cambiarCliente,
-                                      tooltip: 'Cambiar cliente',
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            // Botón agregar productos
-                            Container(
-                              width: double.infinity,
-                              margin: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(15),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: AppTheme.addGreenColor.withOpacity(0.3),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ],
-                              ),
-                              child: ElevatedButton.icon(
-                                onPressed: () async {
-                                  try {
-                                    final resultado = await Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) => SeleccionarProductosScreen(
-                                          productosYaSeleccionados: productosSeleccionados,
-                                          cliente: clienteSeleccionado,
-                                        ),
-                                      ),
-                                    );
+                      ClienteSection(
+                        cliente: clienteSeleccionado!,
+                        onCambiarCliente: cambiarCliente,
+                      ),
 
-                                    if (resultado != null &&
-                                        resultado is List<ProductoSeleccionado>) {
-                                      setState(() {
-                                        productosSeleccionados = resultado;
-                                      });
-                                    }
-                                  } catch (e) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text('Error al seleccionar productos: $e'),
-                                        backgroundColor: Colors.red,
-                                      ),
-                                    );
-                                  }
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppTheme.addGreenColor,
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 18,
-                                    horizontal: 24,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  elevation: 0,
-                                ),
-                                icon: Container(
-                                  padding: const EdgeInsets.all(4),
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                  child: const Icon(
-                                    Icons.add_shopping_cart,
-                                    color: Colors.white,
-                                    size: 20,
-                                  ),
-                                ),
-                                label: const Text(
-                                  'Agregar Productos',
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w600,
-                                  ),
+                      const SizedBox(height: 16),
+
+                      // Botón agregar productos
+                      AgregarProductoButton(
+                        onPressed: () async {
+                          try {
+                            final resultado = await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => SeleccionarProductosScreen(
+                                  productosYaSeleccionados: productosSeleccionados,
+                                  cliente: clienteSeleccionado,
                                 ),
                               ),
-                            ),
-                          ],
-                        ),
+                            );
+
+                            if (resultado != null && resultado is List<ProductoSeleccionado>) {
+                              setState(() {
+                                productosSeleccionados = resultado;
+                              });
+                            }
+                          } catch (e) {
+                            AppTheme.showSnackBar(
+                              context,
+                              AppTheme.errorSnackBar('Error al seleccionar productos: $e'),
+                            );
+                          }
+                        },
                       ),
 
                       // Lista de productos o estado vacío
                       const SizedBox(height: 16),
                       if (productosSeleccionados.isNotEmpty) ...[
-                        ...productosSeleccionados.asMap().entries.map((entry) {
-                          return _buildProductoItem(entry.value, entry.key);
-                        }).toList(),
+                        LineItemsList(
+                          productos: productosSeleccionados,
+                          onEliminar: (index) {
+                            setState(() {
+                              productosSeleccionados.removeAt(index);
+                            });
+                          },
+                          onTap: (index) async {
+                            // Navegar a seleccionar productos con scroll al producto específico
+                            try {
+                              final productoId = productosSeleccionados[index].id;
+                              final resultado = await Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => SeleccionarProductosScreen(
+                                    productosYaSeleccionados: productosSeleccionados,
+                                    cliente: clienteSeleccionado,
+                                    scrollToProductId: productoId,
+                                  ),
+                                ),
+                              );
+
+                              if (resultado != null && resultado is List<ProductoSeleccionado>) {
+                                setState(() {
+                                  productosSeleccionados = resultado;
+                                });
+                              }
+                            } catch (e) {
+                              AppTheme.showSnackBar(
+                                context,
+                                AppTheme.errorSnackBar('Error al editar productos: $e'),
+                              );
+                            }
+                          },
+                          preciosEspeciales: preciosEspeciales,
+                          descuentoGlobal: clienteSeleccionado?.descuentoGlobal,
+                        ),
                       ] else ...[
-                        _buildEmptyProductState(),
+                        const EmptyStateVenta(),
                       ],
                     ],
                   ],
@@ -1249,133 +890,12 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
         ),
       ),
       bottomNavigationBar: _puedeConfirmarVenta()
-          ? Container(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-              decoration: BoxDecoration(
-                color: Theme.of(context).brightness == Brightness.dark
-                    ? const Color(0xFF2A2A2A) // Fondo oscuro en modo oscuro
-                    : Colors.white, // Fondo blanco en modo claro
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(
-                        Theme.of(context).brightness == Brightness.dark ? 0.3 : 0.1),
-                    blurRadius: 10,
-                    offset: const Offset(0, -2),
-                  ),
-                ],
-              ),
-              child: Container(
-                padding: EdgeInsets.only(
-                  bottom: isKeyboardVisible ? keyboardHeight : 0,
-                ),
-                child: SafeArea(
-                  top: false,
-                  child: Row(
-                    children: [
-                      Expanded(
-                        flex: 2,
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            if (clienteSeleccionado != null && clienteSeleccionado!.descuentoGlobal > 0) ...[
-                              Row(
-                                children: [
-                                  Icon(
-                                    Icons.local_offer,
-                                    size: 16,
-                                    color: Colors.green.shade600,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    'Descuento ${clienteSeleccionado!.descuentoGlobal.toStringAsFixed(1)}%',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.green.shade600,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Subtotal: \$${_formatearPrecio(_calcularTotal())}',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Theme.of(context).brightness == Brightness.dark
-                                      ? Colors.grey.shade400 // Texto más claro en modo oscuro
-                                      : Colors.grey.shade600, // Texto gris en modo claro
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                'Descuento: -\$${_formatearPrecio(_calcularDescuento())}',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Theme.of(context).brightness == Brightness.dark
-                                      ? Colors.red.shade400 // Rojo más claro en modo oscuro
-                                      : Colors.red.shade600, // Rojo normal en modo claro
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                            ],
-                            Text(
-                              'Total',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Theme.of(context).brightness == Brightness.dark
-                                    ? Colors.grey.shade300 // Texto más claro en modo oscuro
-                                    : Colors.grey.shade600, // Texto gris en modo claro
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            _formatearPrecioConDecimales(
-                              _calcularTotalConDescuento(),
-                              color: AppTheme.primaryColor,
-                              fontSize: 22.0,
-                            ),
-                            Text(
-                              '${productosSeleccionados.length} producto${productosSeleccionados.length != 1 ? 's' : ''}',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Theme.of(context).brightness == Brightness.dark
-                                    ? Colors.grey.shade400 // Texto más claro en modo oscuro
-                                    : Colors.grey.shade500, // Texto gris en modo claro
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        flex: 3,
-                        child: ElevatedButton.icon(
-                          onPressed: isProcessingVenta ? null : _confirmarVenta,
-                          style: AppTheme.elevatedButtonStyle(AppTheme.addGreenColor),
-                          icon: isProcessingVenta
-                              ? const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                  ),
-                                )
-                              : const Icon(Icons.check_circle, color: Colors.white),
-                          label: Text(
-                            isProcessingVenta ? 'Procesando...' : 'Confirmar Venta',
-                            style: const TextStyle(
-                              fontSize: 16,
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+          ? ConfirmarVentaFooter(
+              onConfirmar: isProcessingVenta ? () {} : _confirmarVenta,
+              enabled: !isProcessingVenta,
+              total: _calcularTotalConDescuento(),
+              cantidadProductos: productosSeleccionados.length,
+              descuento: _calcularDescuento() > 0 ? _calcularDescuento() : null,
             )
           : null,
     );

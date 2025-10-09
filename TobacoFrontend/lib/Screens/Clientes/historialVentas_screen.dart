@@ -224,11 +224,7 @@ class _HistorialVentasScreenState extends State<HistorialVentasScreen> {
         backgroundColor: null, // Usar el tema
         title: const Text(
           'Historial de Ventas',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFFFFFFFF), // Blanco puro
-          ),
+          style: AppTheme.appBarTitleStyle,
         ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),

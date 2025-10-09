@@ -53,11 +53,7 @@ class DetalleClienteScreen extends StatelessWidget {
         backgroundColor: null, // Usar el tema
         title: const Text(
           'Detalle del Cliente',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFFFFFFFF), // Blanco puro
-          ),
+          style: AppTheme.appBarTitleStyle,
         ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),

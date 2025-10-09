@@ -31,11 +31,7 @@ class DetalleProductoScreen extends StatelessWidget {
           centerTitle: true,
           title: Text(
             producto.nombre,
-            style: TextStyle(
-              color: Theme.of(context).brightness == Brightness.dark
-                  ? Colors.white
-                  : Colors.white,
-            ),
+            style: AppTheme.appBarTitleStyle,
           ),
           backgroundColor: Theme.of(context).brightness == Brightness.dark
               ? Colors.black
@@ -164,11 +160,11 @@ class DetalleProductoScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 20),
                     
-                    // Cantidad
+                    // Stock
                     _buildInfoRow(
                       context,
-                      'Cantidad en Stock',
-                      producto.cantidad?.toString() ?? 'No disponible',
+                      'Stock disponible',
+                      producto.stock?.toString() ?? 'No disponible',
                       Icons.inventory,
                     ),
                     const SizedBox(height: 20),

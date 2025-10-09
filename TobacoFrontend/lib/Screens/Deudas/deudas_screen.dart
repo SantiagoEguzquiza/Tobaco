@@ -196,11 +196,7 @@ class _DeudasScreenState extends State<DeudasScreen> {
         backgroundColor: null, // Usar el tema
         title: const Text(
           'Deudas',
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFFFFFFFF), // Blanco puro
-          ),
+          style: AppTheme.appBarTitleStyle,
         ),
       ),
       body: isLoading
