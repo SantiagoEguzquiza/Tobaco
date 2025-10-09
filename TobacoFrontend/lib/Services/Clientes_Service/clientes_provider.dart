@@ -17,6 +17,8 @@ class ClienteProvider with ChangeNotifier {
       notifyListeners();
     } catch (e) {
       debugPrint('Error: $e');
+      // Relanzar la excepción para que la UI la pueda manejar
+      rethrow;
     }
     return _clientes;
   }
@@ -29,7 +31,7 @@ class ClienteProvider with ChangeNotifier {
       return clienteCreado;
     } catch (e) {
       debugPrint('Error: $e');
-      return null;
+      rethrow; // Relanzar la excepción para que se maneje en la UI
     }
   }
 
@@ -71,6 +73,8 @@ class ClienteProvider with ChangeNotifier {
       notifyListeners();
     } catch (e) {
       debugPrint('Error: $e');
+      // Relanzar la excepción para que la UI la pueda manejar
+      rethrow;
     }
     return _clientes;
   }
@@ -81,6 +85,8 @@ class ClienteProvider with ChangeNotifier {
       notifyListeners();
     } catch (e) {
       debugPrint('Error: $e');
+      // Relanzar la excepción para que la UI la pueda manejar
+      rethrow;
     }
     return _clientesConDeuda;
   }

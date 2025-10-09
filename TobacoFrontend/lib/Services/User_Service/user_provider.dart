@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../Models/User.dart';
 import 'user_service.dart';
 import '../Auth_Service/auth_service.dart';
+import '../../Helpers/api_handler.dart';
 
 class UserProvider extends ChangeNotifier {
   List<User> _users = [];
@@ -15,20 +16,26 @@ class UserProvider extends ChangeNotifier {
 
   // Check if token is valid before operations
   Future<bool> _isTokenValid() async {
+    print('UserProvider: Checking token validity...');
     // First check local validation
     if (!await AuthService.isAuthenticated()) {
+      print('UserProvider: Not authenticated locally');
       return false;
     }
     
+    print('UserProvider: Authenticated locally, validating with backend...');
     // Then validate with backend
-    return await AuthService.validateToken();
+    final isValid = await AuthService.validateToken();
+    print('UserProvider: Token validation result: $isValid');
+    return isValid;
   }
 
   // Handle token expiration
   Future<void> _handleTokenExpiration() async {
+    print('UserProvider: Handling token expiration...');
     await AuthService.logout();
-    _errorMessage = 'Sesión expirada. Por favor, inicia sesión nuevamente.';
-    notifyListeners();
+    // No establecer errorMessage aquí, dejar que la UI maneje el error
+    print('UserProvider: Token expiration handled');
   }
 
   // Get all users
@@ -41,28 +48,45 @@ class UserProvider extends ChangeNotifier {
       // Check if token is valid before making the request
       if (!await _isTokenValid()) {
         await _handleTokenExpiration();
-        return;
+        // Esperar 10 segundos antes de lanzar el error, igual que las demás pantallas
+        await Future.delayed(Duration(seconds: 10));
+        // Limpiar la lista de usuarios para errores de conexión
+        _users = [];
+        _isLoading = false;
+        notifyListeners();
+        // Lanzar un error de conexión para que se detecte como servidor no disponible
+        throw TimeoutException('Servidor no disponible', Duration(seconds: 10));
       }
 
       _users = await UserService.getAllUsers();
-      print('Loaded ${_users.length} users from backend'); // Debug log
+      print('UserProvider: Loaded ${_users.length} users from backend'); // Debug log
       for (var user in _users) {
-        print('User: ${user.userName}, Active: ${user.isActive}'); // Debug log
+        print('UserProvider: User ${user.userName}, Active: ${user.isActive}'); // Debug log
       }
       _errorMessage = null;
+      _isLoading = false;
+      notifyListeners();
+      print('UserProvider: loadUsers completado exitosamente');
     } catch (e) {
-      // Check if the error is related to token expiration
-      if (e.toString().contains('Token inválido') || 
-          e.toString().contains('Unauthorized') ||
-          e.toString().contains('401')) {
-        await _handleTokenExpiration();
+      print('UserProvider: Error en loadUsers: $e');
+      print('UserProvider: Error tipo: ${e.runtimeType}');
+      
+      _isLoading = false;
+      
+      // Si es un error de conexión, limpiar la lista de usuarios
+      if (Apihandler.isConnectionError(e)) {
+        _users = [];
+        _errorMessage = null;
       } else {
+        // Solo establecer errorMessage para errores que NO son de conexión
         _errorMessage = e.toString();
       }
+      
+      notifyListeners();
+      
+      // Relanzar TODAS las excepciones para que la UI las maneje
+      rethrow;
     }
-
-    _isLoading = false;
-    notifyListeners();
   }
 
   // Create a new user
@@ -106,7 +130,8 @@ class UserProvider extends ChangeNotifier {
         print('UserProvider createUser error message: $_errorMessage'); // Debug log
         _isLoading = false;
         notifyListeners();
-        return false;
+        // Relanzar TODAS las excepciones para que la UI las maneje
+        rethrow;
       }
     }
   }
@@ -161,7 +186,8 @@ class UserProvider extends ChangeNotifier {
         _errorMessage = e.toString();
         _isLoading = false;
         notifyListeners();
-        return {'success': false, 'currentUserAffected': false, 'error': e.toString()};
+        // Relanzar TODAS las excepciones para que la UI las maneje
+        rethrow;
       }
     }
   }

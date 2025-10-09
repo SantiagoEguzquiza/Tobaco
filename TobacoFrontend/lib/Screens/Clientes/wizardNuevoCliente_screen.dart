@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../../Models/Cliente.dart';
 import '../../Services/Clientes_Service/clientes_provider.dart';
 import '../../Theme/app_theme.dart';
+import '../../Theme/dialogs.dart';
+import '../../Helpers/api_handler.dart';
 import 'editarPreciosEspeciales_screen.dart';
 
 class WizardNuevoClienteScreen extends StatefulWidget {
@@ -68,33 +70,38 @@ class _WizardNuevoClienteScreenState extends State<WizardNuevoClienteScreen> {
 
       final clienteCreado = await _clienteProvider.crearCliente(cliente);
       
-      if (clienteCreado != null) {
-        setState(() {
-          _clienteCreado = clienteCreado;
-          _isLoading = false;
-        });
-        
-        // Avanzar al siguiente paso
-        _pageController.nextPage(
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeInOut,
-        );
-      } else {
-        setState(() {
-          _errorMessage = 'Error al crear el cliente. Verifica que todos los datos sean correctos.';
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
+      if (!mounted) return;
+      
       setState(() {
-        _errorMessage = 'Error al crear el cliente: ${e.toString().replaceAll('Exception: ', '')}';
+        _clienteCreado = clienteCreado;
         _isLoading = false;
       });
+      
+      // Avanzar al siguiente paso
+      _pageController.nextPage(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      
+      if (Apihandler.isConnectionError(e)) {
+        setState(() {
+          _isLoading = false;
+          // No establecer errorMessage para errores de conexión
+        });
+        await Apihandler.handleConnectionError(context, e);
+      } else {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = 'Error al crear el cliente: ${e.toString().replaceAll('Exception: ', '')}';
+        });
+      }
     }
   }
 
   void _finalizarWizard() {
-    Navigator.pop(context, true);
+    Navigator.pop(context, _clienteCreado);
   }
 
   void _anteriorPaso() {
@@ -118,7 +125,7 @@ class _WizardNuevoClienteScreenState extends State<WizardNuevoClienteScreen> {
             color: Colors.white,
           ),
         ),
-        backgroundColor: AppTheme.primaryColor,
+        backgroundColor: null, // Usar el tema
         foregroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
@@ -138,7 +145,7 @@ class _WizardNuevoClienteScreenState extends State<WizardNuevoClienteScreen> {
                   child: TextButton(
                     onPressed: _finalizarWizard,
                     style: TextButton.styleFrom(
-                      backgroundColor: Colors.white.withOpacity(0.2),
+                      backgroundColor: Theme.of(context).cardTheme.color?.withOpacity(0.2) ?? Colors.white.withOpacity(0.2),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(20),
                       ),
@@ -182,6 +189,7 @@ class _WizardNuevoClienteScreenState extends State<WizardNuevoClienteScreen> {
           Expanded(
             child: PageView(
               controller: _pageController,
+              physics: const NeverScrollableScrollPhysics(), // Deshabilitar deslizamiento
               onPageChanged: (index) {
                 setState(() {
                   _currentStep = index;
@@ -248,12 +256,14 @@ class _WizardNuevoClienteScreenState extends State<WizardNuevoClienteScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-            const Text(
+            Text(
               'Información del Cliente',
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
-                color: AppTheme.primaryColor,
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.white
+                    : AppTheme.primaryColor,
               ),
             ),
             const SizedBox(height: 8),
@@ -261,7 +271,9 @@ class _WizardNuevoClienteScreenState extends State<WizardNuevoClienteScreen> {
               'Completa los datos básicos del cliente',
               style: TextStyle(
                 fontSize: 16,
-                color: Colors.grey.shade600,
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.grey.shade400
+                    : Colors.grey.shade600,
               ),
             ),
             const SizedBox(height: 30),
@@ -269,6 +281,11 @@ class _WizardNuevoClienteScreenState extends State<WizardNuevoClienteScreen> {
             // Campo Nombre
             TextFormField(
               controller: _nombreController,
+              style: TextStyle(
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.white
+                    : Colors.black,
+              ),
               decoration: const InputDecoration(
                 labelText: 'Nombre *',
                 hintText: 'Ingresa el nombre del cliente',
@@ -287,6 +304,11 @@ class _WizardNuevoClienteScreenState extends State<WizardNuevoClienteScreen> {
             // Campo Teléfono
             TextFormField(
               controller: _telefonoController,
+              style: TextStyle(
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.white
+                    : Colors.black,
+              ),
               decoration: const InputDecoration(
                 labelText: 'Teléfono *',
                 hintText: 'Ingresa el teléfono del cliente',
@@ -309,6 +331,11 @@ class _WizardNuevoClienteScreenState extends State<WizardNuevoClienteScreen> {
             // Campo Dirección
             TextFormField(
               controller: _direccionController,
+              style: TextStyle(
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.white
+                    : Colors.black,
+              ),
               decoration: const InputDecoration(
                 labelText: 'Dirección *',
                 hintText: 'Ingresa la dirección del cliente',
@@ -328,6 +355,11 @@ class _WizardNuevoClienteScreenState extends State<WizardNuevoClienteScreen> {
             // Campo Deuda
             TextFormField(
               controller: _deudaController,
+              style: TextStyle(
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.white
+                    : Colors.black,
+              ),
               decoration: const InputDecoration(
                 labelText: 'Deuda',
                 hintText: 'Ingresa el monto de la deuda',
@@ -349,6 +381,11 @@ class _WizardNuevoClienteScreenState extends State<WizardNuevoClienteScreen> {
             // Campo Descuento Global
             TextFormField(
               controller: _descuentoGlobalController,
+              style: TextStyle(
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.white
+                    : Colors.black,
+              ),
               decoration: const InputDecoration(
                 labelText: 'Descuento Global (%)',
                 hintText: 'Ingresa el porcentaje de descuento global',
@@ -446,8 +483,12 @@ class _WizardNuevoClienteScreenState extends State<WizardNuevoClienteScreen> {
 
   Widget _buildPasoPreciosEspeciales() {
     if (_clienteCreado == null) {
-      return const Center(
-        child: CircularProgressIndicator(),
+      return Center(
+        child: CircularProgressIndicator(
+          valueColor: AlwaysStoppedAnimation<Color>(
+            Theme.of(context).primaryColor,
+          ),
+        ),
       );
     }
 

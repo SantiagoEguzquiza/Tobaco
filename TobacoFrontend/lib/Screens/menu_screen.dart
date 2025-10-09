@@ -7,8 +7,13 @@ import 'package:tobaco/Screens/Ventas/nuevaVenta_screen.dart';
 import 'package:tobaco/Screens/Ventas/ventas_screen.dart';
 import 'package:tobaco/Screens/Productos/productos_screen.dart';
 import 'package:tobaco/Screens/Admin/user_management_screen.dart';
+import 'package:tobaco/Screens/Admin/categorias_screen.dart';
+import 'package:tobaco/Screens/Auth/login_screen.dart';
 import 'package:tobaco/Services/Auth_Service/auth_provider.dart';
 import 'package:tobaco/Theme/app_theme.dart';
+import 'package:tobaco/Theme/dialogs.dart';
+import 'package:tobaco/Theme/theme_provider.dart';
+import 'package:tobaco/Helpers/api_handler.dart';
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -41,8 +46,9 @@ class MenuScreen extends StatelessWidget {
     final spacing = isTablet ? 30.0 : 20.0;
     final horizontalPadding = isTablet ? 40.0 : 20.0;
 
+    final themeProvider = context.watch<AuthProvider>();
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: Consumer<AuthProvider>(
           builder: (context, authProvider, child) {
@@ -56,6 +62,29 @@ class MenuScreen extends StatelessWidget {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: <Widget>[
+                      // Toggle tema
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: Consumer<ThemeProvider>(
+                          builder: (context, theme, _) {
+                            final isDark = theme.themeMode == ThemeMode.dark;
+                            return Row(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                Icon(isDark ? Icons.dark_mode : Icons.light_mode, color: AppTheme.primaryColor),
+                                const SizedBox(width: 8),
+                                Switch(
+                                  value: isDark,
+                                  activeColor: AppTheme.primaryColor,
+                                  onChanged: (val) {
+                                    theme.setThemeMode(val ? ThemeMode.dark : ThemeMode.light);
+                                  },
+                                ),
+                              ],
+                            );
+                          },
+                        ),
+                      ),
                       // Welcome message with user info
                       Container(
                         padding: const EdgeInsets.all(16),
@@ -77,10 +106,10 @@ class MenuScreen extends StatelessWidget {
                             const SizedBox(width: 8),
                             Text(
                               'Bienvenido, ${authProvider.currentUser?.userName ?? 'Usuario'}',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
-                                color: AppTheme.textColor,
+                                color: Theme.of(context).textTheme.bodyLarge?.color,
                               ),
                             ),
                             if (authProvider.currentUser?.isAdmin == true) ...[
@@ -116,36 +145,70 @@ class MenuScreen extends StatelessWidget {
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(color: AppTheme.primaryColor.withOpacity(0.3)),
                           ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          child: Column(
                             children: [
-                              const Text(
-                                'Administración',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppTheme.primaryColor,
-                                ),
-                              ),
-                              ElevatedButton.icon(
-                                onPressed: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => const UserManagementScreen(),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'Administración',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: Theme.of(context).textTheme.bodyLarge?.color,
                                     ),
-                                  );
-                                },
-                                icon: const Icon(Icons.people, size: 18),
-                                label: const Text('Usuarios'),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppTheme.primaryColor,
-                                  foregroundColor: Colors.white,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
                                   ),
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: ElevatedButton.icon(
+                                      onPressed: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => const UserManagementScreen(),
+                                          ),
+                                        );
+                                      },
+                                      icon: const Icon(Icons.people, size: 18),
+                                      label: const Text('Usuarios'),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: AppTheme.primaryColor,
+                                        foregroundColor: Colors.white,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: ElevatedButton.icon(
+                                      onPressed: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => const CategoriasScreen(),
+                                          ),
+                                        );
+                                      },
+                                      icon: const Icon(Icons.category, size: 18),
+                                      label: const Text('Categorías'),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: AppTheme.primaryColor,
+                                        foregroundColor: Colors.white,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
@@ -455,34 +518,18 @@ class MenuScreen extends StatelessWidget {
     );
   }
 
-  void _showLogoutDialog(BuildContext context) {
-    showDialog(
+  void _showLogoutDialog(BuildContext context) async {
+    final confirmado = await AppDialogs. showLogoutConfirmationDialog(
       context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Cerrar Sesión'),
-          content: const Text('¿Estás seguro de que quieres cerrar sesión?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancelar'),
-            ),
-            TextButton(
-              onPressed: () async {
-                Navigator.of(context).pop();
-                await context.read<AuthProvider>().logout();
-                if (context.mounted) {
-                  Navigator.of(context).pushReplacementNamed('/login');
-                }
-              },
-              child: const Text(
-                'Cerrar Sesión',
-                style: TextStyle(color: Colors.red),
-              ),
-            ),
-          ],
-        );
-      },
     );
+
+    if (confirmado) {
+      await context.read<AuthProvider>().logout();
+      if (context.mounted) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const LoginScreen()),
+        );
+      }
+    }
   }
 }

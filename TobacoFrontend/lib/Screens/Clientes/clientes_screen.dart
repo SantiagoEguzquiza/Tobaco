@@ -7,7 +7,10 @@ import 'package:tobaco/Screens/Clientes/wizardNuevoCliente_screen.dart';
 import 'package:tobaco/Screens/Clientes/wizardEditarCliente_screen.dart';
 import 'package:tobaco/Screens/Clientes/detalleCliente_screen.dart';
 import 'package:tobaco/Theme/app_theme.dart';
+import 'package:tobaco/Theme/dialogs.dart';
+import 'package:tobaco/Theme/headers.dart';
 import 'package:tobaco/Utils/loading_utils.dart';
+import 'package:tobaco/Helpers/api_handler.dart';
 
 class ClientesScreen extends StatefulWidget {
   const ClientesScreen({super.key});
@@ -53,7 +56,7 @@ class _ClientesScreenState extends State<ClientesScreen> {
   }
 
   Future<void> _cargarClientes() async {
-    if (_isLoading) return;
+    if (_isLoading || !mounted) return;
     
     setState(() {
       _isLoading = true;
@@ -64,21 +67,38 @@ class _ClientesScreenState extends State<ClientesScreen> {
 
     try {
       final data = await _clienteService.obtenerClientesPaginados(_currentPage, _pageSize);
+      if (!mounted) return;
+      
       setState(() {
         _clientes = List<Cliente>.from(data['clientes']);
         _hasMoreData = data['hasNextPage'];
         _isLoading = false;
       });
     } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
+      if (!mounted) return;
+      
       log('Error al cargar los clientes: $e', level: 1000);
+      
+      if (Apihandler.isConnectionError(e)) {
+        setState(() {
+          _isLoading = false;
+          // No establecer errorMessage para errores de conexión
+        });
+        await Apihandler.handleConnectionError(context, e);
+      } else {
+        setState(() {
+          _isLoading = false;
+        });
+        await AppDialogs.showErrorDialog(
+          context: context,
+          message: 'Error al cargar clientes',
+        );
+      }
     }
   }
 
   Future<void> _cargarMasClientes() async {
-    if (_isLoading || !_hasMoreData) return;
+    if (_isLoading || !_hasMoreData || !mounted) return;
     
     setState(() {
       _isLoading = true;
@@ -86,6 +106,8 @@ class _ClientesScreenState extends State<ClientesScreen> {
 
     try {
       final data = await _clienteService.obtenerClientesPaginados(_currentPage + 1, _pageSize);
+      if (!mounted) return;
+      
       setState(() {
         _clientes.addAll(List<Cliente>.from(data['clientes']));
         _currentPage++;
@@ -93,10 +115,21 @@ class _ClientesScreenState extends State<ClientesScreen> {
         _isLoading = false;
       });
     } catch (e) {
+      if (!mounted) return;
+      
       setState(() {
         _isLoading = false;
       });
       log('Error al cargar más clientes: $e', level: 1000);
+      
+      if (Apihandler.isConnectionError(e)) {
+        await Apihandler.handleConnectionError(context, e);
+      } else {
+        await AppDialogs.showErrorDialog(
+          context: context,
+          message: 'Error al cargar más clientes',
+        );
+      }
     }
   }
 
@@ -106,6 +139,8 @@ class _ClientesScreenState extends State<ClientesScreen> {
       return;
     }
 
+    if (!mounted) return;
+    
     setState(() {
       _isLoading = true;
       _clientes.clear();
@@ -113,15 +148,28 @@ class _ClientesScreenState extends State<ClientesScreen> {
 
     try {
       final clientes = await _clienteService.buscarClientes(_searchQuery);
+      if (!mounted) return;
+      
       setState(() {
         _clientes = clientes;
         _isLoading = false;
       });
     } catch (e) {
+      if (!mounted) return;
+      
       setState(() {
         _isLoading = false;
       });
       log('Error al buscar clientes: $e', level: 1000);
+      
+      if (Apihandler.isConnectionError(e)) {
+        await Apihandler.handleConnectionError(context, e);
+      } else {
+        await AppDialogs.showErrorDialog(
+          context: context,
+          message: 'Error al buscar clientes',
+        );
+      }
     }
   }
 
@@ -147,6 +195,7 @@ class _ClientesScreenState extends State<ClientesScreen> {
     try {
       // Obtener los datos actualizados del cliente desde la API
       final clienteActualizado = await _clienteService.obtenerClientePorId(clienteOriginal.id!);
+      if (!mounted) return;
       
       setState(() {
         // Buscar el cliente en la lista y actualizarlo
@@ -157,29 +206,22 @@ class _ClientesScreenState extends State<ClientesScreen> {
       });
     } catch (e) {
       log('Error al actualizar cliente en lista: $e', level: 1000);
+      
+      if (mounted && Apihandler.isConnectionError(e)) {
+        await Apihandler.handleConnectionError(context, e);
+      }
       // Si falla, recargar toda la lista como fallback
-      _cargarClientes();
+      if (mounted) {
+        _cargarClientes();
+      }
     }
   }
 
   Future<void> _eliminarCliente(Cliente cliente) async {
-    final confirmacion = await showDialog<bool>(
+    final confirmacion = await AppDialogs.showDeleteConfirmationDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Confirmar eliminación'),
-        content: Text('¿Está seguro de que desea eliminar al cliente "${cliente.nombre}"?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Eliminar'),
-          ),
-        ],
-      ),
+      title: 'Eliminar Cliente',
+      itemName: cliente.nombre,
     );
 
     if (confirmacion == true) {
@@ -194,9 +236,12 @@ class _ClientesScreenState extends State<ClientesScreen> {
           );
         }
       } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error al eliminar cliente: $e')),
+        if (mounted && Apihandler.isConnectionError(e)) {
+          await Apihandler.handleConnectionError(context, e);
+        } else if (mounted) {
+          await AppDialogs.showErrorDialog(
+            context: context,
+            message: 'Error al eliminar cliente: ${e.toString().replaceFirst('Exception: ', '')}',
           );
         }
       }
@@ -212,17 +257,17 @@ class _ClientesScreenState extends State<ClientesScreen> {
         : _clientes;
 
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         centerTitle: true,
         elevation: 0,
-        backgroundColor: Colors.transparent,
+        backgroundColor: null, // Usar el tema
         title: const Text(
           'Clientes',
           style: TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.bold,
-            color: AppTheme.primaryColor,
+            color: Color(0xFFFFFFFF), // Blanco puro
           ),
         ),
       ),
@@ -248,179 +293,56 @@ class _ClientesScreenState extends State<ClientesScreen> {
             )
           : Column(
               children: [
-                // Header fijo
-                Container(
+                // Header con buscador
+                Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Header con estadísticas
-                      Container(
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              AppTheme.primaryColor.withOpacity(0.1),
-                              AppTheme.secondaryColor.withOpacity(0.3),
-                            ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: AppTheme.primaryColor.withOpacity(0.2),
-                            width: 1,
-                          ),
-                        ),
-                        child: Column(
-                          children: [
-                            Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(12),
-                                  decoration: BoxDecoration(
-                                    color: AppTheme.primaryColor,
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: const Icon(
-                                    Icons.people,
-                                    color: Colors.white,
-                                    size: 24,
-                                  ),
-                                ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      const Text(
-                                        'Gestión de Clientes',
-                                        style: TextStyle(
-                                          fontSize: 24,
-                                          fontWeight: FontWeight.bold,
-                                          color: AppTheme.primaryColor,
-                                        ),
-                                      ),
-                                      Text(
-                                        '${_clientes.length} clientes registrados',
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          color: Colors.grey.shade600,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 20),
-
-                            // Botón de crear cliente
-                            SizedBox(
-                              width: double.infinity,
-                              child: ElevatedButton.icon(
-                                onPressed: () async {
-                                  final result = await Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => const WizardNuevoClienteScreen(),
-                                    ),
-                                  );
-                                  if (result == true) {
-                                    _cargarClientes();
-                                  }
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppTheme.primaryColor,
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(vertical: 16),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(15),
-                                  ),
-                                  elevation: 2,
-                                ),
-                                icon: const Icon(Icons.person_add, size: 20),
-                                label: const Text(
-                                  'Crear Nuevo Cliente',
-                                  style: TextStyle(
-                                      fontSize: 16, fontWeight: FontWeight.w600),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
+                      HeaderConBuscador(
+                        leadingIcon: Icons.people,
+                        title: 'Gestión de Clientes',
+                        subtitle: '${_clientes.length} clientes registrados',
+                        controller: _searchController,
+                        hintText: 'Buscar clientes...',
+                        onChanged: _onSearchChanged,
+                        onClear: () {
+                          _searchController.clear();
+                          _onSearchChanged('');
+                        },
                       ),
-
-                      const SizedBox(height: 24),
-
-                      // Barra de búsqueda mejorada
-                      Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(15),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.05),
-                              blurRadius: 10,
-                              offset: const Offset(0, 2),
+                      
+                      const SizedBox(height: 16),
+                      
+                      // Botón de crear cliente
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: () async {
+                            final result = await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const WizardNuevoClienteScreen(),
+                              ),
+                            );
+                            if (result == true) {
+                              _cargarClientes();
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.primaryColor,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(15),
                             ),
-                          ],
-                        ),
-                        child: Theme(
-                          data: Theme.of(context).copyWith(
-                            textSelectionTheme: TextSelectionThemeData(
-                              selectionColor: AppTheme.primaryColor.withOpacity(0.3),
-                              selectionHandleColor: AppTheme.primaryColor,
-                              cursorColor: AppTheme.primaryColor,
-                            ),
+                            elevation: 2,
                           ),
-                          child: TextField(
-                            controller: _searchController,
-                            cursorColor: AppTheme.primaryColor,
-                            style: const TextStyle(fontSize: 16),
-                            decoration: InputDecoration(
-                              hintText: 'Buscar clientes...',
-                              hintStyle: TextStyle(
-                                color: Colors.grey.shade400,
-                                fontSize: 16,
-                              ),
-                              prefixIcon: Icon(
-                                Icons.search,
-                                color: AppTheme.primaryColor,
-                                size: 24,
-                              ),
-                              suffixIcon: _searchQuery.isNotEmpty
-                                  ? IconButton(
-                                      icon: Icon(
-                                        Icons.clear,
-                                        color: Colors.grey.shade400,
-                                      ),
-                                      onPressed: () {
-                                        _searchController.clear();
-                                        _onSearchChanged('');
-                                      },
-                                    )
-                                  : null,
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(15),
-                                borderSide: BorderSide.none,
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(15),
-                                borderSide: BorderSide.none,
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(15),
-                                borderSide: BorderSide.none,
-                              ),
-                              filled: true,
-                              fillColor: Colors.white,
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 20,
-                                vertical: 16,
-                              ),
-                            ),
-                            onChanged: _onSearchChanged,
+                          icon: const Icon(Icons.person_add, size: 20),
+                          label: const Text(
+                            'Crear Nuevo Cliente',
+                            style: TextStyle(
+                                fontSize: 16, fontWeight: FontWeight.w600),
                           ),
                         ),
                       ),
@@ -509,11 +431,15 @@ class _ClientesScreenState extends State<ClientesScreen> {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).brightness == Brightness.dark
+            ? const Color(0xFF1A1A1A)
+            : Colors.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.black.withOpacity(0.3)
+                : Colors.black.withOpacity(0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -560,10 +486,12 @@ class _ClientesScreenState extends State<ClientesScreen> {
                     children: [
                       Text(
                         cliente.nombre,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
-                          color: AppTheme.textColor,
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.white
+                              : AppTheme.textColor,
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -572,7 +500,9 @@ class _ClientesScreenState extends State<ClientesScreen> {
                           Icon(
                             Icons.location_on_outlined,
                             size: 16,
-                            color: Colors.grey.shade600,
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? Colors.grey.shade400
+                                : Colors.grey.shade600,
                           ),
                           const SizedBox(width: 4),
                           Expanded(
@@ -580,7 +510,9 @@ class _ClientesScreenState extends State<ClientesScreen> {
                               cliente.direccion!,
                               style: TextStyle(
                                 fontSize: 14,
-                                color: Colors.grey.shade600,
+                                color: Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.grey.shade400
+                                    : Colors.grey.shade600,
                               ),
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -594,14 +526,18 @@ class _ClientesScreenState extends State<ClientesScreen> {
                             Icon(
                               Icons.phone_outlined,
                               size: 16,
-                              color: Colors.grey.shade600,
+                              color: Theme.of(context).brightness == Brightness.dark
+                                  ? Colors.grey.shade400
+                                  : Colors.grey.shade600,
                             ),
                             const SizedBox(width: 4),
                             Text(
                               cliente.telefono!.toString(),
                               style: TextStyle(
                                 fontSize: 14,
-                                color: Colors.grey.shade600,
+                                color: Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.grey.shade400
+                                    : Colors.grey.shade600,
                               ),
                             ),
                           ],
@@ -613,14 +549,18 @@ class _ClientesScreenState extends State<ClientesScreen> {
                           Icon(
                             Icons.people_outline,
                             size: 16,
-                            color: Colors.grey.shade600,
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? Colors.grey.shade400
+                                : Colors.grey.shade600,
                           ),
                           const SizedBox(width: 4),
                           Text(
                             'Cliente',
                             style: TextStyle(
                               fontSize: 14,
-                              color: Colors.grey.shade600,
+                              color: Theme.of(context).brightness == Brightness.dark
+                                  ? Colors.grey.shade400
+                                  : Colors.grey.shade600,
                             ),
                           ),
                           if (tieneDeuda) ...[

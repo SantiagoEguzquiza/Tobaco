@@ -6,6 +6,7 @@ import 'package:tobaco/Services/Auth_Service/auth_service.dart';
 
 class ClienteService {
   final Uri baseUrl = Apihandler.baseUrl;
+  static const Duration _timeoutDuration = Duration(seconds: 10);
 
   Future<List<Cliente>> obtenerClientes() async {
     try {
@@ -13,7 +14,7 @@ class ClienteService {
       final response = await Apihandler.client.get(
         Uri.parse('$baseUrl/Clientes'),
         headers: headers,
-      );
+      ).timeout(_timeoutDuration);
 
       if (response.statusCode == 200) {
         final List<dynamic> clientesJson = jsonDecode(response.body);
@@ -34,7 +35,7 @@ class ClienteService {
       final response = await Apihandler.client.get(
         Uri.parse('$baseUrl/Clientes/$id'),
         headers: headers,
-      );
+      ).timeout(_timeoutDuration);
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> clienteJson = jsonDecode(response.body);
@@ -57,7 +58,7 @@ class ClienteService {
         Uri.parse('$baseUrl/Clientes'),
         headers: headers,
         body: jsonEncode(cliente.toJson()),
-      );
+      ).timeout(_timeoutDuration);
 
       if (response.statusCode != 200 && response.statusCode != 201) {
         throw Exception(
@@ -82,7 +83,7 @@ class ClienteService {
         Uri.parse('$baseUrl/Clientes/${cliente.id}'),
         headers: headers,
         body: jsonEncode(cliente.toJsonId()),
-      );
+      ).timeout(_timeoutDuration);
 
       if (response.statusCode != 200) {
         throw Exception(
@@ -102,7 +103,7 @@ class ClienteService {
       final response = await Apihandler.client.delete(
         Uri.parse('$baseUrl/Clientes/$id'),
         headers: headers,
-      );
+      ).timeout(_timeoutDuration);
 
       if (response.statusCode != 200) {
         throw Exception(
@@ -117,17 +118,22 @@ class ClienteService {
   }
 
   Future<List<Cliente>> buscarClientes(String nombre) async {
-    final headers = await AuthService.getAuthHeaders();
-    final response = await Apihandler.client.get(
-      Uri.parse('$baseUrl/Clientes/buscar?query=$nombre'),
-      headers: headers,
-    );
+    try {
+      final headers = await AuthService.getAuthHeaders();
+      final response = await Apihandler.client.get(
+        Uri.parse('$baseUrl/Clientes/buscar?query=$nombre'),
+        headers: headers,
+      ).timeout(_timeoutDuration);
 
-    if (response.statusCode == 200) {
-      final List<dynamic> jsonList = jsonDecode(response.body);
-      return jsonList.map((json) => Cliente.fromJson(json)).toList();
-    } else {
-      throw Exception('Error al buscar clientes');
+      if (response.statusCode == 200) {
+        final List<dynamic> jsonList = jsonDecode(response.body);
+        return jsonList.map((json) => Cliente.fromJson(json)).toList();
+      } else {
+        throw Exception('Error al buscar clientes');
+      }
+    } catch (e) {
+      debugPrint('Error al buscar clientes: $e');
+      rethrow;
     }
   }
 
@@ -137,7 +143,7 @@ class ClienteService {
       final response = await Apihandler.client.get(
         Uri.parse('$baseUrl/Clientes/con-deuda'),
         headers: headers,
-      );
+      ).timeout(_timeoutDuration);
 
       if (response.statusCode == 200) {
         final List<dynamic> clientesJson = jsonDecode(response.body);
@@ -158,7 +164,7 @@ class ClienteService {
       final response = await Apihandler.client.get(
         Uri.parse('$baseUrl/Clientes/paginados?page=$page&pageSize=$pageSize'),
         headers: headers,
-      );
+      ).timeout(_timeoutDuration);
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = jsonDecode(response.body);
@@ -190,7 +196,7 @@ class ClienteService {
       final response = await Apihandler.client.get(
         Uri.parse('$baseUrl/Clientes/con-deuda/paginados?page=$page&pageSize=$pageSize'),
         headers: headers,
-      );
+      ).timeout(_timeoutDuration);
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = jsonDecode(response.body);

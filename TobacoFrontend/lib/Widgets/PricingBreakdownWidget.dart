@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:tobaco/Models/PricingResult.dart';
-import 'package:tobaco/Theme/app_theme.dart';
 
 class PricingBreakdownWidget extends StatelessWidget {
   final PricingResult pricingResult;
@@ -16,12 +15,21 @@ class PricingBreakdownWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 8),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.blue.shade50,
-        border: Border.all(color: Colors.blue.shade200),
+        color: isDark 
+          ? const Color(0xFF1A1A1A)
+          : Colors.blue.shade50,
+        border: Border.all(
+          color: isDark 
+            ? const Color(0xFF404040)
+            : Colors.blue.shade200,
+        ),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Column(
@@ -32,16 +40,17 @@ class PricingBreakdownWidget extends StatelessWidget {
             children: [
               Text(
                 'Desglose de Precio - $productName',
-                style: const TextStyle(
+                style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 14,
+                  color: theme.textTheme.bodyLarge?.color,
                 ),
               ),
               Text(
                 'Cantidad: $quantity',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 12,
-                  color: Colors.grey,
+                  color: theme.textTheme.bodyMedium?.color,
                 ),
               ),
             ],
@@ -54,13 +63,17 @@ class PricingBreakdownWidget extends StatelessWidget {
                   children: [
                     Text(
                       breakdown.description,
-                      style: const TextStyle(fontSize: 12),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: theme.textTheme.bodyMedium?.color,
+                      ),
                     ),
                     Text(
                       '\$${breakdown.totalPrice.toStringAsFixed(2)}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
+                        color: theme.textTheme.bodyMedium?.color,
                       ),
                     ),
                   ],
@@ -70,18 +83,20 @@ class PricingBreakdownWidget extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
+              Text(
                 'Subtotal:',
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 14,
+                  color: theme.textTheme.bodyLarge?.color,
                 ),
               ),
               Text(
                 '\$${pricingResult.totalPrice.toStringAsFixed(2)}',
-                style: const TextStyle(
+                style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 14,
+                  color: theme.textTheme.bodyLarge?.color,
                 ),
               ),
             ],

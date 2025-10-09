@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../../Models/Cliente.dart';
 import '../../Services/Clientes_Service/clientes_provider.dart';
 import '../../Theme/app_theme.dart';
+import '../../Theme/dialogs.dart';
+import '../../Helpers/api_handler.dart';
 import 'editarPreciosEspeciales_screen.dart';
 
 class WizardEditarClienteScreen extends StatefulWidget {
@@ -103,9 +105,19 @@ class _WizardEditarClienteScreenState extends State<WizardEditarClienteScreen> {
       );
     } catch (e) {
       setState(() {
-        _errorMessage = 'Error al actualizar el cliente: ${e.toString().replaceAll('Exception: ', '')}';
         _isLoading = false;
       });
+      
+      if (mounted && Apihandler.isConnectionError(e)) {
+        await Apihandler.handleConnectionError(context, e);
+        setState(() {
+          _errorMessage = 'Error de conexión al servidor';
+        });
+      } else {
+        setState(() {
+          _errorMessage = 'Error al actualizar el cliente: ${e.toString().replaceAll('Exception: ', '')}';
+        });
+      }
     }
   }
 
@@ -134,7 +146,7 @@ class _WizardEditarClienteScreenState extends State<WizardEditarClienteScreen> {
             color: Colors.white,
           ),
         ),
-        backgroundColor: AppTheme.primaryColor,
+        backgroundColor: null, // Usar el tema
         foregroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
@@ -154,7 +166,7 @@ class _WizardEditarClienteScreenState extends State<WizardEditarClienteScreen> {
                   child: TextButton(
                     onPressed: _finalizarWizard,
                     style: TextButton.styleFrom(
-                      backgroundColor: Colors.white.withOpacity(0.2),
+                      backgroundColor: Theme.of(context).cardTheme.color?.withOpacity(0.2) ?? Colors.white.withOpacity(0.2),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(20),
                       ),
@@ -198,6 +210,7 @@ class _WizardEditarClienteScreenState extends State<WizardEditarClienteScreen> {
           Expanded(
             child: PageView(
               controller: _pageController,
+              physics: const NeverScrollableScrollPhysics(), // Deshabilitar deslizamiento
               onPageChanged: (index) {
                 setState(() {
                   _currentStep = index;
@@ -264,12 +277,14 @@ class _WizardEditarClienteScreenState extends State<WizardEditarClienteScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-            const Text(
+            Text(
               'Editar Información del Cliente',
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
-                color: AppTheme.primaryColor,
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.white
+                    : AppTheme.primaryColor,
               ),
             ),
             const SizedBox(height: 8),
@@ -277,7 +292,9 @@ class _WizardEditarClienteScreenState extends State<WizardEditarClienteScreen> {
               'Modifica los datos del cliente ${widget.cliente.nombre}',
               style: TextStyle(
                 fontSize: 16,
-                color: Colors.grey.shade600,
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.grey.shade400
+                    : Colors.grey.shade600,
               ),
             ),
             const SizedBox(height: 30),
@@ -285,6 +302,11 @@ class _WizardEditarClienteScreenState extends State<WizardEditarClienteScreen> {
             // Campo Nombre
             TextFormField(
               controller: _nombreController,
+              style: TextStyle(
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.white
+                    : Colors.black,
+              ),
               decoration: const InputDecoration(
                 labelText: 'Nombre *',
                 hintText: 'Ingresa el nombre del cliente',
@@ -303,6 +325,11 @@ class _WizardEditarClienteScreenState extends State<WizardEditarClienteScreen> {
             // Campo Teléfono
             TextFormField(
               controller: _telefonoController,
+              style: TextStyle(
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.white
+                    : Colors.black,
+              ),
               decoration: const InputDecoration(
                 labelText: 'Teléfono *',
                 hintText: 'Ingresa el teléfono del cliente',
@@ -325,6 +352,11 @@ class _WizardEditarClienteScreenState extends State<WizardEditarClienteScreen> {
             // Campo Dirección
             TextFormField(
               controller: _direccionController,
+              style: TextStyle(
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.white
+                    : Colors.black,
+              ),
               decoration: const InputDecoration(
                 labelText: 'Dirección *',
                 hintText: 'Ingresa la dirección del cliente',
@@ -344,6 +376,11 @@ class _WizardEditarClienteScreenState extends State<WizardEditarClienteScreen> {
             // Campo Deuda
             TextFormField(
               controller: _deudaController,
+              style: TextStyle(
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.white
+                    : Colors.black,
+              ),
               decoration: const InputDecoration(
                 labelText: 'Deuda',
                 hintText: 'Ingresa el monto de la deuda (opcional)',
@@ -365,6 +402,11 @@ class _WizardEditarClienteScreenState extends State<WizardEditarClienteScreen> {
             // Campo Descuento Global
             TextFormField(
               controller: _descuentoGlobalController,
+              style: TextStyle(
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.white
+                    : Colors.black,
+              ),
               decoration: const InputDecoration(
                 labelText: 'Descuento Global (%)',
                 hintText: 'Ingresa el porcentaje de descuento global',
@@ -462,8 +504,12 @@ class _WizardEditarClienteScreenState extends State<WizardEditarClienteScreen> {
 
   Widget _buildPasoPreciosEspeciales() {
     if (_clienteActualizado == null) {
-      return const Center(
-        child: CircularProgressIndicator(),
+      return Center(
+        child: CircularProgressIndicator(
+          valueColor: AlwaysStoppedAnimation<Color>(
+            Theme.of(context).primaryColor,
+          ),
+        ),
       );
     }
 

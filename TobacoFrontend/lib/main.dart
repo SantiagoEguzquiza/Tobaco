@@ -9,6 +9,7 @@ import 'package:tobaco/Services/Cotizaciones_Service/cotizaciones_repo.dart';
 import 'package:tobaco/Services/Auth_Service/auth_provider.dart';
 import 'package:tobaco/Services/User_Service/user_provider.dart';
 import 'package:tobaco/Theme/app_theme.dart';
+import 'package:tobaco/Theme/theme_provider.dart';
 
 import 'package:tobaco/Services/Productos_Service/productos_provider.dart';
 import 'package:tobaco/Services/Ventas_Service/ventas_provider.dart';
@@ -26,6 +27,7 @@ void main() {
         ChangeNotifierProvider(create: (_) => ProductoProvider()),
         ChangeNotifierProvider(create: (_) => CategoriasProvider()),
         ChangeNotifierProvider(create: (_) => VentasProvider()),
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
         // 1) Repo primero
         Provider(create: (_) => BcuRepository()),
         // 2) Provider que depende del repo
@@ -43,10 +45,13 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = context.watch<ThemeProvider>();
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: AppTheme.theme,
-      home: const AuthWrapper(),
+      darkTheme: AppTheme.darkTheme,
+      themeMode: themeProvider.themeMode,
+      home: const LoginScreen(),
       routes: {
         '/menu': (context) => const MenuScreen(),
         '/login': (context) => const LoginScreen(),
@@ -77,8 +82,8 @@ class _AuthWrapperState extends State<AuthWrapper> {
     return Consumer<AuthProvider>(
       builder: (context, authProvider, child) {
         if (authProvider.isLoading) {
-          return const Scaffold(
-            backgroundColor: Colors.white,
+          return Scaffold(
+            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
             body: Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,

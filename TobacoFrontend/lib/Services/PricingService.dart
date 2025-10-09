@@ -11,7 +11,7 @@ class PricingService {
     double? specialPrice,
     double? globalDiscount,
   }) {
-    // Use the product's base price as unit price
+    // Use the product's base price as unit price (without global discount)
     var unitPrice = ProductQuantityPrice(
       productId: product.id ?? 0,
       quantity: 1,
@@ -40,6 +40,7 @@ class PricingService {
           )
         ],
         specialPrice: specialPrice,
+        globalDiscount: globalDiscount,
         finalPrice: unitPrice.totalPrice * requestedQuantity,
       );
     }
@@ -69,7 +70,6 @@ class PricingService {
     // Dynamic programming approach
     final dp = List<double>.filled(requestedQuantity + 1, double.infinity);
     final parent = List<int>.filled(requestedQuantity + 1, 0);
-    final usedQuantities = <int, int>{};
 
     // Initialize DP array
     dp[0] = 0;

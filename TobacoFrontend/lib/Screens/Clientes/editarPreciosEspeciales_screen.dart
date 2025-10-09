@@ -7,6 +7,8 @@ import '../../Services/Categoria_Service/categoria_provider.dart';
 import '../../Services/Productos_Service/productos_provider.dart';
 import '../../Services/PrecioEspecialService.dart';
 import '../../Theme/app_theme.dart';
+import '../../Theme/dialogs.dart';
+import '../../Helpers/api_handler.dart';
 
 class EditarPreciosEspecialesScreen extends StatefulWidget {
   final Cliente cliente;
@@ -99,10 +101,20 @@ class _EditarPreciosEspecialesScreenState
         isLoading = false;
       });
     } catch (e) {
-      setState(() {
-        errorMessage = 'Error al cargar los datos: $e';
-        isLoading = false;
-      });
+      if (!mounted) return;
+      
+      if (Apihandler.isConnectionError(e)) {
+        setState(() {
+          isLoading = false;
+          // No establecer errorMessage para errores de conexión
+        });
+        await Apihandler.handleConnectionError(context, e);
+      } else {
+        setState(() {
+          errorMessage = 'Error al cargar los datos: ${e.toString().replaceFirst('Exception: ', '')}';
+          isLoading = false;
+        });
+      }
     }
   }
 
@@ -217,9 +229,11 @@ class _EditarPreciosEspecialesScreenState
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: tieneEspecial
-                    ? Colors.green.shade700
-                    : AppTheme.primaryColor,
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.white
+                    : (tieneEspecial
+                        ? Colors.green.shade700
+                        : AppTheme.primaryColor),
               ),
             ),
             if (tieneEspecial) ...[
@@ -248,7 +262,9 @@ class _EditarPreciosEspecialesScreenState
             'Estándar: \$${precioEstandar.toStringAsFixed(2)}',
             style: TextStyle(
               fontSize: 12,
-              color: Colors.grey.shade600,
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? Colors.grey.shade400
+                  : Colors.grey.shade600,
               decoration: TextDecoration.lineThrough,
             ),
           ),
@@ -262,10 +278,10 @@ class _EditarPreciosEspecialesScreenState
     return widget.isWizardMode
         ? _buildContent()
         : Scaffold(
-            backgroundColor: AppTheme.secondaryColor,
+            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
             appBar: widget.isIndividualEdit 
                 ? AppBar(
-                    backgroundColor: AppTheme.primaryColor,
+                    backgroundColor: null, // Usar el tema
                     foregroundColor: Colors.white,
                     leading: IconButton(
                       icon: const Icon(Icons.arrow_back),
@@ -274,7 +290,7 @@ class _EditarPreciosEspecialesScreenState
                   )
                 : AppBar(
                     title: Text('Precios Especiales - ${widget.cliente.nombre}'),
-                    backgroundColor: AppTheme.primaryColor,
+                    backgroundColor: null, // Usar el tema
                     foregroundColor: Colors.white,
                     leading: IconButton(
                       icon: const Icon(Icons.arrow_back),
@@ -293,10 +309,14 @@ class _EditarPreciosEspecialesScreenState
         Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: Theme.of(context).brightness == Brightness.dark
+                ? const Color(0xFF1A1A1A)
+                : Colors.white,
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.black.withOpacity(0.3)
+                    : Colors.black.withOpacity(0.05),
                 blurRadius: 10,
                 offset: const Offset(0, 2),
               ),
@@ -323,19 +343,23 @@ class _EditarPreciosEspecialesScreenState
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
+                        Text(
                           'Precios Especiales',
                           style: TextStyle(
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
-                            color: AppTheme.primaryColor,
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? Colors.white
+                                : AppTheme.primaryColor,
                           ),
                         ),
                         Text(
                           'Configura precios especiales para ${widget.cliente.nombre}',
                           style: TextStyle(
                             fontSize: 14,
-                            color: Colors.grey.shade600,
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? Colors.grey.shade400
+                                : Colors.grey.shade600,
                           ),
                         ),
                         const SizedBox(height: 4),
@@ -374,11 +398,15 @@ class _EditarPreciosEspecialesScreenState
               // Barra de búsqueda
               Container(
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.transparent
+                      : Colors.white,
                   borderRadius: BorderRadius.circular(15),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.transparent
+                          : Colors.black.withOpacity(0.05),
                       blurRadius: 10,
                       offset: const Offset(0, 2),
                     ),
@@ -393,10 +421,17 @@ class _EditarPreciosEspecialesScreenState
                     ),
                   ),
                   child: TextField(
+                    style: TextStyle(
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white
+                          : Colors.black,
+                    ),
                     decoration: InputDecoration(
                       hintText: 'Buscar productos por nombre...',
                       hintStyle: TextStyle(
-                        color: Colors.grey.shade400,
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.grey.shade400
+                            : Colors.grey.shade400,
                         fontSize: 16,
                       ),
                       prefixIcon: Icon(
@@ -408,7 +443,9 @@ class _EditarPreciosEspecialesScreenState
                           ? IconButton(
                               icon: Icon(
                                 Icons.clear,
-                                color: Colors.grey.shade400,
+                                color: Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.grey.shade400
+                                    : Colors.grey.shade400,
                               ),
                               onPressed: () {
                                 setState(() {
@@ -484,7 +521,11 @@ class _EditarPreciosEspecialesScreenState
         // Lista de productos
         Expanded(
           child: isLoading
-              ? const Center(child: CircularProgressIndicator())
+              ? const Center(
+                  child: CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
+                  ),
+                )
               : errorMessage != null
                   ? Center(
                       child: Column(
@@ -558,7 +599,9 @@ class _EditarPreciosEspecialesScreenState
                             return Container(
                               margin: const EdgeInsets.only(bottom: 12),
                               decoration: BoxDecoration(
-                                color: Colors.white,
+                                color: Theme.of(context).brightness == Brightness.dark
+                                    ? const Color(0xFF1A1A1A)
+                                    : Colors.white,
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
                                   color: tieneEspecial
@@ -592,12 +635,13 @@ class _EditarPreciosEspecialesScreenState
                                                   Expanded(
                                                     child: Text(
                                                       producto.nombre,
-                                                      style: const TextStyle(
+                                                      style: TextStyle(
                                                         fontSize: 16,
                                                         fontWeight:
                                                             FontWeight.bold,
-                                                        color: AppTheme
-                                                            .primaryColor,
+                                                        color: Theme.of(context).brightness == Brightness.dark
+                                                            ? Colors.white
+                                                            : AppTheme.primaryColor,
                                                       ),
                                                       overflow:
                                                           TextOverflow.ellipsis,
@@ -635,7 +679,9 @@ class _EditarPreciosEspecialesScreenState
                                                 'Categoría: ${producto.categoriaNombre ?? 'Sin categoría'}',
                                                 style: TextStyle(
                                                   fontSize: 12,
-                                                  color: Colors.grey.shade600,
+                                                  color: Theme.of(context).brightness == Brightness.dark
+                                                      ? Colors.grey.shade400
+                                                      : Colors.grey.shade600,
                                                 ),
                                               ),
                                             ],

@@ -10,6 +10,7 @@ class AuthService {
   static const String _tokenKey = 'auth_token';
   static const String _tokenExpiryKey = 'token_expiry';
   static const String _userKey = 'user_data';
+  static const Duration _timeoutDuration = Duration(seconds: 10);
 
   // Login user
   static Future<LoginResponse?> login(LoginRequest loginRequest) async {
@@ -20,7 +21,7 @@ class AuthService {
           'Content-Type': 'application/json',
         },
         body: jsonEncode(loginRequest.toJson()),
-      );
+      ).timeout(_timeoutDuration);
 
       if (response.statusCode == 200) {
         final loginResponse = LoginResponse.fromJson(jsonDecode(response.body));
@@ -114,7 +115,7 @@ class AuthService {
           'Content-Type': 'application/json',
         },
         body: jsonEncode({'token': token}),
-      );
+      ).timeout(_timeoutDuration);
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -122,6 +123,10 @@ class AuthService {
       }
       return false;
     } catch (e) {
+      // Si hay un error de conexión, relanzar la excepción para que se maneje como servidor no disponible
+      if (Apihandler.isConnectionError(e)) {
+        rethrow;
+      }
       return false;
     }
   }

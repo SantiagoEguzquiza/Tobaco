@@ -4,7 +4,8 @@ import 'package:tobaco/Models/Ventas.dart';
 import 'package:tobaco/Models/metodoPago.dart';
 import 'package:tobaco/Models/ventasPago.dart';
 import 'package:tobaco/Theme/app_theme.dart';
-import 'package:tobaco/Screens/Ventas/resumenVenta_screen.dart';
+import 'package:tobaco/Theme/dialogs.dart';
+import 'package:tobaco/Helpers/api_handler.dart';
 
 class FormaPagoScreen extends StatefulWidget {
   final Ventas venta;
@@ -187,17 +188,19 @@ class _FormaPagoScreenState extends State<FormaPagoScreen> {
                     child: OutlinedButton(
                       onPressed: () => Navigator.of(context).pop(),
                       style: OutlinedButton.styleFrom(
-                        backgroundColor: Colors.white,
+                        backgroundColor: Theme.of(context).cardTheme.color,
                         side: const BorderSide(color: Colors.grey, width: 1.5),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
                         padding: const EdgeInsets.symmetric(vertical: 14),
                       ),
-                      child: const Text(
+                      child: Text(
                         'Cancelar',
                         style: TextStyle(
-                          color: Colors.black,
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.white
+                              : Colors.black,
                           fontWeight: FontWeight.w400,
                           fontSize: 16,
                         ),
@@ -287,10 +290,14 @@ class _FormaPagoScreenState extends State<FormaPagoScreen> {
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade50,
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? const Color(0xFF1A1A1A)
+                        : Colors.grey.shade50,
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                      color: Colors.grey.shade200,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.grey.shade700
+                          : Colors.grey.shade200,
                       width: 1,
                     ),
                   ),
@@ -315,12 +322,14 @@ class _FormaPagoScreenState extends State<FormaPagoScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text(
+                                Text(
                                   'Total de la Venta',
                                   style: TextStyle(
                                     fontSize: 24,
                                     fontWeight: FontWeight.bold,
-                                    color: Colors.black87,
+                                    color: Theme.of(context).brightness == Brightness.dark
+                                        ? Colors.white
+                                        : Colors.black87,
                                   ),
                                 ),
                                 _formatearPrecioConDecimales(
@@ -344,26 +353,34 @@ class _FormaPagoScreenState extends State<FormaPagoScreen> {
                     borderRadius: BorderRadius.circular(15),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.black.withOpacity(0.3)
+                            : Colors.black.withOpacity(0.05),
                         blurRadius: 10,
                         offset: const Offset(0, 2),
                       ),
                     ],
                     border: Border.all(
-                      color: Colors.grey.shade200,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.grey.shade700
+                          : Colors.grey.shade200,
                       width: 1,
                     ),
                   ),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(15),
                     child: Container(
-                      color: Colors.white,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? const Color(0xFF1A1A1A)
+                          : Colors.white,
                       child: Column(
                         children: [
                         Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: Colors.grey.shade50,
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? const Color(0xFF2A2A2A)
+                                : Colors.grey.shade50,
                             borderRadius: const BorderRadius.only(
                               topLeft: Radius.circular(15),
                               topRight: Radius.circular(15),
@@ -375,7 +392,9 @@ class _FormaPagoScreenState extends State<FormaPagoScreen> {
                               Text(
                                 'Seleccionar Método de Pago',
                                 style: TextStyle(
-                                  color: Colors.grey.shade800,
+                                  color: Theme.of(context).brightness == Brightness.dark
+                                      ? Colors.white
+                                      : Colors.grey.shade800,
                                   fontWeight: FontWeight.bold,
                                   fontSize: 16,
                                 ),
@@ -397,17 +416,23 @@ class _FormaPagoScreenState extends State<FormaPagoScreen> {
                 if (pagosParciales.isNotEmpty) ...[
                   Container(
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? const Color(0xFF1A1A1A)
+                          : Colors.white,
                       borderRadius: BorderRadius.circular(15),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.black.withOpacity(0.3)
+                              : Colors.black.withOpacity(0.05),
                           blurRadius: 10,
                           offset: const Offset(0, 2),
                         ),
                       ],
                       border: Border.all(
-                        color: Colors.grey.shade200,
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.grey.shade700
+                            : Colors.grey.shade200,
                         width: 1,
                       ),
                     ),
@@ -416,7 +441,9 @@ class _FormaPagoScreenState extends State<FormaPagoScreen> {
                         Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: Colors.grey.shade50,
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? const Color(0xFF2A2A2A)
+                                : Colors.grey.shade50,
                             borderRadius: const BorderRadius.only(
                               topLeft: Radius.circular(15),
                               topRight: Radius.circular(15),
@@ -427,7 +454,9 @@ class _FormaPagoScreenState extends State<FormaPagoScreen> {
                               Text(
                                 'Pagos Agregados ( ${pagosParciales.length} )',
                                 style: TextStyle(
-                                  color: Colors.grey.shade800,
+                                  color: Theme.of(context).brightness == Brightness.dark
+                                      ? Colors.white
+                                      : Colors.grey.shade800,
                                   fontWeight: FontWeight.bold,
                                   fontSize: 16,
                                 ),
@@ -448,12 +477,14 @@ class _FormaPagoScreenState extends State<FormaPagoScreen> {
                               final pago = pagosParciales[index];
                               return Container(
                                 decoration: BoxDecoration(
-                                  color: index % 2 == 0
-                                      ? Colors.white
-                                      : Colors.grey.shade50,
+                                  color: Theme.of(context).brightness == Brightness.dark
+                                      ? (index % 2 == 0 ? const Color(0xFF1A1A1A) : const Color(0xFF2A2A2A))
+                                      : (index % 2 == 0 ? Colors.white : Colors.grey.shade50),
                                   border: Border(
                                     bottom: BorderSide(
-                                      color: Colors.grey.shade200,
+                                      color: Theme.of(context).brightness == Brightness.dark
+                                          ? Colors.grey.shade700
+                                          : Colors.grey.shade200,
                                       width: 0.5,
                                     ),
                                   ),
@@ -477,19 +508,26 @@ class _FormaPagoScreenState extends State<FormaPagoScreen> {
                                   ),
                                   title: Text(
                                     pago.nombre,
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                     fontWeight: FontWeight.w600,
                                     fontSize: 16,
+                                    color: Theme.of(context).brightness == Brightness.dark
+                                        ? Colors.white
+                                        : Colors.black,
                                     ),
                                   ),
                                   subtitle: _formatearPrecioConDecimales(
                                     pago.monto,
-                                    color: Colors.black87,
+                                    color: Theme.of(context).brightness == Brightness.dark
+                                        ? Colors.white
+                                        : Colors.black87,
                                   ),
                                   trailing: IconButton(
                                     icon: Icon(
                                       Icons.close,
-                                      color: Colors.grey.shade600,
+                                      color: Theme.of(context).brightness == Brightness.dark
+                                          ? Colors.grey.shade400
+                                          : Colors.grey.shade600,
                                       size: 20,
                                     ),
                                     onPressed: () => _eliminarPago(index),
@@ -514,15 +552,21 @@ class _FormaPagoScreenState extends State<FormaPagoScreen> {
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? const Color(0xFF1A1A1A)
+                        : Colors.white,
                     borderRadius: BorderRadius.circular(15),
                     border: Border.all(
-                      color: Colors.grey.shade200,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.grey.shade700
+                          : Colors.grey.shade200,
                       width: 1,
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.black.withOpacity(0.3)
+                            : Colors.black.withOpacity(0.05),
                         blurRadius: 10,
                         offset: const Offset(0, 2),
                       ),
@@ -533,11 +577,14 @@ class _FormaPagoScreenState extends State<FormaPagoScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text(
+                          Text(
                             'Total de la Venta:',
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w500,
+                              color: Theme.of(context).brightness == Brightness.dark
+                                  ? Colors.grey.shade400
+                                  : Colors.black,
                             ),
                           ),
                           Text(
@@ -554,11 +601,14 @@ class _FormaPagoScreenState extends State<FormaPagoScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text(
+                          Text(
                             'Total Pagado:',
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w500,
+                              color: Theme.of(context).brightness == Brightness.dark
+                                  ? Colors.grey.shade400
+                                  : Colors.black,
                             ),
                           ),
                           Text(
@@ -607,10 +657,14 @@ class _FormaPagoScreenState extends State<FormaPagoScreen> {
           ? Container(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? const Color(0xFF1A1A1A)
+                    : Colors.white,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.black.withOpacity(0.3)
+                        : Colors.black.withOpacity(0.1),
                     blurRadius: 10,
                     offset: const Offset(0, -2),
                   ),
@@ -630,7 +684,9 @@ class _FormaPagoScreenState extends State<FormaPagoScreen> {
                             _calcularRestante() <= 0.01 ? 'Pago Completo' : 'Restante',
                             style: TextStyle(
                               fontSize: 14,
-                              color: Colors.grey.shade600,
+                              color: Theme.of(context).brightness == Brightness.dark
+                                  ? Colors.grey.shade400
+                                  : Colors.grey.shade600,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -648,7 +704,9 @@ class _FormaPagoScreenState extends State<FormaPagoScreen> {
                             '${pagosParciales.length} método${pagosParciales.length != 1 ? 's' : ''}',
                             style: TextStyle(
                               fontSize: 12,
-                              color: Colors.grey.shade500,
+                              color: Theme.of(context).brightness == Brightness.dark
+                                  ? Colors.grey.shade400
+                                  : Colors.grey.shade500,
                             ),
                           ),
                         ],
@@ -666,7 +724,8 @@ class _FormaPagoScreenState extends State<FormaPagoScreen> {
                             _puedeConfirmarPago() ? AppTheme.addGreenColor : Colors.grey),
                         icon: const Icon(Icons.check_circle, color: Colors.white),
                         label: const Text(
-                          'Confirmar Pago',
+                           'Confirmar Pago',
+                           
                           style: TextStyle(
                             fontSize: 16,
                             color: Colors.white,
@@ -686,10 +745,14 @@ class _FormaPagoScreenState extends State<FormaPagoScreen> {
   Widget _buildMetodoPagoTile(_MetodoPago metodo, {bool isLast = false}) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).brightness == Brightness.dark
+            ? const Color(0xFF1A1A1A)
+            : Colors.white,
         border: isLast ? null : Border(
           bottom: BorderSide(
-            color: Colors.grey.shade200,
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.grey.shade700
+                : Colors.grey.shade200,
             width: 0.5,
           ),
         ),
@@ -716,8 +779,9 @@ class _FormaPagoScreenState extends State<FormaPagoScreen> {
           style: TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 16,
-            color: Colors.grey.shade800,
-            
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.white
+                : Colors.grey.shade800,
           ),
         ),
         trailing: Icon(
@@ -730,36 +794,35 @@ class _FormaPagoScreenState extends State<FormaPagoScreen> {
     );
   }
 
-  void _confirmarPago() {
+  void _confirmarPago() async {
     if (!_puedeConfirmarPago()) return;
 
     // Mostrar diálogo de confirmación
-    showDialog(
+    final confirmado = await AppDialogs.showConfirmationDialog(
       context: context,
-      builder: (BuildContext context) {
-        return AppTheme.confirmDialogStyle(
-          title: 'Confirmar Pago',
-          content: '¿Está seguro de que desea confirmar el pago con ${pagosParciales.length} método${pagosParciales.length != 1 ? 's' : ''}?',
-          onConfirm: () {
-            // Convertir pagosParciales a VentaPago y almacenar en la venta
-            final ventaPagos = pagosParciales.map((pago) => 
-              VentaPago(
-                id: 0, // Asigna el valor adecuado para 'id'
-                pedidoId: widget.venta.id ?? 0, // Asegúrate de que 'widget.venta.id' existe y es correcto
-                metodo: pago.metodo, 
-                monto: pago.monto
-              )
-            ).toList();
-            
-            // Actualizar la venta con la lista de pagos
-            widget.venta.pagos = ventaPagos;
-            
-            Navigator.of(context).pop(); // Cerrar diálogo
-            Navigator.pop(context, widget.venta); // Devolver la venta actualizada
-          },
-          onCancel: () => Navigator.of(context).pop(),
-        );
-      },
+      title: 'Confirmar Pago',
+      message: '¿Está seguro de que desea confirmar el pago con ${pagosParciales.length} método${pagosParciales.length != 1 ? 's' : ''}?',
+      confirmText: 'Confirmar',
+      cancelText: 'Cancelar',
+      icon: Icons.payment,
+      iconColor: Colors.green,
     );
+
+    if (confirmado) {
+      // Convertir pagosParciales a VentaPago y almacenar en la venta
+      final ventaPagos = pagosParciales.map((pago) => 
+        VentaPago(
+          id: 0, // Asigna el valor adecuado para 'id'
+          pedidoId: widget.venta.id ?? 0, // Asegúrate de que 'widget.venta.id' existe y es correcto
+          metodo: pago.metodo, 
+          monto: pago.monto
+        )
+      ).toList();
+      
+      // Actualizar la venta con la lista de pagos
+      widget.venta.pagos = ventaPagos;
+      
+      Navigator.pop(context, widget.venta); // Devolver la venta actualizada
+    }
   }
 }
