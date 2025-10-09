@@ -130,8 +130,8 @@ class UserProvider extends ChangeNotifier {
         print('UserProvider createUser error message: $_errorMessage'); // Debug log
         _isLoading = false;
         notifyListeners();
-        // Relanzar TODAS las excepciones para que la UI las maneje
-        rethrow;
+        // No relanzar la excepción, dejar que la UI maneje el mensaje de error
+        return false;
       }
     }
   }
@@ -186,8 +186,8 @@ class UserProvider extends ChangeNotifier {
         _errorMessage = e.toString();
         _isLoading = false;
         notifyListeners();
-        // Relanzar TODAS las excepciones para que la UI las maneje
-        rethrow;
+        // No relanzar la excepción, dejar que la UI maneje el mensaje de error
+        return {'success': false, 'currentUserAffected': false, 'message': e.toString()};
       }
     }
   }

@@ -279,8 +279,8 @@ class _SeleccionarProductosScreenState
     );
   }
 
-  // Función especial para el total del pedido
-  Widget _formatearTotalPedido() {
+  // Función especial para el total de la venta
+  Widget _formatearTotalVenta() {
     final total = cantidades.entries.where((e) => e.value > 0).map((e) {
       final producto = productos.firstWhere(
         (p) => p.id == e.key,
@@ -1244,7 +1244,7 @@ class _SeleccionarProductosScreenState
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Total del pedido',
+                      'Total de la venta',
                       style: TextStyle(
                         fontSize: 14,
                         color: Theme.of(context).brightness == Brightness.dark
@@ -1253,7 +1253,7 @@ class _SeleccionarProductosScreenState
                         fontWeight: FontWeight.w500,
                       ),
                     ),
-                    _formatearTotalPedido(),
+                    _formatearTotalVenta(),
                   ],
                 ),
               ),

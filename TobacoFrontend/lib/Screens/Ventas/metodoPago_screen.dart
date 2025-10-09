@@ -813,7 +813,7 @@ class _FormaPagoScreenState extends State<FormaPagoScreen> {
       final ventaPagos = pagosParciales.map((pago) => 
         VentaPago(
           id: 0, // Asigna el valor adecuado para 'id'
-          pedidoId: widget.venta.id ?? 0, // Asegúrate de que 'widget.venta.id' existe y es correcto
+          ventaId: widget.venta.id ?? 0, // Asegúrate de que 'widget.venta.id' existe y es correcto
           metodo: pago.metodo, 
           monto: pago.monto
         )

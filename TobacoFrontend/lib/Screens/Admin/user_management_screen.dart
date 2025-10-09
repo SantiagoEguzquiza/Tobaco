@@ -1615,6 +1615,16 @@ class _CreateUserDialogState extends State<_CreateUserDialog> {
                               : Colors.black,
                         ),
                               onChanged: (value) => _clearFieldErrors(),
+                              validator: (value) {
+                                if (value != null && value.isNotEmpty) {
+                                  // Validar formato de email solo si hay contenido
+                                  final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+                                  if (!emailRegex.hasMatch(value)) {
+                                    return 'Ingrese un email válido';
+                                  }
+                                }
+                                return null;
+                              },
                               decoration: InputDecoration(
                                 labelText: 'Email (Opcional)',
                                 labelStyle: TextStyle(
@@ -1976,73 +1986,16 @@ class _CreateUserDialogState extends State<_CreateUserDialog> {
         }
 
         // Show error dialog instead of SnackBar
-        _showErrorDialog(context, errorTitle, errorMessage);
+        AppDialogs.showErrorDialog(
+          context: context,
+          title: errorTitle,
+          message: errorMessage,
+        );
 
         // Clear the error from provider after showing dialog
         userProvider.clearError();
       }
     }
-  }
-
-  void _showErrorDialog(BuildContext context, String title, String message) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.red.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Icon(
-                Icons.error_outline,
-                color: Colors.red,
-                size: 24,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                title,
-                style: const TextStyle(
-                  color: Colors.red,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
-                ),
-              ),
-            ),
-          ],
-        ),
-        content: Text(
-          message,
-          style: const TextStyle(
-            fontSize: 16,
-            height: 1.5,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            style: TextButton.styleFrom(
-              foregroundColor: Colors.red,
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            ),
-            child: const Text(
-              'Entendido',
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-                fontSize: 16,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
   }
 }
 
@@ -2211,6 +2164,16 @@ class _EditUserDialogState extends State<_EditUserDialog> {
                               : Colors.black,
                         ),
                               onChanged: (value) => _clearFieldErrors(),
+                              validator: (value) {
+                                if (value != null && value.isNotEmpty) {
+                                  // Validar formato de email solo si hay contenido
+                                  final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+                                  if (!emailRegex.hasMatch(value)) {
+                                    return 'Ingrese un email válido';
+                                  }
+                                }
+                                return null;
+                              },
                               decoration: InputDecoration(
                           labelText: 'Email',
                                 labelStyle: TextStyle(
@@ -2588,8 +2551,11 @@ class _EditUserDialogState extends State<_EditUserDialog> {
           return;
         } else {
           // Para otros errores, mostrar el diálogo de error genérico
-          _showErrorDialog(context, 'Error al Actualizar Usuario', 
-              'No se pudo actualizar el usuario. Por favor, intente más tarde.');
+          AppDialogs.showErrorDialog(
+            context: context,
+            title: 'Error al Actualizar Usuario',
+            message: 'No se pudo actualizar el usuario. Por favor, intente más tarde.',
+          );
           return;
         }
       }
@@ -2735,72 +2701,15 @@ class _EditUserDialogState extends State<_EditUserDialog> {
         }
 
         // Show error dialog instead of SnackBar
-        _showErrorDialog(context, errorTitle, errorMessage);
+        AppDialogs.showErrorDialog(
+          context: context,
+          title: errorTitle,
+          message: errorMessage,
+        );
 
         // Clear the error from provider after showing dialog
         userProvider.clearError();
       }
     }
-  }
-
-  void _showErrorDialog(BuildContext context, String title, String message) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.red.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Icon(
-                Icons.error_outline,
-                color: Colors.red,
-                size: 24,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                title,
-                style: const TextStyle(
-                  color: Colors.red,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
-                ),
-              ),
-            ),
-          ],
-        ),
-        content: Text(
-          message,
-          style: const TextStyle(
-            fontSize: 16,
-            height: 1.5,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            style: TextButton.styleFrom(
-              foregroundColor: Colors.red,
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            ),
-            child: const Text(
-              'Entendido',
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-                fontSize: 16,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
   }
 }

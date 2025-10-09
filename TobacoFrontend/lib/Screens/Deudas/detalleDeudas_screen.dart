@@ -88,7 +88,7 @@ class _DetalleDeudaScreenState extends State<DetalleDeudaScreen>
       );
       
       setState(() {
-        ventasCC = List<Ventas>.from(data['pedidos']);
+        ventasCC = List<Ventas>.from(data['ventas']);
         _hasMoreVentas = data['hasNextPage'];
         isLoadingVentas = false;
       });
@@ -133,7 +133,7 @@ class _DetalleDeudaScreenState extends State<DetalleDeudaScreen>
       );
       
       setState(() {
-        ventasCC.addAll(List<Ventas>.from(data['pedidos']));
+        ventasCC.addAll(List<Ventas>.from(data['ventas']));
         _currentPageVentas++;
         _hasMoreVentas = data['hasNextPage'];
         _isLoadingMoreVentas = false;

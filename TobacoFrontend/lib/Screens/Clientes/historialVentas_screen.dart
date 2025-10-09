@@ -73,7 +73,7 @@ class _HistorialVentasScreenState extends State<HistorialVentasScreen> {
 
       if (mounted) {
         setState(() {
-          _ventas = List<Ventas>.from(result['pedidos']);
+          _ventas = List<Ventas>.from(result['ventas']);
           _totalItems = result['totalItems'];
           _hasNextPage = result['hasNextPage'];
           _isLoading = false;
@@ -116,7 +116,7 @@ class _HistorialVentasScreenState extends State<HistorialVentasScreen> {
 
       if (mounted) {
         setState(() {
-          _ventas.addAll(List<Ventas>.from(result['pedidos']));
+          _ventas.addAll(List<Ventas>.from(result['ventas']));
           _currentPage = _currentPage + 1;
           _hasNextPage = result['hasNextPage'];
           _isLoadingMore = false;
