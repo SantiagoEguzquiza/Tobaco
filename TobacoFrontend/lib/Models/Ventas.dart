@@ -56,7 +56,7 @@ class Ventas {
         'pedidoProductos': ventasProductos.map((e) => e.toJson()).toList(),
         'total': total,
         'fecha': fecha.toIso8601String(),
-        'metodoPago': metodoPago?.index ?? 0,
+        'metodoPago': metodoPago?.index,
         'ventaPagos': pagos?.map((e) => e.toJson()).toList() ?? [],
         'usuarioId': usuarioId,
         'usuario': usuario?.toJson(),
