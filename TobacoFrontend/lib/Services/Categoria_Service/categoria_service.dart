@@ -7,6 +7,7 @@ import 'package:tobaco/Services/Auth_Service/auth_service.dart';
 
 class CategoriaService {
   final Uri baseUrl = Apihandler.baseUrl;
+  static const Duration _timeoutDuration = Duration(seconds: 10);
 
   Future<List<Categoria>> obtenerCategorias() async {
     try {
@@ -14,7 +15,7 @@ class CategoriaService {
       final response = await Apihandler.client.get(
         Uri.parse('$baseUrl/Categoria'),
         headers: headers,
-      );
+      ).timeout(_timeoutDuration);
 
       if (response.statusCode == 200) {
         // Validar que la respuesta no esté vacía
@@ -41,7 +42,7 @@ class CategoriaService {
         Uri.parse('$baseUrl/Categoria'),
         headers: headers,
         body: jsonEncode(categoria.toJson()),
-      );
+      ).timeout(_timeoutDuration);
 
       if (response.statusCode != 200) {
         throw Exception(
@@ -61,11 +62,27 @@ class CategoriaService {
       final response = await Apihandler.client.delete(
         Uri.parse('$baseUrl/Categoria/$id'),
         headers: headers,
-      );
+      ).timeout(_timeoutDuration);
 
       if (response.statusCode != 200) {
-        throw Exception(
-            'Error al eliminar la categoria. Código de estado: ${response.statusCode}');
+        // Intentar extraer el mensaje del backend
+        String errorMessage = 'Error al eliminar la categoria. Código de estado: ${response.statusCode}';
+        
+        try {
+          if (response.body.isNotEmpty) {
+            final Map<String, dynamic> errorData = jsonDecode(response.body);
+            if (errorData.containsKey('message')) {
+              errorMessage = errorData['message'];
+            } else if (errorData.containsKey('error')) {
+              errorMessage = errorData['error'];
+            }
+          }
+        } catch (e) {
+          // Si no se puede parsear el JSON, usar el mensaje por defecto
+          debugPrint('No se pudo parsear el error del backend: $e');
+        }
+        
+        throw Exception(errorMessage);
       } else {
         debugPrint('Categoria eliminado exitosamente');
       }
@@ -86,7 +103,7 @@ class CategoriaService {
           'nombre': nombre,
           'colorHex': colorHex,
         }),
-      );
+      ).timeout(_timeoutDuration);
 
       if (response.statusCode == 200) {
         return Categoria.fromJson(jsonDecode(response.body));
@@ -107,7 +124,7 @@ class CategoriaService {
         Uri.parse('$baseUrl/Categoria/reordenar'),
         headers: headers,
         body: jsonEncode(categoriaOrders.map((co) => co.toJson()).toList()),
-      );
+      ).timeout(_timeoutDuration);
 
       if (response.statusCode != 200) {
         throw Exception(

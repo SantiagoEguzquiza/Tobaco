@@ -7,6 +7,8 @@ import 'package:tobaco/Models/ProductQuantityPrice.dart';
 import 'package:tobaco/Services/Categoria_Service/categoria_provider.dart';
 import 'package:tobaco/Services/Productos_Service/productos_provider.dart';
 import 'package:tobaco/Theme/app_theme.dart'; // Importa el tema
+import 'package:tobaco/Theme/dialogs.dart';
+import 'package:tobaco/Helpers/api_handler.dart';
 import 'package:tobaco/Widgets/QuantityPriceWidget.dart';
 
 class NuevoProductoScreen extends StatefulWidget {
@@ -50,11 +52,105 @@ class _NuevoProductoScreenState extends State<NuevoProductoScreen> {
     final List<Categoria> categorias =
         Provider.of<CategoriasProvider>(context).categorias;
 
-    return Scaffold(
-      appBar: AppBar(
-        centerTitle: true,
-        title: const Text('Nuevo Producto'),
+    return Theme(
+      data: Theme.of(context).copyWith(
+        colorScheme: Theme.of(context).colorScheme.copyWith(
+          primary: const Color(0xFF4CAF50),
+          secondary: const Color(0xFF66BB6A),
+          surface: Theme.of(context).brightness == Brightness.dark
+              ? const Color(0xFF1A1A1A)
+              : Colors.white,
+          background: Theme.of(context).brightness == Brightness.dark
+              ? const Color(0xFF0F0F0F)
+              : const Color(0xFFF8F9FA),
+        ),
+        textSelectionTheme: TextSelectionThemeData(
+          cursorColor: Theme.of(context).brightness == Brightness.dark
+              ? Colors.white
+              : const Color(0xFF4CAF50),
+          selectionColor: Theme.of(context).brightness == Brightness.dark
+              ? const Color(0xFF4CAF50).withOpacity(0.3)
+              : const Color(0xFF4CAF50).withOpacity(0.2),
+        ),
+        inputDecorationTheme: InputDecorationTheme(
+          labelStyle: TextStyle(
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.white
+                : const Color(0xFF4CAF50),
+          ),
+          hintStyle: TextStyle(
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.grey.shade400
+                : Colors.grey.shade600,
+          ),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? Colors.grey.shade600
+                  : Colors.grey.shade300,
+            ),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? Colors.grey.shade600
+                  : Colors.grey.shade300,
+            ),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(
+              color: const Color(0xFF4CAF50),
+              width: 2,
+            ),
+          ),
+          filled: true,
+          fillColor: Theme.of(context).brightness == Brightness.dark
+              ? const Color(0xFF2A2A2A)
+              : Colors.white,
+        ),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF4CAF50),
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        ),
+        textButtonTheme: TextButtonThemeData(
+          style: TextButton.styleFrom(
+            foregroundColor: Theme.of(context).brightness == Brightness.dark
+                ? Colors.white
+                : Colors.black,
+          ),
+        ),
       ),
+      child: Scaffold(
+        backgroundColor: Theme.of(context).brightness == Brightness.dark
+            ? const Color(0xFF0F0F0F)
+            : const Color(0xFFF8F9FA),
+        appBar: AppBar(
+          centerTitle: true,
+          title: Text(
+            'Nuevo Producto',
+            style: TextStyle(
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? Colors.white
+                  : Colors.white,
+            ),
+          ),
+          backgroundColor: Theme.of(context).brightness == Brightness.dark
+              ? Colors.black
+              : const Color(0xFF4CAF50),
+          iconTheme: IconThemeData(
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.white
+                : Colors.white,
+          ),
+        ),
       body: LayoutBuilder(
         builder: (context, constraints) {
           return Stack(
@@ -69,17 +165,37 @@ class _NuevoProductoScreenState extends State<NuevoProductoScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Nombre:', style: AppTheme.inputLabelStyle),
+                        Text(
+                          'Nombre:',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? Colors.white
+                                : Colors.black,
+                          ),
+                        ),
                         const SizedBox(height: 10),
                         TextField(
                           controller: nombreController,
+                          style: TextStyle(
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? Colors.white
+                                : Colors.black,
+                          ),
                           decoration: AppTheme.inputDecoration.copyWith(
                             hintText: 'Ingrese el nombre...',
                           ),
                         ),
                         const SizedBox(height: 16),
-                        const Text('Cantidad:',
-                            style: AppTheme.inputLabelStyle),
+                        Text(
+                          'Cantidad:',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? Colors.white
+                                : Colors.black,
+                          ),
+                        ),
                         const SizedBox(height: 10),
                         TextField(
                           controller: cantidadController,
@@ -87,12 +203,25 @@ class _NuevoProductoScreenState extends State<NuevoProductoScreen> {
                           inputFormatters: [
                             FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
                           ],
+                          style: TextStyle(
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? Colors.white
+                                : Colors.black,
+                          ),
                           decoration: AppTheme.inputDecoration.copyWith(
                             hintText: 'Ingrese la cantidad...',
                           ),
                         ),
                         const SizedBox(height: 16),
-                        const Text('Precio:', style: AppTheme.inputLabelStyle),
+                        Text(
+                          'Precio:',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? Colors.white
+                                : Colors.black,
+                          ),
+                        ),
                         const SizedBox(height: 10),
                         TextField(
                           controller: precioController,
@@ -100,17 +229,34 @@ class _NuevoProductoScreenState extends State<NuevoProductoScreen> {
                           inputFormatters: [
                             FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
                           ],
+                          style: TextStyle(
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? Colors.white
+                                : Colors.black,
+                          ),
                           decoration: AppTheme.inputDecoration.copyWith(
                             hintText: 'Ingrese el precio...',
                           ),
                         ),
                         const SizedBox(height: 16),
-                        const Text('Categoría:',
-                            style: AppTheme.inputLabelStyle),
+                        Text(
+                          'Categoría:',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? Colors.white
+                                : Colors.black,
+                          ),
+                        ),
                         const SizedBox(height: 10),
                         DropdownButtonFormField<Categoria>(
                           value:
                               categorias.isNotEmpty ? categorias.first : null,
+                          style: TextStyle(
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? Colors.white
+                                : Colors.black,
+                          ),
                           items: categorias.map((categoria) {
                             return DropdownMenuItem<Categoria>(
                               value: categoria,
@@ -129,7 +275,14 @@ class _NuevoProductoScreenState extends State<NuevoProductoScreen> {
                                     ),
                                   ),
                                   const SizedBox(width: 8),
-                                  Text(categoria.nombre),
+                                  Text(
+                                    categoria.nombre,
+                                    style: TextStyle(
+                                      color: Theme.of(context).brightness == Brightness.dark
+                                          ? Colors.white
+                                          : Colors.black,
+                                    ),
+                                  ),
                                 ],
                               ),
                             );
@@ -147,8 +300,15 @@ class _NuevoProductoScreenState extends State<NuevoProductoScreen> {
                           builder: (context, setState) {
                             return Row(
                               children: [
-                                const Text('¿Se puede vender medio?',
-                                    style: AppTheme.inputLabelStyle),
+                                Text(
+                                  '¿Se puede vender medio?',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: Theme.of(context).brightness == Brightness.dark
+                                        ? Colors.white
+                                        : Colors.black,
+                                  ),
+                                ),
                                 const SizedBox(width: 8),
                                 Checkbox(
                                   value: halfController.text == 'true',
@@ -191,10 +351,12 @@ class _NuevoProductoScreenState extends State<NuevoProductoScreen> {
                 bottom: 0,
                 child: SafeArea(
                   top: false,
-                  child: Container(
+                  child:                   Container(
                     padding: const EdgeInsets.symmetric(
                         horizontal: 16, vertical: 12),
-                    color: Colors.white,
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? const Color(0xFF0F0F0F)
+                        : Colors.white,
                     child: Row(
                       children: [
                         Expanded(
@@ -205,16 +367,34 @@ class _NuevoProductoScreenState extends State<NuevoProductoScreen> {
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
-                              side: const BorderSide(color: Colors.grey),
+                              side: BorderSide(
+                                color: Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.grey.shade600
+                                    : Colors.grey,
+                              ),
                             ),
-                            child: const Text('Cancelar',
-                                style: TextStyle(
-                                    fontSize: 16, color: Colors.black)),
+                            child: Text(
+                              'Volver',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.white
+                                    : Colors.black,
+                              ),
+                            ),
                           ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF4CAF50),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
                             onPressed: () async {
                               // Validar campos requeridos
                               if (nombreController.text.trim().isEmpty) {
@@ -306,11 +486,33 @@ class _NuevoProductoScreenState extends State<NuevoProductoScreen> {
                                 quantityPrices: quantityPrices,
                               );
 
+                              // Debug: verificar qué se está enviando
+                              debugPrint('=== NUEVO PRODUCTO ===');
+                              debugPrint('Nombre: ${producto.nombre}');
+                              debugPrint('Cantidad packs: ${quantityPrices.length}');
+                              debugPrint('Packs: ${quantityPrices.map((qp) => 'Cant: ${qp.quantity}, Precio: ${qp.totalPrice}').toList()}');
+
                               try {
+                                // Mostrar loading básico
+                                showDialog(
+                                  context: context,
+                                  barrierDismissible: false,
+                                  builder: (context) => const Center(
+                                    child: CircularProgressIndicator(
+                                      valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
+                                    ),
+                                  ),
+                                );
+                                
                                 await Provider.of<ProductoProvider>(context,
                                         listen: false)
                                     .crearProducto(producto);
+                                
                                 if (!context.mounted) return;
+                                
+                                // Cerrar loading
+                                Navigator.pop(context);
+                                
                                 AppTheme.showSnackBar(
                                   context,
                                   AppTheme.successSnackBar('Producto guardado con éxito'),
@@ -318,19 +520,20 @@ class _NuevoProductoScreenState extends State<NuevoProductoScreen> {
                                 Navigator.pop(context, true); // Devolver true para indicar éxito
                               } catch (e) {
                                 if (!context.mounted) return;
-                                AppTheme.showSnackBar(
-                                  context,
-                                  AppTheme.errorSnackBar('Error: $e'),
-                                );
+                                
+                                // Cerrar loading
+                                Navigator.pop(context);
+                                
+                                if (Apihandler.isConnectionError(e)) {
+                                  await Apihandler.handleConnectionError(context, e);
+                                } else {
+                                  await AppDialogs.showErrorDialog(
+                                    context: context,
+                                    message: 'Error al crear producto: ${e.toString().replaceFirst('Exception: ', '')}',
+                                  );
+                                }
                               }
                             },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF4CAF50),
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
                             child: const Text('Guardar',
                                 style: TextStyle(
                                     fontSize: 16, color: Colors.white)),
@@ -344,6 +547,7 @@ class _NuevoProductoScreenState extends State<NuevoProductoScreen> {
             ],
           );
         },
+      ),
       ),
     );
   }

@@ -6,6 +6,7 @@ import 'package:tobaco/Services/Auth_Service/auth_service.dart';
 
 class VentasService {
   final Uri baseUrl = Apihandler.baseUrl;
+  static const Duration _timeoutDuration = Duration(seconds: 10);
 
   Future<List<Ventas>> obtenerVentas() async {
     try {
@@ -13,7 +14,7 @@ class VentasService {
       final response = await Apihandler.client.get(
         Uri.parse('$baseUrl/Pedidos'),
         headers: headers,
-      );
+      ).timeout(_timeoutDuration);
 
       if (response.statusCode == 200) {
         final List<dynamic> ventasJson = jsonDecode(response.body);
@@ -51,7 +52,7 @@ class VentasService {
         Uri.parse('$baseUrl/Pedidos'),
         headers: headers,
         body: jsonEncode(ventaJson),
-      );
+      ).timeout(_timeoutDuration);
 
       debugPrint('Respuesta del servidor: ${response.statusCode}');
       debugPrint('Cuerpo de la respuesta: ${response.body}');
@@ -75,7 +76,7 @@ class VentasService {
       final response = await Apihandler.client.delete(
         Uri.parse('$baseUrl/Pedidos/$id'),
         headers: headers,
-      );
+      ).timeout(_timeoutDuration);
 
       if (response.statusCode != 200) {
         throw Exception(
@@ -95,7 +96,7 @@ class VentasService {
       final response = await Apihandler.client.get(
         Uri.parse('$baseUrl/Pedidos/paginados?page=$page&pageSize=$pageSize'),
         headers: headers,
-      );
+      ).timeout(_timeoutDuration);
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = jsonDecode(response.body);
@@ -127,7 +128,7 @@ class VentasService {
       final response = await Apihandler.client.get(
         Uri.parse('$baseUrl/Pedidos/$id'),
         headers: headers,
-      );
+      ).timeout(_timeoutDuration);
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> ventaJson = jsonDecode(response.body);
@@ -148,7 +149,7 @@ class VentasService {
       final response = await Apihandler.client.get(
         Uri.parse('$baseUrl/Pedidos'),
         headers: headers,
-      );
+      ).timeout(_timeoutDuration);
 
       if (response.statusCode == 200) {
         final List<dynamic> ventasJson = jsonDecode(response.body);
@@ -198,7 +199,7 @@ class VentasService {
       final response = await Apihandler.client.get(
         uri,
         headers: headers,
-      );
+      ).timeout(_timeoutDuration);
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = jsonDecode(response.body);

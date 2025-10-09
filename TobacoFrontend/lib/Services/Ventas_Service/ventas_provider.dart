@@ -26,6 +26,7 @@ class VentasProvider with ChangeNotifier {
       notifyListeners();
     } catch (e) {
       debugPrint('Error: $e');
+      rethrow;
     }
   }
 

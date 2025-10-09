@@ -12,6 +12,8 @@ import 'package:tobaco/Screens/Auth/login_screen.dart';
 import 'package:tobaco/Services/Auth_Service/auth_provider.dart';
 import 'package:tobaco/Theme/app_theme.dart';
 import 'package:tobaco/Theme/dialogs.dart';
+import 'package:tobaco/Theme/theme_provider.dart';
+import 'package:tobaco/Helpers/api_handler.dart';
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -44,8 +46,9 @@ class MenuScreen extends StatelessWidget {
     final spacing = isTablet ? 30.0 : 20.0;
     final horizontalPadding = isTablet ? 40.0 : 20.0;
 
+    final themeProvider = context.watch<AuthProvider>();
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: Consumer<AuthProvider>(
           builder: (context, authProvider, child) {
@@ -59,6 +62,29 @@ class MenuScreen extends StatelessWidget {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: <Widget>[
+                      // Toggle tema
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: Consumer<ThemeProvider>(
+                          builder: (context, theme, _) {
+                            final isDark = theme.themeMode == ThemeMode.dark;
+                            return Row(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                Icon(isDark ? Icons.dark_mode : Icons.light_mode, color: AppTheme.primaryColor),
+                                const SizedBox(width: 8),
+                                Switch(
+                                  value: isDark,
+                                  activeColor: AppTheme.primaryColor,
+                                  onChanged: (val) {
+                                    theme.setThemeMode(val ? ThemeMode.dark : ThemeMode.light);
+                                  },
+                                ),
+                              ],
+                            );
+                          },
+                        ),
+                      ),
                       // Welcome message with user info
                       Container(
                         padding: const EdgeInsets.all(16),
@@ -80,10 +106,10 @@ class MenuScreen extends StatelessWidget {
                             const SizedBox(width: 8),
                             Text(
                               'Bienvenido, ${authProvider.currentUser?.userName ?? 'Usuario'}',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
-                                color: AppTheme.textColor,
+                                color: Theme.of(context).textTheme.bodyLarge?.color,
                               ),
                             ),
                             if (authProvider.currentUser?.isAdmin == true) ...[
@@ -124,12 +150,12 @@ class MenuScreen extends StatelessWidget {
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
-                                  const Text(
+                                  Text(
                                     'Administración',
                                     style: TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.bold,
-                                      color: AppTheme.primaryColor,
+                                      color: Theme.of(context).textTheme.bodyLarge?.color,
                                     ),
                                   ),
                                 ],

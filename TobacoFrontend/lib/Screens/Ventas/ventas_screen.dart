@@ -7,6 +7,8 @@ import 'package:tobaco/Screens/Ventas/detalleVentas_screen.dart';
 import 'package:tobaco/Services/Ventas_Service/ventas_provider.dart';
 import 'package:tobaco/Theme/app_theme.dart';
 import 'package:tobaco/Theme/dialogs.dart';
+import 'package:tobaco/Theme/headers.dart';
+import 'package:tobaco/Helpers/api_handler.dart';
 
 class VentasScreen extends StatefulWidget {
   const VentasScreen({super.key});
@@ -58,6 +60,8 @@ class _VentasScreenState extends State<VentasScreen> {
   }
 
   Future<void> _loadVentas() async {
+    if (!mounted) return;
+    
     setState(() {
       isLoading = true;
       errorMessage = null;
@@ -70,6 +74,7 @@ class _VentasScreenState extends State<VentasScreen> {
       final ventasProvider = VentasProvider();
       final data = await ventasProvider.obtenerVentasPaginadas(_currentPage, _pageSize);
       if (!mounted) return;
+      
       setState(() {
         ventas = List<Ventas>.from(data['pedidos']);
         _hasMoreData = data['hasNextPage'];
@@ -77,16 +82,30 @@ class _VentasScreenState extends State<VentasScreen> {
       });
     } catch (e) {
       if (!mounted) return;
-      setState(() {
-        isLoading = false;
-        errorMessage = 'Error al cargar los pedidos: $e';
-      });
+      
       debugPrint('Error al cargar los pedidos: $e');
+      
+      if (Apihandler.isConnectionError(e)) {
+        setState(() {
+          isLoading = false;
+          // No establecer errorMessage para errores de conexión
+        });
+        await Apihandler.handleConnectionError(context, e);
+      } else {
+        setState(() {
+          isLoading = false;
+          errorMessage = 'Error al cargar los pedidos: $e';
+        });
+        await AppDialogs.showErrorDialog(
+          context: context,
+          message: 'Error al cargar ventas',
+        );
+      }
     }
   }
 
   Future<void> _cargarMasVentas() async {
-    if (_isLoadingMore || !_hasMoreData) return;
+    if (_isLoadingMore || !_hasMoreData || !mounted) return;
     
     setState(() {
       _isLoadingMore = true;
@@ -96,6 +115,7 @@ class _VentasScreenState extends State<VentasScreen> {
       final ventasProvider = VentasProvider();
       final data = await ventasProvider.obtenerVentasPaginadas(_currentPage + 1, _pageSize);
       if (!mounted) return;
+      
       setState(() {
         ventas.addAll(List<Ventas>.from(data['pedidos']));
         _currentPage++;
@@ -104,10 +124,20 @@ class _VentasScreenState extends State<VentasScreen> {
       });
     } catch (e) {
       if (!mounted) return;
+      
       setState(() {
         _isLoadingMore = false;
       });
       debugPrint('Error al cargar más ventas: $e');
+      
+      if (Apihandler.isConnectionError(e)) {
+        await Apihandler.handleConnectionError(context, e);
+      } else {
+        await AppDialogs.showErrorDialog(
+          context: context,
+          message: 'Error al cargar más ventas',
+        );
+      }
     }
   }
 
@@ -144,89 +174,37 @@ class _VentasScreenState extends State<VentasScreen> {
 
   // Header principal con información y estadísticas
   Widget _buildHeaderSection() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            AppTheme.primaryColor.withOpacity(0.1),
-            AppTheme.secondaryColor.withOpacity(0.3),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+    return Column(
+      children: [
+        HeaderSimple(
+          leadingIcon: Icons.storefront,
+          title: 'Gestión de Ventas',
+          subtitle: '${ventas.length} venta${ventas.length != 1 ? 's' : ''} registrada${ventas.length != 1 ? 's' : ''}',
         ),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: AppTheme.primaryColor.withOpacity(0.2),
-          width: 1,
-        ),
-      ),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppTheme.primaryColor,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(
-                  Icons.storefront,
-                  color: Colors.white,
-                  size: 24,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Gestión de Ventas',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: AppTheme.primaryColor,
-                      ),
-                    ),
-                    Text(
-                      '${ventas.length} venta${ventas.length != 1 ? 's' : ''} registrada${ventas.length != 1 ? 's' : ''}',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
+        const SizedBox(height: 20),
 
-          // Botón nueva venta mejorado
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: () async {
-                await Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const NuevaVentaScreen(),
-                  ),
-                );
-                _loadVentas();
-              },
-              style: AppTheme.elevatedButtonStyle(AppTheme.addGreenColor),
-              icon: const Icon(Icons.add_shopping_cart, color: Colors.white),
-              label: const Text(
-                'Nueva Venta',
-                style: TextStyle(fontSize: 18, color: Colors.white),
-              ),
+        // Botón nueva venta mejorado
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton.icon(
+            onPressed: () async {
+              await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const NuevaVentaScreen(),
+                ),
+              );
+              _loadVentas();
+            },
+            style: AppTheme.elevatedButtonStyle(AppTheme.addGreenColor),
+            icon: const Icon(Icons.add_shopping_cart, color: Colors.white),
+            label: const Text(
+              'Nueva Venta',
+              style: TextStyle(fontSize: 18, color: Colors.white),
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -234,11 +212,15 @@ class _VentasScreenState extends State<VentasScreen> {
   Widget _buildSearchSection() {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).brightness == Brightness.dark
+            ? const Color(0xFF2A2A2A)
+            : Colors.white,
         borderRadius: BorderRadius.circular(15),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.black.withOpacity(0.3)
+                : Colors.black.withOpacity(0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -246,11 +228,18 @@ class _VentasScreenState extends State<VentasScreen> {
       ),
       child: TextField(
         cursorColor: AppTheme.primaryColor,
-        style: const TextStyle(fontSize: 16),
+        style: TextStyle(
+          fontSize: 16,
+          color: Theme.of(context).brightness == Brightness.dark
+              ? Colors.white
+              : Colors.black,
+        ),
         decoration: InputDecoration(
           hintText: 'Buscar por cliente, fecha o total...',
           hintStyle: TextStyle(
-            color: Colors.grey.shade400,
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.grey.shade400
+                : Colors.grey.shade400,
             fontSize: 16,
           ),
           prefixIcon: Icon(
@@ -262,7 +251,9 @@ class _VentasScreenState extends State<VentasScreen> {
               ? IconButton(
                   icon: Icon(
                     Icons.clear,
-                    color: Colors.grey.shade400,
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.grey.shade400
+                        : Colors.grey.shade400,
                   ),
                   onPressed: () {
                     setState(() {
@@ -284,7 +275,9 @@ class _VentasScreenState extends State<VentasScreen> {
             borderSide: BorderSide.none,
           ),
           filled: true,
-          fillColor: Colors.white,
+          fillColor: Theme.of(context).brightness == Brightness.dark
+              ? const Color(0xFF2A2A2A)
+              : Colors.white,
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 20,
             vertical: 16,
@@ -324,11 +317,15 @@ class _VentasScreenState extends State<VentasScreen> {
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).brightness == Brightness.dark
+            ? const Color(0xFF1A1A1A)
+            : Colors.white,
         borderRadius: BorderRadius.circular(15),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.black.withOpacity(0.3)
+                : Colors.black.withOpacity(0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -339,7 +336,9 @@ class _VentasScreenState extends State<VentasScreen> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: AppTheme.primaryColor.withOpacity(0.1),
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? const Color(0xFF2A2A2A)
+                  : AppTheme.primaryColor.withOpacity(0.1),
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(15),
                 topRight: Radius.circular(15),
@@ -356,7 +355,9 @@ class _VentasScreenState extends State<VentasScreen> {
                 Text(
                   'Ventas (${filteredVentas.length})',
                   style: TextStyle(
-                    color: AppTheme.primaryColor,
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white
+                        : AppTheme.primaryColor,
                     fontWeight: FontWeight.bold,
                     fontSize: 14,
                   ),
@@ -417,10 +418,14 @@ class _VentasScreenState extends State<VentasScreen> {
         },
         child: Container(
           decoration: BoxDecoration(
-            color: index % 2 == 0 ? Colors.white : AppTheme.secondaryColor.withOpacity(0.3),
+            color: Theme.of(context).brightness == Brightness.dark
+                ? (index % 2 == 0 ? const Color(0xFF1A1A1A) : const Color(0xFF2A2A2A))
+                : (index % 2 == 0 ? Colors.white : AppTheme.secondaryColor.withOpacity(0.3)),
             border: Border(
               bottom: BorderSide(
-                color: Colors.grey.shade200,
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.grey.shade700
+                    : Colors.grey.shade200,
                 width: 0.5,
               ),
             ),
@@ -450,10 +455,12 @@ class _VentasScreenState extends State<VentasScreen> {
                   children: [
                     Text(
                       venta.cliente.nombre,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: AppTheme.primaryColor,
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.white
+                            : AppTheme.primaryColor,
                       ),
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -462,7 +469,9 @@ class _VentasScreenState extends State<VentasScreen> {
                       '${venta.fecha.day}/${venta.fecha.month}/${venta.fecha.year}',
                       style: TextStyle(
                         fontSize: 14,
-                        color: Colors.grey.shade600,
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.grey.shade400
+                            : Colors.grey.shade600,
                       ),
                     ),
                   ],
@@ -481,7 +490,9 @@ class _VentasScreenState extends State<VentasScreen> {
                     '${venta.ventasProductos.length} producto${venta.ventasProductos.length != 1 ? 's' : ''}',
                     style: TextStyle(
                       fontSize: 12,
-                      color: Colors.grey.shade500,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.grey.shade400
+                          : Colors.grey.shade500,
                     ),
                   ),
                 ],
@@ -497,11 +508,15 @@ class _VentasScreenState extends State<VentasScreen> {
   Widget _buildLoadingState() {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).brightness == Brightness.dark
+            ? const Color(0xFF1A1A1A)
+            : Colors.white,
         borderRadius: BorderRadius.circular(15),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.black.withOpacity(0.3)
+                : Colors.black.withOpacity(0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -532,11 +547,15 @@ class _VentasScreenState extends State<VentasScreen> {
   Widget _buildErrorState() {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).brightness == Brightness.dark
+            ? const Color(0xFF1A1A1A)
+            : Colors.white,
         borderRadius: BorderRadius.circular(15),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.black.withOpacity(0.3)
+                : Colors.black.withOpacity(0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -596,11 +615,15 @@ class _VentasScreenState extends State<VentasScreen> {
   Widget _buildEmptyState() {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).brightness == Brightness.dark
+            ? const Color(0xFF1A1A1A)
+            : Colors.white,
         borderRadius: BorderRadius.circular(15),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.black.withOpacity(0.3)
+                : Colors.black.withOpacity(0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -670,14 +693,18 @@ class _VentasScreenState extends State<VentasScreen> {
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
-              color: color ?? AppTheme.primaryColor,
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? Colors.white
+                  : (color ?? AppTheme.primaryColor),
             ),
           ),
           TextSpan(
             text: ',${parteDecimal}',
             style: TextStyle(
               fontSize: 12,
-              color: Colors.grey.shade400,
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? Colors.grey.shade400
+                  : Colors.grey.shade400,
             ),
           ),
         ],

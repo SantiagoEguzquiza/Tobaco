@@ -6,6 +6,7 @@ import '../../Services/PrecioEspecialService.dart';
 import '../../Services/Productos_Service/productos_provider.dart';
 import '../../Theme/app_theme.dart';
 import '../../Theme/dialogs.dart';
+import '../../Helpers/api_handler.dart';
 import 'editarPreciosEspeciales_screen.dart';
 
 class PreciosEspecialesScreen extends StatefulWidget {
@@ -31,6 +32,8 @@ class _PreciosEspecialesScreenState extends State<PreciosEspecialesScreen> {
   }
 
   Future<void> _loadData() async {
+    if (!mounted) return;
+    
     setState(() {
       isLoading = true;
       errorMessage = '';
@@ -40,23 +43,32 @@ class _PreciosEspecialesScreenState extends State<PreciosEspecialesScreen> {
       final precios = await PrecioEspecialService.getPreciosEspecialesByCliente(widget.cliente.id!);
       final productosData = await productoProvider.obtenerProductos();
       
+      if (!mounted) return;
+      
       setState(() {
         preciosEspeciales = precios;
         productos = productosData;
         isLoading = false;
       });
     } catch (e) {
+      if (!mounted) return;
+      
       setState(() {
         isLoading = false;
       });
       
-      // Si es un error 401, el usuario necesita autenticarse
-      if (e.toString().contains('401')) {
+      // Verificar si es un error de conexión con el servidor
+      if (Apihandler.isConnectionError(e)) {
+        await Apihandler.handleConnectionError(context, e);
+      } else if (e.toString().contains('401')) {
+        // Si es un error 401, el usuario necesita autenticarse
         _showAuthErrorDialog();
       } else {
-        setState(() {
-          errorMessage = 'Error al cargar los datos: $e';
-        });
+        // Mostrar otros errores
+        await AppDialogs.showErrorDialog(
+          context: context,
+          message: 'Error al cargar los datos: ${e.toString().replaceFirst('Exception: ', '')}',
+        );
       }
     }
   }
@@ -120,16 +132,23 @@ class _PreciosEspecialesScreenState extends State<PreciosEspecialesScreen> {
     if (confirmed == true) {
       try {
         await PrecioEspecialService.deletePrecioEspecial(precioEspecial.id!);
-        AppTheme.showSnackBar(
-          context,
-          AppTheme.successSnackBar('Precio especial eliminado exitosamente'),
-        );
+        
+        if (mounted) {
+          AppTheme.showSnackBar(
+            context,
+            AppTheme.successSnackBar('Precio especial eliminado exitosamente'),
+          );
+        }
         _loadData();
       } catch (e) {
-        AppTheme.showSnackBar(
-          context,
-          AppTheme.errorSnackBar('Error al eliminar: $e'),
-        );
+        if (mounted && Apihandler.isConnectionError(e)) {
+          await Apihandler.handleConnectionError(context, e);
+        } else if (mounted) {
+          await AppDialogs.showErrorDialog(
+            context: context,
+            message: 'Error al eliminar el precio especial: ${e.toString().replaceFirst('Exception: ', '')}',
+          );
+        }
       }
     }
   }
@@ -137,93 +156,89 @@ class _PreciosEspecialesScreenState extends State<PreciosEspecialesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.secondaryColor,
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Header moderno
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Column(
-                children: [
-                  Row(
-                    children: [
-                      // Botón de retroceso
-                      Container(
-                        decoration: BoxDecoration(
-                          color: AppTheme.primaryColor.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: IconButton(
-                          icon: const Icon(Icons.arrow_back, color: AppTheme.primaryColor),
-                          onPressed: () => Navigator.pop(context),
-                          tooltip: 'Volver',
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: AppTheme.primaryColor,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Icon(
-                          Icons.price_change,
-                          color: Colors.white,
-                          size: 24,
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Precios Especiales',
-                              style: TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                                color: AppTheme.primaryColor,
-                              ),
-                            ),
-                            Text(
-                              'Cliente: ${widget.cliente.nombre}',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.grey.shade600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-
-            // Contenido principal
-            Expanded(
-              child: isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : errorMessage.isNotEmpty
-                      ? _buildErrorState()
-                      : preciosEspeciales.isEmpty
-                          ? _buildEmptyState()
-                          : _buildPreciosList(),
-            ),
-          ],
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      appBar: AppBar(
+        centerTitle: true,
+        elevation: 0,
+        backgroundColor: null, // Usar el tema
+        title: const Text(
+          'Precios Especiales',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFFFFFFFF), // Blanco puro
+          ),
         ),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      body: Column(
+        children: [
+          // Información del cliente
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? const Color(0xFF1A1A1A)
+                  : Colors.white,
+              boxShadow: [
+                BoxShadow(
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.black.withOpacity(0.3)
+                      : Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryColor,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.person,
+                    color: Colors.white,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Text(
+                    widget.cliente.nombre,
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white
+                          : AppTheme.primaryColor,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Contenido principal
+          Expanded(
+            child: isLoading
+                ? Center(
+                    child: CircularProgressIndicator(
+                      color: AppTheme.primaryColor,
+                    ),
+                  )
+                : errorMessage.isNotEmpty
+                    ? _buildErrorState()
+                    : preciosEspeciales.isEmpty
+                        ? _buildEmptyState()
+                        : _buildPreciosList(),
+          ),
+        ],
       ),
     );
   }
@@ -302,11 +317,15 @@ class _PreciosEspecialesScreenState extends State<PreciosEspecialesScreen> {
         margin: const EdgeInsets.all(24),
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).brightness == Brightness.dark
+              ? const Color(0xFF1A1A1A)
+              : Colors.white,
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? Colors.black.withOpacity(0.3)
+                  : Colors.black.withOpacity(0.05),
               blurRadius: 15,
               offset: const Offset(0, 5),
             ),
@@ -328,12 +347,14 @@ class _PreciosEspecialesScreenState extends State<PreciosEspecialesScreen> {
               ),
             ),
             const SizedBox(height: 20),
-            const Text(
+            Text(
               'No hay precios especiales',
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
-                color: AppTheme.primaryColor,
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.white
+                    : AppTheme.primaryColor,
               ),
             ),
             const SizedBox(height: 8),
@@ -343,7 +364,9 @@ class _PreciosEspecialesScreenState extends State<PreciosEspecialesScreen> {
                 'Este cliente no tiene precios especiales configurados',
                 style: TextStyle(
                   fontSize: 14,
-                  color: Colors.grey.shade600,
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.grey.shade400
+                      : Colors.grey.shade600,
                 ),
                 textAlign: TextAlign.center,
                 maxLines: 2,
@@ -354,21 +377,35 @@ class _PreciosEspecialesScreenState extends State<PreciosEspecialesScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               decoration: BoxDecoration(
-                color: Colors.grey.shade100,
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? const Color(0xFF2A2A2A)
+                    : Colors.grey.shade100,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.grey.shade300),
+                border: Border.all(
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.grey.shade600
+                      : Colors.grey.shade300,
+                ),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.info_outline, size: 16, color: Colors.grey.shade600),
+                  Icon(
+                    Icons.info_outline,
+                    size: 16,
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.grey.shade400
+                        : Colors.grey.shade600,
+                  ),
                   const SizedBox(width: 8),
                   Flexible(
                     child: Text(
                       'Usa el botón de gestión desde el detalle del cliente',
                       style: TextStyle(
                         fontSize: 12,
-                        color: Colors.grey.shade600,
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.grey.shade400
+                            : Colors.grey.shade600,
                       ),
                       textAlign: TextAlign.center,
                       maxLines: 2,

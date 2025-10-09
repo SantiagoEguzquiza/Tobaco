@@ -13,21 +13,21 @@ class DetalleClienteScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         centerTitle: true,
         elevation: 0,
-        backgroundColor: Colors.transparent,
+        backgroundColor: null, // Usar el tema
         title: const Text(
           'Detalle del Cliente',
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
-            color: AppTheme.primaryColor,
+            color: Color(0xFFFFFFFF), // Blanco puro
           ),
         ),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppTheme.primaryColor),
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -37,11 +37,11 @@ class DetalleClienteScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Header del cliente
-            _buildClienteHeader(),
+            _buildClienteHeader(context),
             const SizedBox(height: 24),
 
             // Información del cliente
-            _buildClienteInfo(),
+            _buildClienteInfo(context),
             const SizedBox(height: 24),
 
             // Acciones de contacto
@@ -61,21 +61,28 @@ class DetalleClienteScreen extends StatelessWidget {
   }
 
   // Header del cliente
-  Widget _buildClienteHeader() {
+  Widget _buildClienteHeader(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [
-            AppTheme.primaryColor.withOpacity(0.1),
-            AppTheme.secondaryColor.withOpacity(0.3),
-          ],
+          colors: Theme.of(context).brightness == Brightness.dark
+              ? [
+                  const Color(0xFF1A1A1A),
+                  const Color(0xFF2A2A2A),
+                ]
+              : [
+                  AppTheme.primaryColor.withOpacity(0.1),
+                  AppTheme.secondaryColor.withOpacity(0.3),
+                ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: AppTheme.primaryColor.withOpacity(0.2),
+          color: Theme.of(context).brightness == Brightness.dark
+              ? Colors.grey.shade700
+              : AppTheme.primaryColor.withOpacity(0.2),
           width: 1,
         ),
       ),
@@ -96,10 +103,12 @@ class DetalleClienteScreen extends StatelessWidget {
           const SizedBox(height: 16),
           Text(
             cliente.nombre,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
-              color: AppTheme.primaryColor,
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? Colors.white
+                  : AppTheme.primaryColor,
             ),
             textAlign: TextAlign.center,
           ),
@@ -129,7 +138,7 @@ class DetalleClienteScreen extends StatelessWidget {
   }
 
   // Información del cliente
-  Widget _buildClienteInfo() {
+  Widget _buildClienteInfo(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -138,13 +147,16 @@ class DetalleClienteScreen extends StatelessWidget {
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
-            color: Colors.grey.shade700,
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.white
+                : Colors.grey.shade700,
           ),
         ),
         const SizedBox(height: 16),
         
         // Dirección
         _buildInfoCard(
+          context: context,
           icon: Icons.location_on,
           title: 'Dirección',
           content: cliente.direccion ?? 'No disponible',
@@ -154,6 +166,7 @@ class DetalleClienteScreen extends StatelessWidget {
         
         // Teléfono
         _buildInfoCard(
+          context: context,
           icon: Icons.phone,
           title: 'Teléfono',
           content: cliente.telefono?.toString() ?? 'No disponible',
@@ -163,6 +176,7 @@ class DetalleClienteScreen extends StatelessWidget {
         
         // Deuda
         _buildInfoCard(
+          context: context,
           icon: Icons.account_balance_wallet,
           title: 'Deuda',
           content: '\$${cliente.deuda ?? '0.00'}',
@@ -174,6 +188,7 @@ class DetalleClienteScreen extends StatelessWidget {
 
   // Tarjeta de información
   Widget _buildInfoCard({
+    required BuildContext context,
     required IconData icon,
     required String title,
     required String content,
@@ -182,11 +197,15 @@ class DetalleClienteScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).brightness == Brightness.dark
+            ? const Color(0xFF1A1A1A)
+            : Colors.white,
         borderRadius: BorderRadius.circular(15),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.black.withOpacity(0.3)
+                : Colors.black.withOpacity(0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -215,17 +234,21 @@ class DetalleClienteScreen extends StatelessWidget {
                   title,
                   style: TextStyle(
                     fontSize: 14,
-                    color: Colors.grey.shade600,
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.grey.shade400
+                        : Colors.grey.shade600,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   content,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
-                    color: AppTheme.primaryColor,
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white
+                        : AppTheme.primaryColor,
                   ),
                 ),
               ],
@@ -246,7 +269,9 @@ class DetalleClienteScreen extends StatelessWidget {
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
-            color: Colors.grey.shade700,
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.white
+                : Colors.grey.shade700,
           ),
         ),
         const SizedBox(height: 16),
@@ -254,6 +279,7 @@ class DetalleClienteScreen extends StatelessWidget {
           children: [
             Expanded(
               child: _buildActionButton(
+                context: context,
                 icon: Icons.phone,
                 label: 'Llamar',
                 color: Colors.blue,
@@ -279,6 +305,7 @@ class DetalleClienteScreen extends StatelessWidget {
             const SizedBox(width: 12),
             Expanded(
               child: _buildActionButton(
+                context: context,
                 icon: Icons.message,
                 label: 'WhatsApp',
                 color: const Color(0xFF25D366),
@@ -309,6 +336,7 @@ class DetalleClienteScreen extends StatelessWidget {
 
   // Botón de acción
   Widget _buildActionButton({
+    required BuildContext context,
     required IconData icon,
     required String label,
     required Color color,
@@ -316,11 +344,15 @@ class DetalleClienteScreen extends StatelessWidget {
   }) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).brightness == Brightness.dark
+            ? const Color(0xFF1A1A1A)
+            : Colors.white,
         borderRadius: BorderRadius.circular(15),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.black.withOpacity(0.3)
+                : Colors.black.withOpacity(0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -353,7 +385,9 @@ class DetalleClienteScreen extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: Colors.grey.shade700,
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.grey.shade400
+                        : Colors.grey.shade700,
                   ),
                 ),
               ],
@@ -374,11 +408,14 @@ class DetalleClienteScreen extends StatelessWidget {
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
-            color: Colors.grey.shade700,
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.white
+                : Colors.grey.shade700,
           ),
         ),
         const SizedBox(height: 16),
         _buildAdditionalActionButton(
+          context: context,
           icon: Icons.price_change,
           label: 'Precios Especiales',
           description: 'Gestionar precios especiales para este cliente',
@@ -394,6 +431,7 @@ class DetalleClienteScreen extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         _buildAdditionalActionButton(
+          context: context,
           icon: Icons.history,
           label: 'Historial de Ventas',
           description: 'Ver todas las ventas realizadas a este cliente',
@@ -413,6 +451,7 @@ class DetalleClienteScreen extends StatelessWidget {
 
   // Botón de acción adicional
   Widget _buildAdditionalActionButton({
+    required BuildContext context,
     required IconData icon,
     required String label,
     required String description,
@@ -421,11 +460,15 @@ class DetalleClienteScreen extends StatelessWidget {
   }) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).brightness == Brightness.dark
+            ? const Color(0xFF1A1A1A)
+            : Colors.white,
         borderRadius: BorderRadius.circular(15),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.black.withOpacity(0.3)
+                : Colors.black.withOpacity(0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -459,10 +502,12 @@ class DetalleClienteScreen extends StatelessWidget {
                     children: [
                       Text(
                         label,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
-                          color: AppTheme.primaryColor,
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.white
+                              : AppTheme.primaryColor,
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -470,7 +515,9 @@ class DetalleClienteScreen extends StatelessWidget {
                         description,
                         style: TextStyle(
                           fontSize: 14,
-                          color: Colors.grey.shade600,
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.grey.shade400
+                              : Colors.grey.shade600,
                         ),
                       ),
                     ],
@@ -478,7 +525,9 @@ class DetalleClienteScreen extends StatelessWidget {
                 ),
                 Icon(
                   Icons.arrow_forward_ios,
-                  color: Colors.grey.shade400,
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.grey.shade400
+                      : Colors.grey.shade400,
                   size: 16,
                 ),
               ],
@@ -496,19 +545,26 @@ class DetalleClienteScreen extends StatelessWidget {
       child: ElevatedButton(
         onPressed: () => Navigator.pop(context),
         style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.grey.shade200,
-          foregroundColor: Colors.grey.shade700,
+          backgroundColor: Theme.of(context).brightness == Brightness.dark
+              ? const Color(0xFF2A2A2A)
+              : Theme.of(context).dividerTheme.color,
+          foregroundColor: Theme.of(context).brightness == Brightness.dark
+              ? Colors.white
+              : Colors.grey.shade700,
           padding: const EdgeInsets.symmetric(vertical: 16),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(15),
           ),
           elevation: 0,
         ),
-        child: const Text(
+        child: Text(
           'Volver',
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
+            color: Theme.of(context).brightness == Brightness.dark
+                ? AppTheme.secondaryColor
+                : AppTheme.secondaryColor,
           ),
         ),
       ),

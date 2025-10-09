@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../Services/Auth_Service/auth_provider.dart';
 import '../../Widgets/custom_loading_widget.dart';
+import '../../Helpers/api_handler.dart';
+import '../../Theme/dialogs.dart';
 import '../menu_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -85,16 +87,20 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
       child: Scaffold(
         resizeToAvoidBottomInset: true,
         body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              Color.fromARGB(255, 255, 255, 255),
-              Color.fromARGB(255, 197, 197, 197),
-              Color.fromARGB(255, 16, 58, 18),
+            colors: Theme.of(context).brightness == Brightness.dark ? [
+              const Color(0xFF0F0F0F),
+              const Color(0xFF1A1A1A),
+              const Color(0xFF2A2A2A),
+            ] : [
+              const Color.fromARGB(255, 255, 255, 255),
+              const Color.fromARGB(255, 197, 197, 197),
+              const Color.fromARGB(255, 16, 58, 18),
             ],
-            stops: [0.0, 0.5, 1.0],
+            stops: const [0.0, 0.5, 1.0],
           ),
         ),
           child: SafeArea(
@@ -174,22 +180,26 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
         const SizedBox(height: 20),
         
         // App Title
-        const Text(
+        Text(
           'PROVIDER',
           style: TextStyle(
             fontSize: 32,
             fontWeight: FontWeight.bold,
-            color: Color.fromARGB(255, 48, 48, 48),
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.white
+                : const Color.fromARGB(255, 48, 48, 48),
             fontFamily: 'Raleway',
             letterSpacing: 2.0,
           ),
         ),
         const SizedBox(height: 8),
-        const Text(
+        Text(
           'Sistema de Gestión Comercial',
           style: TextStyle(
             fontSize: 16,
-            color: Color.fromARGB(255, 49, 49, 49),
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.grey.shade300
+                : const Color.fromARGB(255, 49, 49, 49),
             fontFamily: 'Raleway',
             letterSpacing: 1.0,
           ),
@@ -213,11 +223,15 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).brightness == Brightness.dark
+            ? const Color(0xFF1A1A1A)
+            : Colors.white,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.2),
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.black.withOpacity(0.5)
+                : Colors.black.withOpacity(0.2),
             blurRadius: 25,
             offset: const Offset(0, 15),
           ),
@@ -227,21 +241,25 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
         key: _formKey,
         child: Column(
           children: [
-            const Text(
+            Text(
               'Bienvenido',
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
-                color: Color(0xFF2C2C2C),
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.white
+                    : const Color(0xFF2C2C2C),
                 fontFamily: 'Raleway',
               ),
             ),
             const SizedBox(height: 6),
-            const Text(
+            Text(
               'Inicia sesión para acceder al sistema',
               style: TextStyle(
                 fontSize: 14,
-                color: Color(0xFF666666),
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.grey.shade400
+                    : const Color(0xFF666666),
                 fontFamily: 'Raleway',
               ),
             ),
@@ -412,31 +430,33 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
     bool isPassword = false,
     String? Function(String?)? validator,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return TextFormField(
       controller: controller,
       obscureText: isPassword ? _obscurePassword : false,
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 16,
-        color: Color.fromARGB(255, 0, 0, 0),
+        color: isDark ? Colors.white : const Color.fromARGB(255, 0, 0, 0),
         fontFamily: 'Raleway',
       ),
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: const TextStyle(
-          color: Color(0xFF333333),
+        labelStyle: TextStyle(
+          color: isDark ? Colors.grey.shade400 : const Color(0xFF333333),
           fontFamily: 'Raleway',
           fontWeight: FontWeight.w500,
         ),
         prefixIcon: Icon(
           icon,
-          color: const Color(0xFF333333),
+          color: isDark ? Colors.grey.shade400 : const Color(0xFF333333),
           size: 24,
         ),
         suffixIcon: isPassword
             ? IconButton(
                 icon: Icon(
                   _obscurePassword ? Icons.visibility : Icons.visibility_off,
-                  color: const Color(0xFF333333),
+                  color: isDark ? Colors.grey.shade400 : const Color(0xFF333333),
                 ),
                 onPressed: () {
                   setState(() {
@@ -446,19 +466,23 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
               )
             : null,
         filled: true,
-        fillColor: const Color(0xFFF8F9FA),
+        fillColor: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFF8F9FA),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
+          borderSide: BorderSide(
+            color: isDark ? Colors.grey.shade600 : const Color(0xFFE0E0E0),
+          ),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
+          borderSide: BorderSide(
+            color: isDark ? Colors.grey.shade600 : const Color(0xFFE0E0E0),
+          ),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(
-            color: Color(0xFF333333),
+          borderSide: BorderSide(
+            color: isDark ? Colors.grey.shade400 : const Color(0xFF333333),
             width: 2,
           ),
         ),
@@ -482,19 +506,23 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
   Widget _buildFooter() {
     return Column(
       children: [
-        const Text(
+        Text(
           '© 2025 Provider',
           style: TextStyle(
-            color: Color.fromARGB(255, 223, 223, 223),
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.grey.shade400
+                : const Color.fromARGB(255, 223, 223, 223),
             fontSize: 14,
             fontFamily: 'Raleway',
           ),
         ),
         const SizedBox(height: 4),
-        const Text(
+        Text(
           'Sistema de Gestión Comercial',
           style: TextStyle(
-            color: Color.fromARGB(255, 255, 255, 255),
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.grey.shade500
+                : const Color.fromARGB(255, 255, 255, 255),
             fontSize: 12,
             fontFamily: 'Raleway',
           ),
@@ -519,9 +547,12 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
             MaterialPageRoute(builder: (context) => const MenuScreen()),
           );
         }
-        // Error messages are already displayed in the UI, no need for SnackBar
       } catch (e) {
-        // Error messages are already displayed in the UI, no need for SnackBar
+        // Mostrar diálogo de error de servidor si corresponde
+        if (mounted && Apihandler.isConnectionError(e)) {
+          await Apihandler.handleConnectionError(context, e);
+        }
+        // Los demás errores ya se muestran en la UI del AuthProvider
       }
     }
   }
@@ -539,7 +570,10 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
       }
     } catch (e) {
       // If there's an error checking auth, just stay on login screen
-      // The user can manually log in
+      // Show server error if needed
+      if (mounted && Apihandler.isConnectionError(e)) {
+        await Apihandler.handleConnectionError(context, e);
+      }
     }
   }
 }

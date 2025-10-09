@@ -6,6 +6,8 @@ import 'package:tobaco/Models/ProductQuantityPrice.dart';
 import 'package:tobaco/Services/Categoria_Service/categoria_provider.dart';
 import 'package:tobaco/Services/Productos_Service/productos_provider.dart';
 import 'package:tobaco/Theme/app_theme.dart';
+import 'package:tobaco/Theme/dialogs.dart';
+import 'package:tobaco/Helpers/api_handler.dart';
 import 'package:tobaco/Models/Categoria.dart';
 import 'package:tobaco/Widgets/QuantityPriceWidget.dart';
 
@@ -52,14 +54,6 @@ class EditarProductoScreenState extends State<EditarProductoScreen> {
 
     // Initialize quantity prices
     quantityPrices = List.from(widget.producto.quantityPrices);
-    if (quantityPrices.isEmpty) {
-      // Add default unit price if none exists
-      quantityPrices.add(ProductQuantityPrice(
-        productId: widget.producto.id ?? 0,
-        quantity: 1,
-        totalPrice: widget.producto.precio,
-      ));
-    }
     
     Future.microtask(() {
       if (!mounted) return;
@@ -94,12 +88,105 @@ class EditarProductoScreenState extends State<EditarProductoScreen> {
       }
     }
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Editar Producto'),
-        centerTitle: true,
-        backgroundColor: Colors.white,
+    return Theme(
+      data: Theme.of(context).copyWith(
+        colorScheme: Theme.of(context).colorScheme.copyWith(
+          primary: const Color(0xFF4CAF50),
+          secondary: const Color(0xFF66BB6A),
+          surface: Theme.of(context).brightness == Brightness.dark
+              ? const Color(0xFF1A1A1A)
+              : Colors.white,
+          background: Theme.of(context).brightness == Brightness.dark
+              ? const Color(0xFF0F0F0F)
+              : const Color(0xFFF8F9FA),
+        ),
+        textSelectionTheme: TextSelectionThemeData(
+          cursorColor: Theme.of(context).brightness == Brightness.dark
+              ? Colors.white
+              : const Color(0xFF4CAF50),
+          selectionColor: Theme.of(context).brightness == Brightness.dark
+              ? const Color(0xFF4CAF50).withOpacity(0.3)
+              : const Color(0xFF4CAF50).withOpacity(0.2),
+        ),
+        inputDecorationTheme: InputDecorationTheme(
+          labelStyle: TextStyle(
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.white
+                : const Color(0xFF4CAF50),
+          ),
+          hintStyle: TextStyle(
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.grey.shade400
+                : Colors.grey.shade600,
+          ),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? Colors.grey.shade600
+                  : Colors.grey.shade300,
+            ),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? Colors.grey.shade600
+                  : Colors.grey.shade300,
+            ),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(
+              color: const Color(0xFF4CAF50),
+              width: 2,
+            ),
+          ),
+          filled: true,
+          fillColor: Theme.of(context).brightness == Brightness.dark
+              ? const Color(0xFF2A2A2A)
+              : Colors.white,
+        ),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF4CAF50),
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        ),
+        textButtonTheme: TextButtonThemeData(
+          style: TextButton.styleFrom(
+            foregroundColor: Theme.of(context).brightness == Brightness.dark
+                ? Colors.white
+                : Colors.black,
+          ),
+        ),
       ),
+      child: Scaffold(
+        backgroundColor: Theme.of(context).brightness == Brightness.dark
+            ? const Color(0xFF0F0F0F)
+            : const Color(0xFFF8F9FA),
+        appBar: AppBar(
+          title: Text(
+            'Editar Producto',
+            style: TextStyle(
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? Colors.white
+                  : Colors.white,
+            ),
+          ),
+          centerTitle: true,
+          backgroundColor: Theme.of(context).brightness == Brightness.dark
+              ? Colors.black
+              : const Color(0xFF4CAF50),
+          iconTheme: IconThemeData(
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.white
+                : Colors.white,
+          ),
+        ),
       resizeToAvoidBottomInset: true, // Ajusta la pantalla al teclado
       body: SafeArea(
         child: Stack(
@@ -109,15 +196,23 @@ class EditarProductoScreenState extends State<EditarProductoScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'Nombre:',
-                    style: AppTheme.inputLabelStyle,
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white
+                          : Colors.black,
+                    ),
                   ),
                   const SizedBox(height: 10),
                   TextField(
                     controller: nombreController,
-                    style: AppTheme.inputTextStyle,
-                    cursorColor: Colors.black,
+                    style: TextStyle(
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white
+                          : Colors.black,
+                    ),
                     decoration: AppTheme.inputDecoration,
                     onChanged: (value) {
                       setState(() {
@@ -126,15 +221,23 @@ class EditarProductoScreenState extends State<EditarProductoScreen> {
                     },
                   ),
                   const SizedBox(height: 16),
-                  const Text(
+                  Text(
                     'Cantidad:',
-                    style: AppTheme.inputLabelStyle,
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white
+                          : Colors.black,
+                    ),
                   ),
                   const SizedBox(height: 10),
                   TextField(
                     controller: cantidadController,
-                    style: AppTheme.inputTextStyle,
-                    cursorColor: Colors.black,
+                    style: TextStyle(
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white
+                          : Colors.black,
+                    ),
                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
                     inputFormatters: [
                       FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
@@ -148,15 +251,23 @@ class EditarProductoScreenState extends State<EditarProductoScreen> {
                     },
                   ),
                   const SizedBox(height: 16),
-                  const Text(
+                  Text(
                     'Precio:',
-                    style: AppTheme.inputLabelStyle,
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white
+                          : Colors.black,
+                    ),
                   ),
                   const SizedBox(height: 10),
                   TextField(
                     controller: precioController,
-                    style: AppTheme.inputTextStyle,
-                    cursorColor: Colors.black,
+                    style: TextStyle(
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white
+                          : Colors.black,
+                    ),
                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
                     inputFormatters: [
                       FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
@@ -169,14 +280,24 @@ class EditarProductoScreenState extends State<EditarProductoScreen> {
                     },
                   ),
                   const SizedBox(height: 16),
-                  const Text(
+                  Text(
                     'Categoria:',
-                    style: AppTheme.inputLabelStyle,
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white
+                          : Colors.black,
+                    ),
                   ),
                   const SizedBox(height: 10),
                   DropdownButtonFormField<Categoria>(
                     value: categoriaSeleccionada,
                     isExpanded: true,
+                    style: TextStyle(
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white
+                          : Colors.black,
+                    ),
                     items: categorias.map((Categoria categoria) {
                       return DropdownMenuItem<Categoria>(
                         value: categoria,
@@ -197,7 +318,11 @@ class EditarProductoScreenState extends State<EditarProductoScreen> {
                             const SizedBox(width: 8),
                             Text(
                               categoria.nombre,
-                              style: AppTheme.inputTextStyle,
+                              style: TextStyle(
+                                color: Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.white
+                                    : Colors.black,
+                              ),
                             ),
                           ],
                         ),
@@ -221,9 +346,14 @@ class EditarProductoScreenState extends State<EditarProductoScreen> {
                   const SizedBox(height: 16),
                   Row(
                     children: [
-                      const Text(
+                      Text(
                         '¿Se puede vender medio?',
-                        style: AppTheme.inputLabelStyle,
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.white
+                              : Colors.black,
+                        ),
                       ),
                       const SizedBox(width: 8),
                       Checkbox(
@@ -259,27 +389,47 @@ class EditarProductoScreenState extends State<EditarProductoScreen> {
             ),
             Align(
               alignment: Alignment.bottomCenter,
-              child: Padding(
+              child: Container(
                 padding: const EdgeInsets.all(16.0),
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? const Color(0xFF0F0F0F)
+                    : Colors.white,
                 child: Row(
                   children: [
                     Expanded(
-                      child: ElevatedButton(
+                      child: OutlinedButton(
                         onPressed: () {
                           Navigator.pop(context);
                         },
-                        style: AppTheme.outlinedButtonStyle,
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          side: BorderSide(
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? Colors.grey.shade600
+                                : Colors.grey,
+                          ),
+                        ),
                         child: const Text(
                           'Volver',
-                          style: TextStyle(fontSize: 18, color: Colors.black),
+                          style: TextStyle(
+                            fontSize: 16,
+                          ),
                         ),
                       ),
                     ),
                     const SizedBox(width: 10),
                     Expanded(
                       child: ElevatedButton(
-                        style: AppTheme.elevatedButtonStyle(
-                          AppTheme.confirmButtonColor,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.confirmButtonColor,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
                         onPressed: () async {
                           // Validar campos requeridos
@@ -342,10 +492,26 @@ class EditarProductoScreenState extends State<EditarProductoScreen> {
                           }
 
                           try {
+                            // Mostrar loading básico
+                            showDialog(
+                              context: context,
+                              barrierDismissible: false,
+                              builder: (context) => const Center(
+                                child: CircularProgressIndicator(
+                                  valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
+                                ),
+                              ),
+                            );
+                            
                             await ProductoProvider()
                                 .editarProducto(widget.producto);
 
                             if (!mounted) return;
+                            
+                            // Cerrar loading
+                            Navigator.of(context).pop();
+                            
+                            // Cerrar pantalla de editar
                             Navigator.of(context).pop();
 
                             // Acción para confirmar los cambios
@@ -356,20 +522,27 @@ class EditarProductoScreenState extends State<EditarProductoScreen> {
                               );
                             }
                           } catch (e) {
+                            if (!mounted) return;
+                            
+                            // Cerrar loading
+                            Navigator.of(context).pop();
+                            
                             // Manejo de errores
-                            debugPrint(
-                                'Error al editar el producto: $e'); // Registro del error
-                            if (mounted) {
-                              AppTheme.showSnackBar(
-                                context,
-                                AppTheme.errorSnackBar('Error: ${e.toString()}'),
+                            debugPrint('Error al editar el producto: $e');
+                            
+                            if (Apihandler.isConnectionError(e)) {
+                              await Apihandler.handleConnectionError(context, e);
+                            } else {
+                              await AppDialogs.showErrorDialog(
+                                context: context,
+                                message: 'Error al editar producto: ${e.toString().replaceFirst('Exception: ', '')}',
                               );
                             }
                           }
                         },
                         child: const Text(
                           'Confirmar',
-                          style: TextStyle(fontSize: 18),
+                          style: TextStyle(fontSize: 16),
                         ),
                       ),
                     ),
@@ -379,6 +552,7 @@ class EditarProductoScreenState extends State<EditarProductoScreen> {
             ),
           ],
         ),
+      ),
       ),
     );
   }

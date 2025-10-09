@@ -7,6 +7,8 @@ import '../../Services/Categoria_Service/categoria_provider.dart';
 import '../../Services/Productos_Service/productos_provider.dart';
 import '../../Services/PrecioEspecialService.dart';
 import '../../Theme/app_theme.dart';
+import '../../Theme/dialogs.dart';
+import '../../Helpers/api_handler.dart';
 
 class SeleccionarProductosConPreciosEspecialesScreen extends StatefulWidget {
   final List<ProductoSeleccionado> productosYaSeleccionados;
@@ -74,10 +76,20 @@ class _SeleccionarProductosConPreciosEspecialesScreenState
         isLoading = false;
       });
     } catch (e) {
-      setState(() {
-        errorMessage = 'Error al cargar los datos: $e';
-        isLoading = false;
-      });
+      if (!mounted) return;
+      
+      if (Apihandler.isConnectionError(e)) {
+        setState(() {
+          isLoading = false;
+          // No establecer errorMessage para errores de conexión
+        });
+        await Apihandler.handleConnectionError(context, e);
+      } else {
+        setState(() {
+          errorMessage = 'Error al cargar los datos: ${e.toString().replaceFirst('Exception: ', '')}';
+          isLoading = false;
+        });
+      }
     }
   }
 
@@ -86,6 +98,7 @@ class _SeleccionarProductosConPreciosEspecialesScreenState
 
     try {
       final precios = await PrecioEspecialService.getPreciosEspecialesByCliente(widget.cliente!.id!);
+      if (!mounted) return;
       setState(() {
         preciosEspeciales.clear();
         for (var precio in precios) {
@@ -93,8 +106,14 @@ class _SeleccionarProductosConPreciosEspecialesScreenState
         }
       });
     } catch (e) {
-      // Si hay error cargando precios especiales, continuar sin ellos
-      print('Error cargando precios especiales: $e');
+      if (!mounted) return;
+      
+      if (Apihandler.isConnectionError(e)) {
+        await Apihandler.handleConnectionError(context, e);
+      } else {
+        // Si hay error cargando precios especiales, continuar sin ellos
+        print('Error cargando precios especiales: $e');
+      }
     }
   }
 
@@ -235,9 +254,9 @@ class _SeleccionarProductosConPreciosEspecialesScreenState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.secondaryColor,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: AppTheme.primaryColor,
+        backgroundColor: null, // Usar el tema
         foregroundColor: Colors.white,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),

@@ -26,38 +26,23 @@ class LoadingUtils {
   }
 
   // Mostrar pantalla de carga completa
-  static void showFullScreenLoading(
-    BuildContext context, {
-    String? message,
-    Color? backgroundColor,
-    bool showLogo = true,
-  }) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => LoadingScreen(
-          message: message,
-          backgroundColor: backgroundColor,
-          showLogo: showLogo,
-        ),
-        fullscreenDialog: true,
-      ),
-    );
-  }
-
-  // Mostrar pantalla de carga para autenticación
-  static void showAuthLoading(
-    BuildContext context, {
-    String? message,
-  }) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => AuthLoadingScreen(
-          message: message,
-        ),
-        fullscreenDialog: true,
-      ),
-    );
-  }
+  // static void showFullScreenLoading(
+  //   BuildContext context, {
+  //   String? message,
+  //   Color? backgroundColor,
+  //   bool showLogo = true,
+  // }) {
+  //   Navigator.of(context).push(
+  //     MaterialPageRoute(
+  //       builder: (context) => LoadingScreen(
+  //         message: message,
+  //         backgroundColor: backgroundColor,
+  //         showLogo: showLogo,
+  //       ),
+  //       fullscreenDialog: true,
+  //     ),
+  //   );
+  // }
 
   // Mostrar pantalla de carga para datos
   static void showDataLoading(
@@ -115,27 +100,27 @@ class LoadingUtils {
   }
 
   // Ejecutar operación con pantalla de carga completa
-  static Future<T?> executeWithFullScreenLoading<T>(
-    BuildContext context,
-    Future<T> Function() operation, {
-    String? loadingMessage,
-    Color? backgroundColor,
-    bool showLogo = true,
-  }) async {
-    showFullScreenLoading(
-      context,
-      message: loadingMessage,
-      backgroundColor: backgroundColor,
-      showLogo: showLogo,
-    );
+  // static Future<T?> executeWithFullScreenLoading<T>(
+  //   BuildContext context,
+  //   Future<T> Function() operation, {
+  //   String? loadingMessage,
+  //   Color? backgroundColor,
+  //   bool showLogo = true,
+  // }) async {
+  //   showFullScreenLoading(
+  //     context,
+  //     message: loadingMessage,
+  //     backgroundColor: backgroundColor,
+  //     showLogo: showLogo,
+  //   );
 
-    try {
-      final result = await operation();
-      Navigator.of(context).pop(); // Cerrar pantalla de carga
-      return result;
-    } catch (e) {
-      Navigator.of(context).pop(); // Cerrar pantalla de carga
-      rethrow;
-    }
-  }
+  //   try {
+  //     final result = await operation();
+  //     Navigator.of(context).pop(); // Cerrar pantalla de carga
+  //     return result;
+  //   } catch (e) {
+  //     Navigator.of(context).pop(); // Cerrar pantalla de carga
+  //     rethrow;
+  //   }
+  // }
 }

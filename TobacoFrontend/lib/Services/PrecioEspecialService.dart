@@ -6,6 +6,7 @@ import '../Services/Auth_Service/auth_service.dart';
 class PrecioEspecialService {
   static final Uri _baseUrl = Apihandler.baseUrl;
   static const String _endpoint = 'preciosespeciales';
+  static const Duration _timeoutDuration = Duration(seconds: 10);
 
   // Obtener todos los precios especiales
   static Future<List<PrecioEspecial>> getAllPreciosEspeciales() async {
@@ -13,7 +14,7 @@ class PrecioEspecialService {
       final response = await Apihandler.client.get(
         Uri.parse('$_baseUrl/$_endpoint'),
         headers: await AuthService.getAuthHeaders(),
-      );
+      ).timeout(_timeoutDuration);
 
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
@@ -32,7 +33,7 @@ class PrecioEspecialService {
       final response = await Apihandler.client.get(
         Uri.parse('$_baseUrl/$_endpoint/$id'),
         headers: await AuthService.getAuthHeaders(),
-      );
+      ).timeout(_timeoutDuration);
 
       if (response.statusCode == 200) {
         return PrecioEspecial.fromJson(json.decode(response.body));
@@ -52,7 +53,7 @@ class PrecioEspecialService {
       final response = await Apihandler.client.get(
         Uri.parse('$_baseUrl/$_endpoint/cliente/$clienteId'),
         headers: await AuthService.getAuthHeaders(),
-      );
+      ).timeout(_timeoutDuration);
 
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
@@ -71,7 +72,7 @@ class PrecioEspecialService {
       final response = await Apihandler.client.get(
         Uri.parse('$_baseUrl/$_endpoint/cliente/$clienteId/producto/$productoId'),
         headers: await AuthService.getAuthHeaders(),
-      );
+      ).timeout(_timeoutDuration);
 
       if (response.statusCode == 200) {
         return PrecioEspecial.fromJson(json.decode(response.body));
@@ -91,7 +92,7 @@ class PrecioEspecialService {
       final response = await Apihandler.client.get(
         Uri.parse('$_baseUrl/$_endpoint/precio-final/cliente/$clienteId/producto/$productoId'),
         headers: await AuthService.getAuthHeaders(),
-      );
+      ).timeout(_timeoutDuration);
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -111,7 +112,7 @@ class PrecioEspecialService {
         Uri.parse('$_baseUrl/$_endpoint'),
         headers: await AuthService.getAuthHeaders(),
         body: json.encode(precioEspecial.toJson()),
-      );
+      ).timeout(_timeoutDuration);
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -131,7 +132,7 @@ class PrecioEspecialService {
         Uri.parse('$_baseUrl/$_endpoint/${precioEspecial.id}'),
         headers: await AuthService.getAuthHeaders(),
         body: json.encode(precioEspecial.toJson()),
-      );
+      ).timeout(_timeoutDuration);
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -150,7 +151,7 @@ class PrecioEspecialService {
       final response = await Apihandler.client.delete(
         Uri.parse('$_baseUrl/$_endpoint/$id'),
         headers: await AuthService.getAuthHeaders(),
-      );
+      ).timeout(_timeoutDuration);
 
       return response.statusCode == 200;
     } catch (e) {
@@ -164,7 +165,7 @@ class PrecioEspecialService {
       final response = await Apihandler.client.delete(
         Uri.parse('$_baseUrl/$_endpoint/cliente/$clienteId/producto/$productoId'),
         headers: await AuthService.getAuthHeaders(),
-      );
+      ).timeout(_timeoutDuration);
 
       return response.statusCode == 200;
     } catch (e) {
@@ -185,7 +186,7 @@ class PrecioEspecialService {
         Uri.parse('$_baseUrl/$_endpoint/upsert'),
         headers: await AuthService.getAuthHeaders(),
         body: json.encode(requestBody),
-      );
+      ).timeout(_timeoutDuration);
 
       return response.statusCode == 200;
     } catch (e) {

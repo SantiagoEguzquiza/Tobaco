@@ -3,8 +3,11 @@ import 'package:provider/provider.dart';
 import 'package:tobaco/Models/Categoria.dart';
 import 'package:tobaco/Services/Categoria_Service/categoria_provider.dart';
 import 'package:tobaco/Theme/app_theme.dart';
+import 'package:tobaco/Theme/dialogs.dart';
+import 'package:tobaco/Theme/headers.dart';
 import 'package:tobaco/Widgets/ReorderableCategoriaList.dart';
 import 'package:tobaco/Helpers/color_picker.dart';
+import 'package:tobaco/Helpers/api_handler.dart';
 import 'package:tobaco/Utils/loading_utils.dart';
 
 class CategoriasScreen extends StatefulWidget {
@@ -34,12 +37,7 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
   @override
   void initState() {
     super.initState();
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    // Cargar categorías después de que el contexto esté disponible
+    // Cargar categorías al inicializar la pantalla
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         _loadCategorias();
@@ -54,29 +52,46 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
   }
 
   Future<void> _loadCategorias() async {
-    // Verificar si ya se están cargando las categorías
     final provider = Provider.of<CategoriasProvider>(context, listen: false);
-    if (provider.isLoading) return;
+    
+    // Si ya hay categorías cargadas, resetear el estado de loading y retornar
+    if (provider.categorias.isNotEmpty) {
+      provider.resetLoadingState();
+      return;
+    }
+    
+    // Si está cargando, esperar un poco y verificar de nuevo
+    if (provider.isLoading) {
+      await Future.delayed(Duration(seconds: 1));
+      if (provider.categorias.isNotEmpty) {
+        provider.resetLoadingState();
+        return;
+      }
+    }
 
     try {
       await provider.obtenerCategorias();
     } catch (e) {
-      if (mounted) {
+      if (!mounted) return;
+      
+      if (Apihandler.isConnectionError(e)) {
+        await Apihandler.handleConnectionError(context, e);
+      } else {
         AppTheme.showSnackBar(
           context,
-          AppTheme.errorSnackBar('Error al cargar categorías: $e'),
+          AppTheme.errorSnackBar('Error al cargar categorías: ${e.toString().replaceFirst('Exception: ', '')}'),
         );
       }
     }
   }
 
-  Future<void> _agregarCategoria() async {
+  Future<bool> _agregarCategoria() async {
     if (_nombreController.text.trim().isEmpty) {
       AppTheme.showSnackBar(
         context,
         AppTheme.warningSnackBar('El nombre de la categoría es requerido'),
       );
-      return;
+      return false;
     }
 
     try {
@@ -92,53 +107,59 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
         _nombreController.clear();
         _selectedColor = '#9E9E9E';
         
-        // Cerrar el diálogo
-        Navigator.of(context).pop();
-        
         AppTheme.showSnackBar(
           context,
           AppTheme.successSnackBar('Categoría agregada exitosamente'),
         );
       }
+      return true;
     } catch (e) {
-      if (mounted) {
+      if (!mounted) return false;
+      
+      if (Apihandler.isConnectionError(e)) {
+        await Apihandler.handleConnectionError(context, e);
+      } else {
         AppTheme.showSnackBar(
           context,
-          AppTheme.errorSnackBar('Error al agregar categoría: $e'),
+          AppTheme.errorSnackBar('Error al agregar categoría: ${e.toString().replaceFirst('Exception: ', '')}'),
         );
       }
+      return false;
     }
   }
 
   Future<void> _eliminarCategoria(Categoria categoria) async {
-    final confirmed = await showDialog<bool>(
+    final confirmed = await AppDialogs.showDeleteConfirmationDialog(
       context: context,
-      builder: (context) => AppTheme.alertDialogStyle(
-        title: 'Confirmar eliminación',
-        content: '¿Estás seguro de que quieres eliminar la categoría "${categoria.nombre}"?',
-        onConfirm: () async {
-          try {
-            await Provider.of<CategoriasProvider>(context, listen: false)
-                .eliminarCategoria(categoria.id!);
-
-            if (mounted) {
-              AppTheme.showSnackBar(
-                context,
-                AppTheme.successSnackBar('Categoría eliminada exitosamente'),
-              );
-            }
-          } catch (e) {
-            if (mounted) {
-              AppTheme.showSnackBar(
-                context,
-                AppTheme.errorSnackBar('Error al eliminar categoría: $e'),
-              );
-            }
-          }
-        },
-        onCancel: () => Navigator.of(context).pop(),
-      ),
+      title: 'Eliminar Categoría',
+      itemName: categoria.nombre,
     );
+
+    if (confirmed) {
+      try {
+        await Provider.of<CategoriasProvider>(context, listen: false)
+            .eliminarCategoria(categoria.id!);
+
+        if (!mounted) return;
+
+        AppTheme.showSnackBar(
+          context,
+          AppTheme.successSnackBar('Categoría eliminada exitosamente'),
+        );
+      } catch (e) {
+        if (!mounted) return;
+
+        if (Apihandler.isConnectionError(e)) {
+          await Apihandler.handleConnectionError(context, e);
+        } else {
+          // Mostrar el mensaje de error del backend
+          await AppDialogs.showErrorDialog(
+            context: context,
+            message: e.toString().replaceFirst('Exception: ', ''),
+          );
+        }
+      }
+    }
   }
 
   void _showAddCategoriaDialog() {
@@ -150,13 +171,67 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              TextField(
-                controller: _nombreController,
-                cursorColor: Colors.black,
-                autofocus: true,
-                decoration: const InputDecoration(
-                  labelText: 'Nombre de la categoría',
-                  border: OutlineInputBorder(),
+              Theme(
+                data: Theme.of(context).copyWith(
+                  textSelectionTheme: TextSelectionThemeData(
+                    cursorColor: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white
+                        : Colors.black,
+                    selectionColor: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white.withOpacity(0.3)
+                        : Colors.black.withOpacity(0.2),
+                  ),
+                  inputDecorationTheme: InputDecorationTheme(
+                    labelStyle: TextStyle(
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white
+                          : Colors.black,
+                    ),
+                    hintStyle: TextStyle(
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.grey.shade400
+                          : Colors.grey.shade600,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.grey.shade600
+                            : Colors.grey.shade300,
+                      ),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.grey.shade600
+                            : Colors.grey.shade300,
+                      ),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(
+                        color: AppTheme.primaryColor,
+                        width: 2,
+                      ),
+                    ),
+                    filled: true,
+                    fillColor: Theme.of(context).brightness == Brightness.dark
+                        ? const Color(0xFF2A2A2A)
+                        : Colors.white,
+                  ),
+                ),
+                child: TextField(
+                  controller: _nombreController,
+                  style: TextStyle(
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white
+                        : Colors.black,
+                  ),
+                  autofocus: true,
+                  decoration: const InputDecoration(
+                    labelText: 'Nombre de la categoría',
+                  ),
                 ),
               ),
               const SizedBox(height: 16),
@@ -171,7 +246,12 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
             ],
           ),
           onCancel: () => Navigator.of(context).pop(),
-          onConfirm: _agregarCategoria,
+          onConfirm: () {
+            // Cerrar el diálogo inmediatamente
+            Navigator.of(context).pop();
+            // Luego ejecutar la función de agregar categoría
+            _agregarCategoria();
+          },
           confirmText: 'Agregar',
           cancelText: 'Cancelar',
         ),
@@ -182,17 +262,17 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         centerTitle: true,
         elevation: 0,
-        backgroundColor: Colors.transparent,
+        backgroundColor: null, // Usar el tema
         title: const Text(
           'Categorías',
           style: TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.bold,
-            color: AppTheme.primaryColor,
+            color: Color(0xFFFFFFFF), // Blanco puro
           ),
         ),
         actions: [
@@ -223,97 +303,19 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
 
           return Column(
             children: [
-              // Header fijo
-              Container(
+              // Header con botón
+              Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Header con estadísticas
-                    Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            AppTheme.primaryColor.withOpacity(0.1),
-                            AppTheme.secondaryColor.withOpacity(0.3),
-                          ],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: AppTheme.primaryColor.withOpacity(0.2),
-                          width: 1,
-                        ),
-                      ),
-                      child: Column(
-                        children: [
-                          Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: AppTheme.primaryColor,
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: const Icon(
-                                  Icons.category,
-                                  color: Colors.white,
-                                  size: 24,
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const Text(
-                                      'Gestión de Categorías',
-                                      style: TextStyle(
-                                        fontSize: 24,
-                                        fontWeight: FontWeight.bold,
-                                        color: AppTheme.primaryColor,
-                                      ),
-                                    ),
-                                    Text(
-                                      '${provider.categorias.length} categorías registradas',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        color: Colors.grey.shade600,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 20),
-
-                          // Botón de crear categoría
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton.icon(
-                              onPressed: _showAddCategoriaDialog,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppTheme.primaryColor,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(vertical: 16),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(15),
-                                ),
-                                elevation: 2,
-                              ),
-                              icon: const Icon(Icons.add_circle_outline, size: 20),
-                              label: const Text(
-                                'Crear Nueva Categoría',
-                                style: TextStyle(
-                                    fontSize: 16, fontWeight: FontWeight.w600),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
+                    HeaderConBoton(
+                      leadingIcon: Icons.category,
+                      title: 'Gestión de Categorías',
+                      subtitle: '${provider.categorias.length} categorías registradas',
+                      onAction: _showAddCategoriaDialog,
+                      actionIcon: Icons.add_circle_outline,
+                      actionTooltip: 'Crear nueva categoría',
+                      buttonType: HeaderButtonType.primary,
                     ),
 
                     const SizedBox(height: 24),
@@ -400,7 +402,9 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
                           ],
                         ),
                       )
-                    : ReorderableCategoriaList(),
+                    : ReorderableCategoriaList(
+                        onDelete: (categoria) => _eliminarCategoria(categoria),
+                      ),
               ),
             ],
           );

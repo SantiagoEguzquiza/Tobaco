@@ -5,6 +5,7 @@ import 'package:tobaco/Models/metodoPago.dart';
 import 'package:tobaco/Services/Ventas_Service/ventas_provider.dart';
 import 'package:tobaco/Theme/app_theme.dart';
 import 'package:tobaco/Theme/dialogs.dart';
+import 'package:tobaco/Helpers/api_handler.dart';
 
 class DetalleVentaScreen extends StatelessWidget {
   final Ventas venta;
@@ -25,19 +26,19 @@ class DetalleVentaScreen extends StatelessWidget {
             child: Column(             
               children: [               
                 // Header con información principal de la venta
-                _buildHeaderSection(),
+                _buildHeaderSection(context),
                 const SizedBox(height: 20),
 
                 // Información detallada de la venta
-                _buildInfoCard(),
+                _buildInfoCard(context),
                 const SizedBox(height: 20),
 
                 // Lista de productos
-                _buildProductsSection(),
+                _buildProductsSection(context),
                 const SizedBox(height: 20),
 
                 // Resumen de totales
-                _buildSummarySection(),
+                _buildSummarySection(context),
               ],
             ),
           ),
@@ -48,14 +49,18 @@ class DetalleVentaScreen extends StatelessWidget {
   }
 
   // Header principal con información de la venta
-  Widget _buildHeaderSection() {
+  Widget _buildHeaderSection(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.grey.shade50,
+        color: Theme.of(context).brightness == Brightness.dark
+            ? const Color(0xFF1A1A1A)
+            : Colors.grey.shade50,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: Colors.grey.shade200,
+          color: Theme.of(context).brightness == Brightness.dark
+              ? Colors.grey.shade700
+              : Colors.grey.shade200,
           width: 1,
         ),
       ),
@@ -69,9 +74,11 @@ class DetalleVentaScreen extends StatelessWidget {
                   color: AppTheme.primaryColor,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(
+                child:  Icon(
                   Icons.receipt_long,
-                  color: Colors.white,
+                  color: Theme.of(context).brightness == Brightness.dark
+            ? const Color(0xFF1A1A1A)
+            : Colors.white,
                   size: 35,
                 ),
               ),
@@ -80,19 +87,23 @@ class DetalleVentaScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'Detalle de Venta',
                       style: TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
-                        color: Colors.black87,
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.white
+                            : Colors.black87,
                       ),
                     ),
                     Text(
                       'Venta #${venta.id}',
                       style: TextStyle(
                         fontSize: 16,
-                        color: Colors.grey.shade600,
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.grey.shade400
+                            : Colors.grey.shade600,
                       ),
                     ),
                   ],
@@ -111,15 +122,19 @@ class DetalleVentaScreen extends StatelessWidget {
                     'Cliente',
                     style: TextStyle(
                       fontSize: 14,
-                      color: Colors.grey.shade600,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.grey.shade400
+                          : Colors.grey.shade600,
                     ),
                   ),
                   Text(
                     venta.cliente.nombre,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: AppTheme.primaryColor,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white
+                          : AppTheme.primaryColor,
                     ),
                   ),
                 ],
@@ -131,10 +146,12 @@ class DetalleVentaScreen extends StatelessWidget {
                     'Total',
                     style: TextStyle(
                       fontSize: 14,
-                      color: Colors.grey.shade600,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.grey.shade400
+                          : Colors.grey.shade600,
                     ),
                   ),
-                  _formatearPrecioConDecimales(venta.total),
+                  _formatearPrecioConDecimales(venta.total, context: context),
                 ],
               ),
             ],
@@ -145,20 +162,26 @@ class DetalleVentaScreen extends StatelessWidget {
   }
 
   // Tarjeta con información detallada
-  Widget _buildInfoCard() {
+  Widget _buildInfoCard(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).brightness == Brightness.dark
+            ? const Color(0xFF1A1A1A)
+            : Colors.white,
         borderRadius: BorderRadius.circular(15),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.black.withOpacity(0.3)
+                : Colors.black.withOpacity(0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
         ],
         border: Border.all(
-          color: Colors.grey.shade200,
+          color: Theme.of(context).brightness == Brightness.dark
+              ? Colors.grey.shade700
+              : Colors.grey.shade200,
           width: 1,
         ),
       ),
@@ -167,7 +190,9 @@ class DetalleVentaScreen extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.grey.shade50,
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? const Color(0xFF2A2A2A)
+                  : Colors.grey.shade50,
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(15),
                 topRight: Radius.circular(15),
@@ -175,10 +200,12 @@ class DetalleVentaScreen extends StatelessWidget {
             ),
             child: Row(
               children: [
-                const Text(
+                 Text(
                   'Información de la Venta',
                   style: TextStyle(
-                    color: Colors.black87,
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white
+                        : Colors.black87,
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
                   ),
@@ -238,20 +265,26 @@ class DetalleVentaScreen extends StatelessWidget {
   }
 
   // Sección de productos
-  Widget _buildProductsSection() {
+  Widget _buildProductsSection(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).brightness == Brightness.dark
+            ? const Color(0xFF1A1A1A)
+            : Colors.white,
         borderRadius: BorderRadius.circular(15),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.black.withOpacity(0.3)
+                : Colors.black.withOpacity(0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
         ],
         border: Border.all(
-          color: Colors.grey.shade200,
+          color: Theme.of(context).brightness == Brightness.dark
+              ? Colors.grey.shade700
+              : Colors.grey.shade200,
           width: 1,
         ),
       ),
@@ -260,7 +293,9 @@ class DetalleVentaScreen extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.grey.shade50,
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? const Color(0xFF2A2A2A)
+                  : Colors.grey.shade50,
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(15),
                 topRight: Radius.circular(15),
@@ -270,8 +305,10 @@ class DetalleVentaScreen extends StatelessWidget {
               children: [             
                 Text(
                   'Productos (${venta.ventasProductos.length})',
-                  style: const TextStyle(
-                    color: Colors.black87,
+                  style:  TextStyle(
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white
+                        : Colors.black87,
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
                   ),
@@ -286,14 +323,8 @@ class DetalleVentaScreen extends StatelessWidget {
             itemBuilder: (context, index) {
               final producto = venta.ventasProductos[index];
               return Container(
-                decoration: BoxDecoration(
-                  color: index % 2 == 0 ? Colors.white : Colors.grey.shade50,
-                  border: Border(
-                    bottom: BorderSide(
-                      color: Colors.grey.shade200,
-                      width: 0.5,
-                    ),
-                  ),
+                decoration: const BoxDecoration(
+                  color: Colors.transparent,
                 ),
                 child: Container(
                   padding: const EdgeInsets.symmetric(
@@ -324,9 +355,12 @@ class DetalleVentaScreen extends StatelessWidget {
                               children: [
                                 Text(
                                   producto.nombre,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontWeight: FontWeight.w600,
                                     fontSize: 16,
+                                    color: Theme.of(context).brightness == Brightness.dark
+                                        ? Colors.white
+                                        : Colors.black,
                                   ),
                                 ),
                                 const SizedBox(height: 4),
@@ -334,13 +368,15 @@ class DetalleVentaScreen extends StatelessWidget {
                                   'Cantidad: ${producto.cantidad}',
                                   style: TextStyle(
                                     fontSize: 14,
-                                    color: Colors.grey.shade600,
+                                    color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.grey.shade400
+                          : Colors.grey.shade600,
                                   ),
                                 ),
                               ],
                             ),
                           ),
-                          _buildPrecioConDescuento(producto),
+                          _buildPrecioConDescuento(producto, context),
                         ],
                       ),
                     ],
@@ -355,19 +391,25 @@ class DetalleVentaScreen extends StatelessWidget {
   }
 
   // Sección de resumen
-  Widget _buildSummarySection() {
+  Widget _buildSummarySection(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).brightness == Brightness.dark
+            ? const Color(0xFF1A1A1A)
+            : Colors.white,
         borderRadius: BorderRadius.circular(15),
         border: Border.all(
-          color: Colors.grey.shade200,
+          color: Theme.of(context).brightness == Brightness.dark
+              ? Colors.grey.shade700
+              : Colors.grey.shade200,
           width: 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.black.withOpacity(0.3)
+                : Colors.black.withOpacity(0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -377,12 +419,14 @@ class DetalleVentaScreen extends StatelessWidget {
         children: [
           // Desglose de métodos de pago
           if (venta.pagos != null && venta.pagos!.isNotEmpty) ...[
-            const Text(
+            Text(
               'Desglose de Pagos:',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
-                color: Colors.black87,
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.white
+                    : Colors.black87,
               ),
             ),
             const SizedBox(height: 12),
@@ -396,7 +440,9 @@ class DetalleVentaScreen extends StatelessWidget {
                       Icon(
                         _getPaymentIcon(pago.metodo),
                         size: 16,
-                        color: Colors.grey.shade600,
+                        color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.grey.shade400
+                          : Colors.grey.shade600,
                       ),
                       const SizedBox(width: 8),
                       Text(
@@ -410,12 +456,14 @@ class DetalleVentaScreen extends StatelessWidget {
                   ),
                   _formatearPrecioConDecimales(
                     pago.monto,
-                    color: Colors.black87,
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white
+                        : Colors.black87,
+                    context: context,
                   ),
                 ],
               ),
             )).toList(),
-            const Divider(height: 20),
           ],
           // Mostrar descuento si aplica
           if (venta.cliente.descuentoGlobal > 0) ...[
@@ -464,7 +512,7 @@ class DetalleVentaScreen extends StatelessWidget {
                   fontWeight: FontWeight.w600,
                 ),
               ),
-              _formatearPrecioConDecimales(venta.total),
+              _formatearPrecioConDecimales(venta.total, context: context),
             ],
           ),
         ],
@@ -477,7 +525,9 @@ class DetalleVentaScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).brightness == Brightness.dark
+            ? const Color(0xFF1A1A1A)
+            : Colors.white,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.1),
@@ -493,17 +543,19 @@ class DetalleVentaScreen extends StatelessWidget {
               child: OutlinedButton(
                 onPressed: () => Navigator.pop(context),
                 style: OutlinedButton.styleFrom(
-                  backgroundColor: Colors.white,
+                  backgroundColor: Theme.of(context).cardTheme.color,
                   side: const BorderSide(color: Colors.grey, width: 1.5),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
                   padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
-                child: const Text(
+                child: Text(
                   'Volver',
                   style: TextStyle(
-                    color: Colors.black,
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white
+                        : Colors.black,
                     fontWeight: FontWeight.w600,
                     fontSize: 16,
                   ),
@@ -557,21 +609,23 @@ class DetalleVentaScreen extends StatelessWidget {
 
 
   // Widget para mostrar precio simple
-  Widget _buildPrecioConDescuento(VentasProductos producto) {
+  Widget _buildPrecioConDescuento(VentasProductos producto, BuildContext context) {
     // Usar directamente el precio final calculado del backend
     return Text(
       '\$${_formatearPrecio(producto.precioFinalCalculado)}',
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 16,
         fontWeight: FontWeight.bold,
-        color: Colors.black87,
+        color: Theme.of(context).brightness == Brightness.dark
+            ? Colors.white
+            : Colors.black87,
       ),
     );
   }
 
 
   // Widget para formatear precios con decimales más pequeños y grises
-  Widget _formatearPrecioConDecimales(double precio, {Color? color}) {
+  Widget _formatearPrecioConDecimales(double precio, {Color? color, required BuildContext context}) {
     final precioStr = precio.toStringAsFixed(2);
     final partes = precioStr.split('.');
     final parteEntera = partes[0].replaceAllMapped(
@@ -586,14 +640,18 @@ class DetalleVentaScreen extends StatelessWidget {
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
-              color: color ?? AppTheme.primaryColor,
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? Colors.white
+                  : (color ?? AppTheme.primaryColor),
             ),
           ),
           TextSpan(
             text: ',${parteDecimal}',
             style: TextStyle(
               fontSize: 14,
-              color: Colors.grey.shade400,
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? Colors.grey.shade400
+                  : Colors.grey.shade400,
             ),
           ),
         ],

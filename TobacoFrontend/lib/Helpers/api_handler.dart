@@ -1,7 +1,9 @@
 import 'dart:io';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:http/io_client.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:tobaco/Theme/dialogs.dart';
 
 class Apihandler {
   static final HttpClient httpClient = HttpClient()
@@ -27,6 +29,41 @@ class Apihandler {
       }
     } else {
       return false;
+    }
+  }
+
+  /// Verifica si un error es un error de conexión con el servidor
+  static bool isConnectionError(dynamic error) {
+    if (error is SocketException) {
+      return true;
+    }
+    if (error is TimeoutException) {
+      return true;
+    }
+    if (error is HandshakeException) {
+      return true;
+    }
+    if (error.toString().contains('Failed host lookup') ||
+        error.toString().contains('Connection refused') ||
+        error.toString().contains('Connection timed out') ||
+        error.toString().contains('Network is unreachable') ||
+        error.toString().contains('Software caused connection abort') ||
+        error.toString().contains('TimeoutException')) {
+      return true;
+    }
+    return false;
+  }
+
+  /// Maneja errores de conexión mostrando un diálogo al usuario
+  static Future<void> handleConnectionError(BuildContext context, dynamic error) async {
+    if (isConnectionError(error)) {
+      await AppDialogs.showServerErrorDialog(context: context);
+    } else {
+      // Para otros tipos de errores, mostrar el diálogo de error genérico
+      await AppDialogs.showErrorDialog(
+        context: context,
+        message: error.toString().replaceFirst('Exception: ', ''),
+      );
     }
   }
 }

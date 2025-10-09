@@ -6,6 +6,7 @@ import 'package:tobaco/Services/Auth_Service/auth_service.dart';
 
 class ProductoService {
   final Uri baseUrl = Apihandler.baseUrl;
+  static const Duration _timeoutDuration = Duration(seconds: 10);
 
   Future<List<Producto>> obtenerProductos() async {
     try {
@@ -13,7 +14,7 @@ class ProductoService {
       final response = await Apihandler.client.get(
         Uri.parse('$baseUrl/Productos'),
         headers: headers,
-      );
+      ).timeout(_timeoutDuration);
 
       if (response.statusCode == 200) {
         if (response.body.isEmpty) {
@@ -53,7 +54,7 @@ class ProductoService {
         Uri.parse('$baseUrl/Productos'),
         headers: headers,
         body: jsonEncode(productoJson),
-      );
+      ).timeout(_timeoutDuration);
 
       debugPrint('Response Status: ${response.statusCode}');
       debugPrint('Response Body: ${response.body}');
@@ -80,7 +81,7 @@ class ProductoService {
         Uri.parse('$baseUrl/Productos/${producto.id}'),
         headers: headers,
         body: jsonEncode(productoJson),
-      );
+      ).timeout(_timeoutDuration);
 
       if (response.statusCode != 200) {
         throw Exception(
@@ -101,7 +102,7 @@ class ProductoService {
       final response = await Apihandler.client.delete(
         Uri.parse('$baseUrl/Productos/$id'),
         headers: headers,
-      );
+      ).timeout(_timeoutDuration);
 
       if (response.statusCode == 200) {
         debugPrint('Producto eliminado exitosamente');
@@ -134,7 +135,7 @@ class ProductoService {
       final response = await Apihandler.client.post(
         Uri.parse('$baseUrl/Productos/$id/deactivate'),
         headers: headers,
-      );
+      ).timeout(_timeoutDuration);
 
       if (response.statusCode == 200) {
         debugPrint('Producto desactivado exitosamente');
@@ -155,7 +156,7 @@ class ProductoService {
       final response = await Apihandler.client.post(
         Uri.parse('$baseUrl/Productos/$id/activate'),
         headers: headers,
-      );
+      ).timeout(_timeoutDuration);
 
       if (response.statusCode == 200) {
         debugPrint('Producto activado exitosamente');
@@ -176,7 +177,7 @@ class ProductoService {
       final response = await Apihandler.client.get(
         Uri.parse('$baseUrl/Productos/paginados?page=$page&pageSize=$pageSize'),
         headers: headers,
-      );
+      ).timeout(_timeoutDuration);
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = jsonDecode(response.body);
