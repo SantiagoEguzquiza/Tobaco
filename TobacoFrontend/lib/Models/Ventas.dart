@@ -3,6 +3,7 @@ import 'package:tobaco/Models/VentasProductos.dart';
 import 'package:tobaco/Models/metodoPago.dart';
 import 'package:tobaco/Models/User.dart';
 import 'package:tobaco/Models/ventasPago.dart';
+import 'package:tobaco/Models/EstadoEntrega.dart';
 
 class Ventas {
   int? id;
@@ -15,6 +16,7 @@ class Ventas {
   MetodoPago? metodoPago;
   int? usuarioId;
   User? usuario;
+  EstadoEntrega estadoEntrega;
 
   Ventas({
     this.id,
@@ -27,6 +29,7 @@ class Ventas {
     this.pagos,
     this.usuarioId,
     this.usuario,
+    this.estadoEntrega = EstadoEntrega.noEntregada,
   });
 
   factory Ventas.fromJson(Map<String, dynamic> json) => Ventas(
@@ -48,6 +51,9 @@ class Ventas {
             : null,
         usuarioId: json['usuarioId'],
         usuario: json['usuario'] != null ? User.fromJson(json['usuario']) : null,
+        estadoEntrega: json['estadoEntrega'] != null
+            ? EstadoEntregaExtension.fromJson(json['estadoEntrega'] as int)
+            : EstadoEntrega.noEntregada,
       );
 
   Map<String, dynamic> toJson() => {
@@ -60,5 +66,6 @@ class Ventas {
         'ventaPagos': pagos?.map((e) => e.toJson()).toList() ?? [],
         'usuarioId': usuarioId,
         'usuario': usuario?.toJson(),
+        'estadoEntrega': estadoEntrega.toJson(),
       };    
 }

@@ -4,6 +4,7 @@ import 'package:tobaco/Theme/app_theme.dart'; // Importa el tema
 import 'package:url_launcher/url_launcher.dart';
 import 'preciosEspeciales_screen.dart';
 import 'historialVentas_screen.dart';
+import 'productosAFavor_screen.dart';
 
 class DetalleClienteScreen extends StatelessWidget {
   final Cliente cliente;
@@ -470,6 +471,22 @@ class DetalleClienteScreen extends StatelessWidget {
               context,
               MaterialPageRoute(
                 builder: (context) => HistorialVentasScreen(cliente: cliente),
+              ),
+            );
+          },
+        ),
+        const SizedBox(height: 12),
+        _buildAdditionalActionButton(
+          context: context,
+          icon: Icons.inventory_2_outlined,
+          label: 'Productos a Favor',
+          description: 'Ver productos pendientes de entrega',
+          color: Colors.red,
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ProductosAFavorScreen(cliente: cliente),
               ),
             );
           },
