@@ -13,6 +13,7 @@ import 'package:tobaco/Theme/theme_provider.dart';
 
 import 'package:tobaco/Services/Productos_Service/productos_provider.dart';
 import 'package:tobaco/Services/Ventas_Service/ventas_provider.dart';
+import 'package:tobaco/Services/VentaBorrador_Service/venta_borrador_provider.dart';
 
 
 
@@ -27,6 +28,7 @@ void main() {
         ChangeNotifierProvider(create: (_) => ProductoProvider()),
         ChangeNotifierProvider(create: (_) => CategoriasProvider()),
         ChangeNotifierProvider(create: (_) => VentasProvider()),
+        ChangeNotifierProvider(create: (_) => VentaBorradorProvider()),
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         // 1) Repo primero
         Provider(create: (_) => BcuRepository()),
