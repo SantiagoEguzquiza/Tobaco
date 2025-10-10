@@ -245,11 +245,15 @@ class _PreciosEspecialesScreenState extends State<PreciosEspecialesScreen> {
         margin: const EdgeInsets.all(24),
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).brightness == Brightness.dark 
+              ? Colors.grey.shade800 
+              : Colors.white,
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? Colors.black.withOpacity(0.3)
+                  : Colors.black.withOpacity(0.05),
               blurRadius: 15,
               offset: const Offset(0, 5),
             ),
@@ -276,7 +280,9 @@ class _PreciosEspecialesScreenState extends State<PreciosEspecialesScreen> {
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: Colors.grey.shade800,
+                color: Theme.of(context).brightness == Brightness.dark 
+                    ? Colors.white 
+                    : Colors.grey.shade800,
               ),
             ),
             const SizedBox(height: 8),
@@ -284,7 +290,9 @@ class _PreciosEspecialesScreenState extends State<PreciosEspecialesScreen> {
               errorMessage,
               style: TextStyle(
                 fontSize: 14,
-                color: Colors.grey.shade600,
+                color: Theme.of(context).brightness == Brightness.dark 
+                    ? Colors.grey.shade300 
+                    : Colors.grey.shade600,
               ),
               textAlign: TextAlign.center,
             ),
@@ -438,206 +446,202 @@ class _PreciosEspecialesScreenState extends State<PreciosEspecialesScreen> {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: Theme.of(context).brightness == Brightness.dark
+              ? [
+                  Colors.grey.shade800,
+                  Colors.grey.shade900,
+                ]
+              : [
+                  Colors.white,
+                  Colors.grey.shade50,
+                ],
+        ),
+        borderRadius: BorderRadius.circular(14),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.black.withOpacity(0.3)
+                : Colors.black.withOpacity(0.06),
             blurRadius: 10,
-            offset: const Offset(0, 2),
+            offset: const Offset(0, 3),
+            spreadRadius: 0,
           ),
         ],
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(14),
+        child: Stack(
           children: [
-            // Fila principal con información
-            Row(
-              children: [
-                // Icono del producto
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: tieneDescuento ? Colors.green.shade50 : AppTheme.secondaryColor,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: tieneDescuento ? Colors.green.shade200 : AppTheme.primaryColor.withOpacity(0.2),
-                      width: 1,
+            // Fondo decorativo (más pequeño y sutil)
+            Positioned(
+              top: -10,
+              right: -10,
+              child: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: (tieneDescuento ? Colors.green : Colors.orange)
+                      .withOpacity(0.03),
+                ),
+              ),
+            ),
+            
+            // Contenido principal - Diseño horizontal compacto
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              child: Row(
+                children: [
+                  // Icono pequeño
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: tieneDescuento
+                            ? [Colors.green.shade400, Colors.green.shade600]
+                            : [Colors.orange.shade400, Colors.orange.shade600],
+                      ),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(
+                      Icons.inventory_2_rounded,
+                      color: Colors.white,
+                      size: 20,
                     ),
                   ),
-                  child: Icon(
-                    Icons.inventory_2,
-                    color: tieneDescuento ? Colors.green.shade600 : AppTheme.primaryColor,
-                    size: 24,
+                  const SizedBox(width: 16),
+                  
+                  // Nombre e info del producto
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          precioEspecial.productoNombre ?? 'Producto desconocido',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                            color: Theme.of(context).brightness == Brightness.dark 
+                                ? Colors.white 
+                                : Colors.grey.shade800,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 4),
+                        if (precioEspecial.precioEstandar != null)
+                          Row(
+                            children: [
+                              Text(
+                                '\$${precioEspecial.precioEstandar!.toStringAsFixed(2)}',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey.shade500,
+                                  decoration: TextDecoration.lineThrough,
+                                ),
+                              ),
+                              if (tieneDescuento) ...[
+                                const SizedBox(width: 6),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: Colors.green.shade600,
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    '-${porcentajeDescuento.toStringAsFixed(0)}%',
+                                    style: const TextStyle(
+                                      fontSize: 10,
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                      ],
+                    ),
                   ),
-                ),
-                const SizedBox(width: 16),
-                
-                // Información del producto
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  
+                  // Precio especial destacado
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        precioEspecial.productoNombre ?? 'Producto desconocido',
-                        style: const TextStyle(
-                          fontSize: 16,
+                        '\$${precioEspecial.precio.toStringAsFixed(2)}',
+                        style: TextStyle(
+                          fontSize: 22,
                           fontWeight: FontWeight.bold,
-                          color: AppTheme.primaryColor,
+                          color: tieneDescuento ? Colors.green.shade600 : Colors.orange.shade600,
                         ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(height: 8),
-                      
-                      // Precio especial
+                      const SizedBox(height: 4),
                       Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text(
-                            '\$${precioEspecial.precio.toStringAsFixed(2)}',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: tieneDescuento ? Colors.green.shade700 : AppTheme.primaryColor,
+                          // Botón editar
+                          InkWell(
+                            onTap: () => _editarPrecioEspecial(precioEspecial),
+                            borderRadius: BorderRadius.circular(8),
+                            child: Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.blue.shade600,
+                                borderRadius: BorderRadius.circular(8),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.blue.withOpacity(0.3),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Icon(
+                                Icons.edit_rounded,
+                                color: Colors.white,
+                                size: 18,
+                              ),
                             ),
                           ),
                           const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: tieneDescuento ? Colors.green : Colors.orange,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              'ESPECIAL',
-                              style: const TextStyle(
+                          // Botón eliminar
+                          InkWell(
+                            onTap: () => _eliminarPrecioEspecial(precioEspecial),
+                            borderRadius: BorderRadius.circular(8),
+                            child: Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.red.shade600,
+                                borderRadius: BorderRadius.circular(8),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.red.withOpacity(0.3),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Icon(
+                                Icons.delete_rounded,
                                 color: Colors.white,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
+                                size: 18,
                               ),
                             ),
                           ),
                         ],
                       ),
-                      
-                      // Precio estándar y descuento
-                      if (precioEspecial.precioEstandar != null) ...[
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            Text(
-                              'Estándar: \$${precioEspecial.precioEstandar!.toStringAsFixed(2)}',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey.shade600,
-                                decoration: TextDecoration.lineThrough,
-                              ),
-                            ),
-                            if (tieneDescuento) ...[
-                              const SizedBox(width: 8),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                                decoration: BoxDecoration(
-                                  color: Colors.green.shade100,
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: Text(
-                                  '-${porcentajeDescuento.toStringAsFixed(0)}%',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    color: Colors.green.shade700,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ],
                     ],
                   ),
-                ),
-              ],
-            ),
-            
-            // Fila de acciones (debajo)
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                // Indicador visual
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: tieneDescuento ? Colors.green.shade50 : Colors.orange.shade50,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: tieneDescuento ? Colors.green.shade200 : Colors.orange.shade200,
-                      width: 1,
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        tieneDescuento ? Icons.trending_down : Icons.trending_up,
-                        color: tieneDescuento ? Colors.green.shade600 : Colors.orange.shade600,
-                        size: 16,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        tieneDescuento ? 'Descuento' : 'Aumento',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: tieneDescuento ? Colors.green.shade700 : Colors.orange.shade700,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                
-                const Spacer(),
-                
-                // Botones de acción
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Botón de editar
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.blue.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: IconButton(
-                        icon: const Icon(Icons.edit, color: Colors.blue),
-                        onPressed: () => _editarPrecioEspecial(precioEspecial),
-                        tooltip: 'Editar precio especial',
-                        iconSize: 18,
-                        padding: const EdgeInsets.all(6),
-                        constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    
-                    // Botón de eliminar
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.red.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: IconButton(
-                        icon: const Icon(Icons.delete, color: Colors.red),
-                        onPressed: () => _eliminarPrecioEspecial(precioEspecial),
-                        tooltip: 'Eliminar precio especial',
-                        iconSize: 18,
-                        padding: const EdgeInsets.all(6),
-                        constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+                ],
+              ),
             ),
           ],
         ),
