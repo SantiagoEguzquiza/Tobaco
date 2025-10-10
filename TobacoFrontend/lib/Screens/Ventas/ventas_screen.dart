@@ -2,7 +2,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:tobaco/Models/Ventas.dart';
-import 'package:tobaco/Models/EstadoEntrega.dart';
 import 'package:tobaco/Screens/Ventas/nuevaVenta_screen.dart';
 import 'package:tobaco/Screens/Ventas/detalleVentas_screen.dart';
 import 'package:tobaco/Services/Ventas_Service/ventas_provider.dart';
@@ -412,8 +411,8 @@ class _VentasScreenState extends State<VentasScreen> {
               builder: (context) => DetalleVentaScreen(venta: venta),
             ),
           );
-          // Refresh the list if venta was deleted or updated
-          if (result == true || result == 'updated') {
+          // If a venta was deleted, refresh the list
+          if (result == true) {
             _loadVentas();
           }
         },
@@ -479,7 +478,7 @@ class _VentasScreenState extends State<VentasScreen> {
                 ),
               ),
 
-              // Total de la venta y estado
+              // Total de la venta
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
@@ -487,7 +486,6 @@ class _VentasScreenState extends State<VentasScreen> {
                     venta.total,
                     color: AppTheme.primaryColor,
                   ),
-                  const SizedBox(height: 4),
                   Text(
                     '${venta.ventasProductos.length} producto${venta.ventasProductos.length != 1 ? 's' : ''}',
                     style: TextStyle(
@@ -497,8 +495,6 @@ class _VentasScreenState extends State<VentasScreen> {
                           : Colors.grey.shade500,
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  _buildEstadoEntregaBadge(venta.estadoEntrega),
                 ],
               ),
             ],
@@ -757,54 +753,6 @@ class _VentasScreenState extends State<VentasScreen> {
         child: CircularProgressIndicator(
           valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
         ),
-      ),
-    );
-  }
-
-  // Badge del estado de entrega
-  Widget _buildEstadoEntregaBadge(EstadoEntrega estado) {
-    Color bgColor;
-    Color textColor;
-    IconData icon;
-    
-    switch (estado) {
-      case EstadoEntrega.entregada:
-        bgColor = Colors.green.shade100;
-        textColor = Colors.green.shade700;
-        icon = Icons.check_circle;
-        break;
-      case EstadoEntrega.parcial:
-        bgColor = Colors.orange.shade100;
-        textColor = Colors.orange.shade700;
-        icon = Icons.access_time;
-        break;
-      case EstadoEntrega.noEntregada:
-        bgColor = Colors.red.shade100;
-        textColor = Colors.red.shade700;
-        icon = Icons.local_shipping;
-        break;
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 12, color: textColor),
-          const SizedBox(width: 4),
-          Text(
-            estado.displayName,
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w600,
-              color: textColor,
-            ),
-          ),
-        ],
       ),
     );
   }

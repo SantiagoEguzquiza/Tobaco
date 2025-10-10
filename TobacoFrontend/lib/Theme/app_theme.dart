@@ -595,44 +595,18 @@ class AppTheme {
       actionsAlignment: MainAxisAlignment.end,
       actionsPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       actions: [
-        Builder(
-          builder: (context) => OutlinedButton(
-            onPressed: onCancel,
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              side: BorderSide(color: AppTheme.primaryColor.withOpacity(0.3), width: 1.5),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-            child: Text(
-              cancelText,
-              style: TextStyle(
-                color: Theme.of(context).brightness == Brightness.dark 
-                    ? Colors.grey.shade300 
-                    : Colors.grey.shade700,
-                fontWeight: FontWeight.w600,
-                fontSize: 14,
-              ),
-            ),
+        TextButton(
+          onPressed: onCancel,
+          child: const Text(
+            'Cancelar',
+            style: TextStyle(color: Colors.grey),
           ),
         ),
-        ElevatedButton(
+        TextButton(
           onPressed: onConfirm,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppTheme.primaryColor,
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-          ),
-          child: Text(
-            confirmText,
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w600,
-              fontSize: 14,
-            ),
+          child: const Text(
+            'Agregar',
+            style: TextStyle(color: Colors.green),
           ),
         ),
       ],

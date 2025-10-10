@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:provider/provider.dart';
 import 'package:tobaco/Models/Cliente.dart';
 import 'package:tobaco/Models/ProductoSeleccionado.dart';
 import 'package:tobaco/Models/VentasProductos.dart';
@@ -11,7 +10,6 @@ import 'package:tobaco/Screens/Ventas/seleccionarProducto_screen.dart';
 import 'package:tobaco/Services/Clientes_Service/clientes_provider.dart';
 import 'package:tobaco/Services/Ventas_Service/ventas_provider.dart';
 import 'package:tobaco/Services/PrecioEspecialService.dart';
-import 'package:tobaco/Services/VentaBorrador_Service/venta_borrador_provider.dart';
 import 'package:tobaco/Theme/app_theme.dart';
 import 'package:tobaco/Theme/dialogs.dart';
 import 'package:tobaco/Theme/headers.dart';
@@ -41,468 +39,19 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
   Map<int, double> preciosEspeciales = {};
   Timer? _debounceTimer;
   String? errorMessage;
-  VentaBorradorProvider? _borradorProvider; // Referencia al provider
-  bool _ventaCompletada = false; // Flag para saber si la venta se completó
 
   @override
   void initState() {
     super.initState();
     _searchController.addListener(_onSearchChanged);
     _cargarClientesIniciales();
-    // Cargar borrador después del primer frame
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _verificarYCargarBorrador();
-    });
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    // Guardar referencia al provider de manera segura
-    _borradorProvider ??= Provider.of<VentaBorradorProvider>(context, listen: false);
   }
 
   @override
   void dispose() {
     _debounceTimer?.cancel();
     _searchController.dispose();
-    // Solo guardar borrador si la venta NO se completó
-    if (!_ventaCompletada) {
-      _guardarBorradorAlSalir();
-    }
     super.dispose();
-  }
-
-  /// Verifica si existe un borrador y muestra diálogo para recuperarlo
-  Future<void> _verificarYCargarBorrador() async {
-    final borradorProvider = Provider.of<VentaBorradorProvider>(context, listen: false);
-    await borradorProvider.cargarBorradorInicial();
-
-    if (!mounted) return;
-
-    final borrador = borradorProvider.borradorActual;
-    if (borrador != null && borrador.tieneContenido) {
-      _mostrarDialogoRecuperarBorrador(borrador, borradorProvider);
-    }
-  }
-
-  /// Muestra diálogo preguntando si desea continuar con la venta en borrador
-  Future<void> _mostrarDialogoRecuperarBorrador(
-    dynamic borrador,
-    VentaBorradorProvider borradorProvider,
-  ) async {
-    final tiempoTranscurrido = borradorProvider.getTiempoTranscurrido();
-    
-    final resultado = await showDialog<String>(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          elevation: 8,
-          child: Container(
-            constraints: const BoxConstraints(maxWidth: 380),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Header con gradiente
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        AppTheme.primaryColor,
-                        AppTheme.primaryColor.withOpacity(0.8),
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(20),
-                      topRight: Radius.circular(20),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Icon(
-                          Icons.restore,
-                          color: Colors.white,
-                          size: 28,
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      const Expanded(
-                        child: Text(
-                          'Venta en Curso',
-                          style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                            fontFamily: 'Shippori',
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                
-                // Contenido
-                Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Tienes una venta sin completar.',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                          color: Theme.of(context).brightness == Brightness.dark
-                              ? Colors.grey.shade300
-                              : Colors.grey.shade700,
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      
-                      // Información del borrador con tarjetas
-                      if (borrador.cliente != null) ...[
-                        _buildInfoCard(
-                          context,
-                          Icons.person,
-                          'Cliente',
-                          borrador.cliente!.nombre,
-                          AppTheme.primaryColor,
-                        ),
-                        const SizedBox(height: 12),
-                      ],
-                      if (borrador.productosSeleccionados.isNotEmpty) ...[
-                        _buildInfoCard(
-                          context,
-                          Icons.shopping_cart,
-                          'Productos',
-                          '${borrador.productosSeleccionados.length} producto${borrador.productosSeleccionados.length > 1 ? 's' : ''}',
-                          Colors.blue.shade600,
-                        ),
-                        const SizedBox(height: 12),
-                      ],
-                      _buildInfoCard(
-                        context,
-                        Icons.access_time,
-                        'Última modificación',
-                        tiempoTranscurrido,
-                        Colors.orange.shade600,
-                      ),
-                      
-                      const SizedBox(height: 24),
-                      
-                      // Pregunta
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).brightness == Brightness.dark
-                              ? Colors.grey.shade800.withOpacity(0.5)
-                              : Colors.grey.shade50,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: Theme.of(context).brightness == Brightness.dark
-                                ? Colors.grey.shade700
-                                : Colors.grey.shade200,
-                          ),
-                        ),
-                        child: Text(
-                          '¿Deseas continuar con esta venta o empezar una nueva?',
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                            color: Theme.of(context).brightness == Brightness.dark
-                                ? Colors.grey.shade300
-                                : Colors.grey.shade800,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                
-                // Botones
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: () => Navigator.of(context).pop('nueva'),
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            side: BorderSide(
-                              color: Theme.of(context).brightness == Brightness.dark
-                                  ? Colors.grey.shade600
-                                  : Colors.grey.shade400,
-                              width: 1.5,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          icon: Icon(
-                            Icons.add_circle_outline,
-                            size: 20,
-                            color: Theme.of(context).brightness == Brightness.dark
-                                ? Colors.grey.shade400
-                                : Colors.grey.shade700,
-                          ),
-                          label: Text(
-                            'Nueva Venta',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: Theme.of(context).brightness == Brightness.dark
-                                  ? Colors.grey.shade300
-                                  : Colors.grey.shade700,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: () => Navigator.of(context).pop('continuar'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.primaryColor,
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            elevation: 2,
-                          ),
-                          icon: const Icon(
-                            Icons.play_arrow,
-                            color: Colors.white,
-                            size: 20,
-                          ),
-                          label: const Text(
-                            'Continuar',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-
-    if (resultado == 'continuar') {
-      _cargarDatosDesdeBorrador(borrador);
-    } else if (resultado == 'nueva') {
-      await borradorProvider.limpiarYCrearNuevo();
-    }
-  }
-
-  /// Widget para mostrar información del borrador con tarjetas elegantes
-  Widget _buildInfoCard(
-    BuildContext context,
-    IconData icon,
-    String label,
-    String value,
-    Color iconColor,
-  ) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).brightness == Brightness.dark
-            ? Colors.grey.shade800.withOpacity(0.3)
-            : Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: Theme.of(context).brightness == Brightness.dark
-              ? Colors.grey.shade700
-              : Colors.grey.shade200,
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(
-              Theme.of(context).brightness == Brightness.dark ? 0.2 : 0.05,
-            ),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: iconColor.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(
-              icon,
-              size: 20,
-              color: iconColor,
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Theme.of(context).brightness == Brightness.dark
-                        ? Colors.grey.shade400
-                        : Colors.grey.shade600,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  value,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).brightness == Brightness.dark
-                        ? Colors.white
-                        : Colors.black87,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Widget para mostrar información del borrador (método anterior - mantener por compatibilidad)
-  Widget _buildBorradorInfo(IconData icon, String label, String value) {
-    return Row(
-      children: [
-        Icon(icon, size: 18, color: Colors.grey.shade600),
-        const SizedBox(width: 8),
-        Text(
-          '$label: ',
-          style: TextStyle(
-            fontSize: 14,
-            color: Colors.grey.shade600,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        Expanded(
-          child: Text(
-            value,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  /// Carga los datos desde el borrador al estado actual
-  void _cargarDatosDesdeBorrador(dynamic borrador) {
-    setState(() {
-      if (borrador.cliente != null) {
-        clienteSeleccionado = borrador.cliente;
-        isSearching = false;
-      }
-      productosSeleccionados = List.from(borrador.productosSeleccionados);
-      preciosEspeciales = Map.from(borrador.preciosEspeciales);
-    });
-  }
-
-  /// Guarda el estado actual al borrador al salir de la pantalla
-  void _guardarBorradorAlSalir() {
-    // Solo guardar si la venta no se completó y hay contenido
-    if (!_ventaCompletada && 
-        (clienteSeleccionado != null || productosSeleccionados.isNotEmpty) && 
-        _borradorProvider != null) {
-      // Usar un microtask para evitar problemas con el tree lock
-      Future.microtask(() async {
-        try {
-          await _borradorProvider!.actualizarBorrador(
-            cliente: clienteSeleccionado,
-            productos: productosSeleccionados,
-            preciosEspeciales: preciosEspeciales,
-          );
-        } catch (e) {
-          debugPrint('Error al guardar borrador al salir: $e');
-        }
-      });
-    }
-  }
-
-  /// Guarda el borrador actual
-  Future<void> _guardarBorrador() async {
-    if (_borradorProvider != null) {
-      await _borradorProvider!.actualizarBorrador(
-        cliente: clienteSeleccionado,
-        productos: productosSeleccionados,
-        preciosEspeciales: preciosEspeciales,
-      );
-    }
-  }
-
-  /// Elimina el borrador de forma segura sin bloquear la UI
-  void _eliminarBorradorDeFormaSegura() {
-    if (_borradorProvider != null) {
-      // Usar un microtask para evitar bloquear el tree
-      Future.microtask(() async {
-        try {
-          await _borradorProvider!.eliminarBorrador();
-        } catch (e) {
-          debugPrint('Error al eliminar borrador: $e');
-        }
-      });
-    }
-  }
-
-  /// Muestra diálogo para cancelar la venta actual
-  Future<void> _mostrarDialogoCancelarVenta() async {
-    final confirmar = await AppDialogs.showConfirmationDialog(
-      context: context,
-      title: 'Cancelar Venta',
-      message: '¿Estás seguro de que deseas cancelar esta venta? Se perderán todos los datos ingresados.',
-      confirmText: 'Cancelar Venta',
-      cancelText: 'Volver',
-      icon: Icons.cancel,
-      iconColor: Colors.red,
-    );
-
-    if (confirmar == true) {
-      _eliminarBorradorDeFormaSegura();
-      
-      if (mounted) {
-        Navigator.of(context).pop();
-        AppTheme.showSnackBar(
-          context,
-          AppTheme.successSnackBar('Venta cancelada'),
-        );
-      }
-    }
   }
 
   void _onSearchChanged() {
@@ -707,18 +256,14 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
   }
 
   Widget _buildEmptyState(String message) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    
     return Container(
       height: 200,
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF2F2F2F) : Colors.white,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(15),
         boxShadow: [
           BoxShadow(
-            color: isDark 
-                ? Colors.black.withOpacity(0.3)
-                : Colors.black.withOpacity(0.05),
+            color: Colors.black.withOpacity(0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -731,26 +276,20 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: isDark 
-                    ? Colors.grey.shade800 
-                    : Colors.grey.shade100,
+                color: Colors.grey.shade100,
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 Icons.search_off,
                 size: 40,
-                color: isDark 
-                    ? Colors.grey.shade400 
-                    : Colors.grey.shade400,
+                color: Colors.grey.shade400,
               ),
             ),
             const SizedBox(height: 16),
             Text(
               message,
               style: TextStyle(
-                color: isDark 
-                    ? Colors.grey.shade300 
-                    : Colors.grey.shade600,
+                color: Colors.grey.shade600,
                 fontSize: 18,
                 fontWeight: FontWeight.w500,
               ),
@@ -759,9 +298,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
             Text(
               'Intenta con otro término de búsqueda',
               style: TextStyle(
-                color: isDark 
-                    ? Colors.grey.shade400 
-                    : Colors.grey.shade500,
+                color: Colors.grey.shade500,
                 fontSize: 14,
               ),
             ),
@@ -779,7 +316,6 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
       _searchController.clear();
     });
     _cargarPreciosEspeciales();
-    _guardarBorrador(); // Guardar borrador al seleccionar cliente
   }
 
   Future<void> _cargarPreciosEspeciales() async {
@@ -793,7 +329,6 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
           preciosEspeciales[precio.productoId] = precio.precio;
         }
       });
-      _guardarBorrador(); // Guardar borrador con precios especiales actualizados
     } catch (e) {
       print('Error cargando precios especiales: $e');
     }
@@ -843,7 +378,6 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
     });
     _searchController.clear();
     _cargarPreciosEspeciales();
-    _guardarBorrador(); // Guardar borrador al seleccionar cliente
   }
 
   void cambiarCliente() {
@@ -952,12 +486,6 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
       await VentasProvider().crearVenta(ventaConPagos);
 
       if (mounted) {
-        // Marcar que la venta se completó exitosamente
-        _ventaCompletada = true;
-        
-        // Eliminar borrador después de confirmar la venta (de forma segura)
-        _eliminarBorradorDeFormaSegura();
-
         showGeneralDialog(
           context: context,
           barrierDismissible: false,
@@ -1015,15 +543,6 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
       appBar: AppBar(
         centerTitle: true,
         title: const Text('Nueva Venta', style: AppTheme.appBarTitleStyle),
-        actions: [
-          // Botón para cancelar venta (solo mostrar si hay contenido)
-          if (clienteSeleccionado != null || productosSeleccionados.isNotEmpty)
-            IconButton(
-              icon: const Icon(Icons.cancel_outlined),
-              tooltip: 'Cancelar Venta',
-              onPressed: _mostrarDialogoCancelarVenta,
-            ),
-        ],
       ),
       body: SafeArea(
         child: Column(
@@ -1139,7 +658,6 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                               setState(() {
                                 productosSeleccionados = resultado;
                               });
-                              _guardarBorrador(); // Guardar borrador con productos actualizados
                             }
                           } catch (e) {
                             AppTheme.showSnackBar(
@@ -1159,7 +677,6 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                             setState(() {
                               productosSeleccionados.removeAt(index);
                             });
-                            _guardarBorrador(); // Guardar borrador al eliminar producto
                           },
                           onTap: (index) async {
                             // Navegar a seleccionar productos con scroll al producto específico
@@ -1180,7 +697,6 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                                 setState(() {
                                   productosSeleccionados = resultado;
                                 });
-                                _guardarBorrador(); // Guardar borrador con productos actualizados
                               }
                             } catch (e) {
                               AppTheme.showSnackBar(

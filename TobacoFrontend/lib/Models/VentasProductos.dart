@@ -6,11 +6,6 @@ class VentasProductos {
   String categoria;
   int categoriaId; // Agregar el ID de la categoría
   double precioFinalCalculado; // Precio final después de todos los descuentos
-  bool entregado; // Indica si este item fue entregado
-  String? motivo; // Motivo cuando no se entrega
-  String? nota; // Nota opcional sobre la entrega
-  DateTime? fechaChequeo; // Fecha de chequeo
-  int? usuarioChequeoId; // ID del usuario que hizo el chequeo
 
   VentasProductos({
     required this.productoId,
@@ -20,11 +15,6 @@ class VentasProductos {
     required this.categoria,
     required this.categoriaId,
     required this.precioFinalCalculado,
-    this.entregado = false,
-    this.motivo,
-    this.nota,
-    this.fechaChequeo,
-    this.usuarioChequeoId,
   });
 
   factory VentasProductos.fromJson(Map<String, dynamic> json) {
@@ -40,11 +30,6 @@ class VentasProductos {
       categoria: producto['categoriaNombre'] ?? '',
       categoriaId: producto['categoriaId'] ?? 0,
       precioFinalCalculado: (json['precioFinalCalculado'] as num?)?.toDouble() ?? 0.0,
-      entregado: json['entregado'] ?? false,
-      motivo: json['motivo'],
-      nota: json['nota'],
-      fechaChequeo: json['fechaChequeo'] != null ? DateTime.parse(json['fechaChequeo']) : null,
-      usuarioChequeoId: json['usuarioChequeoId'],
     );
   }
 
@@ -61,10 +46,5 @@ class VentasProductos {
         },
         'cantidad': cantidad,
         'precioFinalCalculado': precioFinalCalculado,
-        'entregado': entregado,
-        'motivo': motivo,
-        'nota': nota,
-        'fechaChequeo': fechaChequeo?.toIso8601String(),
-        'usuarioChequeoId': usuarioChequeoId,
       };
 }

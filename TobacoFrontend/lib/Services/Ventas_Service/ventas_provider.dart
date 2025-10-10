@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:tobaco/Models/Ventas.dart';
-import 'package:tobaco/Models/VentasProductos.dart';
 import 'package:tobaco/Services/Ventas_Service/ventas_service.dart';
 
 class VentasProvider with ChangeNotifier {
@@ -97,17 +96,6 @@ class VentasProvider with ChangeNotifier {
           clienteId, page, pageSize);
     } catch (e) {
       debugPrint('Error al obtener ventas con cuenta corriente: $e');
-      rethrow;
-    }
-  }
-
-  Future<void> actualizarEstadoEntrega(
-      int ventaId, List<VentasProductos> items) async {
-    try {
-      await _ventasService.actualizarEstadoEntrega(ventaId, items);
-      notifyListeners();
-    } catch (e) {
-      debugPrint('Error al actualizar estado de entrega: $e');
       rethrow;
     }
   }

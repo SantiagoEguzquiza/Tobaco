@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:tobaco/Helpers/api_handler.dart';
 import 'package:tobaco/Models/Ventas.dart';
-import 'package:tobaco/Models/VentasProductos.dart';
 import 'package:tobaco/Services/Auth_Service/auth_service.dart';
 
 class VentasService {
@@ -257,38 +256,6 @@ class VentasService {
       }
     } catch (e) {
       debugPrint('Error al obtener las ventas con cuenta corriente: $e');
-      rethrow;
-    }
-  }
-
-  Future<void> actualizarEstadoEntrega(int ventaId, List<VentasProductos> items) async {
-    try {
-      final headers = await AuthService.getAuthHeaders();
-      headers['Content-Type'] = 'application/json';
-      
-      // Convertir la lista de items a JSON
-      final itemsJson = items.map((item) => item.toJson()).toList();
-      
-      debugPrint('Actualizando estado de entrega para venta $ventaId');
-      debugPrint('Items: ${jsonEncode(itemsJson)}');
-      
-      final response = await Apihandler.client.put(
-        Uri.parse('$baseUrl/Ventas/$ventaId/estado-entrega'),
-        headers: headers,
-        body: jsonEncode(itemsJson),
-      ).timeout(_timeoutDuration);
-
-      debugPrint('Respuesta del servidor: ${response.statusCode}');
-      debugPrint('Cuerpo de la respuesta: ${response.body}');
-
-      if (response.statusCode != 200) {
-        throw Exception(
-            'Error al actualizar estado de entrega. Código de estado: ${response.statusCode}, Respuesta: ${response.body}');
-      } else {
-        debugPrint('Estado de entrega actualizado exitosamente');
-      }
-    } catch (e) {
-      debugPrint('Error al actualizar estado de entrega: $e');
       rethrow;
     }
   }

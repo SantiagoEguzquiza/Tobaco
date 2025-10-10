@@ -1325,25 +1325,13 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
           ],
         ),
         actions: [
-          OutlinedButton(
+          TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              side: BorderSide(color: AppTheme.primaryColor.withOpacity(0.3), width: 1.5),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.grey[600],
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             ),
-            child: Text(
-              'Cancelar',
-              style: TextStyle(
-                color: Theme.of(context).brightness == Brightness.dark 
-                    ? Colors.grey.shade300 
-                    : Colors.grey.shade700,
-                fontWeight: FontWeight.w600,
-                fontSize: 14,
-              ),
-            ),
+            child: const Text('Cancelar'),
           ),
           ElevatedButton(
             onPressed: () async {
@@ -1866,25 +1854,16 @@ class _CreateUserDialogState extends State<_CreateUserDialog> {
                       Row(
                         children: [
                           Expanded(
-                            child: OutlinedButton(
+                            child: TextButton(
                               onPressed: () => Navigator.of(context).pop(),
-                              style: OutlinedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(vertical: 12),
-                                side: BorderSide(color: AppTheme.primaryColor.withOpacity(0.3), width: 1.5),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
+                              style: TextButton.styleFrom(
+                                foregroundColor: Colors.grey[600],
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
                               ),
-                              child: Text(
-                                'Cancelar',
-                                style: TextStyle(
-                                  color: Theme.of(context).brightness == Brightness.dark 
-                                      ? Colors.grey.shade300 
-                                      : Colors.grey.shade700,
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 14,
-                                ),
-                              ),
+                              child: const Text('Cancelar'),
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -2490,25 +2469,16 @@ class _EditUserDialogState extends State<_EditUserDialog> {
                       Row(
                         children: [
                           Expanded(
-                            child: OutlinedButton(
+                            child: TextButton(
                               onPressed: () => Navigator.of(context).pop(),
-                              style: OutlinedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(vertical: 12),
-                                side: BorderSide(color: AppTheme.primaryColor.withOpacity(0.3), width: 1.5),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
+                              style: TextButton.styleFrom(
+                                foregroundColor: Colors.grey[600],
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                               ),
-                              child: Text(
-                                'Cancelar',
-                                style: TextStyle(
-                                  color: Theme.of(context).brightness == Brightness.dark 
-                                      ? Colors.grey.shade300 
-                                      : Colors.grey.shade700,
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 14,
-                                ),
-                              ),
+                              child: const Text('Cancelar'),
                             ),
                           ),
                           const SizedBox(width: 12),
