@@ -256,14 +256,18 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
   }
 
   Widget _buildEmptyState(String message) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Container(
       height: 200,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? const Color(0xFF2F2F2F) : Colors.white,
         borderRadius: BorderRadius.circular(15),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: isDark 
+                ? Colors.black.withOpacity(0.3)
+                : Colors.black.withOpacity(0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -276,20 +280,26 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: Colors.grey.shade100,
+                color: isDark 
+                    ? Colors.grey.shade800 
+                    : Colors.grey.shade100,
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 Icons.search_off,
                 size: 40,
-                color: Colors.grey.shade400,
+                color: isDark 
+                    ? Colors.grey.shade400 
+                    : Colors.grey.shade400,
               ),
             ),
             const SizedBox(height: 16),
             Text(
               message,
               style: TextStyle(
-                color: Colors.grey.shade600,
+                color: isDark 
+                    ? Colors.grey.shade300 
+                    : Colors.grey.shade600,
                 fontSize: 18,
                 fontWeight: FontWeight.w500,
               ),
@@ -298,7 +308,9 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
             Text(
               'Intenta con otro término de búsqueda',
               style: TextStyle(
-                color: Colors.grey.shade500,
+                color: isDark 
+                    ? Colors.grey.shade400 
+                    : Colors.grey.shade500,
                 fontSize: 14,
               ),
             ),
