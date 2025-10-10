@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../Models/User.dart';
 import '../../Models/LoginRequest.dart';
+import '../../Helpers/api_handler.dart';
 import 'auth_service.dart';
 
 class AuthProvider extends ChangeNotifier {
@@ -29,9 +30,16 @@ class AuthProvider extends ChangeNotifier {
         _currentUser = null;
       }
     } catch (e) {
-      _errorMessage = 'Error initializing authentication: $e';
       _isAuthenticated = false;
       _currentUser = null;
+      
+      // Solo establecer errorMessage para errores que NO son de conexión
+      if (!Apihandler.isConnectionError(e)) {
+        _errorMessage = 'Error initializing authentication: $e';
+      }
+      
+      // Relanzar la excepción para que la UI la maneje
+      rethrow;
     }
 
     _isLoading = false;
@@ -66,21 +74,28 @@ class AuthProvider extends ChangeNotifier {
         return false;
       }
     } catch (e) {
-      // Extract the actual error message from the exception
-      String errorMsg = e.toString();
-      if (errorMsg.contains('Exception: ')) {
-        errorMsg = errorMsg.replaceFirst('Exception: ', '');
-      }
-      if (errorMsg.contains('Login error: ')) {
-        errorMsg = errorMsg.replaceFirst('Login error: ', '');
-      }
-      
-      _errorMessage = errorMsg.isNotEmpty ? errorMsg : 'Error al iniciar sesión. Intenta nuevamente.';
       _isLoading = false;
       _isAuthenticated = false;
       _currentUser = null;
+      
+      // Solo establecer errorMessage para errores que NO son de conexión
+      if (!Apihandler.isConnectionError(e)) {
+        // Extract the actual error message from the exception
+        String errorMsg = e.toString();
+        if (errorMsg.contains('Exception: ')) {
+          errorMsg = errorMsg.replaceFirst('Exception: ', '');
+        }
+        if (errorMsg.contains('Login error: ')) {
+          errorMsg = errorMsg.replaceFirst('Login error: ', '');
+        }
+        
+        _errorMessage = errorMsg.isNotEmpty ? errorMsg : 'Error al iniciar sesión. Intenta nuevamente.';
+      }
+      
       notifyListeners();
-      return false;
+      
+      // Relanzar la excepción para que la UI la maneje
+      rethrow;
     }
   }
 

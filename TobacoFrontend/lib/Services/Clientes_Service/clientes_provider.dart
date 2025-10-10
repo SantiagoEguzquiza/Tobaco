@@ -17,6 +17,8 @@ class ClienteProvider with ChangeNotifier {
       notifyListeners();
     } catch (e) {
       debugPrint('Error: $e');
+      // Relanzar la excepción para que la UI la pueda manejar
+      rethrow;
     }
     return _clientes;
   }
@@ -29,7 +31,7 @@ class ClienteProvider with ChangeNotifier {
       return clienteCreado;
     } catch (e) {
       debugPrint('Error: $e');
-      return null;
+      rethrow; // Relanzar la excepción para que se maneje en la UI
     }
   }
 
@@ -71,6 +73,8 @@ class ClienteProvider with ChangeNotifier {
       notifyListeners();
     } catch (e) {
       debugPrint('Error: $e');
+      // Relanzar la excepción para que la UI la pueda manejar
+      rethrow;
     }
     return _clientes;
   }
@@ -81,6 +85,8 @@ class ClienteProvider with ChangeNotifier {
       notifyListeners();
     } catch (e) {
       debugPrint('Error: $e');
+      // Relanzar la excepción para que la UI la pueda manejar
+      rethrow;
     }
     return _clientesConDeuda;
   }
@@ -90,6 +96,15 @@ class ClienteProvider with ChangeNotifier {
       return await _clienteService.obtenerClientesConDeudaPaginados(page, pageSize);
     } catch (e) {
       debugPrint('Error al obtener clientes con deuda paginados: $e');
+      rethrow;
+    }
+  }
+
+  Future<Map<String, dynamic>> obtenerDetalleDeuda(int clienteId) async {
+    try {
+      return await _clienteService.obtenerDetalleDeuda(clienteId);
+    } catch (e) {
+      debugPrint('Error al obtener detalle de deuda: $e');
       rethrow;
     }
   }

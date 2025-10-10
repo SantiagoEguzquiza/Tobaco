@@ -5,7 +5,12 @@ import 'package:tobaco/Services/Categoria_Service/categoria_provider.dart';
 import 'package:tobaco/Theme/app_theme.dart';
 
 class ReorderableCategoriaList extends StatefulWidget {
-  const ReorderableCategoriaList({super.key});
+  final Function(Categoria)? onDelete;
+  
+  const ReorderableCategoriaList({
+    super.key,
+    this.onDelete,
+  });
 
   @override
   State<ReorderableCategoriaList> createState() => _ReorderableCategoriaListState();
@@ -146,12 +151,20 @@ class _ReorderableCategoriaListState extends State<ReorderableCategoriaList> {
       key: ValueKey(categoria.id),
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).brightness == Brightness.dark
+            ? const Color(0xFF1A1A1A)
+            : Colors.white,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey.shade300),
+        border: Border.all(
+          color: Theme.of(context).brightness == Brightness.dark
+              ? Colors.grey.shade600
+              : Colors.grey.shade300,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.black.withOpacity(0.3)
+                : Colors.grey.withOpacity(0.1),
             spreadRadius: 1,
             blurRadius: 3,
             offset: const Offset(0, 1),
@@ -174,29 +187,50 @@ class _ReorderableCategoriaListState extends State<ReorderableCategoriaList> {
         ),
         title: Text(
           categoria.nombre,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w500,
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.white
+                : Colors.black,
           ),
         ),
         subtitle: Text(
           'Orden: ${index + 1}',
           style: TextStyle(
             fontSize: 12,
-            color: Colors.grey.shade600,
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.grey.shade400
+                : Colors.grey.shade600,
           ),
         ),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
+            if (widget.onDelete != null)
+              IconButton(
+                icon: const Icon(
+                  Icons.delete_outline,
+                  color: Colors.red,
+                  size: 20,
+                ),
+                onPressed: () {
+                  widget.onDelete!(categoria);
+                },
+                tooltip: 'Eliminar',
+              ),
             Icon(
               Icons.drag_handle,
-              color: Colors.grey.shade400,
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? Colors.grey.shade400
+                  : Colors.grey.shade400,
             ),
             const SizedBox(width: 8),
             Icon(
               Icons.reorder,
-              color: Colors.grey.shade400,
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? Colors.grey.shade400
+                  : Colors.grey.shade400,
             ),
           ],
         ),

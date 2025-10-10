@@ -59,8 +59,9 @@ class _CustomLoadingWidgetState extends State<CustomLoadingWidget>
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Container(
-      color: widget.backgroundColor ?? Colors.white.withOpacity(0.9),
+      color: widget.backgroundColor ?? theme.scaffoldBackgroundColor.withOpacity(0.9),
       child: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -143,10 +144,10 @@ class _CustomLoadingWidgetState extends State<CustomLoadingWidget>
             if (widget.message != null) ...[
               Text(
                 widget.message!,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
-                  color: AppTheme.textColor,
+                  color: theme.textTheme.bodyLarge?.color ?? AppTheme.textColor,
                   fontFamily: 'Raleway',
                 ),
                 textAlign: TextAlign.center,
@@ -159,7 +160,7 @@ class _CustomLoadingWidgetState extends State<CustomLoadingWidget>
               'Por favor espera...',
               style: TextStyle(
                 fontSize: 14,
-                color: AppTheme.textGreyColor,
+                color: theme.textTheme.bodyMedium?.color ?? AppTheme.textGreyColor,
                 fontFamily: 'Raleway',
               ),
             ),
@@ -219,8 +220,9 @@ class FullScreenLoadingWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
-      backgroundColor: backgroundColor ?? Colors.white,
+      backgroundColor: backgroundColor ?? theme.scaffoldBackgroundColor,
       body: CustomLoadingWidget(
         message: message,
         backgroundColor: backgroundColor,
@@ -242,13 +244,14 @@ class DialogLoadingWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Dialog(
       backgroundColor: Colors.transparent,
       elevation: 0,
       child: Container(
         padding: const EdgeInsets.all(32),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: theme.cardTheme.color ?? theme.scaffoldBackgroundColor,
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(

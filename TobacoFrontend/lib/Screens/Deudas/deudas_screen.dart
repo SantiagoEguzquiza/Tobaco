@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:tobaco/Models/Cliente.dart';
 import 'package:tobaco/Services/Clientes_Service/clientes_provider.dart';
 import 'package:tobaco/Theme/app_theme.dart';
+import 'package:tobaco/Theme/dialogs.dart';
+import 'package:tobaco/Theme/headers.dart';
+import 'package:tobaco/Helpers/api_handler.dart';
+import 'package:tobaco/Screens/Deudas/detalleDeudas_screen.dart';
 import 'dart:developer';
 
 class DeudasScreen extends StatefulWidget {
@@ -41,6 +45,44 @@ class _DeudasScreenState extends State<DeudasScreen> {
     super.dispose();
   }
 
+  String _formatearPrecio(double precio) {
+    return precio.toStringAsFixed(2);
+  }
+
+  double _parsearDeuda(String? deuda) {
+    if (deuda == null || deuda.isEmpty) return 0.0;
+    
+    // El backend envía formatos como "1000,000", "2500,250", etc.
+    // Vamos a tratar TODOS los casos como si la coma fuera decimal
+    // y solo convertir a formato estándar con 2 decimales
+    
+    if (deuda.contains(',')) {
+      List<String> partes = deuda.split(',');
+      
+      if (partes.length == 2) {
+        String parteEntera = partes[0];
+        String parteDecimal = partes[1];
+        
+        // Siempre convertir la coma a punto decimal
+        // Si tiene más de 2 dígitos, tomar solo los primeros 2
+        String decimalesFinales;
+        if (parteDecimal.length >= 2) {
+          decimalesFinales = parteDecimal.substring(0, 2);
+        } else {
+          // Si tiene menos de 2, rellenar con ceros
+          decimalesFinales = parteDecimal.padRight(2, '0');
+        }
+        
+        String numeroCorregido = '$parteEntera.$decimalesFinales';
+        return double.tryParse(numeroCorregido) ?? 0.0;
+      }
+    }
+    
+    // Para otros formatos, usar la lógica normal
+    String deudaLimpia = deuda.replaceAll(',', '');
+    return double.tryParse(deudaLimpia) ?? 0.0;
+  }
+
   void _onScroll() {
     if (_scrollController.position.pixels >= 
         _scrollController.position.maxScrollExtent - 200) {
@@ -51,6 +93,8 @@ class _DeudasScreenState extends State<DeudasScreen> {
 
 
   Future<void> _loadClientes() async {
+    if (!mounted) return;
+    
     setState(() {
       isLoading = true;
       errorMessage = null;
@@ -63,22 +107,39 @@ class _DeudasScreenState extends State<DeudasScreen> {
       final clienteProvider = ClienteProvider();
       final data = await clienteProvider.obtenerClientesConDeudaPaginados(_currentPage, _pageSize);
 
+      if (!mounted) return;
+      
       setState(() {
         clientes = List<Cliente>.from(data['clientes']);
         _hasMoreData = data['hasNextPage'];
         isLoading = false;
       });
     } catch (e) {
-      setState(() {
-        isLoading = false;
-        errorMessage = 'Error al cargar los clientes: $e';
-      });
+      if (!mounted) return;
+      
       log('Error al cargar los clientes: $e', level: 1000);
+      
+      if (Apihandler.isConnectionError(e)) {
+        setState(() {
+          isLoading = false;
+          // No establecer errorMessage para errores de conexión
+        });
+        await Apihandler.handleConnectionError(context, e);
+      } else {
+        setState(() {
+          isLoading = false;
+          errorMessage = 'Error al cargar los clientes: $e';
+        });
+        await AppDialogs.showErrorDialog(
+          context: context,
+          message: 'Error al cargar clientes con deuda',
+        );
+      }
     }
   }
 
   Future<void> _cargarMasClientes() async {
-    if (_isLoadingMore || !_hasMoreData) return;
+    if (_isLoadingMore || !_hasMoreData || !mounted) return;
     
     setState(() {
       _isLoadingMore = true;
@@ -88,6 +149,8 @@ class _DeudasScreenState extends State<DeudasScreen> {
       final clienteProvider = ClienteProvider();
       final data = await clienteProvider.obtenerClientesConDeudaPaginados(_currentPage + 1, _pageSize);
       
+      if (!mounted) return;
+      
       setState(() {
         clientes.addAll(List<Cliente>.from(data['clientes']));
         _currentPage++;
@@ -95,10 +158,21 @@ class _DeudasScreenState extends State<DeudasScreen> {
         _isLoadingMore = false;
       });
     } catch (e) {
+      if (!mounted) return;
+      
       setState(() {
         _isLoadingMore = false;
       });
       log('Error al cargar más clientes: $e', level: 1000);
+      
+      if (Apihandler.isConnectionError(e)) {
+        await Apihandler.handleConnectionError(context, e);
+      } else {
+        await AppDialogs.showErrorDialog(
+          context: context,
+          message: 'Error al cargar más clientes: ${e.toString().replaceFirst('Exception: ', '')}',
+        );
+      }
     }
   }
 
@@ -115,18 +189,14 @@ class _DeudasScreenState extends State<DeudasScreen> {
       ..sort((a, b) => a.nombre.toLowerCase().compareTo(b.nombre.toLowerCase()));
 
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         centerTitle: true,
         elevation: 0,
-        backgroundColor: Colors.transparent,
+        backgroundColor: null, // Usar el tema
         title: const Text(
           'Deudas',
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: AppTheme.primaryColor,
-          ),
+          style: AppTheme.appBarTitleStyle,
         ),
       ),
       body: isLoading
@@ -155,12 +225,25 @@ class _DeudasScreenState extends State<DeudasScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Header con estadísticas
-                  _buildHeaderSection(),
-                  const SizedBox(height: 20),
-
-                  // Sección de búsqueda
-                  _buildSearchSection(),
+                  // Header con buscador
+                  HeaderConBuscador(
+                    leadingIcon: Icons.account_balance_wallet,
+                    title: 'Gestión de Deudas',
+                    subtitle: '${clientes.length} cliente${clientes.length != 1 ? 's' : ''} con deuda',
+                    controller: _searchController,
+                    hintText: 'Buscar clientes con deuda...',
+                    onChanged: (value) {
+                      setState(() {
+                        _searchText = value;
+                      });
+                    },
+                    onClear: () {
+                      _searchController.clear();
+                      setState(() {
+                        _searchText = '';
+                      });
+                    },
+                  ),
                   const SizedBox(height: 20),
 
                   // Lista de clientes con deuda
@@ -174,104 +257,7 @@ class _DeudasScreenState extends State<DeudasScreen> {
     );
   }
 
-  // Header con estadísticas
-  Widget _buildHeaderSection() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            AppTheme.primaryColor.withOpacity(0.1),
-            AppTheme.secondaryColor.withOpacity(0.3),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: AppTheme.primaryColor.withOpacity(0.2),
-          width: 1,
-        ),
-      ),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppTheme.primaryColor,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(
-                  Icons.account_balance_wallet,
-                  color: Colors.white,
-                  size: 24,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Gestión de Deudas',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: AppTheme.primaryColor,
-                      ),
-                    ),
-                    Text(
-                      '${clientes.length} cliente${clientes.length != 1 ? 's' : ''} con deuda',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
 
-  // Sección de búsqueda
-  Widget _buildSearchSection() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(15),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: TextField(
-        controller: _searchController,
-        cursorColor: AppTheme.primaryColor,
-        style: const TextStyle(fontSize: 16),
-        decoration: InputDecoration(
-          hintText: 'Buscar cliente por nombre...',
-          hintStyle: TextStyle(color: Colors.grey.shade400),
-          prefixIcon: Icon(Icons.search, color: AppTheme.primaryColor),
-          border: InputBorder.none,
-          contentPadding: const EdgeInsets.all(20),
-        ),
-        onChanged: (value) {
-          setState(() {
-            _searchText = value;
-          });
-        },
-      ),
-    );
-  }
 
   // Estado vacío
   Widget _buildEmptyState() {
@@ -321,7 +307,9 @@ class _DeudasScreenState extends State<DeudasScreen> {
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
-            color: Colors.grey.shade700,
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.white
+                : Colors.grey.shade700,
           ),
         ),
         const SizedBox(height: 12),
@@ -346,11 +334,15 @@ class _DeudasScreenState extends State<DeudasScreen> {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).brightness == Brightness.dark
+            ? const Color(0xFF1A1A1A)
+            : Colors.white,
         borderRadius: BorderRadius.circular(15),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.black.withOpacity(0.3)
+                : Colors.black.withOpacity(0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -360,8 +352,18 @@ class _DeudasScreenState extends State<DeudasScreen> {
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(15),
-          onTap: () {
-            // TODO: Navegar a detalles del cliente o cobrar deuda
+          onTap: () async {
+            final result = await Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => DetalleDeudaScreen(cliente: cliente),
+              ),
+            );
+            
+            // Si regresamos con true, significa que se saldó una deuda y debemos refrescar
+            if (result == true) {
+              _loadClientes();
+            }
           },
           child: Padding(
             padding: const EdgeInsets.all(16),
@@ -370,7 +372,9 @@ class _DeudasScreenState extends State<DeudasScreen> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: AppTheme.primaryColor.withOpacity(0.1),
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? AppTheme.primaryColor.withOpacity(0.2)
+                        : AppTheme.primaryColor.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(
@@ -386,18 +390,22 @@ class _DeudasScreenState extends State<DeudasScreen> {
                     children: [
                       Text(
                         cliente.nombre,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
-                          color: AppTheme.primaryColor,
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.white
+                              : AppTheme.primaryColor,
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Deuda: \$${cliente.deuda ?? '0.00'}',
+                        'Deuda: \$${_formatearPrecio(_parsearDeuda(cliente.deuda))}',
                         style: TextStyle(
                           fontSize: 14,
-                          color: Colors.grey.shade600,
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.grey.shade400
+                              : Colors.grey.shade600,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -407,7 +415,9 @@ class _DeudasScreenState extends State<DeudasScreen> {
                           'Tel: ${cliente.telefono}',
                           style: TextStyle(
                             fontSize: 12,
-                            color: Colors.grey.shade500,
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? Colors.grey.shade400
+                                : Colors.grey.shade500,
                           ),
                         ),
                       ],
@@ -417,14 +427,18 @@ class _DeudasScreenState extends State<DeudasScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: Colors.red.withOpacity(0.1),
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.red.withOpacity(0.2)
+                        : Colors.red.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
                     'Deuda',
                     style: TextStyle(
                       fontSize: 12,
-                      color: Colors.red.shade700,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.red.shade400
+                          : Colors.red.shade700,
                       fontWeight: FontWeight.w600,
                     ),
                   ),

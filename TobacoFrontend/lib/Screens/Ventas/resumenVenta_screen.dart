@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:tobaco/Models/Ventas.dart';
 import 'package:tobaco/Models/metodoPago.dart';
 import 'package:tobaco/Theme/app_theme.dart';
+import 'package:tobaco/Theme/dialogs.dart';
 import 'package:tobaco/Services/Ventas_Service/ventas_service.dart';
+import 'package:tobaco/Helpers/api_handler.dart';
 
 class ResumenVentaScreen extends StatefulWidget {
   const ResumenVentaScreen({
@@ -34,15 +36,26 @@ class _ResumenVentaScreenState extends State<ResumenVentaScreen> {
 
       final ultimaVenta = await _ventasService.obtenerUltimaVenta();
       
+      if (!mounted) return;
       setState(() {
         venta = ultimaVenta;
         isLoading = false;
       });
     } catch (e) {
-      setState(() {
-        errorMessage = 'Error al cargar la venta: $e';
-        isLoading = false;
-      });
+      if (!mounted) return;
+      
+      if (Apihandler.isConnectionError(e)) {
+        setState(() {
+          isLoading = false;
+          // No establecer errorMessage para errores de conexión
+        });
+        await Apihandler.handleConnectionError(context, e);
+      } else {
+        setState(() {
+          errorMessage = 'Error al cargar la venta: ${e.toString().replaceFirst('Exception: ', '')}';
+          isLoading = false;
+        });
+      }
     }
   }
 
@@ -88,7 +101,9 @@ class _ResumenVentaScreenState extends State<ResumenVentaScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            CircularProgressIndicator(),
+            CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
+            ),
             SizedBox(height: 16),
             Text('Cargando información de la venta...'),
           ],
@@ -169,10 +184,14 @@ class _ResumenVentaScreenState extends State<ResumenVentaScreen> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.grey.shade50,
+        color: Theme.of(context).brightness == Brightness.dark
+            ? const Color(0xFF1A1A1A)
+            : Colors.grey.shade50,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: Colors.grey.shade200,
+          color: Theme.of(context).brightness == Brightness.dark
+              ? Colors.grey.shade700
+              : Colors.grey.shade200,
           width: 1,
         ),
       ),
@@ -197,19 +216,23 @@ class _ResumenVentaScreenState extends State<ResumenVentaScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'Venta Completada',
                       style: TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
-                        color: Colors.black87,
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.white
+                            : Colors.black87,
                       ),
                     ),
                     Text(
                       'Venta #${venta!.id}',
                       style: TextStyle(
                         fontSize: 16,
-                        color: Colors.grey.shade600,
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.grey.shade400
+                            : Colors.grey.shade600,
                       ),
                     ),
                   ],
@@ -228,7 +251,9 @@ class _ResumenVentaScreenState extends State<ResumenVentaScreen> {
                     'Cliente',
                     style: TextStyle(
                       fontSize: 14,
-                      color: Colors.grey.shade600,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.grey.shade400
+                          : Colors.grey.shade600,
                     ),
                   ),
                   Text(
@@ -248,7 +273,9 @@ class _ResumenVentaScreenState extends State<ResumenVentaScreen> {
                     'Total',
                     style: TextStyle(
                       fontSize: 14,
-                      color: Colors.grey.shade600,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.grey.shade400
+                          : Colors.grey.shade600,
                     ),
                   ),
                   _formatearPrecioConDecimales(venta!.total),
@@ -265,17 +292,23 @@ class _ResumenVentaScreenState extends State<ResumenVentaScreen> {
   Widget _buildVentaInfoCard() {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).brightness == Brightness.dark
+            ? const Color(0xFF1A1A1A)
+            : Colors.white,
         borderRadius: BorderRadius.circular(15),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.black.withOpacity(0.3)
+                : Colors.black.withOpacity(0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
         ],
         border: Border.all(
-          color: Colors.grey.shade200,
+          color: Theme.of(context).brightness == Brightness.dark
+              ? Colors.grey.shade700
+              : Colors.grey.shade200,
           width: 1,
         ),
       ),
@@ -284,7 +317,9 @@ class _ResumenVentaScreenState extends State<ResumenVentaScreen> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.grey.shade50,
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? const Color(0xFF2A2A2A)
+                  : Colors.grey.shade50,
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(15),
                 topRight: Radius.circular(15),
@@ -298,10 +333,12 @@ class _ResumenVentaScreenState extends State<ResumenVentaScreen> {
                   size: 20,
                 ),
                 const SizedBox(width: 12),
-                const Text(
+                Text(
                   'Información de la Venta',
                   style: TextStyle(
-                    color: Colors.black87,
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white
+                        : Colors.black87,
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
                   ),
@@ -330,17 +367,23 @@ class _ResumenVentaScreenState extends State<ResumenVentaScreen> {
   Widget _buildSummarySection() {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).brightness == Brightness.dark
+            ? const Color(0xFF1A1A1A)
+            : Colors.white,
         borderRadius: BorderRadius.circular(15),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.black.withOpacity(0.3)
+                : Colors.black.withOpacity(0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
         ],
         border: Border.all(
-          color: Colors.grey.shade200,
+          color: Theme.of(context).brightness == Brightness.dark
+              ? Colors.grey.shade700
+              : Colors.grey.shade200,
           width: 1,
         ),
       ),
@@ -349,7 +392,9 @@ class _ResumenVentaScreenState extends State<ResumenVentaScreen> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.grey.shade50,
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? const Color(0xFF2A2A2A)
+                  : Colors.grey.shade50,
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(15),
                 topRight: Radius.circular(15),
@@ -363,10 +408,12 @@ class _ResumenVentaScreenState extends State<ResumenVentaScreen> {
                   size: 20,
                 ),
                 const SizedBox(width: 12),
-                const Text(
+                Text(
                   'Resumen de Pagos',
                   style: TextStyle(
-                    color: Colors.black87,
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white
+                        : Colors.black87,
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
                   ),
@@ -420,10 +467,14 @@ class _ResumenVentaScreenState extends State<ResumenVentaScreen> {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).brightness == Brightness.dark
+            ? const Color(0xFF1A1A1A)
+            : Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.black.withOpacity(0.3)
+                : Colors.black.withOpacity(0.1),
             blurRadius: 10,
             offset: const Offset(0, -2),
           ),
@@ -454,17 +505,19 @@ class _ResumenVentaScreenState extends State<ResumenVentaScreen> {
               child: OutlinedButton(
                 onPressed: () => Navigator.of(context).popUntil((route) => route.isFirst),
                 style: OutlinedButton.styleFrom(
-                  backgroundColor: Colors.white,
+                  backgroundColor: Theme.of(context).cardTheme.color,
                   side: const BorderSide(color: Colors.grey, width: 1.5),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
                   padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
-                child: const Text(
+                child: Text(
                   'Volver al Inicio',
                   style: TextStyle(
-                    color: Colors.black,
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white
+                        : Colors.black,
                     fontWeight: FontWeight.w600,
                     fontSize: 16,
                   ),
@@ -483,7 +536,7 @@ class _ResumenVentaScreenState extends State<ResumenVentaScreen> {
       children: [
         Icon(
           icon,
-          color: isTotal ? AppTheme.primaryColor : Colors.grey.shade600,
+          color: isTotal ? AppTheme.primaryColor : (Theme.of(context).brightness == Brightness.dark ? Colors.grey.shade400 : Colors.grey.shade600),
           size: 20,
         ),
         const SizedBox(width: 12),
@@ -492,7 +545,9 @@ class _ResumenVentaScreenState extends State<ResumenVentaScreen> {
           child: Text(
             label,
             style: TextStyle(
-              color: Colors.grey.shade600,
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? Colors.grey.shade400
+                  : Colors.grey.shade600,
               fontSize: isTotal ? 16 : 14,
               fontWeight: isTotal ? FontWeight.w600 : FontWeight.normal,
             ),
@@ -505,7 +560,7 @@ class _ResumenVentaScreenState extends State<ResumenVentaScreen> {
             style: TextStyle(
               fontSize: isTotal ? 18 : 16,
               fontWeight: isTotal ? FontWeight.bold : FontWeight.w600,
-              color: valueColor ?? (isTotal ? AppTheme.primaryColor : Colors.black87),
+              color: valueColor ?? (isTotal ? AppTheme.primaryColor : (Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black87)),
             ),
           ),
         ),

@@ -26,41 +26,41 @@ class LoadingScreen extends StatelessWidget {
   }
 }
 
-// Pantalla de carga para autenticación
-class AuthLoadingScreen extends StatelessWidget {
-  final String? message;
+// // Pantalla de carga para autenticación
+// class AuthLoadingScreen extends StatelessWidget {
+//   final String? message;
 
-  const AuthLoadingScreen({
-    super.key,
-    this.message,
-  });
+//   const AuthLoadingScreen({
+//     super.key,
+//     this.message,
+//   });
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color.fromARGB(255, 255, 255, 255),
-              Color.fromARGB(255, 197, 197, 197),
-              Color.fromARGB(255, 16, 58, 18),
-            ],
-            stops: [0.0, 0.5, 1.0],
-          ),
-        ),
-        child: CustomLoadingWidget(
-          message: message ?? 'Verificando credenciales...',
-          backgroundColor: Colors.transparent,
-          showLogo: true,
-          size: 120.0,
-        ),
-      ),
-    );
-  }
-}
+//   @override
+//   Widget build(BuildContext context) {
+//     return Scaffold(
+//       body: Container(
+//         decoration: const BoxDecoration(
+//           gradient: LinearGradient(
+//             begin: Alignment.topLeft,
+//             end: Alignment.bottomRight,
+//             colors: [
+//               Color.fromARGB(255, 255, 255, 255),
+//               Color.fromARGB(255, 197, 197, 197),
+//               Color.fromARGB(255, 16, 58, 18),
+//             ],
+//             stops: [0.0, 0.5, 1.0],
+//           ),
+//         ),
+//         child: CustomLoadingWidget(
+//           message: message ?? 'Verificando credenciales...',
+//           backgroundColor: Colors.transparent,
+//           showLogo: true,
+//           size: 120.0,
+//         ),
+//       ),
+//     );
+//   }
+// }
 
 // Pantalla de carga para datos
 class DataLoadingScreen extends StatelessWidget {
@@ -74,10 +74,10 @@ class DataLoadingScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: CustomLoadingWidget(
         message: message ?? 'Cargando datos...',
-        backgroundColor: Colors.grey.shade50,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         showLogo: true,
         size: 100.0,
       ),
@@ -97,10 +97,10 @@ class OperationLoadingScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: CustomLoadingWidget(
         message: message ?? 'Procesando...',
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         showLogo: false,
         size: 80.0,
       ),

@@ -33,7 +33,7 @@ class Ventas {
         id: json['id'],
         clienteId: json['clienteId'] ?? 0,
         cliente: Cliente.fromJson(json['cliente']),
-        ventasProductos: (json['pedidoProductos'] as List?)
+        ventasProductos: (json['ventaProductos'] as List?)
             ?.map((e) => VentasProductos.fromJson(e))
             .toList() ?? [],
         total: (json['total'] as num?)?.toDouble() ?? 0.0,
@@ -53,10 +53,10 @@ class Ventas {
   Map<String, dynamic> toJson() => {
         'clienteId': clienteId,
         'cliente': cliente.toJson(),
-        'pedidoProductos': ventasProductos.map((e) => e.toJson()).toList(),
+        'ventaProductos': ventasProductos.map((e) => e.toJson()).toList(),
         'total': total,
         'fecha': fecha.toIso8601String(),
-        'metodoPago': metodoPago?.index ?? 0,
+        'metodoPago': metodoPago?.index,
         'ventaPagos': pagos?.map((e) => e.toJson()).toList() ?? [],
         'usuarioId': usuarioId,
         'usuario': usuario?.toJson(),

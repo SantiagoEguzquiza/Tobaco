@@ -5,14 +5,19 @@ import '../Auth_Service/auth_service.dart';
 
 class UserService {
   static const String _usersEndpoint = '/api/User';
+  static const Duration _timeoutDuration = Duration(seconds: 10);
 
   // Get all users (Admin only)
   static Future<List<User>> getAllUsers() async {
     try {
+      final url = Apihandler.baseUrl.resolve('$_usersEndpoint/all');
+      print('UserService: Making request to: $url');
+      print('UserService: Timeout duration: $_timeoutDuration');
+      
       final response = await Apihandler.client.get(
-        Apihandler.baseUrl.resolve('$_usersEndpoint/all'),
+        url,
         headers: await _getAuthHeaders(),
-      );
+      ).timeout(_timeoutDuration);
 
       print('UserService: Response status: ${response.statusCode}');
       print('UserService: Response body: ${response.body}');
@@ -32,6 +37,8 @@ class UserService {
       }
     } catch (e) {
       print('UserService: Error getting users: $e');
+      print('UserService: Error type: ${e.runtimeType}');
+      print('UserService: Error details: ${e.toString()}');
       throw Exception('Error al obtener usuarios: $e');
     }
   }
@@ -55,7 +62,7 @@ class UserService {
         Apihandler.baseUrl.resolve('$_usersEndpoint/create'),
         headers: await _getAuthHeaders(),
         body: jsonEncode(userData),
-      );
+      ).timeout(_timeoutDuration);
 
       if (response.statusCode == 201) {
         return User.fromJson(jsonDecode(response.body));
@@ -94,7 +101,7 @@ class UserService {
         Apihandler.baseUrl.resolve('$_usersEndpoint/update/$userId'),
         headers: await _getAuthHeaders(),
         body: jsonEncode(userData),
-      );
+      ).timeout(_timeoutDuration);
 
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body);
@@ -120,7 +127,7 @@ class UserService {
       final response = await Apihandler.client.delete(
         Apihandler.baseUrl.resolve('$_usersEndpoint/delete/$userId'),
         headers: await _getAuthHeaders(),
-      );
+      ).timeout(_timeoutDuration);
 
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body);

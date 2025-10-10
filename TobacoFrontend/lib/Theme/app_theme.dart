@@ -76,23 +76,23 @@ class AppTheme {
     required VoidCallback onCancel,
   }) {
     return AlertDialog(
-      backgroundColor: Colors.white,
+      backgroundColor: null, // Usar el tema del contexto
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
       ),
       title: Text(
         title,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 20,
           fontWeight: FontWeight.bold,
-          color: textColor,
+          color: null, // Usar el color del tema
         ),
       ),
       content: Text(
         content,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 16,
-          color: textColor,
+          color: null, // Usar el color del tema
         ),
       ),
       actions: [
@@ -121,23 +121,23 @@ class AppTheme {
     required VoidCallback onCancel,
   }) {
     return AlertDialog(
-      backgroundColor: Colors.white,
+      backgroundColor: null, // Usar el tema del contexto
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
       ),
       title: Text(
         title,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 20,
           fontWeight: FontWeight.bold,
-          color: textColor,
+          color: null, // Usar el color del tema
         ),
       ),
       content: Text(
         content,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 16,
-          color: textColor,
+          color: null, // Usar el color del tema
         ),
       ),
       actions: [
@@ -214,7 +214,7 @@ class AppTheme {
       borderRadius: BorderRadius.circular(10),
     ),
     side: const BorderSide(color: Colors.grey),
-    backgroundColor: Colors.white,
+    backgroundColor: Colors.white, // This will be overridden by theme
   );
 
   static const TextStyle cardTitleStyle = TextStyle(
@@ -228,8 +228,9 @@ class AppTheme {
   );
 
   static const TextStyle appBarTitleStyle = TextStyle(
-    fontSize: 35,
-    color: textColor,
+    fontSize: 20,
+    color: Color(0xFFFFFFFF), // Blanco puro para títulos
+    fontWeight: FontWeight.w600,
   );
 
   static const TextStyle sectionTitleStyle = TextStyle(
@@ -260,29 +261,40 @@ class AppTheme {
   static ThemeData get theme {
     return ThemeData(
       scaffoldBackgroundColor: Colors.white,
-      primarySwatch: Colors.blue,
-      appBarTheme: const AppBarTheme(
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
+      primarySwatch: Colors.green,
+      primaryColor: primaryColor,
+      appBarTheme: AppBarTheme(
+        backgroundColor: primaryColor,
+        foregroundColor: Colors.white,
         elevation: 0,
-        systemOverlayStyle: SystemUiOverlayStyle(
+        systemOverlayStyle: const SystemUiOverlayStyle(
           statusBarBrightness: Brightness.light,
           systemNavigationBarColor: Colors.transparent,
           systemStatusBarContrastEnforced: false,
-          statusBarColor: Colors.white,
           statusBarIconBrightness: Brightness.dark,
           systemNavigationBarIconBrightness: Brightness.dark,
         ),
-        titleTextStyle: TextStyle(
+        titleTextStyle: const TextStyle(
           fontFamily: 'Shippori',
           fontSize: 30,
-          color: Colors.black,
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.blue,
+          backgroundColor: primaryColor,
           foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          backgroundColor: Colors.white,
+          foregroundColor: Colors.black,
+          side: const BorderSide(color: Colors.grey),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(10),
           ),
@@ -336,6 +348,229 @@ class AppTheme {
     );
   }
 
+  static ThemeData get darkTheme {
+    return ThemeData(
+      brightness: Brightness.dark,
+      scaffoldBackgroundColor: const Color(0xFF0F0F0F),
+      primaryColor: const Color(0xFF4CAF50), // Verde más vibrante para modo oscuro
+      colorScheme: const ColorScheme.dark().copyWith(
+        primary: const Color(0xFF4CAF50),
+        secondary: const Color(0xFF66BB6A),
+        surface: const Color(0xFF1A1A1A),
+        background: const Color(0xFF0F0F0F),
+        onBackground: const Color(0xFFE0E0E0),
+        onSurface: const Color(0xFFE0E0E0),
+        onPrimary: Colors.white,
+        error: const Color(0xFFCF6679),
+      ),
+      appBarTheme: const AppBarTheme(
+        backgroundColor: Color(0xFF000000), // Negro para modo oscuro
+        foregroundColor: Color(0xFFFFFFFF), // Blanco para modo oscuro
+        elevation: 1,
+        shadowColor: Colors.black26,
+        systemOverlayStyle: SystemUiOverlayStyle(
+          statusBarBrightness: Brightness.dark,
+          systemNavigationBarColor: Color(0xFF0F0F0F),
+          systemStatusBarContrastEnforced: false,
+          statusBarColor: Color(0xFF000000),
+          statusBarIconBrightness: Brightness.light,
+          systemNavigationBarIconBrightness: Brightness.light,
+        ),
+        titleTextStyle: TextStyle(
+          fontFamily: 'Shippori',
+          fontSize: 30,
+          color: Color(0xFFFFFFFF),
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFF4CAF50),
+          foregroundColor: Colors.white,
+          shadowColor: const Color(0xFF4CAF50).withOpacity(0.3),
+          elevation: 4,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          backgroundColor: const Color(0xFF2A2A2A),
+          foregroundColor: Colors.white,
+          side: const BorderSide(color: Colors.grey),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+      ),
+      textTheme: const TextTheme(
+        bodyLarge: TextStyle(
+          fontSize: 18,
+          color: Color(0xFFE0E0E0),
+          fontFamily: 'LibreFranklin',
+        ),
+        bodyMedium: TextStyle(
+          fontSize: 16,
+          color: Color(0xFFB0B0B0),
+          fontFamily: 'LibreFranklin',
+        ),
+        bodySmall: TextStyle(
+          fontSize: 14,
+          color: Color(0xFF808080),
+          fontFamily: 'LibreFranklin',
+        ),
+        titleLarge: TextStyle(
+          fontSize: 22,
+          color: Color(0xFFE0E0E0),
+          fontFamily: 'LibreFranklin',
+          fontWeight: FontWeight.bold,
+        ),
+        titleMedium: TextStyle(
+          fontSize: 18,
+          color: Color(0xFFE0E0E0),
+          fontFamily: 'LibreFranklin',
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        labelStyle: const TextStyle(
+          color: Color(0xFF808080),
+          fontSize: 15,
+        ),
+        floatingLabelStyle: const TextStyle(
+          color: Color(0xFF4CAF50),
+        ),
+        hintStyle: const TextStyle(
+          color: Color(0xFF606060),
+          fontSize: 15,
+        ),
+        border: const OutlineInputBorder(
+          borderRadius: BorderRadius.all(Radius.circular(30)),
+          borderSide: BorderSide(color: Color(0xFF404040)),
+        ),
+        enabledBorder: const OutlineInputBorder(
+          borderRadius: BorderRadius.all(Radius.circular(30)),
+          borderSide: BorderSide(color: Color(0xFF404040)),
+        ),
+        focusedBorder: const OutlineInputBorder(
+          borderRadius: BorderRadius.all(Radius.circular(30)),
+          borderSide: BorderSide(color: Color(0xFF4CAF50), width: 2.0),
+        ),
+        errorBorder: const OutlineInputBorder(
+          borderRadius: BorderRadius.all(Radius.circular(30)),
+          borderSide: BorderSide(color: Color(0xFFCF6679)),
+        ),
+        focusedErrorBorder: const OutlineInputBorder(
+          borderRadius: BorderRadius.all(Radius.circular(30)),
+          borderSide: BorderSide(color: Color(0xFFCF6679), width: 2.0),
+        ),
+        prefixIconColor: const Color(0xFF808080),
+        suffixIconColor: const Color(0xFF808080),
+        filled: true,
+        fillColor: const Color(0xFF1A1A1A),
+        contentPadding: const EdgeInsets.symmetric(
+          vertical: 10,
+          horizontal: 15,
+        ),
+      ),
+      cardTheme: const CardTheme(
+        color: Color(0xFF1A1A1A),
+        elevation: 2,
+        shadowColor: Colors.black26,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(12)),
+        ),
+      ),
+      dialogTheme: const DialogTheme(
+        backgroundColor: Color(0xFF1A1A1A),
+        titleTextStyle: TextStyle(
+          color: Color(0xFFE0E0E0),
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+        ),
+        contentTextStyle: TextStyle(
+          color: Color(0xFFB0B0B0),
+          fontSize: 16,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(16)),
+        ),
+      ),
+      dividerTheme: const DividerThemeData(
+        color: Color(0xFF404040),
+        thickness: 1,
+      ),
+      switchTheme: SwitchThemeData(
+        thumbColor: WidgetStateProperty.resolveWith<Color>((states) {
+          if (states.contains(WidgetState.selected)) {
+            return const Color(0xFF4CAF50);
+          }
+          return const Color(0xFF808080);
+        }),
+        trackColor: WidgetStateProperty.resolveWith<Color>((states) {
+          if (states.contains(WidgetState.selected)) {
+            return const Color(0xFF4CAF50).withOpacity(0.3);
+          }
+          return const Color(0xFF404040);
+        }),
+      ),
+      checkboxTheme: CheckboxThemeData(
+        fillColor: WidgetStateProperty.resolveWith<Color>((states) {
+          if (states.contains(WidgetState.selected)) {
+            return const Color(0xFF4CAF50);
+          }
+          return const Color(0xFF404040);
+        }),
+        checkColor: WidgetStateProperty.all(Colors.white),
+        side: const BorderSide(color: Color(0xFF808080)),
+      ),
+      radioTheme: RadioThemeData(
+        fillColor: WidgetStateProperty.resolveWith<Color>((states) {
+          if (states.contains(WidgetState.selected)) {
+            return const Color(0xFF4CAF50);
+          }
+          return const Color(0xFF808080);
+        }),
+      ),
+      progressIndicatorTheme: const ProgressIndicatorThemeData(
+        color: Color(0xFF4CAF50),
+        linearTrackColor: Color(0xFF404040),
+        circularTrackColor: Color(0xFF404040),
+      ),
+      snackBarTheme: const SnackBarThemeData(
+        backgroundColor: Color(0xFF1A1A1A),
+        contentTextStyle: TextStyle(color: Color(0xFFE0E0E0)),
+        actionTextColor: Color(0xFF4CAF50),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(12)),
+        ),
+      ),
+      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+        backgroundColor: Color(0xFF1A1A1A),
+        selectedItemColor: Color(0xFF4CAF50),
+        unselectedItemColor: Color(0xFF808080),
+        type: BottomNavigationBarType.fixed,
+      ),
+      drawerTheme: const DrawerThemeData(
+        backgroundColor: Color(0xFF1A1A1A),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.only(
+            topRight: Radius.circular(16),
+            bottomRight: Radius.circular(16),
+          ),
+        ),
+      ),
+      listTileTheme: const ListTileThemeData(
+        textColor: Color(0xFFE0E0E0),
+        iconColor: Color(0xFF808080),
+        tileColor: Color(0xFF1A1A1A),
+        selectedTileColor: Color(0xFF2A2A2A),
+      ),
+    );
+  }
+
   static AlertDialog customAlertDialog({
     required String title,
     required Widget content,
@@ -345,15 +580,15 @@ class AppTheme {
     String cancelText = 'Cancelar',
   }) {
     return AlertDialog(
-      backgroundColor: Colors.white,
+      backgroundColor: null, // Usar el tema del contexto
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
       ),
       title: Text(
         title,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 22,        
-          color: textColor,
+          color: null, // Usar el color del tema
         ),
       ),
       content: content,
@@ -387,13 +622,13 @@ class AppTheme {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(14),
       ),
-      backgroundColor: Colors.white,
+      backgroundColor: null, // Usar el tema del contexto
       title: Text(
         title,
-        style: const TextStyle(
+        style: TextStyle(
           fontWeight: FontWeight.bold,
           fontSize: 18,
-          color: Colors.black87,
+          color: null, // Usar el color del tema
         ),
       ),
       content: content,

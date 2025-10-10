@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:tobaco/Models/Categoria.dart';
 import 'package:tobaco/Models/CategoriaReorderDTO.dart';
 import 'package:tobaco/Services/Categoria_Service/categoria_service.dart';
+import 'package:tobaco/Helpers/api_handler.dart';
 
 class CategoriasProvider with ChangeNotifier {
   final CategoriaService _categoriaService = CategoriaService();
@@ -12,15 +13,20 @@ class CategoriasProvider with ChangeNotifier {
 
   bool isLoading = false;
 
+  // Método para resetear el estado de loading
+  void resetLoadingState() {
+    if (isLoading) {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
+
   Future<List<Categoria>> obtenerCategorias({bool silent = false}) async {
     try {
       // Solo actualizar isLoading si realmente cambió y no es modo silencioso
       if (!isLoading && !silent) {
         isLoading = true;
-        // Usar WidgetsBinding para evitar notifyListeners durante build
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          notifyListeners();
-        });
+        notifyListeners();
       }
       
       _categorias = await _categoriaService.obtenerCategorias();
@@ -28,20 +34,21 @@ class CategoriasProvider with ChangeNotifier {
       // Solo actualizar isLoading si realmente cambió y no es modo silencioso
       if (isLoading && !silent) {
         isLoading = false;
-        // Usar WidgetsBinding para evitar notifyListeners durante build
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          notifyListeners();
-        });
+        notifyListeners();
       }
     } catch (e) {
+      // Si es un error de conexión, limpiar la lista de categorías
+      if (Apihandler.isConnectionError(e)) {
+        _categorias = [];
+      }
+      
       if (isLoading && !silent) {
         isLoading = false;
-        // Usar WidgetsBinding para evitar notifyListeners durante build
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          notifyListeners();
-        });
+        notifyListeners();
       }
-      debugPrint('Error: $e');
+      debugPrint('Error en obtenerCategorias: $e');
+      // Relanzar la excepción para que la UI la pueda manejar
+      rethrow;
     }
     return _categorias;
   }
@@ -56,12 +63,23 @@ class CategoriasProvider with ChangeNotifier {
       await _categoriaService.crearCategoria(categoria);
       await obtenerCategorias(silent: true);
       
+      if (isLoading) {
+        isLoading = false;
+        notifyListeners();
+      }
     } catch (e) {
+      // Si es un error de conexión, limpiar la lista de categorías
+      if (Apihandler.isConnectionError(e)) {
+        _categorias = [];
+      }
+      
       if (isLoading) {
         isLoading = false;
         notifyListeners();
       }
       debugPrint('Error al agregar categoría: $e');
+      // Relanzar la excepción para que la UI la pueda manejar
+      rethrow;
     }
   }
 
@@ -80,11 +98,18 @@ class CategoriasProvider with ChangeNotifier {
         notifyListeners();
       }
     } catch (e) {
+      // Si es un error de conexión, limpiar la lista de categorías
+      if (Apihandler.isConnectionError(e)) {
+        _categorias = [];
+      }
+      
       if (isLoading) {
         isLoading = false;
         notifyListeners();
       }
       debugPrint('Error al eliminar categoría: $e');
+      // Relanzar la excepción para que la UI la pueda manejar
+      rethrow;
     }
   }
   Future<void> editarCategoria(int id, String nombre, String colorHex) async {
@@ -96,7 +121,14 @@ class CategoriasProvider with ChangeNotifier {
         notifyListeners();
       }
     } catch (e) {
+      // Si es un error de conexión, limpiar la lista de categorías
+      if (Apihandler.isConnectionError(e)) {
+        _categorias = [];
+        notifyListeners();
+      }
       debugPrint('Error al editar categoría: $e');
+      // Relanzar la excepción para que la UI la pueda manejar
+      rethrow;
     }
   }
 
@@ -126,6 +158,11 @@ class CategoriasProvider with ChangeNotifier {
         notifyListeners();
       }
     } catch (e) {
+      // Si es un error de conexión, limpiar la lista de categorías
+      if (Apihandler.isConnectionError(e)) {
+        _categorias = [];
+      }
+      
       if (isLoading) {
         isLoading = false;
         notifyListeners();

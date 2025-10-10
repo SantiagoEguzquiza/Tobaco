@@ -78,9 +78,14 @@ class _QuantityPriceWidgetState extends State<QuantityPriceWidget> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text(
+            Text(
               'Precios por Packs',
-              style: AppTheme.inputLabelStyle,
+              style: TextStyle(
+                fontSize: 16,
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.white
+                    : Colors.black,
+              ),
             ),
             TextButton.icon(
               onPressed: _addQuantityPrice,
@@ -93,11 +98,13 @@ class _QuantityPriceWidgetState extends State<QuantityPriceWidget> {
           ],
         ),
         const SizedBox(height: 8),
-        const Text(
+        Text(
           'Configure los precios para packs (cantidad >= 2). El precio unitario se toma del precio base del producto.',
           style: TextStyle(
             fontSize: 12,
-            color: Colors.grey,
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.grey.shade400
+                : Colors.grey,
           ),
         ),
         const SizedBox(height: 16),
@@ -106,12 +113,16 @@ class _QuantityPriceWidgetState extends State<QuantityPriceWidget> {
           return _buildQuantityPriceRow(index, qp);
         }),
         if (_quantityPrices.isEmpty)
-          const Center(
+          Center(
             child: Padding(
-              padding: EdgeInsets.all(16.0),
+              padding: const EdgeInsets.all(16.0),
               child: Text(
                 'No hay packs configurados. El producto se venderá solo por unidad.',
-                style: TextStyle(color: Colors.grey),
+                style: TextStyle(
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.grey.shade400
+                      : Colors.grey,
+                ),
               ),
             ),
           ),
@@ -127,9 +138,15 @@ class _QuantityPriceWidgetState extends State<QuantityPriceWidget> {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey.shade300),
+        border: Border.all(
+          color: Theme.of(context).brightness == Brightness.dark
+              ? Colors.grey.shade600
+              : Colors.grey.shade300,
+        ),
         borderRadius: BorderRadius.circular(8),
-        color: Colors.grey.shade50,
+        color: Theme.of(context).brightness == Brightness.dark
+            ? const Color(0xFF2A2A2A)
+            : Colors.grey.shade50,
       ),
       child: Column(
         children: [
@@ -140,12 +157,14 @@ class _QuantityPriceWidgetState extends State<QuantityPriceWidget> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'Cantidad',
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
-                        color: Colors.grey,
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.grey.shade400
+                            : Colors.grey,
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -204,12 +223,14 @@ class _QuantityPriceWidgetState extends State<QuantityPriceWidget> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'Precio Total',
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
-                        color: Colors.grey,
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.grey.shade400
+                            : Colors.grey,
                       ),
                     ),
                     const SizedBox(height: 4),

@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:tobaco/Services/Cotizaciones_Service/cotizaciones_provider.dart';
 import 'package:tobaco/Theme/app_theme.dart';
+import 'package:tobaco/Theme/dialogs.dart';
+import 'package:tobaco/Theme/headers.dart';
+import 'package:tobaco/Helpers/api_handler.dart';
 
 class CotizacionesScreen extends StatefulWidget {
   const CotizacionesScreen({super.key});
@@ -56,7 +59,7 @@ class _CotizacionesScreenState extends State<CotizacionesScreen> {
     final vm = context.watch<BcuProvider>();
 
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text(
           'Cotizaciones de Monedas',
@@ -65,7 +68,7 @@ class _CotizacionesScreenState extends State<CotizacionesScreen> {
             color: Colors.white,
           ),
         ),
-        backgroundColor: AppTheme.primaryColor,
+        backgroundColor: null, // Usar el tema
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
       ),

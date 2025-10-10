@@ -7,16 +7,16 @@ class AppDialogs {
   static const Color _successColor = Colors.green;
   static const Color _warningColor = Colors.orange;
   
-  // Estilos consistentes
-  static const TextStyle _titleStyle = TextStyle(
+  // Estilos consistentes - ahora son métodos que toman el contexto
+  static TextStyle _titleStyle(BuildContext context) => TextStyle(
     fontSize: 18,
     fontWeight: FontWeight.bold,
-    color: Colors.black87,
+    color: Theme.of(context).textTheme.titleLarge?.color,
   );
   
-  static const TextStyle _messageStyle = TextStyle(
+  static TextStyle _messageStyle(BuildContext context) => TextStyle(
     fontSize: 16,
-    color: Colors.black54,
+    color: Theme.of(context).textTheme.bodyLarge?.color,
     height: 1.4,
   );
   
@@ -255,6 +255,33 @@ class AppDialogs {
     
     return result ?? false;
   }
+
+  /// Diálogo de error de conexión con el servidor
+  /// 
+  /// [context] - Contexto de la aplicación
+  /// [title] - Título del diálogo (opcional, por defecto: "Servidor No Disponible")
+  /// [message] - Mensaje del diálogo (opcional)
+  /// [buttonText] - Texto del botón (opcional, por defecto: "Entendido")
+  static Future<void> showServerErrorDialog({
+    required BuildContext context,
+    String? title,
+    String? message,
+    String? buttonText,
+  }) async {
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return _InfoDialog(
+          title: title ?? 'Servidor No Disponible',
+          message: message ?? 'No se pudo conectar con el servidor. Por favor, intente más tarde.',
+          buttonText: buttonText ?? 'Entendido',
+          icon: Icons.cloud_off_rounded,
+          iconColor: _destructiveColor,
+        );
+      },
+    );
+  }
 }
 
 /// Widget privado para diálogos de confirmación
@@ -309,7 +336,7 @@ class _ConfirmationDialog extends StatelessWidget {
             // Título
             Text(
               title,
-              style: AppDialogs._titleStyle,
+              style: AppDialogs._titleStyle(context),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 12),
@@ -317,7 +344,7 @@ class _ConfirmationDialog extends StatelessWidget {
             // Mensaje
             Text(
               message,
-              style: AppDialogs._messageStyle,
+              style: AppDialogs._messageStyle(context),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
@@ -338,7 +365,7 @@ class _ConfirmationDialog extends StatelessWidget {
                     child: Text(
                       cancelText,
                       style: AppDialogs._buttonTextStyle.copyWith(
-                        color: Colors.grey.shade600,
+                        color: Theme.of(context).textTheme.bodyLarge?.color,
                       ),
                     ),
                   ),
@@ -423,7 +450,7 @@ class _InfoDialog extends StatelessWidget {
             // Título
             Text(
               title,
-              style: AppDialogs._titleStyle,
+              style: AppDialogs._titleStyle(context),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 12),
@@ -431,7 +458,7 @@ class _InfoDialog extends StatelessWidget {
             // Mensaje
             Text(
               message,
-              style: AppDialogs._messageStyle,
+              style: AppDialogs._messageStyle(context),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
@@ -513,7 +540,7 @@ class _DeactivateProductDialog extends StatelessWidget {
             // Título
             Text(
               title,
-              style: AppDialogs._titleStyle,
+              style: AppDialogs._titleStyle(context),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),
@@ -521,18 +548,18 @@ class _DeactivateProductDialog extends StatelessWidget {
             // Mensaje principal
             Text(
               message,
-              style: AppDialogs._messageStyle,
+              style: AppDialogs._messageStyle(context),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),
             
             // Pregunta
-            const Text(
+            Text(
               '¿Desea desactivarlo en su lugar?',
               style: TextStyle(
                 fontWeight: FontWeight.w600,
                 fontSize: 16,
-                color: Colors.black87,
+                color: Theme.of(context).textTheme.titleLarge?.color,
               ),
               textAlign: TextAlign.center,
             ),
@@ -548,12 +575,12 @@ class _DeactivateProductDialog extends StatelessWidget {
                   size: 20,
                 ),
                 const SizedBox(width: 8),
-                const Expanded(
+                Expanded(
                   child: Text(
                     'El producto se ocultará de los catálogos pero se mantendrá en las ventas existentes',
                     style: TextStyle(
                       fontSize: 14,
-                      color: Colors.black54,
+                      color: Theme.of(context).textTheme.bodyMedium?.color,
                       height: 1.3,
                     ),
                   ),
@@ -578,7 +605,7 @@ class _DeactivateProductDialog extends StatelessWidget {
                     child: Text(
                       cancelText,
                       style: AppDialogs._buttonTextStyle.copyWith(
-                        color: Colors.grey.shade600,
+                        color: Theme.of(context).textTheme.bodyLarge?.color,
                       ),
                     ),
                   ),

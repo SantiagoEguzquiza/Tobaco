@@ -39,7 +39,7 @@ class VentasProductos {
           'id': productoId,
           'nombre': nombre,
           'precio': precio,
-          'cantidad': 0, // Este campo es para el stock del producto, no la cantidad vendida
+          'stock': 0, // Este campo es para el stock del producto, no la cantidad vendida
           'categoriaId': categoriaId, // Usar el ID de la categoría
           'categoriaNombre': categoria,
           'half': false,
