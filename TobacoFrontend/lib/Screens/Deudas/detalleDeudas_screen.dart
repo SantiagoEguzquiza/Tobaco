@@ -8,6 +8,7 @@ import 'package:tobaco/Services/Clientes_Service/clientes_provider.dart';
 import 'package:tobaco/Services/Ventas_Service/ventas_provider.dart';
 import 'package:tobaco/Services/Abonos_Service/abonos_provider.dart';
 import 'package:tobaco/Theme/app_theme.dart';
+import 'package:tobaco/Screens/Ventas/detalleVentas_screen.dart';
 import 'package:tobaco/Theme/dialogs.dart';
 import 'dart:developer';
 
@@ -33,6 +34,9 @@ class _DetalleDeudaScreenState extends State<DetalleDeudaScreen>
   Map<String, dynamic>? detalleDeuda;
   
   String? errorMessage;
+  
+  // Variable para rastrear si hubo cambios (abonos creados/eliminados)
+  bool _huboCambios = false;
   
   // Variables para paginación de ventas
   bool _isLoadingMoreVentas = false;
@@ -456,6 +460,8 @@ class _DetalleDeudaScreenState extends State<DetalleDeudaScreen>
       );
       
       if (abonoCreado != null) {
+        _huboCambios = true;
+        
         // Actualizar la deuda del cliente localmente
         final deudaActual = _parsearDeuda(widget.cliente.deuda);
         final nuevaDeuda = deudaActual - monto;
@@ -499,17 +505,22 @@ class _DetalleDeudaScreenState extends State<DetalleDeudaScreen>
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     
-    return Scaffold(
-      backgroundColor: isDarkMode ? const Color(0xFF121212) : Colors.grey.shade50,
-      appBar: AppBar(
-        centerTitle: true,
-        elevation: 0,
-        backgroundColor: null, // Usar el tema
-        title: const Text(
-          'Detalle de Deuda',
-          style: AppTheme.appBarTitleStyle,
+    return WillPopScope(
+      onWillPop: () async {
+        Navigator.of(context).pop(_huboCambios);
+        return false;
+      },
+      child: Scaffold(
+        backgroundColor: isDarkMode ? const Color(0xFF121212) : Colors.grey.shade50,
+        appBar: AppBar(
+          centerTitle: true,
+          elevation: 0,
+          backgroundColor: null, // Usar el tema
+          title: const Text(
+            'Detalle de Deuda',
+            style: AppTheme.appBarTitleStyle,
+          ),
         ),
-      ),
       body: isLoadingDetalle
           ? Center(
               child: Column(
@@ -601,6 +612,7 @@ class _DetalleDeudaScreenState extends State<DetalleDeudaScreen>
           'Saldar Deuda',
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
+      ),
       ),
     );
   }
@@ -782,8 +794,18 @@ class _DetalleDeudaScreenState extends State<DetalleDeudaScreen>
       montoCuentaCorriente = venta.total;
     }
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+    return GestureDetector(
+      onTap: () {
+        // Navegar a la pantalla de detalle de venta
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => DetalleVentaScreen(venta: venta),
+          ),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
         borderRadius: BorderRadius.circular(15),
@@ -867,12 +889,335 @@ class _DetalleDeudaScreenState extends State<DetalleDeudaScreen>
           ],
         ),
       ),
+      ),
+    );
+  }
+
+  void _mostrarDetalleAbono(Abono abono) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    
+    showDialog(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          backgroundColor: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Container(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.7,
+              maxWidth: MediaQuery.of(context).size.width * 0.9,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Header del modal
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.green.withOpacity(isDarkMode ? 0.2 : 0.1),
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(20),
+                      topRight: Radius.circular(20),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.green.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(
+                          Icons.payment,
+                          color: Colors.green.shade700,
+                          size: 28,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Abono #${abono.id}',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: isDarkMode ? Colors.white : AppTheme.primaryColor,
+                              ),
+                            ),
+                            Text(
+                              _formatearFecha(abono.fecha),
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: isDarkMode ? Colors.grey.shade300 : Colors.grey.shade600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: Icon(
+                          Icons.close,
+                          color: isDarkMode ? Colors.grey.shade300 : Colors.grey.shade600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                
+                // Contenido scrolleable
+                Flexible(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Monto del abono
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.green.withOpacity(isDarkMode ? 0.15 : 0.05),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: Colors.green.withOpacity(isDarkMode ? 0.3 : 0.2),
+                              width: 1,
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.attach_money,
+                                color: Colors.green.shade700,
+                                size: 24,
+                              ),
+                              const SizedBox(width: 12),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Monto del Abono',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: isDarkMode ? Colors.grey.shade300 : Colors.grey.shade600,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '\$${_formatearPrecio(_parsearDeuda(abono.monto))}',
+                                    style: TextStyle(
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.green.shade700,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        
+                        const SizedBox(height: 20),
+                        
+                        // Cliente
+                        _buildDetalleItem(
+                          icon: Icons.person,
+                          label: 'Cliente',
+                          value: abono.clienteNombre,
+                          iconColor: AppTheme.primaryColor,
+                        ),
+                        
+                        const SizedBox(height: 16),
+                        
+                        // Fecha
+                        _buildDetalleItem(
+                          icon: Icons.calendar_today,
+                          label: 'Fecha',
+                          value: _formatearFecha(abono.fecha),
+                          iconColor: Colors.blue,
+                        ),
+                        
+                        const SizedBox(height: 20),
+                        
+                        // Nota
+                        if (abono.nota.isNotEmpty) ...[
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.note,
+                                color: Colors.orange.shade700,
+                                size: 20,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Nota',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: isDarkMode ? Colors.grey.shade200 : Colors.grey.shade700,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Colors.orange.withOpacity(isDarkMode ? 0.15 : 0.05),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: Colors.orange.withOpacity(isDarkMode ? 0.3 : 0.2),
+                                width: 1,
+                              ),
+                            ),
+                            child: Text(
+                              abono.nota,
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: isDarkMode ? Colors.grey.shade200 : Colors.grey.shade700,
+                                height: 1.5,
+                              ),
+                            ),
+                          ),
+                        ] else ...[
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Colors.grey.withOpacity(isDarkMode ? 0.15 : 0.05),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: Colors.grey.withOpacity(isDarkMode ? 0.3 : 0.2),
+                                width: 1,
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.info_outline,
+                                  color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade500,
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 12),
+                                Text(
+                                  'Sin nota adicional',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade500,
+                                    fontStyle: FontStyle.italic,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+                
+                // Footer con botón de cerrar
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: isDarkMode ? const Color(0xFF2A2A2A) : Colors.grey.shade50,
+                    borderRadius: const BorderRadius.only(
+                      bottomLeft: Radius.circular(20),
+                      bottomRight: Radius.circular(20),
+                    ),
+                  ),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primaryColor,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text(
+                        'Cerrar',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildDetalleItem({
+    required IconData icon,
+    required String label,
+    required String value,
+    required Color iconColor,
+  }) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: iconColor.withOpacity(isDarkMode ? 0.2 : 0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(
+            icon,
+            color: iconColor,
+            size: 20,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: isDarkMode ? Colors.grey.shade300 : Colors.grey.shade600,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                value,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: isDarkMode ? Colors.grey.shade100 : Colors.grey.shade800,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
   Widget _buildAbonoCard(Abono abono, bool isDarkMode) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+    return GestureDetector(
+      onTap: () => _mostrarDetalleAbono(abono),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
         borderRadius: BorderRadius.circular(15),
@@ -932,6 +1277,8 @@ class _DetalleDeudaScreenState extends State<DetalleDeudaScreen>
                             color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade500,
                             fontStyle: FontStyle.italic,
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ],
@@ -976,6 +1323,7 @@ class _DetalleDeudaScreenState extends State<DetalleDeudaScreen>
             ),
           ],
         ),
+      ),
       ),
     );
   }
@@ -1056,6 +1404,8 @@ class _DetalleDeudaScreenState extends State<DetalleDeudaScreen>
       final eliminado = await abonosProvider.eliminarAbono(abono.id!);
       
       if (eliminado) {
+        _huboCambios = true;
+        
         // Actualizar la deuda local del cliente
         final montoAbono = _parsearDeuda(abono.monto);
         final deudaActual = _parsearDeuda(widget.cliente.deuda);
