@@ -10,6 +10,7 @@ import 'package:tobaco/Screens/Ventas/metodoPago_screen.dart';
 import 'package:tobaco/Screens/Ventas/seleccionarProducto_screen.dart';
 import 'package:tobaco/Services/Clientes_Service/clientes_provider.dart';
 import 'package:tobaco/Services/Ventas_Service/ventas_provider.dart';
+import 'package:tobaco/Services/Ventas_Service/ventas_offline_service.dart';
 import 'package:tobaco/Services/PrecioEspecialService.dart';
 import 'package:tobaco/Services/VentaBorrador_Service/venta_borrador_provider.dart';
 import 'package:tobaco/Theme/app_theme.dart';
@@ -562,147 +563,145 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
 
   Widget _buildClientesList(List<Cliente> clientes, String title) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final tieneDeuda = (String? deuda) {
+      if (deuda == null) return false;
+      return double.tryParse(deuda.toString()) != null && double.parse(deuda.toString()) > 0;
+    };
     
-    return Container(
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF2F2F2F) : Colors.white,
-        borderRadius: BorderRadius.circular(15),
-        boxShadow: [
-          BoxShadow(
-            color: isDark 
-                ? Colors.black.withOpacity(0.5)
-                : Colors.black.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: isDark 
-                  ? const Color(0xFF1E1E1E)
-                  : AppTheme.primaryColor.withOpacity(0.1),
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(15),
-                topRight: Radius.circular(15),
+    return ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      padding: const EdgeInsets.all(16),
+      itemCount: clientes.length.clamp(0, 4),
+      itemBuilder: (context, index) {
+        final cliente = clientes[index];
+        final tieneDeudaCliente = tieneDeuda(cliente.deuda);
+        
+        return Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          decoration: BoxDecoration(
+            color: Theme.of(context).brightness == Brightness.dark
+                ? const Color(0xFF1A1A1A)
+                : Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.black.withOpacity(0.3)
+                    : Colors.black.withOpacity(0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 2),
               ),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.people,
-                  color: AppTheme.primaryColor,
-                  size: 20,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  '$title (${clientes.length})',
-                  style: TextStyle(
-                    color: AppTheme.primaryColor,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                  ),
-                ),
-              ],
-            ),
+            ],
           ),
-          ListView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: clientes.length.clamp(0, 4),
-            itemBuilder: (context, index) {
-              final cliente = clientes[index];
-              final isLast = index == clientes.length.clamp(0, 4) - 1;
-              return Container(
-                decoration: BoxDecoration(
-                  color: isDark 
-                      ? (index % 2 == 0
-                          ? const Color(0xFF2F2F2F)
-                          : const Color(0xFF1E1E1E))
-                      : (index % 2 == 0
-                          ? Colors.white
-                          : AppTheme.primaryColor.withOpacity(0.05)),
-                  borderRadius: isLast 
-                      ? const BorderRadius.only(
-                          bottomLeft: Radius.circular(15),
-                          bottomRight: Radius.circular(15),
-                        )
-                      : null,
-                  border: isLast ? null : Border(
-                    bottom: BorderSide(
-                      color: isDark ? Colors.grey.shade600 : Colors.grey.shade200,
-                      width: 1,
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(16),
+              onTap: () => _seleccionarCliente(cliente),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    // Indicador lateral
+                    Container(
+                      width: 4,
+                      height: 60,
+                      decoration: BoxDecoration(
+                        color: tieneDeudaCliente 
+                            ? Colors.red 
+                            : AppTheme.primaryColor,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
                     ),
-                  ),
-                ),
-                child: ListTile(
-                  leading: Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: isDark 
-                          ? AppTheme.primaryColor.withOpacity(0.2)
-                          : AppTheme.primaryColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(
-                      Icons.person,
-                      color: AppTheme.primaryColor,
-                      size: 20,
-                    ),
-                  ),
-                  title: Text(
-                    cliente.nombre,
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 16,
-                      color: isDark ? Colors.white : Colors.black87,
-                    ),
-                  ),
-                  subtitle: cliente.direccion != null &&
-                          cliente.direccion!.isNotEmpty
-                      ? Text(
-                          cliente.direccion!,
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        )
-                      : null,
-                  trailing: cliente.deuda != null &&
-                          double.tryParse(cliente.deuda!.toString()) != null &&
-                          double.parse(cliente.deuda!.toString()) > 0
-                      ? Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.red.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            'Deuda: \$${cliente.deuda}',
-                            style: const TextStyle(
-                              color: Colors.red,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
+                    const SizedBox(width: 16),
+
+                    // Información del cliente
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            cliente.nombre,
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Theme.of(context).brightness == Brightness.dark
+                                  ? Colors.white
+                                  : AppTheme.textColor,
                             ),
                           ),
-                        )
-                      : null,
-                  onTap: () => _seleccionarCliente(cliente),
+                          if (cliente.direccion != null && cliente.direccion!.isNotEmpty) ...[
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.location_on_outlined,
+                                  size: 16,
+                                  color: Theme.of(context).brightness == Brightness.dark
+                                      ? Colors.grey.shade400
+                                      : Colors.grey.shade600,
+                                ),
+                                const SizedBox(width: 4),
+                                Expanded(
+                                  child: Text(
+                                    cliente.direccion!,
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Theme.of(context).brightness == Brightness.dark
+                                          ? Colors.grey.shade400
+                                          : Colors.grey.shade600,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                          if (tieneDeudaCliente) ...[
+                            const SizedBox(height: 2),
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.attach_money,
+                                  size: 16,
+                                  color: Theme.of(context).brightness == Brightness.dark
+                                      ? Colors.grey.shade400
+                                      : Colors.grey.shade600,
+                                ),
+                                const SizedBox(width: 4),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red.shade50,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: Colors.red.shade200),
+                                  ),
+                                  child: Text(
+                                    'Deuda: \$${cliente.deuda}',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      color: Colors.red.shade600,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-              );
-            },
+              ),
+            ),
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -949,15 +948,33 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
         return;
       }
 
-      await VentasProvider().crearVenta(ventaConPagos);
+      // Crear la venta
+      final ventasProvider = Provider.of<VentasProvider>(context, listen: false);
+      final result = await ventasProvider.crearVenta(ventaConPagos);
 
       if (mounted) {
+        if (!result['success']) {
+          throw Exception(result['message']);
+        }
+
         // Marcar que la venta se completó exitosamente
         _ventaCompletada = true;
         
         // Eliminar borrador después de confirmar la venta (de forma segura)
         _eliminarBorradorDeFormaSegura();
 
+        // Mostrar mensaje si fue offline
+        if (result['isOffline']) {
+          await AppDialogs.showWarningDialog(
+            context: context,
+            title: 'Venta guardada offline',
+            message: 'Venta guardada localmente. Se sincronizará cuando haya conexión.',
+            buttonText: 'Entendido',
+            icon: Icons.cloud_off,
+          );
+        }
+
+        // Mostrar animación de confirmación
         showGeneralDialog(
           context: context,
           barrierDismissible: false,
@@ -976,7 +993,9 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                     Navigator.of(context).pop();
                     Navigator.of(context).pushReplacement(
                       MaterialPageRoute(
-                        builder: (context) => ResumenVentaScreen(),
+                        builder: (context) => ResumenVentaScreen(
+                          venta: ventaConPagos,
+                        ),
                       ),
                     );
                   },
@@ -1353,6 +1372,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                                   color: AppTheme.primaryColor,
                                 ),
                               ),
+                              const SizedBox(height: 4),
                               Text(
                                 'Registrar',
                                 style: TextStyle(

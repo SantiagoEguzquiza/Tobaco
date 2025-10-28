@@ -20,24 +20,24 @@ class AgregarProductoButton extends StatelessWidget {
         width: double.infinity,
         child: ElevatedButton.icon(
           onPressed: enabled ? onPressed : null,
-          icon: const Icon(Icons.add_shopping_cart, size: 24),
+          icon: const Icon(Icons.add_shopping_cart, size: 20),
           label: const Text(
             'Agregar Productos',
             style: TextStyle(
-              fontSize: 18,
+              fontSize: 16,
               fontWeight: FontWeight.w600,
             ),
           ),
           style: ElevatedButton.styleFrom(
-            backgroundColor: AppTheme.addGreenColor,
+            backgroundColor: AppTheme.primaryColor,
             foregroundColor: Colors.white,
             disabledBackgroundColor: Colors.grey.shade400,
             disabledForegroundColor: Colors.grey.shade200,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(15),
             ),
-            padding: const EdgeInsets.symmetric(vertical: 18),
-            elevation: enabled ? 3 : 0,
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            elevation: enabled ? 2 : 0,
           ),
         ),
       ),

@@ -9,11 +9,11 @@ import 'package:tobaco/Screens/Productos/productos_screen.dart';
 import 'package:tobaco/Screens/Admin/user_management_screen.dart';
 import 'package:tobaco/Screens/Admin/categorias_screen.dart';
 import 'package:tobaco/Screens/Auth/login_screen.dart';
+import 'package:tobaco/Screens/Config/config_screen.dart';
 import 'package:tobaco/Services/Auth_Service/auth_provider.dart';
 import 'package:tobaco/Theme/app_theme.dart';
 import 'package:tobaco/Theme/dialogs.dart';
 import 'package:tobaco/Theme/theme_provider.dart';
-import 'package:tobaco/Helpers/api_handler.dart';
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -483,7 +483,14 @@ class MenuScreen extends StatelessWidget {
                                 elevation: 10,
                                 shadowColor: Colors.black,
                               ),
-                              onPressed: () => _showLogoutDialog(context),
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => const ConfigScreen(),
+                                  ),
+                                );
+                              },
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [

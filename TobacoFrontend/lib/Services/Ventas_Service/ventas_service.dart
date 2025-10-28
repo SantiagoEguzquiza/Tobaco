@@ -7,32 +7,49 @@ import 'package:tobaco/Services/Auth_Service/auth_service.dart';
 
 class VentasService {
   final Uri baseUrl = Apihandler.baseUrl;
-  static const Duration _timeoutDuration = Duration(seconds: 10);
+  static const Duration _timeoutDuration = Duration(milliseconds: 500); // Ultra rápido para modo offline
 
   Future<List<Ventas>> obtenerVentas() async {
     try {
+      print('📡 VentasService: Obteniendo ventas del backend...');
+      print('📡 VentasService: URL: $baseUrl/Ventas');
+      
       final headers = await AuthService.getAuthHeaders();
+      print('📡 VentasService: Headers obtenidos');
+      
       final response = await Apihandler.client.get(
         Uri.parse('$baseUrl/Ventas'),
         headers: headers,
       ).timeout(_timeoutDuration);
 
+      print('📡 VentasService: Respuesta recibida - Status: ${response.statusCode}');
+      print('📡 VentasService: Body length: ${response.body.length}');
+
       if (response.statusCode == 200) {
         final List<dynamic> ventasJson = jsonDecode(response.body);
         
-        // Debug: Imprimir la estructura de datos recibida
-        debugPrint('Datos recibidos del backend: ${jsonEncode(ventasJson)}');
+        print('✅ VentasService: ${ventasJson.length} ventas recibidas del backend');
         
-        return ventasJson.map((json) {
-          debugPrint('Procesando venta individual: ${jsonEncode(json)}');
+        if (ventasJson.isEmpty) {
+          print('⚠️ VentasService: El backend devolvió un array VACÍO');
+          print('⚠️ VentasService: Verifica que haya ventas en la base de datos del backend');
+        }
+        
+        final ventas = ventasJson.map((json) {
           return Ventas.fromJson(json);
         }).toList();
+        
+        print('✅ VentasService: ${ventas.length} ventas parseadas correctamente');
+        return ventas;
       } else {
+        print('❌ VentasService: Error del servidor - Status: ${response.statusCode}');
+        print('❌ VentasService: Body: ${response.body}');
         throw Exception(
           'Error al obtener las ventas. Código de estado: ${response.statusCode}',
         );
       }
     } catch (e) {
+      print('❌ VentasService: Excepción capturada: $e');
       debugPrint('Error al obtener las ventas: $e');
       rethrow;
     }

@@ -20,8 +20,9 @@ class CategoriasScreen extends StatefulWidget {
 class _CategoriasScreenState extends State<CategoriasScreen> {
   final TextEditingController _nombreController = TextEditingController();
   String _selectedColor = '#9E9E9E';
-  bool _isLoading = false;
-  String _searchQuery = '';
+  final bool _isLoading = false;
+  final String _searchQuery = '';
+  bool _offlineMessageShown = false; // Para mostrar el mensaje solo la primera vez
 
   final List<String> _availableColors = [
     '#FF8A00', // Orange
@@ -54,28 +55,36 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
   Future<void> _loadCategorias() async {
     final provider = Provider.of<CategoriasProvider>(context, listen: false);
     
-    // Si ya hay categorías cargadas, resetear el estado de loading y retornar
-    if (provider.categorias.isNotEmpty) {
+    // Si ya hay categorías cargadas del servidor (no del caché), solo resetear loading
+    if (provider.categorias.isNotEmpty && !provider.loadedFromCache) {
       provider.resetLoadingState();
       return;
     }
-    
-    // Si está cargando, esperar un poco y verificar de nuevo
-    if (provider.isLoading) {
-      await Future.delayed(Duration(seconds: 1));
-      if (provider.categorias.isNotEmpty) {
-        provider.resetLoadingState();
-        return;
-      }
-    }
 
     try {
+      // Siempre intentar cargar del servidor cuando se abre la pantalla
       await provider.obtenerCategorias();
+      
+      // 📱 Mostrar snackbar si cargó del caché (solo la primera vez)
+      if (mounted && provider.loadedFromCache && provider.categorias.isNotEmpty && !_offlineMessageShown) {
+        _offlineMessageShown = true;
+        AppTheme.showSnackBar(
+          context,
+          AppTheme.warningSnackBar('Modo Offline Activado'),
+        );
+      }
     } catch (e) {
       if (!mounted) return;
       
+      // Si hay error y no hay categorías, mostrar mensaje
       if (Apihandler.isConnectionError(e)) {
-        await Apihandler.handleConnectionError(context, e);
+        // Solo mostrar mensaje si no hay categorías en caché
+        if (provider.categorias.isEmpty) {
+          AppTheme.showSnackBar(
+            context,
+            AppTheme.warningSnackBar('Sin conexión. Verifica tu conexión a internet.'),
+          );
+        }
       } else {
         AppTheme.showSnackBar(
           context,

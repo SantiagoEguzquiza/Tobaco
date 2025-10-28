@@ -184,8 +184,9 @@ class BcuRepository {
             // Si es un valor numérico, intentar asignarlo a tcc o tcv
             final numValue = double.tryParse(value.replaceAll(',', '.'));
             if (numValue != null) {
-              if (tcc == null) tcc = numValue;
-              else if (tcv == null) tcv = numValue;
+              if (tcc == null) {
+                tcc = numValue;
+              } else tcv ??= numValue;
             }
           }
         }

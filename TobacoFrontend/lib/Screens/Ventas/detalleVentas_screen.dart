@@ -630,7 +630,7 @@ class _DetalleVentaScreenState extends State<DetalleVentaScreen> {
                   ),
                 ],
               ),
-            )).toList(),
+            )),
           ],
           // Mostrar descuento si aplica
           if (widget.venta.cliente.descuentoGlobal > 0) ...[
@@ -863,7 +863,7 @@ class _DetalleVentaScreenState extends State<DetalleVentaScreen> {
       text: TextSpan(
         children: [
           TextSpan(
-            text: '\$${parteEntera}',
+            text: '\$$parteEntera',
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
@@ -873,7 +873,7 @@ class _DetalleVentaScreenState extends State<DetalleVentaScreen> {
             ),
           ),
           TextSpan(
-            text: ',${parteDecimal}',
+            text: ',$parteDecimal',
             style: TextStyle(
               fontSize: 14,
               color: Theme.of(context).brightness == Brightness.dark

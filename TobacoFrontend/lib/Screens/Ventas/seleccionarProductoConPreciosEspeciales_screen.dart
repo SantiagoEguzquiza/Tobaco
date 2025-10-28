@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../Models/Categoria.dart';
 import '../../Models/Producto.dart';
 import '../../Models/ProductoSeleccionado.dart';
@@ -7,7 +8,6 @@ import '../../Services/Categoria_Service/categoria_provider.dart';
 import '../../Services/Productos_Service/productos_provider.dart';
 import '../../Services/PrecioEspecialService.dart';
 import '../../Theme/app_theme.dart';
-import '../../Theme/dialogs.dart';
 import '../../Helpers/api_handler.dart';
 
 class SeleccionarProductosConPreciosEspecialesScreen extends StatefulWidget {
@@ -36,8 +36,6 @@ class _SeleccionarProductosConPreciosEspecialesScreenState
   bool isLoading = true;
   String? errorMessage;
   String searchQuery = '';
-  final ProductoProvider productoProvider = ProductoProvider();
-  final CategoriasProvider categoriasProvider = CategoriasProvider();
 
   @override
   void initState() {
@@ -60,6 +58,10 @@ class _SeleccionarProductosConPreciosEspecialesScreenState
     });
 
     try {
+      // ⭐ Usar los providers del contexto (para acceder al caché)
+      final productoProvider = Provider.of<ProductoProvider>(context, listen: false);
+      final categoriasProvider = Provider.of<CategoriasProvider>(context, listen: false);
+      
       final List<Producto> fetchedProductos =
           await productoProvider.obtenerProductos();
       final List<Categoria> fetchedCategorias =

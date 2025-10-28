@@ -2,12 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:tobaco/Models/Categoria.dart';
 import 'package:tobaco/Models/CategoriaReorderDTO.dart';
 import 'package:tobaco/Services/Categoria_Service/categoria_service.dart';
+import 'package:tobaco/Services/Cache/datos_cache_service.dart';
 import 'package:tobaco/Helpers/api_handler.dart';
 
 class CategoriasProvider with ChangeNotifier {
   final CategoriaService _categoriaService = CategoriaService();
+  final DatosCacheService _cacheService = DatosCacheService();
 
   List<Categoria> _categorias = [];
+  bool loadedFromCache = false; // Indica si la última carga fue del caché
 
   List<Categoria> get categorias => _categorias;
 
@@ -22,34 +25,75 @@ class CategoriasProvider with ChangeNotifier {
   }
 
   Future<List<Categoria>> obtenerCategorias({bool silent = false}) async {
+    // Si ya hay categorías cargadas del servidor (no del caché) y no se solicita recargar, retornar las existentes
+    if (!silent && _categorias.isNotEmpty && !loadedFromCache) {
+      return _categorias;
+    }
+    
+    print('📡 CategoriasProvider: Intentando obtener categorías del servidor... (silent: $silent)');
+    
+    // En modo silencioso, no modificar el estado de loading para evitar notificaciones durante build
+    // Solo establecer estado de carga si no es modo silencioso
+    if (!silent && !isLoading) {
+      isLoading = true;
+      // Diferir la notificación hasta después del build actual para evitar setState during build
+      Future.microtask(() => notifyListeners());
+    }
+    
+    loadedFromCache = false; // Reset
+    
     try {
-      // Solo actualizar isLoading si realmente cambió y no es modo silencioso
-      if (!isLoading && !silent) {
-        isLoading = true;
-        notifyListeners();
-      }
-      
+      // Intentar obtener del servidor (el servicio maneja el timeout)
       _categorias = await _categoriaService.obtenerCategorias();
       
-      // Solo actualizar isLoading si realmente cambió y no es modo silencioso
-      if (isLoading && !silent) {
-        isLoading = false;
-        notifyListeners();
-      }
-    } catch (e) {
-      // Si es un error de conexión, limpiar la lista de categorías
-      if (Apihandler.isConnectionError(e)) {
-        _categorias = [];
+      print('✅ CategoriasProvider: ${_categorias.length} categorías obtenidas del servidor');
+      loadedFromCache = false; // Cargado del servidor
+      
+      // Guardar en caché para uso offline
+      if (_categorias.isNotEmpty) {
+        await _cacheService.guardarCategoriasEnCache(_categorias);
+        print('✅ CategoriasProvider: ${_categorias.length} categorías guardadas en caché');
       }
       
-      if (isLoading && !silent) {
+      // Notificar cambios solo si no es modo silencioso
+      if (!silent) {
         isLoading = false;
         notifyListeners();
       }
-      debugPrint('Error en obtenerCategorias: $e');
-      // Relanzar la excepción para que la UI la pueda manejar
-      rethrow;
+      
+    } catch (e) {
+      print('⚠️ CategoriasProvider: Error obteniendo del servidor: $e');
+      print('📦 CategoriasProvider: Cargando categorías del caché...');
+      
+      // Si falla, cargar del caché
+      try {
+        _categorias = await _cacheService.obtenerCategoriasDelCache();
+        
+        if (_categorias.isEmpty) {
+          print('❌ CategoriasProvider: No hay categorías en caché');
+          loadedFromCache = false;
+          if (!silent) {
+            isLoading = false;
+            notifyListeners();
+          }
+          throw Exception('No hay categorías disponibles offline. Conecta para sincronizar.');
+        } else {
+          print('✅ CategoriasProvider: ${_categorias.length} categorías cargadas del caché');
+          loadedFromCache = true; // Cargado del caché
+          if (!silent) {
+            isLoading = false;
+            notifyListeners();
+          }
+        }
+      } catch (cacheError) {
+        if (!silent) {
+          isLoading = false;
+          notifyListeners();
+        }
+        rethrow;
+      }
     }
+    
     return _categorias;
   }
 

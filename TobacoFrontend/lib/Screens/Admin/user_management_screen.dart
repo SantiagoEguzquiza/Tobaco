@@ -331,9 +331,6 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                     surface: Theme.of(context).brightness == Brightness.dark
                         ? const Color(0xFF1A1A1A)
                         : Colors.white,
-                    background: Theme.of(context).brightness == Brightness.dark
-                        ? const Color(0xFF0F0F0F)
-                        : const Color(0xFFF8F9FA),
                   ),
               textSelectionTheme: TextSelectionThemeData(
                 selectionColor: const Color(0xFF4CAF50).withOpacity(0.3),
@@ -658,8 +655,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                                 ),
                               )
                             : ListView.builder(
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 16),
+                                padding: const EdgeInsets.all(16),
                   itemCount: userProvider.users.length,
                   itemBuilder: (context, index) {
                     final user = userProvider.users[index];
@@ -679,6 +675,10 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
 
   Widget _buildUserCard(
       BuildContext context, User user, UserProvider userProvider) {
+    final indicatorColor = user.isActive 
+        ? (user.isAdmin ? const Color(0xFF4CAF50) : AppTheme.primaryColor)
+        : Colors.red;
+    
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -690,207 +690,170 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
           BoxShadow(
             color: Theme.of(context).brightness == Brightness.dark
                 ? Colors.black.withOpacity(0.3)
-                : Colors.black.withOpacity(0.06),
-            blurRadius: 8,
+                : Colors.black.withOpacity(0.05),
+            blurRadius: 10,
             offset: const Offset(0, 2),
           ),
         ],
-        border: Border.all(
-          color: user.isActive
-              ? Colors.green.withOpacity(0.2)
-              : Colors.red.withOpacity(0.2),
-          width: 1,
-        ),
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            // User avatar
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: user.isAdmin
-                    ? const Color(0xFF4CAF50).withOpacity(0.1)
-                    : Colors.grey.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: user.isAdmin
-                      ? const Color(0xFF4CAF50).withOpacity(0.3)
-                      : Colors.grey.withOpacity(0.3),
-                  width: 1,
+      child: Material(
+        color: Colors.transparent,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              // Indicador lateral
+              Container(
+                width: 4,
+                height: 60,
+                decoration: BoxDecoration(
+                  color: indicatorColor,
+                  borderRadius: BorderRadius.circular(2),
                 ),
               ),
-          child: Icon(
-            user.isAdmin ? Icons.admin_panel_settings : Icons.person,
-                color:
-                    user.isAdmin ? const Color(0xFF4CAF50) : Colors.grey[600],
-                size: 24,
-              ),
-            ),
-            const SizedBox(width: 16),
+              const SizedBox(width: 16),
 
-            // User info
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-          user.userName,
-                    style: AppTheme.appBarTitleStyle.copyWith(
-            fontWeight: FontWeight.bold,
-                      color: Theme.of(context).brightness == Brightness.dark
-                          ? const Color(0xFFE0E0E0)
-                          : const Color(0xFF1B5E20),
-                      fontSize: 18,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  if (user.email != null) ...[
-                    const SizedBox(height: 4),
+              // Información del usuario
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                     Text(
-                      user.email!,
-                      style: AppTheme.cardSubtitleStyle.copyWith(
-                        color: const Color(0xFF4CAF50),
-                        fontSize: 14,
+                      user.userName,
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.white
+                            : AppTheme.textColor,
                       ),
                       overflow: TextOverflow.ellipsis,
                     ),
-                  ],
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 4,
-          children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: user.isAdmin
-                              ? const Color(0xFF4CAF50).withOpacity(0.1)
-                              : Colors.grey.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: user.isAdmin
-                                ? const Color(0xFF4CAF50).withOpacity(0.3)
-                                : Colors.grey.withOpacity(0.3),
-                            width: 1,
+                    if (user.email != null) ...[
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.email_outlined,
+                            size: 16,
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? Colors.grey.shade400
+                                : Colors.grey.shade600,
                           ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              user.isAdmin
-                                  ? Icons.admin_panel_settings
-                                  : Icons.person,
-                              size: 14,
-                              color: user.isAdmin
-                                  ? const Color(0xFF4CAF50)
-                                  : Colors.grey[600],
-                            ),
-                            const SizedBox(width: 4),
-            Text(
-                              user.role,
-                              style: AppTheme.cardSubtitleStyle.copyWith(
-                                color: user.isAdmin
-                                    ? const Color(0xFF4CAF50)
-                                    : Colors.grey[600],
-                                fontWeight: FontWeight.w600,
-                                fontSize: 12,
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              user.email!,
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.grey.shade400
+                                    : Colors.grey.shade600,
                               ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      // Show "Último Admin" badge if this is the last admin
-                      if (_isLastAdmin(user, userProvider)) ...[
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.orange.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: Colors.orange.withOpacity(0.3),
-                              width: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(
-                                Icons.security,
-                                size: 14,
-                                color: Colors.orange,
-                              ),
-                              const SizedBox(width: 4),
-              Text(
-                                'Último Admin',
-                                style: AppTheme.cardSubtitleStyle.copyWith(
-                                  color: Colors.orange,
-                                  fontWeight: FontWeight.w600,
-                  fontSize: 12,
-                ),
-              ),
-          ],
-        ),
-                        ),
-                      ],
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: user.isActive
-                              ? Colors.green.withOpacity(0.1)
-                              : Colors.red.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: user.isActive
-                                ? Colors.green.withOpacity(0.3)
-                                : Colors.red.withOpacity(0.3),
-                            width: 1,
-                          ),
-                        ),
-                        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-                            Icon(
-                              user.isActive ? Icons.check_circle : Icons.cancel,
-                              size: 14,
-                              color: user.isActive
-                                  ? Colors.green[700]
-                                  : Colors.red[700],
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              user.isActive ? 'Activo' : 'Inactivo',
-                              style: AppTheme.cardSubtitleStyle.copyWith(
-                                color: user.isActive
-                                    ? Colors.green[700]
-                                    : Colors.red[700],
-                                fontWeight: FontWeight.w600,
-                                fontSize: 12,
-                              ),
-            ),
-          ],
-        ),
+                        ],
                       ),
                     ],
-                  ),
-                ],
+                    const SizedBox(height: 2),
+                    Row(
+                      children: [
+                        Icon(
+                          user.isAdmin ? Icons.admin_panel_settings : Icons.person,
+                          size: 16,
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.grey.shade400
+                              : Colors.grey.shade600,
+                        ),
+                        const SizedBox(width: 4),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: user.isAdmin
+                                ? const Color(0xFF4CAF50).withOpacity(0.1)
+                                : Colors.grey.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: user.isAdmin
+                                  ? const Color(0xFF4CAF50).withOpacity(0.3)
+                                  : Colors.grey.withOpacity(0.3),
+                            ),
+                          ),
+                          child: Text(
+                            user.role,
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: user.isAdmin
+                                  ? const Color(0xFF4CAF50)
+                                  : Colors.grey.shade700,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                        if (_isLastAdmin(user, userProvider)) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.orange.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: Colors.orange.withOpacity(0.3),
+                              ),
+                            ),
+                            child: Text(
+                              'Último Admin',
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: Colors.orange.shade700,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ],
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: user.isActive
+                                ? Colors.green.withOpacity(0.1)
+                                : Colors.red.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: user.isActive
+                                  ? Colors.green.withOpacity(0.3)
+                                  : Colors.red.withOpacity(0.3),
+                            ),
+                          ),
+                          child: Text(
+                            user.isActive ? 'Activo' : 'Inactivo',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: user.isActive
+                                  ? Colors.green.shade700
+                                  : Colors.red.shade700,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ),
 
-            // Actions
-            PopupMenuButton<String>(
+              // Actions
+              PopupMenuButton<String>(
               onSelected: (value) {
                 // Use a post-frame callback with a small delay to ensure the popup is fully dismissed
                 WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -996,7 +959,8 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                 ),
               ),
             ),
-          ],
+            ],
+          ),
         ),
       ),
     );
