@@ -337,7 +337,7 @@ class _DeudasScreenState extends State<DeudasScreen> {
         color: Theme.of(context).brightness == Brightness.dark
             ? const Color(0xFF1A1A1A)
             : Colors.white,
-        borderRadius: BorderRadius.circular(15),
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
             color: Theme.of(context).brightness == Brightness.dark
@@ -351,7 +351,7 @@ class _DeudasScreenState extends State<DeudasScreen> {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(15),
+          borderRadius: BorderRadius.circular(16),
           onTap: () async {
             final result = await Navigator.push(
               context,
@@ -369,21 +369,18 @@ class _DeudasScreenState extends State<DeudasScreen> {
             padding: const EdgeInsets.all(16),
             child: Row(
               children: [
+                // Indicador lateral
                 Container(
-                  padding: const EdgeInsets.all(12),
+                  width: 4,
+                  height: 60,
                   decoration: BoxDecoration(
-                    color: Theme.of(context).brightness == Brightness.dark
-                        ? AppTheme.primaryColor.withOpacity(0.2)
-                        : AppTheme.primaryColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(
-                    Icons.person,
-                    color: AppTheme.primaryColor,
-                    size: 24,
+                    color: Colors.red,
+                    borderRadius: BorderRadius.circular(2),
                   ),
                 ),
                 const SizedBox(width: 16),
+
+                // Información del cliente
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -391,56 +388,92 @@ class _DeudasScreenState extends State<DeudasScreen> {
                       Text(
                         cliente.nombre,
                         style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
                           color: Theme.of(context).brightness == Brightness.dark
                               ? Colors.white
-                              : AppTheme.primaryColor,
+                              : AppTheme.textColor,
                         ),
                       ),
                       const SizedBox(height: 4),
-                      Text(
-                        'Deuda: \$${_formatearPrecio(_parsearDeuda(cliente.deuda))}',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Theme.of(context).brightness == Brightness.dark
-                              ? Colors.grey.shade400
-                              : Colors.grey.shade600,
-                          fontWeight: FontWeight.w500,
-                        ),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.attach_money,
+                            size: 16,
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? Colors.grey.shade400
+                                : Colors.grey.shade600,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Deuda: \$${_formatearPrecio(_parsearDeuda(cliente.deuda))}',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Theme.of(context).brightness == Brightness.dark
+                                  ? Colors.grey.shade400
+                                  : Colors.grey.shade600,
+                            ),
+                          ),
+                        ],
                       ),
                       if (cliente.telefono != null) ...[
                         const SizedBox(height: 2),
-                        Text(
-                          'Tel: ${cliente.telefono}',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Theme.of(context).brightness == Brightness.dark
-                                ? Colors.grey.shade400
-                                : Colors.grey.shade500,
-                          ),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.phone_outlined,
+                              size: 16,
+                              color: Theme.of(context).brightness == Brightness.dark
+                                  ? Colors.grey.shade400
+                                  : Colors.grey.shade600,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              cliente.telefono!.toString(),
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.grey.shade400
+                                    : Colors.grey.shade600,
+                              ),
+                            ),
+                          ],
                         ),
                       ],
+                      const SizedBox(height: 2),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.people_outline,
+                            size: 16,
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? Colors.grey.shade400
+                                : Colors.grey.shade600,
+                          ),
+                          const SizedBox(width: 4),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.red.shade50,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.red.shade200),
+                            ),
+                            child: Text(
+                              'Con Deuda',
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: Colors.red.shade600,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ],
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).brightness == Brightness.dark
-                        ? Colors.red.withOpacity(0.2)
-                        : Colors.red.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    'Deuda',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Theme.of(context).brightness == Brightness.dark
-                          ? Colors.red.shade400
-                          : Colors.red.shade700,
-                      fontWeight: FontWeight.w600,
-                    ),
                   ),
                 ),
               ],

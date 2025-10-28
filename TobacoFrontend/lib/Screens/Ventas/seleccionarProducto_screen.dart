@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 import 'package:tobaco/Models/Categoria.dart';
 import 'package:tobaco/Models/Producto.dart';
 import 'package:tobaco/Models/ProductoSeleccionado.dart';
@@ -71,18 +72,14 @@ class _SeleccionarProductosScreenState
     });
 
     try {
-      final productoProvider = ProductoProvider();
-      final categoriasProvider = CategoriasProvider();
+      // ⭐ Usar los providers del contexto (para acceder al caché)
+      final productoProvider = Provider.of<ProductoProvider>(context, listen: false);
+      final categoriasProvider = Provider.of<CategoriasProvider>(context, listen: false);
 
       final List<Producto> fetchedProductos =
           await productoProvider.obtenerProductos();
       final List<Categoria> fetchedCategorias =
           await categoriasProvider.obtenerCategorias();
-
-      // Cargar precios especiales si hay un cliente seleccionado
-      if (widget.cliente != null) {
-        await _loadPreciosEspeciales();
-      }
 
       setState(() {
         categorias = fetchedCategorias;
@@ -102,6 +99,13 @@ class _SeleccionarProductosScreenState
         
         isLoading = false;
       });
+
+      // Cargar precios especiales si hay un cliente seleccionado
+      if (widget.cliente != null) {
+        await _loadPreciosEspeciales();
+      }
+
+      // No mostrar mensaje de modo offline aquí (solo en listado de ventas)
 
       // Si hay un producto al que hacer scroll, hacerlo después de que se construya la UI
       if (widget.scrollToProductId != null) {
@@ -224,6 +228,18 @@ class _SeleccionarProductosScreenState
     pricingResults.clear();
   }
 
+  // Helper method to safely parse color hex
+  Color _parseColor(String colorHex) {
+    try {
+      if (colorHex.isEmpty || colorHex.length < 7) {
+        return const Color(0xFF9E9E9E); // Default gray
+      }
+      return Color(int.parse(colorHex.substring(1), radix: 16) + 0xFF000000);
+    } catch (e) {
+      return const Color(0xFF9E9E9E); // Default gray on error
+    }
+  }
+
   double _getPrecioUnitarioReal(Producto producto) {
     // Este método devuelve el precio unitario base, considerando solo precios especiales
     // El descuento global se aplica en el backend al confirmar la venta
@@ -258,7 +274,7 @@ class _SeleccionarProductosScreenState
       text: TextSpan(
         children: [
           TextSpan(
-            text: '\$${parteEntera}',
+            text: '\$$parteEntera',
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w500,
@@ -268,7 +284,7 @@ class _SeleccionarProductosScreenState
             ),
           ),
           TextSpan(
-            text: ',${parteDecimal}',
+            text: ',$parteDecimal',
             style: TextStyle(
               fontSize: 10,
               color: Colors.grey.shade400,
@@ -300,7 +316,7 @@ class _SeleccionarProductosScreenState
       text: TextSpan(
         children: [
           TextSpan(
-            text: '\$${parteEntera}',
+            text: '\$$parteEntera',
             style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -308,7 +324,7 @@ class _SeleccionarProductosScreenState
             ),
           ),
           TextSpan(
-            text: ',${parteDecimal}',
+            text: ',$parteDecimal',
             style: TextStyle(
               fontSize: 12,
               color: Theme.of(context).brightness == Brightness.dark
@@ -638,7 +654,7 @@ class _SeleccionarProductosScreenState
                     ),
                   ),
                 );
-              }).toList(),
+              }),
               const SizedBox(height: 10),
             ],
           ),
@@ -681,7 +697,27 @@ class _SeleccionarProductosScreenState
         centerTitle: true,
         title: const Text('Nueva venta', style: AppTheme.appBarTitleStyle),
       ),
-      body: SafeArea(
+      body: isLoading
+        ? Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Cargando productos...',
+                  style: TextStyle(
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.grey.shade400
+                        : Colors.grey.shade600,
+                  ),
+                ),
+              ],
+            ),
+          )
+        : SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: SingleChildScrollView(
@@ -722,85 +758,66 @@ class _SeleccionarProductosScreenState
                 ),
                 const SizedBox(height: 20),
 
-                // Filtros de categorías mejorados (solo mostrar cuando NO hay búsqueda activa)
-                if (searchQuery.isEmpty)
-                  Container(
-                    height: 60,
-                    padding: const EdgeInsets.symmetric(vertical: 8),
+                // Filtros de categorías (solo mostrar cuando NO hay búsqueda activa)
+                if (searchQuery.isEmpty && categorias.isNotEmpty) ...[
+                  SizedBox(
+                    height: 50,
                     child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: categorias.length,
-                    itemBuilder: (context, index) {
-                      final categoria = categorias[index];
-                      final isSelected = selectedCategory == categoria.nombre;
-
-                      return AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        curve: Curves.easeInOut,
-                        margin: const EdgeInsets.only(right: 12),
-                        child: InkWell(
-                          onTap: () {
-                            setState(() {
-                              selectedCategory = categoria.nombre;
-                            });
-                          },
-                          borderRadius: BorderRadius.circular(25),
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 200),
-                            curve: Curves.easeInOut,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 20,
-                              vertical: 12,
-                            ),
-                            decoration: BoxDecoration(
-                              gradient: isSelected
-                                  ? LinearGradient(
-                                      colors: [
-                                        AppTheme.primaryColor,
-                                        AppTheme.primaryColor.withOpacity(0.8),
-                                      ],
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                    )
-                                  : null,
-                              color: isSelected ? null : (Theme.of(context).brightness == Brightness.dark
-                                  ? const Color(0xFF404040)
-                                  : Colors.white),
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(
-                                color: isSelected
-                                    ? AppTheme.primaryColor
-                                    : (Theme.of(context).brightness == Brightness.dark
-                                        ? Colors.grey.shade600
-                                        : Colors.grey.shade300),
-                                width: 1,
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      itemCount: categorias.length,
+                      itemBuilder: (context, index) {
+                        final categoria = categorias[index];
+                        final isSelected =
+                            selectedCategory == categoria.nombre;
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 12),
+                          child: FilterChip(
+                            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            visualDensity: VisualDensity.compact,
+                            avatar: Container(
+                              width: 12,
+                              height: 12,
+                              decoration: const BoxDecoration(
+                                color: Colors.white,
+                                shape: BoxShape.circle,
                               ),
                             ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  categoria.nombre[0].toUpperCase() +
-                                      categoria.nombre.substring(1),
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                    color: isSelected
-                                        ? Colors.white
-                                        : (Theme.of(context).brightness == Brightness.dark
-                                            ? Colors.white
-                                            : Colors.grey.shade700),
-                                  ),
-                                ),
-                              ],
+                            label: Text(
+                              categoria.nombre[0].toUpperCase() +
+                                  categoria.nombre.substring(1),
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: isSelected
+                                    ? FontWeight.w600
+                                    : FontWeight.normal,
+                              ),
+                            ),
+                            selected: isSelected,
+                            onSelected: (selected) {
+                              setState(() {
+                                selectedCategory = categoria.nombre;
+                              });
+                            },
+                            backgroundColor: Theme.of(context).cardTheme.color,
+                            selectedColor: _parseColor(categoria.colorHex),
+                            showCheckmark: false,
+                            side: BorderSide(
+                              color: isSelected
+                                  ? _parseColor(categoria.colorHex)
+                                  : Colors.grey.shade300,
+                              width: 1,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(25),
                             ),
                           ),
-                        ),
-                      );
-                    },
+                        );
+                      },
+                    ),
                   ),
-                  ),
-                if (searchQuery.isEmpty) const SizedBox(height: 20),
+                  const SizedBox(height: 24),
+                ],
 
                 // Indicador de búsqueda global o título normal
                 if (filteredProductos.isNotEmpty) ...[
@@ -1275,7 +1292,7 @@ class _SeleccionarProductosScreenState
                       
                       // Calculate pricing for this specific quantity
                       final cantidad = e.value.toInt();
-                      final cacheKey = '${producto.id}_${cantidad}';
+                      final cacheKey = '${producto.id}_$cantidad';
                       final pricingResult = pricingResults[cacheKey];
                       
                       // El precio debe ser el promedio por unidad, no el total

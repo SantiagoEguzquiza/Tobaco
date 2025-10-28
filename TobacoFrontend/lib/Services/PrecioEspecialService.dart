@@ -2,11 +2,13 @@ import 'dart:convert';
 import '../Models/PrecioEspecial.dart';
 import '../Helpers/api_handler.dart';
 import '../Services/Auth_Service/auth_service.dart';
+import 'Cache/datos_cache_service.dart';
 
 class PrecioEspecialService {
   static final Uri _baseUrl = Apihandler.baseUrl;
   static const String _endpoint = 'preciosespeciales';
-  static const Duration _timeoutDuration = Duration(seconds: 10);
+  static const Duration _timeoutDuration = Duration(seconds: 1); // Ultra rápido para modo offline
+  static final DatosCacheService _cacheService = DatosCacheService();
 
   // Obtener todos los precios especiales
   static Future<List<PrecioEspecial>> getAllPreciosEspeciales() async {
@@ -49,7 +51,10 @@ class PrecioEspecialService {
 
   // Obtener precios especiales por cliente
   static Future<List<PrecioEspecial>> getPreciosEspecialesByCliente(int clienteId) async {
+    print('📡 PrecioEspecialService: Intentando obtener precios especiales del cliente $clienteId...');
+    
     try {
+      // Intentar obtener del servidor con timeout (1s)
       final response = await Apihandler.client.get(
         Uri.parse('$_baseUrl/$_endpoint/cliente/$clienteId'),
         headers: await AuthService.getAuthHeaders(),
@@ -57,12 +62,34 @@ class PrecioEspecialService {
 
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
-        return data.map((json) => PrecioEspecial.fromJson(json)).toList();
+        final List<PrecioEspecial> precios = data.map((json) => PrecioEspecial.fromJson(json)).toList();
+        
+        print('✅ PrecioEspecialService: ${precios.length} precios especiales obtenidos del servidor');
+        
+        // Guardar en caché para uso offline (en background)
+        _cacheService.guardarPreciosEspecialesEnCache(clienteId, data)
+            .catchError((e) => print('⚠️ Error guardando precios especiales en caché: $e'));
+        
+        return precios;
       } else {
         throw Exception('Error al obtener precios especiales del cliente: ${response.statusCode}');
       }
     } catch (e) {
-      throw Exception('Error de conexión: $e');
+      print('⚠️ PrecioEspecialService: Error obteniendo del servidor: $e');
+      print('📦 PrecioEspecialService: Cargando precios especiales del caché...');
+      
+      // Si falla, cargar del caché
+      final List<dynamic> preciosCache = await _cacheService.obtenerPreciosEspecialesDelCache(clienteId);
+      
+      if (preciosCache.isEmpty) {
+        print('❌ PrecioEspecialService: No hay precios especiales en caché');
+        return []; // Retornar lista vacía en lugar de lanzar excepción
+      }
+      
+      final List<PrecioEspecial> precios = preciosCache.map((json) => PrecioEspecial.fromJson(json)).toList();
+      print('✅ PrecioEspecialService: ${precios.length} precios especiales cargados del caché');
+      
+      return precios;
     }
   }
 

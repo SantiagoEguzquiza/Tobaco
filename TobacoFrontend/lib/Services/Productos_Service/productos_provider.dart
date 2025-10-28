@@ -1,21 +1,49 @@
 import 'package:flutter/material.dart';
 import 'package:tobaco/Models/Producto.dart';
 import 'package:tobaco/Services/Productos_Service/productos_service.dart';
+import 'package:tobaco/Services/Cache/datos_cache_service.dart';
 
 class ProductoProvider with ChangeNotifier {
   final ProductoService _productoService = ProductoService();
+  final DatosCacheService _cacheService = DatosCacheService();
 
   List<Producto> _productos = [];
 
   List<Producto> get productos => _productos;
 
+  /// Obtiene productos: intenta del servidor, si falla usa caché
   Future<List<Producto>> obtenerProductos() async {
+    print('📡 ProductoProvider: Intentando obtener productos del servidor...');
+    
     try {
-      _productos = await _productoService.obtenerProductos();
-      notifyListeners();
+      // Intentar obtener del servidor con timeout (500ms para ser más rápido en offline)
+      _productos = await _productoService.obtenerProductos()
+          .timeout(Duration(milliseconds: 500));
+      
+      print('✅ ProductoProvider: ${_productos.length} productos obtenidos del servidor');
+      
+      // Guardar en caché para uso offline
+      if (_productos.isNotEmpty) {
+        await _cacheService.guardarProductosEnCache(_productos);
+        print('✅ ProductoProvider: ${_productos.length} productos guardados en caché');
+      }
+      
     } catch (e) {
-      debugPrint('Error: $e');
+      print('⚠️ ProductoProvider: Error obteniendo del servidor: $e');
+      print('📦 ProductoProvider: Cargando productos del caché...');
+      
+      // Si falla, cargar del caché
+      _productos = await _cacheService.obtenerProductosDelCache();
+      
+      if (_productos.isEmpty) {
+        print('❌ ProductoProvider: No hay productos en caché');
+        throw Exception('No hay productos disponibles offline. Conecta para sincronizar.');
+      } else {
+        print('✅ ProductoProvider: ${_productos.length} productos cargados del caché');
+      }
     }
+
+    notifyListeners();
     return _productos;
   }
 
@@ -117,11 +145,51 @@ class ProductoProvider with ChangeNotifier {
   }
 
   Future<Map<String, dynamic>> obtenerProductosPaginados(int page, int pageSize) async {
+    print('📡 ProductoProvider: Intentando obtener productos paginados del servidor...');
+    
     try {
-      return await _productoService.obtenerProductosPaginados(page, pageSize);
+      // Intentar obtener del servidor con timeout (500ms para ser más rápido en offline)
+      final result = await _productoService.obtenerProductosPaginados(page, pageSize)
+          .timeout(Duration(milliseconds: 500));
+      
+      print('✅ ProductoProvider: ${result['productos'].length} productos obtenidos del servidor');
+      
+      // Guardar en caché para uso offline (en background)
+      if (result['productos'].isNotEmpty) {
+        _cacheService.guardarProductosEnCache(result['productos'] as List<Producto>)
+            .catchError((e) => print('⚠️ Error guardando productos en caché: $e'));
+      }
+      
+      return result;
     } catch (e) {
-      debugPrint('Error al obtener productos paginados: $e');
-      rethrow;
+      print('⚠️ ProductoProvider: Error obteniendo del servidor: $e');
+      print('📦 ProductoProvider: Cargando productos del caché...');
+      
+      // Si falla, cargar del caché
+      final productosCache = await _cacheService.obtenerProductosDelCache();
+      
+      if (productosCache.isEmpty) {
+        print('❌ ProductoProvider: No hay productos en caché');
+        rethrow;
+      }
+      
+      print('✅ ProductoProvider: ${productosCache.length} productos cargados del caché');
+      
+      // Paginar manualmente desde el caché
+      final start = (page - 1) * pageSize;
+      final end = start + pageSize;
+      final productosPag = productosCache.sublist(
+        start,
+        end > productosCache.length ? productosCache.length : end,
+      );
+      
+      return {
+        'productos': productosPag,
+        'total': productosCache.length,
+        'page': page,
+        'pageSize': pageSize,
+        'totalPages': (productosCache.length / pageSize).ceil(),
+      };
     }
   }
 }

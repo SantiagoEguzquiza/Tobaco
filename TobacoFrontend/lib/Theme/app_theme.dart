@@ -357,8 +357,6 @@ class AppTheme {
         primary: const Color(0xFF4CAF50),
         secondary: const Color(0xFF66BB6A),
         surface: const Color(0xFF1A1A1A),
-        background: const Color(0xFF0F0F0F),
-        onBackground: const Color(0xFFE0E0E0),
         onSurface: const Color(0xFFE0E0E0),
         onPrimary: Colors.white,
         error: const Color(0xFFCF6679),
@@ -592,47 +590,55 @@ class AppTheme {
         ),
       ),
       content: content,
-      actionsAlignment: MainAxisAlignment.end,
-      actionsPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      actionsPadding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
       actions: [
         Builder(
-          builder: (context) => OutlinedButton(
-            onPressed: onCancel,
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              side: BorderSide(color: AppTheme.primaryColor.withOpacity(0.3), width: 1.5),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
+          builder: (context) => Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: onCancel,
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    side: BorderSide(color: AppTheme.primaryColor.withOpacity(0.3), width: 1.5),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: Text(
+                    cancelText,
+                    style: TextStyle(
+                      color: Theme.of(context).brightness == Brightness.dark 
+                          ? Colors.grey.shade300 
+                          : Colors.grey.shade700,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
               ),
-            ),
-            child: Text(
-              cancelText,
-              style: TextStyle(
-                color: Theme.of(context).brightness == Brightness.dark 
-                    ? Colors.grey.shade300 
-                    : Colors.grey.shade700,
-                fontWeight: FontWeight.w600,
-                fontSize: 14,
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: onConfirm,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryColor,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: Text(
+                    confirmText,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
               ),
-            ),
-          ),
-        ),
-        ElevatedButton(
-          onPressed: onConfirm,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppTheme.primaryColor,
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-          ),
-          child: Text(
-            confirmText,
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w600,
-              fontSize: 14,
-            ),
+            ],
           ),
         ),
       ],

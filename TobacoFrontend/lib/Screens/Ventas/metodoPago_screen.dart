@@ -80,7 +80,7 @@ class _FormaPagoScreenState extends State<FormaPagoScreen> {
       text: TextSpan(
         children: [
           TextSpan(
-            text: '\$${parteEntera}',
+            text: '\$$parteEntera',
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
@@ -88,7 +88,7 @@ class _FormaPagoScreenState extends State<FormaPagoScreen> {
             ),
           ),
           TextSpan(
-            text: ',${parteDecimal}',
+            text: ',$parteDecimal',
             style: TextStyle(
               fontSize: 14,
               color: Colors.grey.shade400,

@@ -16,7 +16,7 @@ class CotizacionesScreen extends StatefulWidget {
 class _CotizacionesScreenState extends State<CotizacionesScreen> {
   int _selectedGroup = 2; // 1 int, 2 locales, 3 tasas, 0 todos
   int _selectedDays = 7;
-  List<int> _selectedCurrencies = [2222]; // USD por defecto
+  final List<int> _selectedCurrencies = [2222]; // USD por defecto
 
   final Map<int, String> _groups = {
     0: 'Todas',
@@ -235,41 +235,7 @@ class _CotizacionesScreenState extends State<CotizacionesScreen> {
                   ),
                 ],
               ),
-              child: Column(
-                children: [
-                  // Header de resultados
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: AppTheme.primaryColor.withOpacity(0.1),
-                      borderRadius: const BorderRadius.only(
-                        topLeft: Radius.circular(12),
-                        topRight: Radius.circular(12),
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.trending_up,
-                          color: AppTheme.primaryColor,
-                          size: 24,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Cotizaciones (${vm.items.length})',
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: AppTheme.textColor,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  
-                  // Lista de cotizaciones
-                  Expanded(
-                    child: vm.isLoading
+              child: vm.isLoading
                         ? const Center(
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
@@ -372,118 +338,161 @@ class _CotizacionesScreenState extends State<CotizacionesScreen> {
                                       ],
                                     ),
                                   )
-                                : ListView.separated(
+                                : ListView.builder(
                                     padding: const EdgeInsets.all(16),
                                     itemCount: vm.items.length,
-                                    separatorBuilder: (_, __) => const Divider(height: 1),
                                     itemBuilder: (_, i) {
                                       final c = vm.items[i];
                                       return Container(
-                                        padding: const EdgeInsets.all(12),
+                                        margin: const EdgeInsets.only(bottom: 12),
                                         decoration: BoxDecoration(
-                                          color: Colors.grey[50],
-                                          borderRadius: BorderRadius.circular(8),
-                                          border: Border.all(color: Colors.grey[200]!),
-                                        ),
-                                        child: Row(
-                                          children: [
-                                            // Icono de moneda
-                                            Container(
-                                              width: 40,
-                                              height: 40,
-                                              decoration: BoxDecoration(
-                                                color: AppTheme.primaryColor.withOpacity(0.1),
-                                                borderRadius: BorderRadius.circular(20),
-                                              ),
-                                              child: Icon(
-                                                Icons.attach_money,
-                                                color: AppTheme.primaryColor,
-                                                size: 20,
-                                              ),
-                                            ),
-                                            
-                                            const SizedBox(width: 12),
-                                            
-                                            // Información de la moneda
-                                            Expanded(
-                                              child: Column(
-                                                crossAxisAlignment: CrossAxisAlignment.start,
-                                                children: [
-                                                  Text(
-                                                    '${c.nombre ?? 'Moneda ${c.moneda}'}',
-                                                    style: const TextStyle(
-                                                      fontSize: 16,
-                                                      fontWeight: FontWeight.bold,
-                                                      color: AppTheme.textColor,
-                                                    ),
-                                                  ),
-                                                  if (c.codigoIso != null)
-                                                    Text(
-                                                      c.codigoIso!,
-                                                      style: const TextStyle(
-                                                        fontSize: 12,
-                                                        color: Colors.grey,
-                                                      ),
-                                                    ),
-                                                  if (c.fecha != null)
-                                                    Text(
-                                                      'Fecha: ${c.fecha}',
-                                                      style: const TextStyle(
-                                                        fontSize: 12,
-                                                        color: Colors.grey,
-                                                      ),
-                                                    ),
-                                                ],
-                                              ),
-                                            ),
-                                            
-                                            // Valores de cotización
-                                            Column(
-                                              crossAxisAlignment: CrossAxisAlignment.end,
-                                              children: [
-                                                if (c.tcc != null)
-                                                  Container(
-                                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                                    decoration: BoxDecoration(
-                                                      color: Colors.green[100],
-                                                      borderRadius: BorderRadius.circular(4),
-                                                    ),
-                                                    child: Text(
-                                                      'Compra: \$${c.tcc!.toStringAsFixed(2)}',
-                                                      style: TextStyle(
-                                                        fontSize: 12,
-                                                        fontWeight: FontWeight.bold,
-                                                        color: Colors.green[700],
-                                                      ),
-                                                    ),
-                                                  ),
-                                                const SizedBox(height: 4),
-                                                if (c.tcv != null)
-                                                  Container(
-                                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                                    decoration: BoxDecoration(
-                                                      color: Colors.blue[100],
-                                                      borderRadius: BorderRadius.circular(4),
-                                                    ),
-                                                    child: Text(
-                                                      'Venta: \$${c.tcv!.toStringAsFixed(2)}',
-                                                      style: TextStyle(
-                                                        fontSize: 12,
-                                                        fontWeight: FontWeight.bold,
-                                                        color: Colors.blue[700],
-                                                      ),
-                                                    ),
-                                                  ),
-                                              ],
+                                          color: Theme.of(context).brightness == Brightness.dark
+                                              ? const Color(0xFF1A1A1A)
+                                              : Colors.white,
+                                          borderRadius: BorderRadius.circular(16),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: Theme.of(context).brightness == Brightness.dark
+                                                  ? Colors.black.withOpacity(0.3)
+                                                  : Colors.black.withOpacity(0.05),
+                                              blurRadius: 10,
+                                              offset: const Offset(0, 2),
                                             ),
                                           ],
+                                        ),
+                                        child: Padding(
+                                          padding: const EdgeInsets.all(16),
+                                          child: Row(
+                                            children: [
+                                              // Indicador lateral
+                                              Container(
+                                                width: 4,
+                                                height: 60,
+                                                decoration: BoxDecoration(
+                                                  color: AppTheme.primaryColor,
+                                                  borderRadius: BorderRadius.circular(2),
+                                                ),
+                                              ),
+                                              const SizedBox(width: 16),
+                                              
+                                              // Información de la moneda
+                                              Expanded(
+                                                child: Column(
+                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(
+                                                      c.nombre ?? 'Moneda ${c.moneda}',
+                                                      style: TextStyle(
+                                                        fontSize: 18,
+                                                        fontWeight: FontWeight.bold,
+                                                        color: Theme.of(context).brightness == Brightness.dark
+                                                            ? Colors.white
+                                                            : AppTheme.textColor,
+                                                      ),
+                                                    ),
+                                                    const SizedBox(height: 4),
+                                                    if (c.codigoIso != null)
+                                                      Row(
+                                                        children: [
+                                                          Icon(
+                                                            Icons.currency_exchange_outlined,
+                                                            size: 16,
+                                                            color: Theme.of(context).brightness == Brightness.dark
+                                                                ? Colors.grey.shade400
+                                                                : Colors.grey.shade600,
+                                                          ),
+                                                          const SizedBox(width: 4),
+                                                          Text(
+                                                            c.codigoIso!,
+                                                            style: TextStyle(
+                                                              fontSize: 14,
+                                                              color: Theme.of(context).brightness == Brightness.dark
+                                                                  ? Colors.grey.shade400
+                                                                  : Colors.grey.shade600,
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    if (c.fecha != null) ...[
+                                                      const SizedBox(height: 2),
+                                                      Row(
+                                                        children: [
+                                                          Icon(
+                                                            Icons.calendar_today_outlined,
+                                                            size: 16,
+                                                            color: Theme.of(context).brightness == Brightness.dark
+                                                                ? Colors.grey.shade400
+                                                                : Colors.grey.shade600,
+                                                          ),
+                                                          const SizedBox(width: 4),
+                                                          Text(
+                                                            'Fecha: ${c.fecha}',
+                                                            style: TextStyle(
+                                                              fontSize: 14,
+                                                              color: Theme.of(context).brightness == Brightness.dark
+                                                                  ? Colors.grey.shade400
+                                                                  : Colors.grey.shade600,
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ],
+                                                    const SizedBox(height: 2),
+                                                    Row(
+                                                      children: [
+                                                        if (c.tcc != null)
+                                                          Container(
+                                                            padding: const EdgeInsets.symmetric(
+                                                              horizontal: 6,
+                                                              vertical: 2,
+                                                            ),
+                                                            decoration: BoxDecoration(
+                                                              color: Colors.green.shade50,
+                                                              borderRadius: BorderRadius.circular(8),
+                                                              border: Border.all(color: Colors.green.shade200),
+                                                            ),
+                                                            child: Text(
+                                                              'Compra: \$${c.tcc!.toStringAsFixed(2)}',
+                                                              style: TextStyle(
+                                                                fontSize: 10,
+                                                                color: Colors.green.shade700,
+                                                                fontWeight: FontWeight.w500,
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        if (c.tcc != null && c.tcv != null)
+                                                          const SizedBox(width: 8),
+                                                        if (c.tcv != null)
+                                                          Container(
+                                                            padding: const EdgeInsets.symmetric(
+                                                              horizontal: 6,
+                                                              vertical: 2,
+                                                            ),
+                                                            decoration: BoxDecoration(
+                                                              color: Colors.blue.shade50,
+                                                              borderRadius: BorderRadius.circular(8),
+                                                              border: Border.all(color: Colors.blue.shade200),
+                                                            ),
+                                                            child: Text(
+                                                              'Venta: \$${c.tcv!.toStringAsFixed(2)}',
+                                                              style: TextStyle(
+                                                                fontSize: 10,
+                                                                color: Colors.blue.shade700,
+                                                                fontWeight: FontWeight.w500,
+                                                              ),
+                                                            ),
+                                                          ),
+                                                      ],
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ],
+                                          ),
                                         ),
                                       );
                                     },
                                   ),
-                  ),
-                ],
-              ),
             ),
           ),
           

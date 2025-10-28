@@ -384,6 +384,7 @@ class HeaderSimple extends StatelessWidget {
   final String? subtitle;
   final Color? customBackgroundColor;
   final Color? customBorderColor;
+  final Widget? actions; // Widget adicional en la derecha
 
   const HeaderSimple({
     super.key,
@@ -392,6 +393,7 @@ class HeaderSimple extends StatelessWidget {
     this.subtitle,
     this.customBackgroundColor,
     this.customBorderColor,
+    this.actions,
   });
 
   @override
@@ -472,6 +474,11 @@ class HeaderSimple extends StatelessWidget {
               ],
             ),
           ),
+          // Widget de acciones adicionales (ej: badge de sincronización)
+          if (actions != null) ...[
+            const SizedBox(width: 12),
+            actions!,
+          ],
         ],
       ),
     );

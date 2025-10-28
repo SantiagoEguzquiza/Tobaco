@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:tobaco/Models/ProductQuantityPrice.dart';
-import 'package:tobaco/Theme/app_theme.dart';
 
 class QuantityPriceWidget extends StatefulWidget {
   final List<ProductQuantityPrice> quantityPrices;

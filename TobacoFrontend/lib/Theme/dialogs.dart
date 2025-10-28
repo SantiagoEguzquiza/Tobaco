@@ -170,6 +170,7 @@ class AppDialogs {
     String? title,
     required String message,
     String? buttonText,
+    IconData? icon,
   }) async {
     await showDialog<void>(
       context: context,
@@ -179,7 +180,7 @@ class AppDialogs {
           title: title ?? 'Advertencia',
           message: message,
           buttonText: buttonText ?? 'Entendido',
-          icon: Icons.warning_rounded,
+          icon: icon ?? Icons.warning_rounded,
           iconColor: _warningColor,
         );
       },

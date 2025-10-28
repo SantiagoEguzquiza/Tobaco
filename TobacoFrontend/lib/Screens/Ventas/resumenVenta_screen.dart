@@ -7,9 +7,12 @@ import 'package:tobaco/Services/Ventas_Service/ventas_service.dart';
 import 'package:tobaco/Helpers/api_handler.dart';
 
 class ResumenVentaScreen extends StatefulWidget {
+  final Ventas? venta; // Recibir la venta como parámetro opcional
+  
   const ResumenVentaScreen({
-    Key? key,
-  }) : super(key: key);
+    super.key,
+    this.venta, // Si no se pasa, intentará obtenerla del servidor
+  });
 
   @override
   State<ResumenVentaScreen> createState() => _ResumenVentaScreenState();
@@ -24,7 +27,17 @@ class _ResumenVentaScreenState extends State<ResumenVentaScreen> {
   @override
   void initState() {
     super.initState();
-    _cargarUltimaVenta();
+    
+    // Si se pasó una venta, usarla directamente
+    if (widget.venta != null) {
+      setState(() {
+        venta = widget.venta;
+        isLoading = false;
+      });
+    } else {
+      // Si no, intentar obtener la última venta del servidor
+      _cargarUltimaVenta();
+    }
   }
 
   Future<void> _cargarUltimaVenta() async {
@@ -227,7 +240,9 @@ class _ResumenVentaScreenState extends State<ResumenVentaScreen> {
                       ),
                     ),
                     Text(
-                      'Venta #${venta!.id}',
+                      venta!.id != null 
+                        ? 'Venta #${venta!.id}' 
+                        : 'Guardada localmente',
                       style: TextStyle(
                         fontSize: 16,
                         color: Theme.of(context).brightness == Brightness.dark
@@ -434,7 +449,7 @@ class _ResumenVentaScreenState extends State<ResumenVentaScreen> {
                       _getMetodoPagoText(pago.metodo),
                       '\$${_formatearPrecio(pago.monto)}',
                     ),
-                  )).toList(),
+                  )),
                   const Divider(height: 20),
                 ],
                 // Mostrar descuento si aplica
@@ -596,7 +611,7 @@ class _ResumenVentaScreenState extends State<ResumenVentaScreen> {
       text: TextSpan(
         children: [
           TextSpan(
-            text: '\$${parteEntera}',
+            text: '\$$parteEntera',
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
@@ -604,7 +619,7 @@ class _ResumenVentaScreenState extends State<ResumenVentaScreen> {
             ),
           ),
           TextSpan(
-            text: ',${parteDecimal}',
+            text: ',$parteDecimal',
             style: TextStyle(
               fontSize: 14,
               color: Colors.grey.shade400,

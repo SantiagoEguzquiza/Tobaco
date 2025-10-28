@@ -1,15 +1,17 @@
 import 'dart:developer';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:http/io_client.dart';
 import 'package:tobaco/Models/Cliente.dart';
 import 'package:tobaco/Services/Clientes_Service/clientes_service.dart';
+import 'package:tobaco/Services/Cache/datos_cache_service.dart';
 import 'package:tobaco/Screens/Clientes/wizardNuevoCliente_screen.dart';
 import 'package:tobaco/Screens/Clientes/wizardEditarCliente_screen.dart';
 import 'package:tobaco/Screens/Clientes/detalleCliente_screen.dart';
 import 'package:tobaco/Theme/app_theme.dart';
 import 'package:tobaco/Theme/dialogs.dart';
 import 'package:tobaco/Theme/headers.dart';
-import 'package:tobaco/Utils/loading_utils.dart';
 import 'package:tobaco/Helpers/api_handler.dart';
 
 class ClientesScreen extends StatefulWidget {
@@ -22,6 +24,7 @@ class ClientesScreen extends StatefulWidget {
 class _ClientesScreenState extends State<ClientesScreen> {
   final ClienteService _clienteService = ClienteService();
   final TextEditingController _searchController = TextEditingController();
+  bool _offlineMessageShown = false; // Para mostrar el mensaje solo la primera vez
   
   // Variables para infinite scroll
   List<Cliente> _clientes = [];
@@ -71,24 +74,101 @@ class _ClientesScreenState extends State<ClientesScreen> {
       
       setState(() {
         _clientes = List<Cliente>.from(data['clientes']);
-        _hasMoreData = data['hasNextPage'];
+        _hasMoreData = data['hasNextPage'] ?? false;
         _isLoading = false;
       });
+      
+      // Verificar si estamos en modo offline
+      // Si hay datos y hay caché, verificar si el servidor está disponible
+      if (_clientes.isNotEmpty && !_offlineMessageShown) {
+        // Verificar después de un pequeño delay para no interferir con la carga
+        Future.delayed(Duration(milliseconds: 100), () async {
+          try {
+            final cacheService = DatosCacheService();
+            final clientesCache = await cacheService.obtenerClientesDelCache();
+            
+            // Si hay caché disponible, verificar si el servidor está realmente disponible
+            if (clientesCache.isNotEmpty && mounted && !_offlineMessageShown) {
+              // Hacer una verificación rápida del servidor
+              try {
+                final testClient = IOClient(HttpClient()..badCertificateCallback = ((X509Certificate cert, String host, int port) => true));
+                await testClient
+                    .get(Uri.parse('${Apihandler.baseUrl}/Health'))
+                    .timeout(Duration(milliseconds: 300));
+                
+                // Si el servidor responde, no estamos en modo offline
+                // No mostrar mensaje
+              } catch (e) {
+                // Si falla la verificación del servidor, estamos en modo offline
+                // Mostrar mensaje solo la primera vez
+                if (mounted && !_offlineMessageShown) {
+                  _offlineMessageShown = true;
+                  AppTheme.showSnackBar(
+                    context,
+                    AppTheme.warningSnackBar('Modo Offline Activado'),
+                  );
+                }
+              }
+            }
+          } catch (e) {
+            // Ignorar error
+          }
+        });
+      }
+
     } catch (e) {
       if (!mounted) return;
       
       log('Error al cargar los clientes: $e', level: 1000);
       
+      // Verificar si hay datos del caché disponibles
       if (Apihandler.isConnectionError(e)) {
-        setState(() {
-          _isLoading = false;
-          // No establecer errorMessage para errores de conexión
-        });
-        await Apihandler.handleConnectionError(context, e);
+        try {
+          // Intentar obtener del caché directamente
+          final cacheService = DatosCacheService();
+          final clientesCache = await cacheService.obtenerClientesDelCache();
+          
+          if (clientesCache.isNotEmpty) {
+            // Hay datos en caché, cargarlos
+            final start = (_currentPage - 1) * _pageSize;
+            final end = start + _pageSize;
+            final clientesPag = clientesCache.sublist(
+              start,
+              end > clientesCache.length ? clientesCache.length : end,
+            );
+            
+            setState(() {
+              _clientes = clientesPag;
+              _hasMoreData = end < clientesCache.length;
+              _isLoading = false;
+            });
+            
+            // Mostrar mensaje de modo offline solo la primera vez
+            if (!_offlineMessageShown) {
+              _offlineMessageShown = true;
+              AppTheme.showSnackBar(
+                context,
+                AppTheme.warningSnackBar('Modo Offline Activado'),
+              );
+            }
+            return;
+          }
+        } catch (cacheError) {
+          // Si falla el caché, continuar con el error normal
+        }
+      }
+      
+      setState(() {
+        _isLoading = false;
+      });
+      
+      // Mostrar mensaje apropiado según el tipo de error
+      if (Apihandler.isConnectionError(e)) {
+        AppTheme.showSnackBar(
+          context,
+          AppTheme.warningSnackBar('Sin conexión. Verifica tu conexión a internet.'),
+        );
       } else {
-        setState(() {
-          _isLoading = false;
-        });
         await AppDialogs.showErrorDialog(
           context: context,
           message: 'Error al cargar clientes',
@@ -231,8 +311,9 @@ class _ClientesScreenState extends State<ClientesScreen> {
           _cargarClientes(); // Recargar la lista
         }
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Cliente eliminado exitosamente')),
+          AppTheme.showSnackBar(
+            context,
+            AppTheme.successSnackBar('Cliente eliminado exitosamente'),
           );
         }
       } catch (e) {

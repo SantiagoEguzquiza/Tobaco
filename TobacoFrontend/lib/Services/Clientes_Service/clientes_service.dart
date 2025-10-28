@@ -3,10 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:tobaco/Helpers/api_handler.dart';
 import 'package:tobaco/Models/Cliente.dart';
 import 'package:tobaco/Services/Auth_Service/auth_service.dart';
+import 'package:tobaco/Services/Cache/datos_cache_service.dart';
 
 class ClienteService {
   final Uri baseUrl = Apihandler.baseUrl;
-  static const Duration _timeoutDuration = Duration(seconds: 10);
+  static const Duration _timeoutDuration = Duration(milliseconds: 500); // Ultra rápido para modo offline
+  final DatosCacheService _cacheService = DatosCacheService();
 
   Future<List<Cliente>> obtenerClientes() async {
     try {
@@ -159,7 +161,10 @@ class ClienteService {
   }
 
   Future<Map<String, dynamic>> obtenerClientesPaginados(int page, int pageSize) async {
+    print('📡 ClienteService: Intentando obtener clientes paginados del servidor...');
+    
     try {
+      // Intentar obtener del servidor con timeout
       final headers = await AuthService.getAuthHeaders();
       final response = await Apihandler.client.get(
         Uri.parse('$baseUrl/Clientes/paginados?page=$page&pageSize=$pageSize'),
@@ -170,6 +175,14 @@ class ClienteService {
         final Map<String, dynamic> data = jsonDecode(response.body);
         final List<dynamic> clientesJson = data['clientes'];
         final List<Cliente> clientes = clientesJson.map((json) => Cliente.fromJson(json)).toList();
+        
+        print('✅ ClienteService: ${clientes.length} clientes obtenidos del servidor');
+        
+        // Guardar en caché para uso offline (en background, solo primera página)
+        if (page == 1 && clientes.isNotEmpty) {
+          _cacheService.guardarClientesEnCache(clientes)
+              .catchError((e) => print('⚠️ Error guardando clientes en caché: $e'));
+        }
         
         return {
           'clientes': clientes,
@@ -185,8 +198,37 @@ class ClienteService {
             'Error al obtener los clientes paginados. Código de estado: ${response.statusCode}');
       }
     } catch (e) {
-      debugPrint('Error al obtener los clientes paginados: $e');
-      rethrow;
+      print('⚠️ ClienteService: Error obteniendo del servidor: $e');
+      print('📦 ClienteService: Cargando clientes del caché...');
+      
+      // Si falla, cargar del caché
+      final clientesCache = await _cacheService.obtenerClientesDelCache();
+      
+      if (clientesCache.isEmpty) {
+        print('❌ ClienteService: No hay clientes en caché');
+        debugPrint('Error al obtener los clientes paginados: $e');
+        rethrow;
+      }
+      
+      print('✅ ClienteService: ${clientesCache.length} clientes cargados del caché');
+      
+      // Paginar manualmente desde el caché
+      final start = (page - 1) * pageSize;
+      final end = start + pageSize;
+      final clientesPag = clientesCache.sublist(
+        start,
+        end > clientesCache.length ? clientesCache.length : end,
+      );
+      
+      return {
+        'clientes': clientesPag,
+        'totalCount': clientesCache.length,
+        'page': page,
+        'pageSize': pageSize,
+        'totalPages': (clientesCache.length / pageSize).ceil(),
+        'hasNextPage': end < clientesCache.length,
+        'hasPreviousPage': page > 1,
+      };
     }
   }
 

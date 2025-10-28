@@ -10,10 +10,10 @@ import 'package:tobaco/Screens/Productos/editarProducto_screen.dart';
 import 'package:tobaco/Screens/Productos/nuevoProducto_screen.dart';
 import 'package:tobaco/Services/Categoria_Service/categoria_provider.dart';
 import 'package:tobaco/Services/Productos_Service/productos_provider.dart';
+import 'package:tobaco/Services/Cache/datos_cache_service.dart';
 import 'package:tobaco/Theme/app_theme.dart'; // Importa el tema
 import 'package:tobaco/Theme/dialogs.dart'; // Importa los diálogos centralizados
 import 'package:tobaco/Theme/headers.dart';
-import 'package:tobaco/Utils/loading_utils.dart';
 import 'package:tobaco/Helpers/api_handler.dart'; // Importa el manejador de errores de API
 import 'dart:developer';
 
@@ -32,6 +32,7 @@ class _ProductosScreenState extends State<ProductosScreen> {
   List<Producto> productos = [];
   List<Categoria> categorias = [];
   final TextEditingController _searchController = TextEditingController();
+  bool _offlineMessageShown = false; // Para mostrar el mensaje solo la primera vez
 
   // Variables para infinite scroll
   bool _isLoadingMore = false;
@@ -94,9 +95,9 @@ class _ProductosScreenState extends State<ProductosScreen> {
       final categoriasProvider =
           Provider.of<CategoriasProvider>(context, listen: false);
 
-      // Obtener categorías y productos en paralelo para evitar múltiples notifyListeners
+      // Obtener categorías y productos en paralelo
       final futures = await Future.wait([
-        categoriasProvider.obtenerCategorias(silent: true), // Modo silencioso para evitar notifyListeners durante build
+        categoriasProvider.obtenerCategorias(silent: true),
         productoProvider.obtenerProductosPaginados(_currentPage, _pageSize),
       ]);
 
@@ -108,7 +109,7 @@ class _ProductosScreenState extends State<ProductosScreen> {
       setState(() {
         productos = List<Producto>.from(productosData['productos']);
         categorias = categoriasData;
-        _hasMoreData = productosData['hasNextPage'];
+        _hasMoreData = productosData['hasNextPage'] ?? false;
         isLoading = false;
         
         // Seleccionar la primera categoría por defecto si no hay ninguna seleccionada
@@ -116,23 +117,76 @@ class _ProductosScreenState extends State<ProductosScreen> {
           selectedCategory = categoriasData.first.nombre;
         }
       });
+      
+      // Verificar si los datos vienen del caché (el provider ya los carga, solo verificamos)
+      // Si categorías vienen del caché, es probable que productos también
+      if (categoriasProvider.loadedFromCache && productos.isNotEmpty && !_offlineMessageShown) {
+        _offlineMessageShown = true;
+        Future.microtask(() {
+          if (mounted) {
+            AppTheme.showSnackBar(
+              context,
+              AppTheme.warningSnackBar('Modo Offline Activado'),
+            );
+          }
+        });
+      }
+
     } catch (e) {
       if (!mounted) return;
       
       log('Error al cargar los Productos: $e', level: 1000);
       
-      // Mostrar diálogo de error
+      // Verificar si hay datos del caché disponibles
       if (Apihandler.isConnectionError(e)) {
-        setState(() {
-          isLoading = false;
-          // No establecer errorMessage para errores de conexión
-        });
-        await Apihandler.handleConnectionError(context, e);
+        try {
+          // Intentar obtener del caché directamente
+          final cacheService = DatosCacheService();
+          final productosCache = await cacheService.obtenerProductosDelCache();
+          
+          if (productosCache.isNotEmpty) {
+            // Hay datos en caché, cargarlos manualmente
+            final start = (_currentPage - 1) * _pageSize;
+            final end = start + _pageSize;
+            final productosPag = productosCache.sublist(
+              start,
+              end > productosCache.length ? productosCache.length : end,
+            );
+            
+            setState(() {
+              productos = productosPag;
+              _hasMoreData = end < productosCache.length;
+              isLoading = false;
+            });
+            
+            // Mostrar mensaje de modo offline solo la primera vez
+            if (!_offlineMessageShown) {
+              _offlineMessageShown = true;
+              AppTheme.showSnackBar(
+                context,
+                AppTheme.warningSnackBar('Modo Offline Activado'),
+              );
+            }
+            return;
+          }
+        } catch (cacheError) {
+          // Si falla el caché, continuar con el error normal
+        }
+      }
+      
+      setState(() {
+        isLoading = false;
+      });
+      
+      // Si es error de conexión, intentar mostrar mensaje apropiado
+      if (Apihandler.isConnectionError(e)) {
+        // Intentar cargar del caché ya fue hecho por el provider
+        // Solo mostrar mensaje si realmente no hay datos
+        AppTheme.showSnackBar(
+          context,
+          AppTheme.warningSnackBar('Sin conexión. Verifica tu conexión a internet.'),
+        );
       } else {
-        setState(() {
-          isLoading = false;
-          errorMessage = 'Error al cargar los Productos: $e';
-        });
         await AppDialogs.showErrorDialog(
           context: context,
           message: 'Error al cargar productos',
@@ -399,29 +453,25 @@ class _ProductosScreenState extends State<ProductosScreen> {
                           return Padding(
                             padding: const EdgeInsets.only(right: 12),
                             child: FilterChip(
-                              label: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Container(
-                                    width: 12,
-                                    height: 12,
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      shape: BoxShape.circle,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    categoria.nombre[0].toUpperCase() +
-                                        categoria.nombre.substring(1),
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: isSelected
-                                          ? FontWeight.w600
-                                          : FontWeight.normal,
-                                    ),
-                                  ),
-                                ],
+                              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              visualDensity: VisualDensity.compact,
+                              avatar: Container(
+                                width: 12,
+                                height: 12,
+                                decoration: const BoxDecoration(
+                                  color: Colors.white,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              label: Text(
+                                categoria.nombre[0].toUpperCase() +
+                                    categoria.nombre.substring(1),
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: isSelected
+                                      ? FontWeight.w600
+                                      : FontWeight.normal,
+                                ),
                               ),
                               selected: isSelected,
                               onSelected: (selected) {
@@ -431,7 +481,7 @@ class _ProductosScreenState extends State<ProductosScreen> {
                               },
                               backgroundColor: Theme.of(context).cardTheme.color,
                               selectedColor: _parseColor(categoria.colorHex),
-                              checkmarkColor: Colors.white,
+                              showCheckmark: false,
                               side: BorderSide(
                                 color: isSelected
                                     ? _parseColor(categoria.colorHex)

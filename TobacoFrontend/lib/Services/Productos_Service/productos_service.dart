@@ -6,7 +6,7 @@ import 'package:tobaco/Services/Auth_Service/auth_service.dart';
 
 class ProductoService {
   final Uri baseUrl = Apihandler.baseUrl;
-  static const Duration _timeoutDuration = Duration(seconds: 10);
+  static const Duration _timeoutDuration = Duration(milliseconds: 500); // Ultra rápido para modo offline
 
   Future<List<Producto>> obtenerProductos() async {
     try {
