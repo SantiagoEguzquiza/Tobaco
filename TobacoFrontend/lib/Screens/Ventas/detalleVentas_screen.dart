@@ -6,7 +6,8 @@ import 'package:tobaco/Models/EstadoEntrega.dart';
 import 'package:tobaco/Services/Ventas_Service/ventas_provider.dart';
 import 'package:tobaco/Theme/app_theme.dart';
 import 'package:tobaco/Theme/dialogs.dart';
-import 'package:tobaco/Helpers/api_handler.dart';
+import 'package:printing/printing.dart';
+import 'package:tobaco/Utils/pdf/venta_pdf_builder.dart';
 
 class DetalleVentaScreen extends StatefulWidget {
   final Ventas venta;
@@ -765,6 +766,69 @@ class _DetalleVentaScreenState extends State<DetalleVentaScreen> {
             Row(
               children: [
                 Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      showModalBottomSheet(
+                        context: context,
+                        shape: const RoundedRectangleBorder(
+                          borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                        ),
+                        builder: (context) {
+                          return SafeArea(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                ListTile(
+                                  leading: const Icon(Icons.picture_as_pdf, color: AppTheme.primaryColor),
+                                  title: const Text('Imprimir PDF'),
+                                  onTap: () async {
+                                    Navigator.of(context).pop();
+                                    try {
+                                      final bytes = await buildVentaPdf(widget.venta);
+                                      await Printing.layoutPdf(onLayout: (_) async => bytes);
+                                    } catch (e) {
+                                      // ignore: use_build_context_synchronously
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(content: Text('Error al generar PDF: $e')),
+                                      );
+                                    }
+                                  },
+                                ),
+                                ListTile(
+                                  leading: const Icon(Icons.receipt_long, color: AppTheme.primaryColor),
+                                  title: const Text('Imprimir ticket'),
+                                  onTap: () {
+                                    Navigator.of(context).pop();
+                                  },
+                                ),
+                                ListTile(
+                                  leading: const Icon(Icons.share, color: AppTheme.primaryColor),
+                                  title: const Text('Compartir PDF por WhatsApp'),
+                                  onTap: () {
+                                    Navigator.of(context).pop();
+                                  },
+                                ),
+                                const SizedBox(height: 8),
+                              ],
+                            ),
+                          );
+                        },
+                      );
+                    },
+                    icon: const Icon(Icons.print, size: 20),
+                    label: const Text('Imprimir'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryColor,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      elevation: 2,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
                   child: OutlinedButton(
                     onPressed: () => Navigator.pop(context, hasGuardadoCambios ? 'updated' : null),
                     style: OutlinedButton.styleFrom(
@@ -781,28 +845,6 @@ class _DetalleVentaScreenState extends State<DetalleVentaScreen> {
                         color: Theme.of(context).brightness == Brightness.dark
                             ? Colors.white
                             : Colors.black,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 16,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () => _confirmDelete(context),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red.shade600,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      elevation: 2,
-                    ),
-                    child: const Text(
-                      'Eliminar Venta',
-                      style: TextStyle(
-                        color: Colors.white,
                         fontWeight: FontWeight.w600,
                         fontSize: 16,
                       ),
