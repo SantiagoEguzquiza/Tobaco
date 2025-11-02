@@ -3,6 +3,7 @@ import 'dart:convert';
 import '../Cache/ventas_offline_cache_service.dart';
 import '../Ventas_Service/ventas_service.dart';
 import '../../Models/Ventas.dart';
+import '../Connectivity/connectivity_service.dart';
 
 /// Servicio simple de sincronización de ventas offline
 class SimpleSyncService {
@@ -12,84 +13,122 @@ class SimpleSyncService {
 
   final VentasOfflineCacheService _offlineService = VentasOfflineCacheService();
   final VentasService _ventasService = VentasService();
+  final ConnectivityService _connectivityService = ConnectivityService();
 
   Timer? _syncTimer;
   bool _isSyncing = false;
+  int _intentosSinDatos = 0;
 
-  /// Inicia el servicio de sincronización (cada 30 segundos)
+  /// Inicia el servicio de sincronización (optimizado)
   void iniciar() {
-    print('🔄 SimpleSyncService: Iniciando...');
-    
-    // Sincronizar cada 30 segundos
-    _syncTimer = Timer.periodic(Duration(seconds: 30), (timer) {
-      if (!_isSyncing) {
-        sincronizarAhora();
-      }
-    });
+    // Auto-sincronización deshabilitada: solo manual mediante botón
+    // Método dejado intencionalmente vacío para evitar ejecuciones en background
+  }
 
-    // Sincronización inicial
-    Future.delayed(Duration(seconds: 5), () {
-      sincronizarAhora();
-    });
+  /// Sincronización inteligente que verifica conectividad primero
+  Future<void> _sincronizarInteligente() async {
+    // Solo sincronizar si hay conexión
+    if (!_connectivityService.isFullyConnected) {
+      // Si no hay conexión, saltar esta sincronización
+      return;
+    }
+
+    // Si llevamos 5 intentos sin datos, reducir frecuencia
+    if (_intentosSinDatos >= 5) {
+      // Solo sincronizar 1 de cada 3 veces (efectivamente cada 3 minutos)
+      if (DateTime.now().second % 3 != 0) {
+        return;
+      }
+    }
+
+    await sincronizarAhora();
   }
 
   /// Sincroniza ventas offline pendientes
   Future<Map<String, dynamic>> sincronizarAhora() async {
     if (_isSyncing) {
-      print('⚠️ SimpleSyncService: Ya hay una sincronización en curso');
+      
       return {
         'success': false,
         'sincronizadas': 0,
         'fallidas': 0,
         'message': 'Sincronización en curso',
+        'ventasSincronizadas': [],
       };
     }
 
     _isSyncing = true;
     int sincronizadas = 0;
     int fallidas = 0;
+    List<Ventas> ventasSincronizadas = [];
 
     try {
-      print('🔄 SimpleSyncService: Obteniendo ventas pendientes...');
+      // Limpiar ventas atascadas en "syncing" al inicio
+      await _offlineService.limpiarSyncingAtascadas();
+      
       
       final ventasPendientes = await _offlineService.obtenerVentasPendientes();
       
       if (ventasPendientes.isEmpty) {
-        print('✅ SimpleSyncService: No hay ventas pendientes');
-        _isSyncing = false;
+        _intentosSinDatos++; // Incrementar contador
+        // Solo imprimir cada 5 intentos para no llenar el log
+        if (_intentosSinDatos % 5 == 0) {
+          
+        }
         return {
           'success': true,
           'sincronizadas': 0,
           'fallidas': 0,
           'message': 'No hay ventas pendientes',
+          'ventasSincronizadas': [],
         };
       }
 
-      print('📤 SimpleSyncService: ${ventasPendientes.length} ventas pendientes de sincronizar');
+      // Resetear contador cuando hay datos
+      _intentosSinDatos = 0;
+
+      
 
       for (var ventaData in ventasPendientes) {
+        final ventaId = ventaData['id'] as int;
+        
+        // Intentar marcar como "syncing" - retorna false si ya está siendo sincronizada
+        final marcadoExitoso = await _offlineService.marcarComoSyncing(ventaId);
+        
+        if (!marcadoExitoso) {
+          // Ya está siendo sincronizada por otro proceso, saltar
+          continue;
+        }
+        
         try {
           // Parsear la venta
           final ventaJson = jsonDecode(ventaData['venta_json'] as String);
           final venta = Ventas.fromJson(ventaJson);
           
-          final ventaId = ventaData['id'] as int;
           
-          print('📤 SimpleSyncService: Sincronizando venta offline ID: $ventaId');
 
-          // Enviar al servidor con timeout
-          await _ventasService.crearVenta(venta)
-              .timeout(Duration(seconds: 5));
+          // Enviar al servidor (usa timeout del servicio - 10s)
+          final response = await _ventasService.crearVenta(venta);
+          
+          // Actualizar el ID de la venta
+          if (response['ventaId'] != null) {
+            venta.id = response['ventaId'];
+          }
 
-          // Marcar como sincronizada
+          // IMPORTANTE: Marcar como sincronizada DESPUÉS de éxito
+          // Esto asegura que la venta solo se marca si realmente fue creada en el servidor
           await _offlineService.marcarComoSincronizada(ventaId);
           
+          // Agregar a lista de ventas sincronizadas
+          ventasSincronizadas.add(venta);
           sincronizadas++;
-          print('✅ SimpleSyncService: Venta $ventaId sincronizada exitosamente');
+          
 
         } catch (e) {
+          // Si falla, revertir el marcado de "syncing" para que pueda intentarse de nuevo
+          await _offlineService.revertirSyncing(ventaId);
           fallidas++;
-          print('❌ SimpleSyncService: Error sincronizando venta: $e');
+          
           // Continuar con las demás ventas
         }
 
@@ -97,33 +136,34 @@ class SimpleSyncService {
         await Future.delayed(Duration(milliseconds: 500));
       }
 
-      print('✅ SimpleSyncService: Sincronización completada - $sincronizadas exitosas, $fallidas fallidas');
+      
 
       // Limpiar ventas sincronizadas
       if (sincronizadas > 0) {
         await _offlineService.limpiarVentasSincronizadas();
-        print('🧹 SimpleSyncService: Ventas sincronizadas limpiadas');
+        
       }
-
-      _isSyncing = false;
 
       return {
         'success': fallidas == 0,
         'sincronizadas': sincronizadas,
         'fallidas': fallidas,
         'message': '$sincronizadas ventas sincronizadas, $fallidas fallidas',
+        'ventasSincronizadas': ventasSincronizadas,
       };
 
     } catch (e) {
-      print('❌ SimpleSyncService: Error general en sincronización: $e');
-      _isSyncing = false;
       
       return {
         'success': false,
         'sincronizadas': sincronizadas,
         'fallidas': fallidas,
         'message': 'Error: $e',
+        'ventasSincronizadas': ventasSincronizadas,
       };
+    } finally {
+      // Asegurar que el flag se resetee SIEMPRE
+      _isSyncing = false;
     }
   }
 
@@ -131,7 +171,7 @@ class SimpleSyncService {
   void detener() {
     _syncTimer?.cancel();
     _syncTimer = null;
-    print('🔄 SimpleSyncService: Detenido');
+    
   }
 }
 

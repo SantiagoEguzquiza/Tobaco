@@ -1,0 +1,1007 @@
+import 'dart:async';
+import 'package:flutter/material.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:provider/provider.dart';
+import 'package:tobaco/Models/Entrega.dart';
+import 'package:tobaco/Models/EstadoEntrega.dart';
+import 'package:tobaco/Services/Entregas_Service/entregas_provider.dart';
+import 'package:tobaco/Theme/app_theme.dart';
+import 'package:tobaco/Theme/map_styles.dart';
+import 'package:tobaco/Theme/theme_provider.dart';
+import 'package:tobaco/Theme/dialogs.dart';
+import 'package:tobaco/Services/Maps/directions_service.dart';
+import 'package:tobaco/Screens/Ventas/nuevaVenta_screen.dart';
+
+class MapaEntregasScreen extends StatefulWidget {
+  const MapaEntregasScreen({super.key});
+
+  @override
+  State<MapaEntregasScreen> createState() => _MapaEntregasScreenState();
+}
+
+class _MapaEntregasScreenState extends State<MapaEntregasScreen> {
+  GoogleMapController? _mapController;
+  final Set<Marker> _markers = {};
+  final Set<Polyline> _polylines = {};
+  bool _usandoRutaCalles = false;
+  bool _mostrarResumen = false;
+  EntregasProvider? _provider;
+  bool _yaRefrescado = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Inicializar después de que el frame actual se haya construido
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _inicializarMapa();
+    });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Guardar referencia al provider de forma segura
+    final newProvider = Provider.of<EntregasProvider>(context, listen: false);
+    
+    // Solo refrescar si el provider cambió o es la primera vez
+    if (_provider != newProvider) {
+      _provider = newProvider;
+      
+      // Refrescar entregas cuando se entra a la pantalla para obtener cambios (como eliminaciones de recorridos)
+      if (!_yaRefrescado) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && _provider != null) {
+            _yaRefrescado = true;
+            _provider!.refrescar().then((_) {
+              if (mounted) {
+                _actualizarMarcadoresYRutas();
+              }
+            });
+          }
+        });
+      }
+    }
+  }
+
+  Future<void> _inicializarMapa() async {
+    if (!mounted) return;
+    
+    final provider = Provider.of<EntregasProvider>(context, listen: false);
+    await provider.inicializar();
+    
+    if (!mounted) return;
+    
+    provider.iniciarSeguimientoUbicacion();
+    setState(() {
+      _usandoRutaCalles = true; // activar rutas por calles por defecto
+    });
+    _actualizarMarcadoresYRutas();
+  }
+
+  @override
+  void dispose() {
+    // Detener el seguimiento PRIMERO antes de dispose del widget
+    _provider?.detenerSeguimientoUbicacion();
+    _mapController?.dispose();
+    _yaRefrescado = false; // Resetear para que refresque la próxima vez
+    super.dispose();
+  }
+
+  void _actualizarMarcadoresYRutas() {
+    if (!mounted) return;
+    
+    final provider = Provider.of<EntregasProvider>(context, listen: false);
+    
+    if (!mounted) return;
+    
+    setState(() {
+      _markers.clear();
+      _polylines.clear();
+
+      // Marcador de ubicación actual - Verde (primaryColor)
+      if (provider.posicionActual != null) {
+        _markers.add(
+          Marker(
+            markerId: const MarkerId('ubicacion_actual'),
+            position: LatLng(
+              provider.posicionActual!.latitude,
+              provider.posicionActual!.longitude,
+            ),
+            icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen), // Verde = primaryColor
+            infoWindow: const InfoWindow(
+              title: '📍 Tú estás aquí',
+            ),
+          ),
+        );
+      }
+
+      // Marcadores de entregas (ocultar completadas)
+      for (var entrega in provider.entregas) {
+        if (entrega.tieneCoordenadasValidas && !entrega.estaCompletada) {
+          _markers.add(_crearMarcadorEntrega(entrega));
+        }
+      }
+
+      // Crear polylines (rutas)
+      if (_usandoRutaCalles) {
+        _cargarRutaPorCalles(provider);
+      } else {
+        _crearRutas(provider);
+      }
+    });
+  }
+
+  Marker _crearMarcadorEntrega(Entrega entrega) {
+    double hue;
+    String emoji;
+
+    switch (entrega.estado) {
+      case EstadoEntrega.entregada:
+        hue = BitmapDescriptor.hueGreen; // Verde (success)
+        emoji = '✅';
+        break;
+      case EstadoEntrega.parcial:
+        hue = BitmapDescriptor.hueOrange; // Naranja (warning)
+        emoji = '⚠️';
+        break;
+      case EstadoEntrega.noEntregada:
+      default:
+        hue = BitmapDescriptor.hueAzure; // Azul claro (neutral/pendiente)
+        emoji = '📦';
+    }
+
+    return Marker(
+      markerId: MarkerId('entrega_${entrega.id}'),
+      position: LatLng(entrega.latitud!, entrega.longitud!),
+      icon: BitmapDescriptor.defaultMarkerWithHue(hue),
+      infoWindow: InfoWindow(
+        title: '$emoji ${entrega.nombreCliente}',
+        snippet: entrega.direccion,
+      ),
+      onTap: () => _mostrarDetalleEntrega(entrega),
+    );
+  }
+
+  void _crearRutas(EntregasProvider provider) {
+    if (provider.posicionActual == null) return;
+
+    List<LatLng> puntos = [];
+    
+    // Punto inicial (ubicación actual)
+    puntos.add(LatLng(
+      provider.posicionActual!.latitude,
+      provider.posicionActual!.longitude,
+    ));
+
+    // Agregar entregas pendientes en orden
+    for (var entrega in provider.entregasPendientes) {
+      if (entrega.tieneCoordenadasValidas) {
+        puntos.add(LatLng(entrega.latitud!, entrega.longitud!));
+      }
+    }
+
+    if (puntos.length > 1) {
+      _polylines.add(
+        Polyline(
+          polylineId: const PolylineId('ruta_entregas'),
+          points: puntos,
+          color: AppTheme.primaryColor, // Verde = primaryColor ✅
+          width: 5,
+          patterns: [PatternItem.dash(20), PatternItem.gap(10)],
+        ),
+      );
+    }
+  }
+
+  Future<void> _cargarRutaPorCalles(EntregasProvider provider) async {
+    if (provider.posicionActual == null || !mounted) return;
+    final origen = LatLng(provider.posicionActual!.latitude, provider.posicionActual!.longitude);
+
+    final pendientes = provider.entregasPendientes.where((e) => e.tieneCoordenadasValidas).toList();
+    if (pendientes.isEmpty || !mounted) return;
+
+    final destino = LatLng(pendientes.last.latitud!, pendientes.last.longitud!);
+    final waypoints = pendientes.length > 1
+        ? pendientes.sublist(0, pendientes.length - 1)
+            .map((e) => LatLng(e.latitud!, e.longitud!)).toList()
+        : <LatLng>[];
+
+    try {
+      final puntos = await DirectionsService.fetchRoute(
+        origin: origen,
+        waypoints: waypoints,
+        destination: destino,
+        optimizeWaypoints: true,
+        detailed: true,
+      );
+      if (mounted) {
+        setState(() {
+          _polylines.add(
+            Polyline(
+              polylineId: const PolylineId('ruta_calles'),
+              points: puntos,
+              color: AppTheme.primaryColor,
+              width: 7,
+            ),
+          );
+        });
+      }
+    } catch (e) {
+      // Notificar error mínimo y fallback
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          AppTheme.errorSnackBar('No se pudo calcular ruta por calles. Usando línea recta.'),
+        );
+        // Fallback a líneas rectas
+        setState(() {
+          _usandoRutaCalles = false;
+        });
+        _crearRutas(provider);
+      }
+    }
+  }
+
+  void _mostrarDetalleEntrega(Entrega entrega) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => _DetalleEntregaSheet(entrega: entrega),
+    );
+  }
+
+  void _centrarEnUbicacionActual() {
+    final provider = Provider.of<EntregasProvider>(context, listen: false);
+    if (provider.posicionActual != null && _mapController != null) {
+      _mapController!.animateCamera(
+        CameraUpdate.newLatLngZoom(
+          LatLng(
+            provider.posicionActual!.latitude,
+            provider.posicionActual!.longitude,
+          ),
+          15,
+        ),
+      );
+    }
+  }
+
+  void _centrarEnSiguienteEntrega() {
+    final provider = Provider.of<EntregasProvider>(context, listen: false);
+    final siguiente = provider.siguienteEntrega;
+    
+    if (siguiente != null && 
+        siguiente.tieneCoordenadasValidas && 
+        _mapController != null) {
+      _mapController!.animateCamera(
+        CameraUpdate.newLatLngZoom(
+          LatLng(siguiente.latitud!, siguiente.longitud!),
+          16,
+        ),
+      );
+      
+      // Mostrar detalles automáticamente
+      Future.delayed(const Duration(milliseconds: 500), () {
+        _mostrarDetalleEntrega(siguiente);
+      });
+    } else {
+      AppTheme.showSnackBar(
+        context,
+        AppTheme.successSnackBar('No hay más entregas pendientes'),
+      );
+    }
+  }
+
+  void _zoomIn() {
+    _mapController?.animateCamera(CameraUpdate.zoomIn());
+  }
+
+  void _zoomOut() {
+    _mapController?.animateCamera(CameraUpdate.zoomOut());
+  }
+
+  void _mostrarTodasLasEntregas() {
+    if (!mounted) return;
+    final provider = Provider.of<EntregasProvider>(context, listen: false);
+    
+    if (provider.entregas.isEmpty || _mapController == null || !mounted) return;
+
+    // Calcular los límites del mapa
+    double minLat = double.infinity;
+    double maxLat = -double.infinity;
+    double minLng = double.infinity;
+    double maxLng = -double.infinity;
+
+    if (provider.posicionActual != null) {
+      minLat = provider.posicionActual!.latitude;
+      maxLat = provider.posicionActual!.latitude;
+      minLng = provider.posicionActual!.longitude;
+      maxLng = provider.posicionActual!.longitude;
+    }
+
+    for (var entrega in provider.entregas) {
+      if (entrega.tieneCoordenadasValidas) {
+        minLat = minLat < entrega.latitud! ? minLat : entrega.latitud!;
+        maxLat = maxLat > entrega.latitud! ? maxLat : entrega.latitud!;
+        minLng = minLng < entrega.longitud! ? minLng : entrega.longitud!;
+        maxLng = maxLng > entrega.longitud! ? maxLng : entrega.longitud!;
+      }
+    }
+
+    if (minLat != double.infinity) {
+      _mapController!.animateCamera(
+        CameraUpdate.newLatLngBounds(
+          LatLngBounds(
+            southwest: LatLng(minLat, minLng),
+            northeast: LatLng(maxLat, maxLng),
+          ),
+          50, // Padding
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        centerTitle: true,
+        title: const Text('Mapa de Entregas', style: AppTheme.appBarTitleStyle),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () async {
+              final provider = Provider.of<EntregasProvider>(
+                context,
+                listen: false,
+              );
+              await provider.refrescar();
+              _actualizarMarcadoresYRutas();
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.route),
+            onPressed: () async {
+              if (!mounted) return;
+              final provider = Provider.of<EntregasProvider>(
+                context,
+                listen: false,
+              );
+              provider.calcularRutaOptima();
+              if (mounted) {
+                setState(() {
+                  _usandoRutaCalles = true;
+                  _polylines.clear();
+                });
+              }
+              await _cargarRutaPorCalles(provider);
+              if (mounted) {
+                _mostrarTodasLasEntregas();
+              }
+            },
+          ),
+        ],
+      ),
+      body: Consumer<EntregasProvider>(
+        builder: (context, provider, child) {
+          // Actualizar marcadores cuando cambien las entregas (después del frame actual)
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              _actualizarMarcadoresYRutas();
+            }
+          });
+
+          if (provider.isLoading) {
+            return const Center(
+              child: CircularProgressIndicator(
+                color: AppTheme.primaryColor,
+              ),
+            );
+          }
+
+          if (provider.error != null) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error_outline, size: 64, color: Colors.red),
+                  const SizedBox(height: 16),
+                  Text(
+                    provider.error!,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 16),
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () {
+                      provider.limpiarError();
+                      _inicializarMapa();
+                    },
+                    child: const Text('Reintentar'),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          return Stack(
+            children: [
+              // Mapa - Sigue el tema de la app (claro/oscuro)
+              Consumer<ThemeProvider>(
+                builder: (context, themeProvider, child) {
+                  // Calcular el estilo del mapa FUERA del callback
+                  final isDark = themeProvider.themeMode == ThemeMode.dark ||
+                      (themeProvider.themeMode == ThemeMode.system &&
+                          MediaQuery.of(context).platformBrightness == Brightness.dark);
+                  final mapStyle = isDark ? MapStyles.darkMode : MapStyles.lightMode;
+                  
+                  return GoogleMap(
+                    onMapCreated: (controller) {
+                      _mapController = controller;
+                      // Aplicar el estilo precalculado
+                      controller.setMapStyle(mapStyle);
+                      _mostrarTodasLasEntregas();
+                    },
+                    initialCameraPosition: CameraPosition(
+                      target: provider.posicionActual != null
+                          ? LatLng(
+                              provider.posicionActual!.latitude,
+                              provider.posicionActual!.longitude,
+                            )
+                          : const LatLng(-25.2637, -57.5759), // Asunción por defecto
+                      zoom: 13,
+                    ),
+                    markers: _markers,
+                    polylines: _polylines,
+                    myLocationEnabled: true,
+                    myLocationButtonEnabled: false,
+                    zoomControlsEnabled: false,
+                    mapToolbarEnabled: false,
+                  );
+                },
+              ),
+
+              // Panel superior con información
+              Positioned(
+                top: 16,
+                left: 16,
+                right: 16,
+                child: _PanelInformacion(),
+              ),
+
+              // Botones flotantes - Adaptables al tema
+              Positioned(
+                right: 16,
+                bottom: 100,
+                child: Consumer<ThemeProvider>(
+                  builder: (context, themeProvider, child) {
+                    final isDark = themeProvider.themeMode == ThemeMode.dark ||
+                        (themeProvider.themeMode == ThemeMode.system &&
+                            MediaQuery.of(context).platformBrightness == Brightness.dark);
+                    
+                    return Column(
+                      children: [
+                        // Botón ubicación actual
+                        FloatingActionButton(
+                          heroTag: 'ubicacion',
+                          mini: true,
+                          backgroundColor: isDark ? Colors.black : Colors.white,
+                          foregroundColor: AppTheme.primaryColor, // Verde
+                          onPressed: _centrarEnUbicacionActual,
+                          child: const Icon(Icons.my_location),
+                        ),
+                        const SizedBox(height: 8),
+                        // Botón ver todas las entregas
+                        FloatingActionButton(
+                          heroTag: 'ver_todas',
+                          mini: true,
+                          backgroundColor: isDark ? Colors.black : Colors.white,
+                          foregroundColor: AppTheme.primaryColor, // Verde
+                          onPressed: _mostrarTodasLasEntregas,
+                          child: const Icon(Icons.zoom_out_map),
+                        ),
+                        const SizedBox(height: 8),
+                        FloatingActionButton(
+                          heroTag: 'zoom_in',
+                          mini: true,
+                          backgroundColor: isDark ? Colors.black : Colors.white,
+                          foregroundColor: AppTheme.primaryColor,
+                          onPressed: _zoomIn,
+                          child: const Icon(Icons.add),
+                        ),
+                        const SizedBox(height: 8),
+                        FloatingActionButton(
+                          heroTag: 'zoom_out',
+                          mini: true,
+                          backgroundColor: isDark ? Colors.black : Colors.white,
+                          foregroundColor: AppTheme.primaryColor,
+                          onPressed: _zoomOut,
+                          child: const Icon(Icons.remove),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ),
+
+              // Botón siguiente entrega
+              Positioned(
+                bottom: 16,
+                left: 16,
+                right: 16,
+                child:               ElevatedButton.icon(
+                  onPressed: _centrarEnSiguienteEntrega,
+                  icon: const Icon(Icons.navigation),
+                  label: Text(
+                    provider.siguienteEntrega != null
+                        ? 'Siguiente: ${provider.siguienteEntrega!.nombreCliente}'
+                        : 'No hay entregas pendientes',
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.all(16),
+                    backgroundColor: AppTheme.primaryColor, // Verde = primaryColor
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ),
+
+              // Botón de resumen - Logo verde adaptable al tema
+              Positioned(
+                top: 16,
+                right: 16,
+                child: Consumer<ThemeProvider>(
+                  builder: (context, themeProvider, child) {
+                    final isDark = themeProvider.themeMode == ThemeMode.dark ||
+                        (themeProvider.themeMode == ThemeMode.system &&
+                            MediaQuery.of(context).platformBrightness == Brightness.dark);
+                    
+                    return FloatingActionButton(
+                      heroTag: 'resumen',
+                      mini: true,
+                      backgroundColor: isDark ? Colors.black : Colors.white,
+                      foregroundColor: AppTheme.primaryColor, // Verde siempre
+                      onPressed: () {
+                        setState(() {
+                          _mostrarResumen = !_mostrarResumen;
+                        });
+                      },
+                      child: const Icon(Icons.assessment),
+                    );
+                  },
+                ),
+              ),
+
+              // Panel de resumen
+              if (_mostrarResumen)
+                Positioned(
+                  top: 80,
+                  right: 16,
+                  child: _PanelResumen(),
+                ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+// Widget para el panel de información superior
+class _PanelInformacion extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<EntregasProvider>(
+      builder: (context, provider, child) {
+        return Card(
+          elevation: 4,
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _InfoChip(
+                  icon: Icons.pending_actions,
+                  label: 'Pendientes',
+                  value: provider.entregasPendientes.length.toString(),
+                  color: Colors.amber, // Amarillo ⚠️
+                ),
+                _InfoChip(
+                  icon: Icons.check_circle,
+                  label: 'Completadas',
+                  value: provider.entregasCompletadas.length.toString(),
+                  color: AppTheme.primaryColor, // Verde = primaryColor (success)
+                ),
+                _InfoChip(
+                  icon: Icons.route,
+                  label: 'Distancia',
+                  value: '${provider.distanciaTotal.toStringAsFixed(1)} km',
+                  color: AppTheme.primaryColor, // Verde = primaryColor
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _InfoChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  final Color color;
+
+  const _InfoChip({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, color: color, size: 20),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
+        ),
+        Text(
+          label,
+          style: const TextStyle(fontSize: 10),
+        ),
+      ],
+    );
+  }
+}
+
+// Widget para el panel de resumen
+class _PanelResumen extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<EntregasProvider>(
+      builder: (context, provider, child) {
+        return Card(
+          elevation: 4,
+          child: Container(
+            width: 200,
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Resumen del Día',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const Divider(),
+                _ResumenItem(
+                  'Total entregas:',
+                  provider.entregas.length.toString(),
+                ),
+                _ResumenItem(
+                  'Completadas:',
+                  provider.entregasCompletadas.length.toString(),
+                  color: AppTheme.primaryColor, // Verde = primaryColor (success)
+                ),
+                _ResumenItem(
+                  'Pendientes:',
+                  provider.entregasPendientes.length.toString(),
+                  color: Colors.amber, // Amarillo ⚠️
+                ),
+                _ResumenItem(
+                  'Parciales:',
+                  provider.entregasParciales.length.toString(),
+                  color: Colors.orange, // Naranja (warning) - igual que dialogs
+                ),
+                const Divider(),
+                _ResumenItem(
+                  'Distancia total:',
+                  '${provider.distanciaTotal.toStringAsFixed(1)} km',
+                ),
+                _ResumenItem(
+                  'Tiempo estimado:',
+                  _formatDuration(provider.tiempoEstimado),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  String _formatDuration(Duration duration) {
+    if (duration.inHours > 0) {
+      return '${duration.inHours}h ${duration.inMinutes.remainder(60)}m';
+    }
+    return '${duration.inMinutes}m';
+  }
+}
+
+class _ResumenItem extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color? color;
+
+  const _ResumenItem(this.label, this.value, {this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: const TextStyle(fontSize: 12)),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// Sheet de detalles de entrega
+class _DetalleEntregaSheet extends StatefulWidget {
+  final Entrega entrega;
+
+  const _DetalleEntregaSheet({required this.entrega});
+
+  @override
+  State<_DetalleEntregaSheet> createState() => _DetalleEntregaSheetState();
+}
+
+class _DetalleEntregaSheetState extends State<_DetalleEntregaSheet> {
+  final TextEditingController _notasController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _notasController.text = widget.entrega.notas ?? '';
+  }
+
+  @override
+  void dispose() {
+    _notasController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final provider = Provider.of<EntregasProvider>(context, listen: false);
+
+    return Container(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                widget.entrega.estaCompletada
+                    ? Icons.check_circle
+                    : Icons.pending,
+                color: widget.entrega.estaCompletada
+                    ? AppTheme.primaryColor // Verde = primaryColor (success)
+                    : Colors.grey, // Gris para pendientes
+                size: 32,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  widget.entrega.nombreCliente,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          _DetalleItem(
+            icon: Icons.location_on,
+            label: 'Dirección',
+            value: widget.entrega.direccion,
+          ),
+          if (widget.entrega.distanciaDesdeUbicacionActual != null)
+            _DetalleItem(
+              icon: Icons.directions,
+              label: 'Distancia',
+              value: '${widget.entrega.distanciaDesdeUbicacionActual!.toStringAsFixed(2)} km',
+            ),
+          _DetalleItem(
+            icon: Icons.info,
+            label: 'Estado',
+            value: widget.entrega.estado.displayName,
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'Notas:',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _notasController,
+            maxLines: 3,
+            cursorColor: AppTheme.primaryColor,
+            decoration: InputDecoration(
+              hintText: 'Agregar notas sobre la entrega...',
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: Colors.grey.shade400),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppTheme.primaryColor, width: 2),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          if (!widget.entrega.estaCompletada) ...[
+            // Botón para RepartidorVendedor: crear venta desde recorrido
+            if (widget.entrega.ventaId == 0)
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    // Navegar a crear venta con el cliente pre-seleccionado
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => NuevaVentaScreen(
+                          clientePreSeleccionado: widget.entrega.cliente,
+                        ),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.shopping_cart),
+                  label: const Text('Crear Venta'),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.all(16),
+                    backgroundColor: Colors.blue,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () async {
+                  final confirmar = await AppDialogs.showConfirmationDialog(
+                    context: context,
+                    title: 'Confirmar Entrega',
+                    message: '¿Confirmar que la entrega fue completada?',
+                    confirmText: 'Confirmar',
+                    cancelText: 'Cancelar',
+                    icon: Icons.check_circle,
+                    iconColor: AppTheme.primaryColor,
+                  );
+
+                  if (confirmar == true && mounted) {
+                    final exito = await provider.marcarComoEntregada(
+                      widget.entrega.id!,
+                      notas: _notasController.text.isNotEmpty
+                          ? _notasController.text
+                          : null,
+                    );
+
+                    if (exito && mounted) {
+                      Navigator.pop(context);
+                      AppTheme.showSnackBar(
+                        context,
+                        AppTheme.successSnackBar('Entrega marcada como completada'),
+                      );
+                    }
+                  }
+                },
+                icon: const Icon(Icons.check),
+                label: const Text('Marcar como Entregado'),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.all(16),
+                  backgroundColor: AppTheme.primaryColor, // Verde = primaryColor (success)
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ),
+          ],
+          if (_notasController.text.isNotEmpty &&
+              _notasController.text != widget.entrega.notas)
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () async {
+                  final exito = await provider.agregarNotas(
+                    widget.entrega.id!,
+                    _notasController.text,
+                  );
+
+                  if (exito && mounted) {
+                    Navigator.pop(context);
+                    AppTheme.showSnackBar(
+                      context,
+                      AppTheme.successSnackBar('Notas guardadas'),
+                    );
+                  }
+                },
+                icon: const Icon(Icons.save),
+                label: const Text('Guardar Notas'),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DetalleItem extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+
+  const _DetalleItem({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        children: [
+          Icon(icon, size: 20, color: Colors.grey[600]),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey[600],
+                  ),
+                ),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+

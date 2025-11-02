@@ -39,7 +39,7 @@ class ConnectivityService {
 
   /// Inicializa el servicio de conectividad
   Future<void> initialize() async {
-    print('🌐 ConnectivityService: Inicializando...');
+    
     
     // Verificar estado inicial
     await _checkConnectivity();
@@ -47,7 +47,7 @@ class ConnectivityService {
     // Escuchar cambios en la conectividad
     _connectivitySubscription = _connectivity.onConnectivityChanged.listen(
       (ConnectivityResult result) async {
-        print('🌐 ConnectivityService: Cambio detectado: $result');
+          
         await _checkConnectivity();
       },
     );
@@ -59,7 +59,7 @@ class ConnectivityService {
       }
     });
     
-    print('✅ ConnectivityService: Inicializado correctamente');
+    
   }
 
   /// Verifica el estado de conectividad actual
@@ -72,7 +72,7 @@ class ConnectivityService {
           result == ConnectivityResult.wifi ||
           result == ConnectivityResult.ethernet;
       
-      print('🌐 ConnectivityService: Internet disponible: $_hasInternetConnection');
+      
       
       if (_hasInternetConnection) {
         await _checkBackendAvailability();
@@ -81,7 +81,7 @@ class ConnectivityService {
         _notifyListeners();
       }
     } catch (e) {
-      print('❌ ConnectivityService: Error verificando conectividad: $e');
+      
       _hasInternetConnection = false;
       _isBackendAvailable = false;
       _notifyListeners();
@@ -99,25 +99,25 @@ class ConnectivityService {
     _lastBackendCheck = DateTime.now();
     
     try {
-      print('🔍 ConnectivityService: Verificando disponibilidad del backend...');
+    
       
       final headers = await AuthService.getAuthHeaders();
-      final response = await http.get(
+      final response = await Apihandler.client.get(
         Apihandler.baseUrl.resolve('/api/health'),
         headers: headers,
       ).timeout(_backendCheckTimeout);
       
       _isBackendAvailable = response.statusCode == 200;
-      print('✅ ConnectivityService: Backend disponible: $_isBackendAvailable');
+      
     } catch (e) {
       // Ignorar errores de SSL/certificado y asumir que el backend está disponible
       // El verdadero test es si las APIs de ventas funcionan
       if (e.toString().contains('CERTIFICATE_VERIFY_FAILED') || 
           e.toString().contains('HandshakeException')) {
-        print('⚠️ ConnectivityService: Error de certificado SSL (ignorando)');
+        
         _isBackendAvailable = true; // Asumir disponible, las APIs reales dirán si funciona
       } else {
-        print('⚠️ ConnectivityService: Backend no disponible: $e');
+        
         _isBackendAvailable = false;
       }
     }
@@ -141,7 +141,7 @@ class ConnectivityService {
 
   /// Libera los recursos del servicio
   void dispose() {
-    print('🌐 ConnectivityService: Liberando recursos...');
+    
     _connectivitySubscription?.cancel();
     _connectivityController?.close();
   }

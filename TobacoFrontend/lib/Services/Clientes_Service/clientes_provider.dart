@@ -53,6 +53,8 @@ class ClienteProvider with ChangeNotifier {
     try {
       final clienteCreado = await _clienteService.crearCliente(cliente);
       _clientes.add(clienteCreado);
+      // Guardar en caché para que esté disponible offline
+      await _cacheService.guardarClientesEnCache(_clientes);
       notifyListeners();
       return clienteCreado;
     } catch (e) {

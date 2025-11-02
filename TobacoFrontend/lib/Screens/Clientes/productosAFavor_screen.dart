@@ -477,7 +477,7 @@ class _ProductosAFavorScreenState extends State<ProductosAFavorScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Cantidad: ${producto.cantidad} | Venta #${producto.ventaId}',
+                      'Cantidad: ${producto.cantidad} | ${producto.ventaId != null ? 'Venta #${producto.ventaId}' : 'Venta Pendiente'}',
                       style: TextStyle(
                         fontSize: 12,
                         color: Theme.of(context).brightness == Brightness.dark

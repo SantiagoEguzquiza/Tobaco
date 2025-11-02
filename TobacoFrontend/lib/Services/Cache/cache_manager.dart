@@ -8,6 +8,7 @@ import '../../Models/Ventas.dart';
 import '../../Models/VentasProductos.dart';
 import '../../Models/metodoPago.dart';
 import '../../Models/EstadoEntrega.dart';
+import '../../Models/User.dart';
 
 /// Manager para caché local de datos maestros (Clientes, Productos, Categorías)
 /// Permite que la app funcione offline usando datos guardados previamente
@@ -18,7 +19,7 @@ class CacheManager {
 
   static Database? _database;
   static const String _databaseName = 'tobaco_cache.db';
-  static const int _databaseVersion = 1;
+  static const int _databaseVersion = 2;
 
   // Nombres de tablas
   static const String _clientesTable = 'clientes_cache';
@@ -103,7 +104,10 @@ class CacheManager {
         total REAL NOT NULL,
         fecha TEXT NOT NULL,
         metodo_pago INTEGER,
-        usuario_id INTEGER,
+        usuario_id_creador INTEGER,
+        usuario_creador_json TEXT,
+        usuario_id_asignado INTEGER,
+        usuario_asignado_json TEXT,
         estado_entrega INTEGER NOT NULL,
         cached_at TEXT NOT NULL
       )
@@ -138,7 +142,21 @@ class CacheManager {
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
     print('🗄️  CacheManager: Actualizando base de datos de v$oldVersion a v$newVersion');
-    // Migraciones futuras aquí
+    
+    // Migración de v1 a v2: dividir usuario en creador y asignado
+    if (oldVersion < 2) {
+      await db.execute('ALTER TABLE ventas_cache ADD COLUMN usuario_id_creador INTEGER');
+      await db.execute('ALTER TABLE ventas_cache ADD COLUMN usuario_creador_json TEXT');
+      await db.execute('ALTER TABLE ventas_cache ADD COLUMN usuario_id_asignado INTEGER');
+      await db.execute('ALTER TABLE ventas_cache ADD COLUMN usuario_asignado_json TEXT');
+      
+      // Migrar datos existentes
+      await db.execute('''
+        UPDATE ventas_cache 
+        SET usuario_id_creador = usuario_id
+        WHERE usuario_id IS NOT NULL
+      ''');
+    }
   }
 
   // ==================== CLIENTES ====================
@@ -534,7 +552,10 @@ class CacheManager {
             'total': venta.total,
             'fecha': venta.fecha.toIso8601String(),
             'metodo_pago': venta.metodoPago?.index,
-            'usuario_id': venta.usuarioId,
+            'usuario_id_creador': venta.usuarioIdCreador,
+            'usuario_creador_json': venta.usuarioCreador != null ? jsonEncode(venta.usuarioCreador!.toJson()) : null,
+            'usuario_id_asignado': venta.usuarioIdAsignado,
+            'usuario_asignado_json': venta.usuarioAsignado != null ? jsonEncode(venta.usuarioAsignado!.toJson()) : null,
             'estado_entrega': venta.estadoEntrega.toJson(),
             'cached_at': now,
           });
@@ -615,6 +636,20 @@ class CacheManager {
           );
         }).toList();
 
+        // Parsear usuario creador si existe
+        User? usuarioCreador;
+        if (ventaMap['usuario_creador_json'] != null) {
+          final usuarioJson = jsonDecode(ventaMap['usuario_creador_json'] as String);
+          usuarioCreador = User.fromJson(usuarioJson);
+        }
+        
+        // Parsear usuario asignado si existe
+        User? usuarioAsignado;
+        if (ventaMap['usuario_asignado_json'] != null) {
+          final usuarioJson = jsonDecode(ventaMap['usuario_asignado_json'] as String);
+          usuarioAsignado = User.fromJson(usuarioJson);
+        }
+
         // Construir objeto Venta
         final venta = Ventas(
           id: ventaMap['id'] as int?,
@@ -626,7 +661,10 @@ class CacheManager {
           metodoPago: ventaMap['metodo_pago'] != null 
             ? MetodoPago.values[ventaMap['metodo_pago'] as int]
             : null,
-          usuarioId: ventaMap['usuario_id'] as int?,
+          usuarioIdCreador: ventaMap['usuario_id_creador'] as int?,
+          usuarioCreador: usuarioCreador,
+          usuarioIdAsignado: ventaMap['usuario_id_asignado'] as int?,
+          usuarioAsignado: usuarioAsignado,
           estadoEntrega: EstadoEntregaExtension.fromJson(ventaMap['estado_entrega'] as int),
         );
 

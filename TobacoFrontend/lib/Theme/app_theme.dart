@@ -290,6 +290,11 @@ class AppTheme {
           ),
         ),
       ),
+      textSelectionTheme: TextSelectionThemeData(
+        cursorColor: primaryColor,
+        selectionColor: primaryColor.withOpacity(0.25),
+        selectionHandleColor: primaryColor,
+      ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           backgroundColor: Colors.white,
@@ -312,6 +317,7 @@ class AppTheme {
           fontFamily: 'LibreFranklin',
         ),
       ),
+      
       inputDecorationTheme: const InputDecorationTheme(
         labelStyle: TextStyle(
           color: Colors.grey,
@@ -401,6 +407,11 @@ class AppTheme {
             borderRadius: BorderRadius.circular(10),
           ),
         ),
+      ),
+      textSelectionTheme: const TextSelectionThemeData(
+        cursorColor: Color(0xFF4CAF50),
+        selectionColor: Color(0xFF4CAF50),
+        selectionHandleColor: Color(0xFF4CAF50),
       ),
       textTheme: const TextTheme(
         bodyLarge: TextStyle(
@@ -607,10 +618,8 @@ class AppTheme {
                   ),
                   child: Text(
                     cancelText,
-                    style: TextStyle(
-                      color: Theme.of(context).brightness == Brightness.dark 
-                          ? Colors.grey.shade300 
-                          : Colors.grey.shade700,
+                    style: const TextStyle(
+                      color: Colors.black,
                       fontWeight: FontWeight.w600,
                       fontSize: 14,
                     ),

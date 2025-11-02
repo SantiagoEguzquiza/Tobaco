@@ -19,11 +19,15 @@ import 'package:tobaco/Theme/headers.dart';
 import 'package:tobaco/Models/Ventas.dart';
 import 'package:tobaco/Theme/confirmAnimation.dart';
 import 'package:tobaco/Screens/Ventas/resumenVenta_screen.dart';
+import 'package:tobaco/Services/Auth_Service/auth_service.dart';
+import 'package:tobaco/Models/User.dart';
 // Nuevos widgets modulares
 import 'NuevaVenta/widgets/widgets.dart';
 
 class NuevaVentaScreen extends StatefulWidget {
-  const NuevaVentaScreen({super.key});
+  final Cliente? clientePreSeleccionado;
+  
+  const NuevaVentaScreen({super.key, this.clientePreSeleccionado});
 
   @override
   State<NuevaVentaScreen> createState() => _NuevaVentaScreenState();
@@ -49,6 +53,11 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
   void initState() {
     super.initState();
     _searchController.addListener(_onSearchChanged);
+    // Si hay un cliente pre-seleccionado, usarlo inmediatamente
+    if (widget.clientePreSeleccionado != null) {
+      clienteSeleccionado = widget.clientePreSeleccionado;
+      isSearching = false;
+    }
     _cargarClientesIniciales();
     // Cargar borrador después del primer frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -506,6 +515,89 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
     }
   }
 
+  /// Muestra diálogo preguntando cómo quiere asignar la venta
+  /// Retorna: 'a_mi', 'automatico', o null (cancelar)
+  Future<String?> _mostrarDialogoAsignacionVenta(BuildContext context) async {
+    return await showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Row(
+            children: [
+              Icon(Icons.assignment, color: AppTheme.primaryColor),
+              const SizedBox(width: 12),
+              const Text('Asignar Venta'),
+            ],
+          ),
+          content: const Text(
+            '¿Cómo deseas asignar esta venta?\n\n'
+            '• Asignarme a mí: La venta aparecerá en "Mis Entregas"\n'
+            '• Asignar automáticamente: Se asignará a otro repartidor disponible\n'
+            '• Cancelar: Dejar sin asignar',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(null),
+              child: const Text('Cancelar'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop('automatico'),
+              child: Text(
+                'Automático',
+                style: TextStyle(color: AppTheme.primaryColor),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop('a_mi'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryColor,
+              ),
+              child: const Text('Asignarme a mí'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  /// Asigna la venta automáticamente a otro repartidor
+  Future<void> _asignarVentaAutomaticamente(
+    VentasProvider ventasProvider,
+    int ventaId,
+    int usuarioIdExcluir,
+  ) async {
+    try {
+      final resultado = await ventasProvider.asignarVentaAutomaticamente(ventaId, usuarioIdExcluir);
+      
+      if (mounted) {
+        if (resultado['asignada'] == true) {
+          final nombreAsignado = resultado['usuarioAsignadoNombre'];
+          await AppDialogs.showSuccessDialog(
+            context: context,
+            title: 'Venta Asignada',
+            message: nombreAsignado != null
+                ? 'La venta se asignó automáticamente a: $nombreAsignado'
+                : 'Venta asignada exitosamente',
+            buttonText: 'Entendido',
+          );
+        } else {
+          AppTheme.showSnackBar(
+            context,
+            AppTheme.errorSnackBar(resultado['message'] ?? 'No se pudo asignar la venta'),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        AppTheme.showSnackBar(
+          context,
+          AppTheme.errorSnackBar('Error al asignar la venta: $e'),
+        );
+      }
+    }
+  }
+
   void _onSearchChanged() {
     _debounceTimer?.cancel();
     _debounceTimer = Timer(const Duration(milliseconds: 500), () {
@@ -519,7 +611,8 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
     });
 
     try {
-      final clientes = await ClienteProvider().obtenerClientes();
+      final clienteProvider = Provider.of<ClienteProvider>(context, listen: false);
+      final clientes = await clienteProvider.obtenerClientes();
       if (mounted) {
         setState(() {
           clientesIniciales = clientes;
@@ -816,7 +909,8 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
     });
 
     try {
-      final clientes = await ClienteProvider().buscarClientes(trimmedQuery);
+      final clienteProvider = Provider.of<ClienteProvider>(context, listen: false);
+      final clientes = await clienteProvider.buscarClientes(trimmedQuery);
       setState(() {
         clientesFiltrados = clientes;
         isLoadingClientes = false;
@@ -948,6 +1042,13 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
         return;
       }
 
+      // Obtener usuario actual y asignarlo como creador
+      final usuario = await AuthService.getCurrentUser();
+      if (usuario != null) {
+        ventaConPagos.usuarioIdCreador = usuario.id;
+        ventaConPagos.usuarioCreador = usuario;
+      }
+      
       // Crear la venta
       final ventasProvider = Provider.of<VentasProvider>(context, listen: false);
       final result = await ventasProvider.crearVenta(ventaConPagos);
@@ -955,6 +1056,61 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
       if (mounted) {
         if (!result['success']) {
           throw Exception(result['message']);
+        }
+
+        // Manejar asignación según el tipo de empleado
+        if (!result['isOffline'] && result['ventaId'] != null) {
+          final usuario = await AuthService.getCurrentUser();
+          if (usuario != null && (usuario.isEmployee || usuario.isAdmin)) {
+            // RepartidorVendedor se asigna automáticamente a sí mismo sin diálogo
+            if (usuario.esRepartidorVendedor) {
+              try {
+                await ventasProvider.asignarVenta(result['ventaId'], usuario.id);
+                if (mounted) {
+                  AppTheme.showSnackBar(
+                    context,
+                    AppTheme.successSnackBar('Venta asignada a ti exitosamente'),
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  AppTheme.showSnackBar(
+                    context,
+                    AppTheme.errorSnackBar('Error al asignar la venta: $e'),
+                  );
+                }
+              }
+            } else {
+              // Para otros tipos de empleados, mostrar el diálogo de asignación
+              final opcionAsignacion = await _mostrarDialogoAsignacionVenta(context);
+              
+              if (mounted) {
+                try {
+                  if (opcionAsignacion == 'a_mi') {
+                    // Asignarse a sí mismo
+                    await ventasProvider.asignarVenta(result['ventaId'], usuario.id);
+                    if (mounted) {
+                      AppTheme.showSnackBar(
+                        context,
+                        AppTheme.successSnackBar('Venta asignada a ti exitosamente'),
+                      );
+                    }
+                  } else if (opcionAsignacion == 'automatico') {
+                    // Asignar automáticamente a otro repartidor
+                    await _asignarVentaAutomaticamente(ventasProvider, result['ventaId'], usuario.id);
+                  }
+                  // Si es 'cancelar' o null, no hacer nada
+                } catch (e) {
+                  if (mounted) {
+                    AppTheme.showSnackBar(
+                      context,
+                      AppTheme.errorSnackBar('Error al asignar la venta: $e'),
+                    );
+                  }
+                }
+              }
+            }
+          }
         }
 
         // Marcar que la venta se completó exitosamente

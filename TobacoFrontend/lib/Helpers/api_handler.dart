@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:http/io_client.dart';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tobaco/Theme/dialogs.dart';
 
@@ -12,8 +13,8 @@ class Apihandler {
 
   static final IOClient client = IOClient(httpClient);
 
-  static final baseUrl =
-      Uri.parse('https://10.0.2.2:7148'); // HTTP para desarrollo
+  // URL base dinámica según plataforma (HTTPS siempre)
+  static Uri baseUrl = Uri.parse('https://10.0.2.2:7148');
 
   static Future<bool> checkTokenAndFetchData(BuildContext context) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();

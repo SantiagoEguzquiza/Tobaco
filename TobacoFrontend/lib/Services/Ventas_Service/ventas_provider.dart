@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:tobaco/Models/Ventas.dart';
 import 'package:tobaco/Models/VentasProductos.dart';
@@ -19,35 +21,41 @@ class VentasProvider with ChangeNotifier {
   bool get cargando => _cargando;
 
   /// Obtiene ventas: intenta del servidor, si falla usa caché (optimizado para offline)
-  Future<List<Ventas>> obtenerVentas() async {
-    print('📡 VentasProvider: Intentando obtener ventas del servidor...');
+  Future<List<Ventas>> obtenerVentas({bool usarTimeoutNormal = false}) async {
+    
     
     try {
-      // Timeout reducido a 500ms para ser ultra rápido offline
-      _ventas = await _ventasService.obtenerVentas()
-          .timeout(Duration(milliseconds: 500));
+      // Intentar obtener ventas del servidor con timeout rápido para detección offline
+      _ventas = await _ventasService.obtenerVentas(timeoutRapido: !usarTimeoutNormal, timeoutNormal: usarTimeoutNormal);
       
-      print('✅ VentasProvider: ${_ventas.length} ventas obtenidas del servidor');
       
-      // Guardar en caché para uso offline (en background, no esperar)
-      if (_ventas.isNotEmpty) {
-        _cacheService.guardarVentasEnCache(_ventas).catchError((e) {
-          print('⚠️ VentasProvider: Error guardando en caché: $e');
-        });
-      }
+      
+      // SIEMPRE guardar en caché, incluso si está vacío (reemplaza el caché anterior)
+      _cacheService.guardarVentasEnCache(_ventas).catchError((e) {
+        
+      });
       
     } catch (e) {
-      print('⚠️ VentasProvider: Error obteniendo del servidor: $e');
-      print('📦 VentasProvider: Cargando ventas del caché...');
-      
-      // Si falla, cargar del caché
+      // Si falla online, cargar del caché simple
       _ventas = await _cacheService.obtenerVentasDelCache();
-      
-      if (_ventas.isEmpty) {
-        print('❌ VentasProvider: No hay ventas en caché');
-      } else {
-        print('✅ VentasProvider: ${_ventas.length} ventas cargadas del caché');
-      }
+
+      // Mezclar ventas pendientes offline (no sincronizadas) al inicio
+      try {
+        final pendientes = await _offlineService.obtenerVentasPendientes();
+        if (pendientes.isNotEmpty) {
+          final offlineVentas = pendientes.map((row) {
+            final ventaJson = row['venta_json'] as String;
+            return Ventas.fromJson(jsonDecode(ventaJson));
+          }).toList();
+          
+          // Filtrar ventas offline que ya existen en el caché (para evitar duplicados)
+          final idsEnCache = _ventas.map((v) => v.id).whereType<int>().toSet();
+          final offlineUnique = offlineVentas.where((v) => !idsEnCache.contains(v.id)).toList();
+          
+          // Mostrar primero las offline recientes
+          _ventas = [...offlineUnique, ..._ventas];
+        }
+      } catch (_) {}
     }
 
     return _ventas;
@@ -55,38 +63,44 @@ class VentasProvider with ChangeNotifier {
 
   /// Crea una venta (online u offline)
   Future<Map<String, dynamic>> crearVenta(Ventas venta) async {
-    print('💰 VentasProvider: Creando venta...');
+    
     
     try {
-      // Intentar crear online con timeout (1s)
-      await _ventasService.crearVenta(venta)
-          .timeout(Duration(seconds: 1));
+      // Intentar crear online con timeout normal
+      final response = await _ventasService.crearVenta(venta);
       
-      print('✅ VentasProvider: Venta creada online exitosamente');
+      // Actualizar el ID de la venta con el que retornó el servidor
+      if (response['ventaId'] != null) {
+        venta.id = response['ventaId'];
+      }
       
       // Agregar a la lista local
       _ventas.insert(0, venta);
       
       // Actualizar caché en background
       _cacheService.guardarVentasEnCache(_ventas).catchError((e) {
-        print('⚠️ VentasProvider: Error actualizando caché: $e');
+        
       });
       
       return {
         'success': true,
         'isOffline': false,
-        'message': 'Venta creada exitosamente',
+        'message': response['message'] ?? 'Venta creada exitosamente',
+        'ventaId': response['ventaId'],
+        'asignada': response['asignada'] ?? false,
+        'usuarioAsignadoId': response['usuarioAsignadoId'],
+        'usuarioAsignadoNombre': response['usuarioAsignadoNombre'],
       };
       
     } catch (e) {
-      print('⚠️ VentasProvider: Error creando venta online: $e');
-      print('📴 VentasProvider: Guardando venta offline...');
+      
+      
       
       try {
         // Guardar offline para sincronizar después
         await _offlineService.guardarVentaOffline(venta);
         
-        print('✅ VentasProvider: Venta guardada offline');
+        
         
         return {
           'success': true,
@@ -94,7 +108,7 @@ class VentasProvider with ChangeNotifier {
           'message': 'Venta guardada localmente. Se sincronizará cuando haya conexión.',
         };
       } catch (offlineError) {
-        print('❌ VentasProvider: Error guardando venta offline: $offlineError');
+        
         
         return {
           'success': false,
@@ -105,6 +119,41 @@ class VentasProvider with ChangeNotifier {
     }
   }
 
+  /// Asigna una venta a un usuario
+  Future<void> asignarVenta(int ventaId, int usuarioId) async {
+    try {
+      await _ventasService.asignarVenta(ventaId, usuarioId);
+      // Actualizar la venta en la lista local
+      final ventaIndex = _ventas.indexWhere((v) => v.id == ventaId);
+      if (ventaIndex != -1) {
+        _ventas[ventaIndex].usuarioIdAsignado = usuarioId;
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('Error al asignar venta: $e');
+      rethrow;
+    }
+  }
+
+  /// Asigna una venta automáticamente a otro repartidor
+  Future<Map<String, dynamic>> asignarVentaAutomaticamente(int ventaId, int usuarioIdExcluir) async {
+    try {
+      final resultado = await _ventasService.asignarVentaAutomaticamente(ventaId, usuarioIdExcluir);
+      // Actualizar la venta en la lista local
+      if (resultado['asignada'] == true && resultado['usuarioAsignadoId'] != null) {
+        final ventaIndex = _ventas.indexWhere((v) => v.id == ventaId);
+        if (ventaIndex != -1) {
+          _ventas[ventaIndex].usuarioIdAsignado = resultado['usuarioAsignadoId'];
+          notifyListeners();
+        }
+      }
+      return resultado;
+    } catch (e) {
+      debugPrint('Error al asignar venta automáticamente: $e');
+      rethrow;
+    }
+  }
+
   /// Cuenta ventas pendientes de sincronización
   Future<int> contarVentasPendientes() async {
     return await _offlineService.contarPendientes();
@@ -112,7 +161,7 @@ class VentasProvider with ChangeNotifier {
 
   /// Sincroniza manualmente las ventas pendientes
   Future<Map<String, dynamic>> sincronizarAhora() async {
-    print('🔄 VentasProvider: Sincronización manual iniciada');
+    
     return await _syncService.sincronizarAhora();
   }
 

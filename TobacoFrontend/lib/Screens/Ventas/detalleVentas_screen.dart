@@ -57,7 +57,10 @@ class _DetalleVentaScreenState extends State<DetalleVentaScreen> {
       child: Scaffold(
         appBar: AppBar(
           centerTitle: true,
-          title: Text('Venta #${widget.venta.id}', style: AppTheme.appBarTitleStyle),
+          title: Text(
+            widget.venta.id != null ? 'Venta #${widget.venta.id}' : 'Venta Pendiente',
+            style: AppTheme.appBarTitleStyle
+          ),
           leading: IconButton(
             icon: const Icon(Icons.arrow_back),
             onPressed: () => Navigator.pop(context, hasGuardadoCambios ? 'updated' : null),
@@ -143,7 +146,7 @@ class _DetalleVentaScreenState extends State<DetalleVentaScreen> {
                       ),
                     ),
                     Text(
-                      'Venta #${widget.venta.id}',
+                      widget.venta.id != null ? 'Venta #${widget.venta.id}' : 'Venta Pendiente',
                       style: TextStyle(
                         fontSize: 16,
                         color: Theme.of(context).brightness == Brightness.dark
@@ -266,7 +269,7 @@ class _DetalleVentaScreenState extends State<DetalleVentaScreen> {
                 const SizedBox(height: 12),
                 _buildInfoRow(Icons.payment, 'Método de Pago', _getAllPaymentMethodsString(widget.venta)),
                 const SizedBox(height: 12),               
-                _buildInfoRow(Icons.person, 'Usuario', widget.venta.usuario?.userName ?? 'No disponible'),
+                _buildInfoRow(Icons.person, 'Usuario', widget.venta.usuarioCreador?.userName ?? 'No disponible'),
                 const SizedBox(height: 12),
                 _buildEstadoEntregaRow(),
               ],

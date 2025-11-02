@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../Models/User.dart';
+import '../../Models/TipoVendedor.dart';
 import 'user_service.dart';
 import '../Auth_Service/auth_service.dart';
 import '../../Helpers/api_handler.dart';
@@ -95,6 +96,8 @@ class UserProvider extends ChangeNotifier {
     required String password,
     required String role,
     String? email,
+    TipoVendedor? tipoVendedor,
+    String? zona,
   }) async {
     _isLoading = true;
     _errorMessage = null;
@@ -112,6 +115,8 @@ class UserProvider extends ChangeNotifier {
         password: password,
         role: role,
         email: email,
+        tipoVendedor: tipoVendedor,
+        zona: zona,
       );
       _users.add(newUser);
       _errorMessage = null;
@@ -144,6 +149,8 @@ class UserProvider extends ChangeNotifier {
     String? role,
     String? email,
     bool? isActive,
+    TipoVendedor? tipoVendedor,
+    String? zona,
   }) async {
     _isLoading = true;
     _errorMessage = null;
@@ -163,6 +170,8 @@ class UserProvider extends ChangeNotifier {
         role: role,
         email: email,
         isActive: isActive,
+        tipoVendedor: tipoVendedor,
+        zona: zona,
       );
       
       // Update the user in the local list instead of reloading all users

@@ -7,82 +7,141 @@ import 'package:tobaco/Services/Auth_Service/auth_service.dart';
 
 class VentasService {
   final Uri baseUrl = Apihandler.baseUrl;
-  static const Duration _timeoutDuration = Duration(milliseconds: 500); // Ultra rápido para modo offline
+  static const Duration _timeoutDuration = Duration(seconds: 10); // Timeout normal para operaciones
+  static const Duration _timeoutRapidoDuration = Duration(milliseconds: 500); // Timeout rápido para detección offline
 
-  Future<List<Ventas>> obtenerVentas() async {
+  Future<List<Ventas>> obtenerVentas({bool timeoutRapido = false, bool timeoutNormal = false}) async {
     try {
-      print('📡 VentasService: Obteniendo ventas del backend...');
-      print('📡 VentasService: URL: $baseUrl/Ventas');
+      
       
       final headers = await AuthService.getAuthHeaders();
-      print('📡 VentasService: Headers obtenidos');
       
+      Duration timeout = timeoutNormal ? _timeoutDuration : (timeoutRapido ? _timeoutRapidoDuration : _timeoutDuration);
       final response = await Apihandler.client.get(
         Uri.parse('$baseUrl/Ventas'),
         headers: headers,
-      ).timeout(_timeoutDuration);
+      ).timeout(timeout);
 
-      print('📡 VentasService: Respuesta recibida - Status: ${response.statusCode}');
-      print('📡 VentasService: Body length: ${response.body.length}');
+      
 
       if (response.statusCode == 200) {
         final List<dynamic> ventasJson = jsonDecode(response.body);
         
-        print('✅ VentasService: ${ventasJson.length} ventas recibidas del backend');
+        
         
         if (ventasJson.isEmpty) {
-          print('⚠️ VentasService: El backend devolvió un array VACÍO');
-          print('⚠️ VentasService: Verifica que haya ventas en la base de datos del backend');
         }
         
         final ventas = ventasJson.map((json) {
           return Ventas.fromJson(json);
         }).toList();
         
-        print('✅ VentasService: ${ventas.length} ventas parseadas correctamente');
+        
         return ventas;
       } else {
-        print('❌ VentasService: Error del servidor - Status: ${response.statusCode}');
-        print('❌ VentasService: Body: ${response.body}');
+        
         throw Exception(
           'Error al obtener las ventas. Código de estado: ${response.statusCode}',
         );
       }
     } catch (e) {
-      print('❌ VentasService: Excepción capturada: $e');
+      
       debugPrint('Error al obtener las ventas: $e');
       rethrow;
     }
   }
 
-  Future<void> crearVenta(Ventas venta) async {
+  Future<Map<String, dynamic>> crearVenta(Ventas venta, {Duration? customTimeout}) async {
     try {
       final headers = await AuthService.getAuthHeaders();
       headers['Content-Type'] = 'application/json';
       
       // Debug: Imprimir los datos que se están enviando
       final ventaJson = venta.toJson();
-      debugPrint('Enviando venta: ${jsonEncode(ventaJson)}');
-      debugPrint('URL: $baseUrl/Ventas');
-      debugPrint('Headers: $headers');
+      
       
       final response = await Apihandler.client.post(
         Uri.parse('$baseUrl/Ventas'),
         headers: headers,
         body: jsonEncode(ventaJson),
-      ).timeout(_timeoutDuration);
+      ).timeout(customTimeout ?? _timeoutDuration);
 
-      debugPrint('Respuesta del servidor: ${response.statusCode}');
-      debugPrint('Cuerpo de la respuesta: ${response.body}');
+      
 
-      if (response.statusCode != 200) {
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        // Parsear la respuesta del servidor
+        final responseData = jsonDecode(response.body);
+        return {
+          'ventaId': responseData['ventaId'],
+          'message': responseData['message'] ?? 'Venta creada exitosamente',
+          'asignada': responseData['asignada'] ?? false,
+          'usuarioAsignadoId': responseData['usuarioAsignadoId'],
+          'usuarioAsignadoNombre': responseData['usuarioAsignadoNombre'],
+        };
+      } else {
         throw Exception(
             'Error al guardar la venta. Código de estado: ${response.statusCode}, Respuesta: ${response.body}');
-      } else {
-        debugPrint('Venta guardada exitosamente');
       }
     } catch (e) {
       debugPrint('Error al guardar la venta: $e');
+      rethrow;
+    }
+  }
+
+  /// Asigna una venta a un usuario
+  Future<void> asignarVenta(int ventaId, int usuarioId) async {
+    try {
+      final headers = await AuthService.getAuthHeaders();
+      headers['Content-Type'] = 'application/json';
+      
+      final response = await Apihandler.client.post(
+        Uri.parse('$baseUrl/Ventas/asignar'),
+        headers: headers,
+        body: jsonEncode({
+          'ventaId': ventaId,
+          'usuarioId': usuarioId,
+        }),
+      ).timeout(_timeoutDuration);
+
+      if (response.statusCode != 200) {
+        throw Exception(
+            'Error al asignar la venta. Código de estado: ${response.statusCode}, Respuesta: ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('Error al asignar la venta: $e');
+      rethrow;
+    }
+  }
+
+  /// Asigna una venta automáticamente a otro repartidor (excluyendo al usuario actual)
+  Future<Map<String, dynamic>> asignarVentaAutomaticamente(int ventaId, int usuarioIdExcluir) async {
+    try {
+      final headers = await AuthService.getAuthHeaders();
+      headers['Content-Type'] = 'application/json';
+      
+      final response = await Apihandler.client.post(
+        Uri.parse('$baseUrl/Ventas/asignar-automaticamente'),
+        headers: headers,
+        body: jsonEncode({
+          'ventaId': ventaId,
+          'usuarioIdExcluir': usuarioIdExcluir,
+        }),
+      ).timeout(_timeoutDuration);
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final responseData = jsonDecode(response.body);
+        return {
+          'asignada': responseData['asignada'] ?? false,
+          'usuarioAsignadoId': responseData['usuarioAsignadoId'],
+          'usuarioAsignadoNombre': responseData['usuarioAsignadoNombre'],
+          'message': responseData['message'] ?? 'Venta asignada exitosamente',
+        };
+      } else {
+        final errorData = jsonDecode(response.body);
+        throw Exception(errorData['message'] ?? 'Error al asignar la venta automáticamente');
+      }
+    } catch (e) {
+      debugPrint('Error al asignar la venta automáticamente: $e');
       rethrow;
     }
   }
@@ -99,7 +158,7 @@ class VentasService {
         throw Exception(
             'Error al eliminar la venta. Código de estado: ${response.statusCode}');
       } else {
-        debugPrint('Venta eliminada exitosamente');
+        
       }
     } catch (e) {
       debugPrint('Error al eliminar la venta: $e');

@@ -10,16 +10,23 @@ import 'package:tobaco/Services/Auth_Service/auth_provider.dart';
 import 'package:tobaco/Services/User_Service/user_provider.dart';
 import 'package:tobaco/Theme/app_theme.dart';
 import 'package:tobaco/Theme/theme_provider.dart';
-
 import 'package:tobaco/Services/Productos_Service/productos_provider.dart';
 import 'package:tobaco/Services/Ventas_Service/ventas_provider.dart';
 import 'package:tobaco/Services/VentaBorrador_Service/venta_borrador_provider.dart';
 import 'package:tobaco/Services/Sync/simple_sync_service.dart';
+import 'package:tobaco/Services/Entregas_Service/entregas_provider.dart';
+import 'package:tobaco/Services/Entregas_Service/entregas_service.dart';
+import 'package:tobaco/Services/Entregas_Service/ubicacion_service.dart';
+import 'package:tobaco/Services/Cache/database_helper.dart';
+import 'package:tobaco/Services/Connectivity/connectivity_service.dart';
+import 'package:tobaco/Services/RecorridosProgramados_Service/recorridos_programados_provider.dart';
 
-void main() {
-  // ⭐ Iniciar servicio de sincronización automática
-  SimpleSyncService().iniciar();
-  
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  // 🌐 Inicializar conectividad para habilitar llamadas online
+  await ConnectivityService().initialize();
+  // Sincronización automática deshabilitada: solo manual desde listado de ventas
+
   runApp(
     MultiProvider(
       providers: [
@@ -37,6 +44,18 @@ void main() {
         ChangeNotifierProvider(
           create: (ctx) => BcuProvider(ctx.read<BcuRepository>()),
         ),
+        // 🗺️ Provider de Entregas y Mapas
+        ChangeNotifierProvider(
+          create: (ctx) => EntregasProvider(
+            entregasService: EntregasService(
+              connectivityService: ConnectivityService(),
+              databaseHelper: DatabaseHelper(),
+            ),
+            ubicacionService: UbicacionService(),
+          ),
+        ),
+        // 🛣️ Provider de Recorridos Programados
+        ChangeNotifierProvider(create: (_) => RecorridosProgramadosProvider()),
       ],
       child: const MyApp(),
     ),

@@ -1,6 +1,7 @@
 import 'dart:convert';
 import '../../Helpers/api_handler.dart';
 import '../../Models/User.dart';
+import '../../Models/TipoVendedor.dart';
 import '../Auth_Service/auth_service.dart';
 
 class UserService {
@@ -49,6 +50,8 @@ class UserService {
     required String password,
     required String role,
     String? email,
+    TipoVendedor? tipoVendedor,
+    String? zona,
   }) async {
     try {
       final userData = {
@@ -56,6 +59,8 @@ class UserService {
         'password': password,
         'role': role,
         if (email != null) 'email': email,
+        if (tipoVendedor != null) 'tipoVendedor': tipoVendedor.toJson(),
+        if (zona != null) 'zona': zona,
       };
 
       final response = await Apihandler.client.post(
@@ -88,6 +93,8 @@ class UserService {
     String? role,
     String? email,
     bool? isActive,
+    TipoVendedor? tipoVendedor,
+    String? zona,
   }) async {
     try {
       final userData = <String, dynamic>{};
@@ -96,6 +103,8 @@ class UserService {
       if (role != null) userData['role'] = role;
       if (email != null) userData['email'] = email;
       if (isActive != null) userData['isActive'] = isActive;
+      if (tipoVendedor != null) userData['tipoVendedor'] = tipoVendedor.toJson();
+      if (zona != null) userData['zona'] = zona;
 
       final response = await Apihandler.client.put(
         Apihandler.baseUrl.resolve('$_usersEndpoint/update/$userId'),

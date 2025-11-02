@@ -30,6 +30,7 @@ class _VentasScreenState extends State<VentasScreen> {
   List<Ventas> ventas = [];
   late ScaffoldMessengerState scaffoldMessenger;
   bool _offlineMessageShown = false; // Para mostrar el mensaje solo la primera vez
+  bool _isSincronizando = false; // Flag para evitar sincronizaciones múltiples
 
   // Variables para infinite scroll
   bool _isLoadingMore = false;
@@ -66,7 +67,7 @@ class _VentasScreenState extends State<VentasScreen> {
     }
   }
 
-  Future<void> _loadVentas() async {
+  Future<void> _loadVentas({bool usarTimeoutNormal = false}) async {
     if (!mounted) return;
     
     setState(() {
@@ -78,12 +79,12 @@ class _VentasScreenState extends State<VentasScreen> {
     });
 
     try {
-      print('🔄 VentasScreen: Iniciando carga de ventas...');
+      
       
       final ventasProvider = Provider.of<VentasProvider>(context, listen: false);
       
-      print('🔄 VentasScreen: Obteniendo ventas...');
-      final ventasList = await ventasProvider.obtenerVentas();
+      
+      final ventasList = await ventasProvider.obtenerVentas(usarTimeoutNormal: usarTimeoutNormal);
       
       if (!mounted) return;
       
@@ -93,7 +94,7 @@ class _VentasScreenState extends State<VentasScreen> {
         isLoading = false;
       });
       
-      print('✅ VentasScreen: ${ventas.length} ventas cargadas exitosamente');
+      
       
       // Verificar si estamos en modo offline
       // Si hay ventas y hay caché, verificar si el servidor está realmente disponible
@@ -136,7 +137,7 @@ class _VentasScreenState extends State<VentasScreen> {
     } catch (e, stackTrace) {
       if (!mounted) return;
       
-      print('❌ VentasScreen: Error al cargar las ventas: $e');
+      
       print('Stack trace: $stackTrace');
       
       // Verificar si hay datos del caché disponibles
@@ -193,7 +194,7 @@ class _VentasScreenState extends State<VentasScreen> {
     // En modo offline no hay paginación, todas las ventas se cargan de una vez
     if (_isLoadingMore || !_hasMoreData || !mounted) return;
     
-    print('📋 VentasScreen: Paginación no disponible en modo offline');
+    
     
     // Por ahora, deshabilitamos la paginación ya que obtenerVentas() 
     // trae todas las ventas offline de una vez
@@ -215,32 +216,57 @@ class _VentasScreenState extends State<VentasScreen> {
                 return Padding(
                   padding: const EdgeInsets.only(right: 8.0),
                   child: IconButton(
-                    icon: Badge(
-                      label: Text('${snapshot.data}'),
-                      backgroundColor: Colors.red,
-                      child: const Icon(Icons.cloud_upload),
-                    ),
-                    tooltip: '${snapshot.data} ventas pendientes',
-                    onPressed: () async {
-                      final provider = Provider.of<VentasProvider>(context, listen: false);
-                      final result = await provider.sincronizarAhora();
-                      
-                      if (context.mounted) {
-                        // Usar snackbar personalizado de AppTheme
-                        if (result['success']) {
-                          AppTheme.showSnackBar(
-                            context,
-                            AppTheme.successSnackBar(result['message']),
-                          );
-                        } else {
-                          AppTheme.showSnackBar(
-                            context,
-                            AppTheme.warningSnackBar(result['message']),
-                          );
-                        }
-                        _loadVentas();
-                      }
-                    },
+                    icon: _isSincronizando
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : Badge(
+                            label: Text('${snapshot.data}'),
+                            backgroundColor: Colors.red,
+                            child: const Icon(Icons.cloud_upload),
+                          ),
+                    tooltip: _isSincronizando ? 'Sincronizando...' : '${snapshot.data} ventas pendientes',
+                    onPressed: _isSincronizando
+                        ? null
+                        : () async {
+                            setState(() {
+                              _isSincronizando = true;
+                            });
+                            
+                            try {
+                              final provider = Provider.of<VentasProvider>(context, listen: false);
+                              final result = await provider.sincronizarAhora();
+                              
+                              if (context.mounted) {
+                                // Usar snackbar personalizado de AppTheme
+                                if (result['success']) {
+                                  AppTheme.showSnackBar(
+                                    context,
+                                    AppTheme.successSnackBar(result['message']),
+                                  );
+                                } else {
+                                  AppTheme.showSnackBar(
+                                    context,
+                                    AppTheme.warningSnackBar(result['message']),
+                                  );
+                                }
+                                
+                                // Recargar ventas para mostrar las sincronizadas (con timeout normal)
+                                _loadVentas(usarTimeoutNormal: true);
+                              }
+                            } finally {
+                              if (context.mounted) {
+                                setState(() {
+                                  _isSincronizando = false;
+                                });
+                              }
+                            }
+                          },
                   ),
                 );
               }

@@ -11,7 +11,7 @@ class VentasOfflineCacheService {
 
   static Database? _database;
   static const String _databaseName = 'ventas_offline.db';
-  static const int _databaseVersion = 1;
+  static const int _databaseVersion = 2; // Incrementado para agregar columna is_syncing
 
   Future<Database> get database async {
     if (_database != null) return _database!;
@@ -20,7 +20,7 @@ class VentasOfflineCacheService {
   }
 
   Future<Database> _initDatabase() async {
-    print('💾 VentasOfflineCacheService: Inicializando base de datos...');
+    
     
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, _databaseName);
@@ -29,11 +29,12 @@ class VentasOfflineCacheService {
       path,
       version: _databaseVersion,
       onCreate: _onCreate,
+      onUpgrade: _onUpgrade,
     );
   }
 
   Future<void> _onCreate(Database db, int version) async {
-    print('💾 VentasOfflineCacheService: Creando tabla...');
+    
 
     // Tabla simple: guarda ventas offline como JSON
     await db.execute('''
@@ -41,11 +42,21 @@ class VentasOfflineCacheService {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         venta_json TEXT NOT NULL,
         created_at TEXT NOT NULL,
-        synced INTEGER DEFAULT 0
+        synced INTEGER DEFAULT 0,
+        is_syncing INTEGER DEFAULT 0
       )
     ''');
 
-    print('✅ VentasOfflineCacheService: Tabla creada correctamente');
+    
+  }
+
+  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      // Agregar columna is_syncing para evitar duplicados durante sincronización
+      await db.execute('''
+        ALTER TABLE ventas_offline ADD COLUMN is_syncing INTEGER DEFAULT 0
+      ''');
+    }
   }
 
   /// Guarda una venta offline (para sincronizar después)
@@ -60,10 +71,10 @@ class VentasOfflineCacheService {
         'synced': 0,
       });
 
-      print('✅ VentasOfflineCacheService: Venta guardada offline (ID: $id)');
+      
       return id;
     } catch (e) {
-      print('❌ VentasOfflineCacheService: Error guardando venta: $e');
+      
       rethrow;
     }
   }
@@ -75,15 +86,15 @@ class VentasOfflineCacheService {
       
       final List<Map<String, dynamic>> maps = await db.query(
         'ventas_offline',
-        where: 'synced = ?',
-        whereArgs: [0],
+        where: 'synced = ? AND (is_syncing = ? OR is_syncing IS NULL)',
+        whereArgs: [0, 0],
         orderBy: 'created_at DESC',
       );
 
-      print('📦 VentasOfflineCacheService: ${maps.length} ventas pendientes de sincronización');
+      
       return maps;
     } catch (e) {
-      print('❌ VentasOfflineCacheService: Error obteniendo ventas pendientes: $e');
+      
       return [];
     }
   }
@@ -95,14 +106,53 @@ class VentasOfflineCacheService {
       
       await db.update(
         'ventas_offline',
-        {'synced': 1},
+        {'synced': 1, 'is_syncing': 0},
         where: 'id = ?',
         whereArgs: [id],
       );
 
-      print('✅ VentasOfflineCacheService: Venta $id marcada como sincronizada');
+      
     } catch (e) {
-      print('❌ VentasOfflineCacheService: Error marcando venta como sincronizada: $e');
+      
+    }
+  }
+
+  /// Marca una venta como en proceso de sincronización (para evitar duplicados)
+  Future<bool> marcarComoSyncing(int id) async {
+    try {
+      final db = await database;
+      
+      // Solo marcar si no está ya sincronizada o en proceso
+      final result = await db.update(
+        'ventas_offline',
+        {'is_syncing': 1},
+        where: 'id = ? AND synced = ? AND is_syncing = ?',
+        whereArgs: [id, 0, 0],
+      );
+      
+      // Retornar true si se marcó exitosamente (result > 0)
+      return result > 0;
+    } catch (e) {
+      
+      return false;
+    }
+  }
+
+  /// Revierte el marcado de sincronización (por si falla)
+  Future<void> revertirSyncing(int id) async {
+    try {
+      final db = await database;
+      
+      await db.update(
+        'ventas_offline',
+        {'is_syncing': 0},
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+
+      
+    } catch (e) {
+      
     }
   }
 
@@ -117,9 +167,9 @@ class VentasOfflineCacheService {
         whereArgs: [1],
       );
 
-      print('🧹 VentasOfflineCacheService: Ventas sincronizadas limpiadas');
+      
     } catch (e) {
-      print('❌ VentasOfflineCacheService: Error limpiando ventas: $e');
+      
     }
   }
 
@@ -134,8 +184,61 @@ class VentasOfflineCacheService {
       
       return count ?? 0;
     } catch (e) {
-      print('❌ VentasOfflineCacheService: Error contando pendientes: $e');
+      
       return 0;
+    }
+  }
+
+  /// Limpia ventas que están marcadas como "syncing" pero no deberían estarlo
+  /// Esto puede pasar si la app se cierra durante una sincronización
+  Future<int> limpiarSyncingAtascadas() async {
+    try {
+      final db = await database;
+      
+      // Revertir todas las ventas que están marcadas como syncing pero no han sido sincronizadas
+      final result = await db.update(
+        'ventas_offline',
+        {'is_syncing': 0},
+        where: 'is_syncing = ? AND synced = ?',
+        whereArgs: [1, 0],
+      );
+      
+      return result;
+    } catch (e) {
+      return 0;
+    }
+  }
+
+  /// Obtiene todas las ventas offline (incluyendo las atascadas)
+  Future<List<Map<String, dynamic>>> obtenerTodasLasVentasOffline() async {
+    try {
+      final db = await database;
+      
+      final List<Map<String, dynamic>> maps = await db.query(
+        'ventas_offline',
+        orderBy: 'created_at DESC',
+      );
+      
+      return maps;
+    } catch (e) {
+      return [];
+    }
+  }
+
+  /// Elimina una venta offline específica por ID
+  Future<bool> eliminarVentaOffline(int id) async {
+    try {
+      final db = await database;
+      
+      final result = await db.delete(
+        'ventas_offline',
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+      
+      return result > 0;
+    } catch (e) {
+      return false;
     }
   }
 }

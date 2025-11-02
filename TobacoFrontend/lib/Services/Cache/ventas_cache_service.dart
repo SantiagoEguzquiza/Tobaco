@@ -26,7 +26,7 @@ class VentasCacheService {
   }
 
   Future<Database> _initDatabase() async {
-    print('💾 VentasCacheService: Inicializando base de datos...');
+    
     
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, _databaseName);
@@ -39,7 +39,7 @@ class VentasCacheService {
   }
 
   Future<void> _onCreate(Database db, int version) async {
-    print('💾 VentasCacheService: Creando tabla de ventas...');
+    
 
     // Tabla simple: guarda las ventas como JSON
     await db.execute('''
@@ -50,37 +50,32 @@ class VentasCacheService {
       )
     ''');
 
-    print('✅ VentasCacheService: Tabla creada correctamente');
+    
   }
 
   /// Guarda las ventas del servidor en caché
   Future<void> guardarVentasEnCache(List<Ventas> ventas) async {
-    if (ventas.isEmpty) {
-      print('💾 VentasCacheService: No hay ventas para guardar');
-      return;
-    }
-
     try {
       final db = await database;
-      final now = DateTime.now().toIso8601String();
-
-      await db.transaction((txn) async {
-        // Limpiar caché anterior
-        await txn.delete('ventas_cache');
-
-        // Guardar cada venta como JSON
+      
+      // SIEMPRE limpiar el caché anterior, incluso si la lista está vacía
+      await db.delete('ventas_cache');
+      
+      // Si hay ventas, guardarlas
+      if (ventas.isNotEmpty) {
+        final now = DateTime.now().toIso8601String();
+        
         for (var venta in ventas) {
-          await txn.insert('ventas_cache', {
+          await db.insert('ventas_cache', {
             'id': venta.id,
             'venta_json': jsonEncode(venta.toJson()),
             'cached_at': now,
           });
         }
-      });
-
-      print('✅ VentasCacheService: ${ventas.length} ventas guardadas en caché');
+      }
+      
     } catch (e) {
-      print('❌ VentasCacheService: Error guardando ventas: $e');
+      
     }
   }
 
@@ -95,7 +90,7 @@ class VentasCacheService {
       );
 
       if (maps.isEmpty) {
-        print('📦 VentasCacheService: No hay ventas en caché');
+        
         return [];
       }
 
@@ -105,14 +100,14 @@ class VentasCacheService {
           final ventaJson = jsonDecode(map['venta_json'] as String);
           ventas.add(Ventas.fromJson(ventaJson));
         } catch (e) {
-          print('⚠️ VentasCacheService: Error parseando venta ${map['id']}: $e');
+          
         }
       }
 
-      print('✅ VentasCacheService: ${ventas.length} ventas obtenidas del caché');
+      
       return ventas;
     } catch (e) {
-      print('❌ VentasCacheService: Error obteniendo ventas del caché: $e');
+      
       return [];
     }
   }
@@ -126,7 +121,7 @@ class VentasCacheService {
       );
       return count ?? 0;
     } catch (e) {
-      print('❌ VentasCacheService: Error contando ventas: $e');
+      
       return 0;
     }
   }
@@ -136,15 +131,15 @@ class VentasCacheService {
     try {
       final db = await database;
       await db.delete('ventas_cache');
-      print('🧹 VentasCacheService: Caché limpiado');
+      
     } catch (e) {
-      print('❌ VentasCacheService: Error limpiando caché: $e');
+      
     }
   }
 
   /// Resetea completamente la base de datos
   Future<void> resetearBaseDeDatos() async {
-    print('🔄 VentasCacheService: Reseteando base de datos...');
+    
     
     try {
       if (_database != null) {
@@ -158,9 +153,9 @@ class VentasCacheService {
       
       _database = await _initDatabase();
       
-      print('✅ VentasCacheService: Base de datos reseteada');
+      
     } catch (e) {
-      print('❌ VentasCacheService: Error reseteando BD: $e');
+      
     }
   }
 }

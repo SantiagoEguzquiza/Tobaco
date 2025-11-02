@@ -28,8 +28,13 @@ class _ResumenVentaScreenState extends State<ResumenVentaScreen> {
   void initState() {
     super.initState();
     
-    // Si se pasó una venta, usarla directamente
-    if (widget.venta != null) {
+    // Si se pasó una venta CON ID, intentar cargarla del servidor para obtener todos los datos
+    if (widget.venta != null && widget.venta!.id != null) {
+      _cargarVentaPorId(widget.venta!.id!);
+    } 
+    // Si se pasó una venta SIN ID (offline), usar esa venta directamente sin intentar cargar del servidor
+    else if (widget.venta != null) {
+      // Venta offline, no intentar cargar del servidor
       setState(() {
         venta = widget.venta;
         isLoading = false;
@@ -37,6 +42,75 @@ class _ResumenVentaScreenState extends State<ResumenVentaScreen> {
     } else {
       // Si no, intentar obtener la última venta del servidor
       _cargarUltimaVenta();
+    }
+  }
+
+  Future<void> _cargarVentaPorId(int id) async {
+    try {
+      setState(() {
+        isLoading = true;
+        errorMessage = null;
+      });
+
+      final ventaCargada = await _ventasService.obtenerVentaPorId(id);
+      
+      if (!mounted) return;
+      setState(() {
+        venta = ventaCargada;
+        isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      
+      if (Apihandler.isConnectionError(e)) {
+        setState(() {
+          isLoading = false;
+          // Si falla cargar del servidor, usar la venta local como respaldo
+          venta = widget.venta;
+        });
+        await Apihandler.handleConnectionError(context, e);
+      } else {
+        setState(() {
+          errorMessage = 'Error al cargar la venta: ${e.toString().replaceFirst('Exception: ', '')}';
+          isLoading = false;
+          venta = widget.venta;
+        });
+      }
+    }
+  }
+
+  Future<void> _cargarUltimaVentaConRespaldo(Ventas ventaRespaldo) async {
+    try {
+      setState(() {
+        isLoading = true;
+        errorMessage = null;
+      });
+
+      final ultimaVenta = await _ventasService.obtenerUltimaVenta();
+      
+      if (!mounted) return;
+      setState(() {
+        venta = ultimaVenta;
+        isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      
+      if (Apihandler.isConnectionError(e)) {
+        setState(() {
+          // Si falla cargar del servidor, usar la venta local como respaldo
+          venta = ventaRespaldo;
+          isLoading = false;
+        });
+        await Apihandler.handleConnectionError(context, e);
+      } else {
+        setState(() {
+          errorMessage = 'Error al cargar la venta: ${e.toString().replaceFirst('Exception: ', '')}';
+          // Usar la venta de respaldo
+          venta = ventaRespaldo;
+          isLoading = false;
+        });
+      }
     }
   }
 
@@ -369,7 +443,7 @@ class _ResumenVentaScreenState extends State<ResumenVentaScreen> {
                 const SizedBox(height: 12),
                 _buildInfoRow(Icons.payment, 'Método de Pago', _getAllPaymentMethodsString(venta!)),
                 const SizedBox(height: 12),
-                _buildInfoRow(Icons.person, 'Usuario', venta!.usuario?.userName ?? 'No disponible'),
+                _buildInfoRow(Icons.person, 'Usuario', venta!.usuarioCreador?.userName ?? 'No disponible'),
               ],
             ),
           ),

@@ -25,11 +25,11 @@ class VentasOfflineService {
   /// Inicializa el servicio offline
   Future<void> initialize() async {
     if (_isInitialized) {
-      print('⚠️ VentasOfflineService: Ya está inicializado');
+      
       return;
     }
 
-    print('🚀 VentasOfflineService: Inicializando...');
+    
 
     try {
       // ⭐ VERIFICAR QUE LAS TABLAS EXISTAN
@@ -40,13 +40,13 @@ class VentasOfflineService {
       await _syncService.initialize();
       
       _isInitialized = true;
-      print('✅ VentasOfflineService: Inicializado correctamente');
+      
       
       // Mostrar estado inicial
       final stats = await _dbHelper.getStats();
-      print('📊 VentasOfflineService: Estado inicial - ${stats['pending']} pendientes, ${stats['failed']} fallidas');
+      
     } catch (e) {
-      print('❌ VentasOfflineService: Error en inicialización: $e');
+      
       rethrow;
     }
   }
@@ -58,23 +58,23 @@ class VentasOfflineService {
       await initialize();
     }
 
-    print('💰 VentasOfflineService: Creando venta...');
+    
     
     // Verificar conectividad
     final isConnected = _connectivityService.isFullyConnected;
-    print('🌐 VentasOfflineService: Conexión disponible: $isConnected');
+    
 
     if (isConnected) {
       // Intentar crear online
       try {
-        print('📡 VentasOfflineService: Intentando crear venta online...');
+        
         await _ventasService.crearVenta(venta);
         
-        print('✅ VentasOfflineService: Venta creada online exitosamente');
+        
         
         // ⭐ ACTUALIZAR CACHÉ: Refrescar ventas desde el servidor para que estén disponibles offline
         try {
-          print('💾 VentasOfflineService: Actualizando caché de ventas...');
+          
           
           // Asegurar que las tablas del caché existan
           await _cacheManager.ensureTablesExist();
@@ -84,20 +84,20 @@ class VentasOfflineService {
           
           if (ventasActualizadas.isNotEmpty) {
             await _cacheManager.cacheVentas(ventasActualizadas);
-            print('✅ VentasOfflineService: Caché actualizado con ${ventasActualizadas.length} ventas');
+            
           }
         } catch (cacheError) {
-          print('⚠️ VentasOfflineService: No se pudo actualizar caché: $cacheError');
+          
           // No es crítico, continuar de todas formas
         }
         
         // Intentar sincronizar ventas pendientes en background
         _syncService.syncPendingVentas().then((result) {
           if (result.success) {
-            print('🔄 VentasOfflineService: Ventas pendientes sincronizadas en background');
+            
           }
         }).catchError((e) {
-          print('⚠️ VentasOfflineService: Error en sincronización background: $e');
+          
         });
         
         return VentaCreationResult(
@@ -107,15 +107,15 @@ class VentasOfflineService {
           message: 'Venta creada exitosamente',
         );
       } catch (e) {
-        print('⚠️ VentasOfflineService: Error creando venta online: $e');
-        print('💾 VentasOfflineService: Guardando venta offline como respaldo...');
+        
+        
         
         // Si falla online, guardar offline
         return await _saveVentaOffline(venta, 'Error online: $e');
       }
     } else {
       // Sin conexión, guardar offline directamente
-      print('📴 VentasOfflineService: Sin conexión, guardando offline...');
+    
       return await _saveVentaOffline(venta, 'Sin conexión a internet o backend');
     }
   }
@@ -125,8 +125,8 @@ class VentasOfflineService {
     try {
       final localId = await _dbHelper.saveVentaOffline(venta);
       
-      print('✅ VentasOfflineService: Venta guardada offline con ID: $localId');
-      print('📋 VentasOfflineService: Razón: $reason');
+      
+      
       
       return VentaCreationResult(
         success: true,
@@ -135,7 +135,7 @@ class VentasOfflineService {
         message: 'Venta guardada localmente. Se sincronizará cuando haya conexión.',
       );
     } catch (e) {
-      print('❌ VentasOfflineService: Error guardando venta offline: $e');
+      
       
       return VentaCreationResult(
         success: false,
@@ -149,19 +149,19 @@ class VentasOfflineService {
   /// Obtiene ventas (combina online y offline)
   Future<List<Ventas>> obtenerVentas() async {
     if (!_isInitialized) {
-      print('⚠️ VentasOfflineService: No inicializado, inicializando...');
+      
       await initialize();
     }
 
-    print('🔄 VentasOfflineService: Obteniendo ventas...');
+    
     
     // SIEMPRE obtener ventas offline primero (son rápidas, desde SQLite)
     List<Ventas> ventasOffline = [];
     try {
       ventasOffline = await _dbHelper.getAllOfflineVentas();
-      print('📦 VentasOfflineService: ${ventasOffline.length} ventas offline encontradas');
+      
     } catch (e) {
-      print('⚠️ VentasOfflineService: Error obteniendo ventas offline: $e');
+      
     }
 
     // INTENTAR SIEMPRE obtener del backend
@@ -169,44 +169,44 @@ class VentasOfflineService {
     List<Ventas> ventasCache = [];
     
     try {
-      print('📡 VentasOfflineService: Intentando obtener ventas del backend...');
+      
       
       // Timeout de 5 segundos - si falla, usamos caché
       ventasOnline = await _ventasService.obtenerVentas()
           .timeout(
             Duration(seconds: 5),
             onTimeout: () {
-              print('⏱️ VentasOfflineService: Timeout obteniendo ventas online');
+              
               return <Ventas>[];
             },
           );
       
       if (ventasOnline.isNotEmpty) {
-        print('✅ VentasOfflineService: ${ventasOnline.length} ventas online obtenidas del backend');
+        
         
         // ⭐ GUARDAR EN CACHÉ para uso futuro offline
         try {
           await _cacheManager.ensureTablesExist(); // Verificar tablas antes de cachear
           await _cacheManager.cacheVentas(ventasOnline);
-          print('💾 VentasOfflineService: Ventas guardadas en caché para uso offline');
+          
         } catch (cacheError) {
-          print('⚠️ VentasOfflineService: Error guardando en caché: $cacheError');
+          
           // Continuar de todas formas
         }
       } else {
-        print('⚠️ VentasOfflineService: Backend retornó 0 ventas');
+        
       }
     } catch (e) {
-      print('❌ VentasOfflineService: Error obteniendo ventas online: $e');
-      print('📴 VentasOfflineService: Intentando usar caché de ventas...');
+      
+      
       
       // Si falla obtener del backend, usar caché
       try {
         await _cacheManager.ensureTablesExist(); // Verificar tablas antes de leer caché
         ventasCache = await _cacheManager.getVentasFromCache();
-        print('📦 VentasOfflineService: ${ventasCache.length} ventas obtenidas de caché');
+        
       } catch (cacheError) {
-        print('❌ VentasOfflineService: Error obteniendo caché: $cacheError');
+        
       }
     }
 
@@ -216,7 +216,7 @@ class VentasOfflineService {
       ...(ventasOnline.isNotEmpty ? ventasOnline : ventasCache),
     ];
     
-    print('✅ VentasOfflineService: Total ventas combinadas: ${ventasCombinadas.length}');
+    
     print('   - Offline (creadas localmente): ${ventasOffline.length}');
     print('   - Online (del servidor): ${ventasOnline.length}');
     print('   - Caché (servidor anterior): ${ventasCache.length}');
@@ -230,7 +230,7 @@ class VentasOfflineService {
       await initialize();
     }
 
-    print('🔄 VentasOfflineService: Sincronización manual iniciada');
+    
     
     if (!_connectivityService.isFullyConnected) {
       return SyncResult(
@@ -250,7 +250,7 @@ class VentasOfflineService {
       await initialize();
     }
 
-    print('🔄 VentasOfflineService: Reintentando ventas fallidas');
+    
     return await _syncService.retrySyncFailedVentas();
   }
 
@@ -286,7 +286,7 @@ class VentasOfflineService {
 
   /// Libera recursos
   void dispose() {
-    print('🚀 VentasOfflineService: Liberando recursos...');
+    
     _syncService.dispose();
     _connectivityService.dispose();
   }

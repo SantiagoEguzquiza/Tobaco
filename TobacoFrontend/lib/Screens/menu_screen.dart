@@ -8,8 +8,11 @@ import 'package:tobaco/Screens/Ventas/ventas_screen.dart';
 import 'package:tobaco/Screens/Productos/productos_screen.dart';
 import 'package:tobaco/Screens/Admin/user_management_screen.dart';
 import 'package:tobaco/Screens/Admin/categorias_screen.dart';
+import 'package:tobaco/Screens/Admin/asignar_ventas_screen.dart';
+import 'package:tobaco/Screens/Admin/recorridos_programados_screen.dart';
 import 'package:tobaco/Screens/Auth/login_screen.dart';
 import 'package:tobaco/Screens/Config/config_screen.dart';
+import 'package:tobaco/Screens/Entregas/mapa_entregas_screen.dart';
 import 'package:tobaco/Services/Auth_Service/auth_provider.dart';
 import 'package:tobaco/Theme/app_theme.dart';
 import 'package:tobaco/Theme/dialogs.dart';
@@ -134,6 +137,65 @@ class MenuScreen extends StatelessWidget {
                         ),
                       ),
                       
+                      // Empleado Repartidor-Vendedor Section (recorridos programados)
+                      if (authProvider.currentUser?.esRepartidorVendedor == true && 
+                          authProvider.currentUser?.isAdmin != true) ...[
+                        Container(
+                          width: double.infinity,
+                          margin: const EdgeInsets.only(bottom: 16),
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: AppTheme.primaryColor.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: AppTheme.primaryColor.withOpacity(0.3)),
+                          ),
+                          child: Column(
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'Administración',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: Theme.of(context).textTheme.bodyLarge?.color,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: ElevatedButton.icon(
+                                      onPressed: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => const RecorridosProgramadosScreen(),
+                                          ),
+                                        );
+                                      },
+                                      icon: const Icon(Icons.route, size: 18),
+                                      label: const Text('Recorridos'),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: AppTheme.primaryColor,
+                                        foregroundColor: Colors.white,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                      
                       // Admin Section (only for admins) - NEW ADDITION
                       if (authProvider.currentUser?.isAdmin == true) ...[
                         Container(
@@ -198,6 +260,60 @@ class MenuScreen extends StatelessWidget {
                                       },
                                       icon: const Icon(Icons.category, size: 18),
                                       label: const Text('Categorías'),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: AppTheme.primaryColor,
+                                        foregroundColor: Colors.white,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: ElevatedButton.icon(
+                                      onPressed: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => const AsignarVentasScreen(),
+                                          ),
+                                        );
+                                      },
+                                      icon: const Icon(Icons.assignment_ind, size: 18),
+                                      label: const Text('Asignar Ventas'),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: AppTheme.primaryColor,
+                                        foregroundColor: Colors.white,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: ElevatedButton.icon(
+                                      onPressed: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => const RecorridosProgramadosScreen(),
+                                          ),
+                                        );
+                                      },
+                                      icon: const Icon(Icons.route, size: 18),
+                                      label: const Text('Recorridos'),
                                       style: ElevatedButton.styleFrom(
                                         backgroundColor: AppTheme.primaryColor,
                                         foregroundColor: Colors.white,
@@ -418,6 +534,52 @@ class MenuScreen extends StatelessWidget {
                                   'Crear nueva venta',
                                   style: TextStyle(
                                     fontSize: fontSize,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: spacing),
+                      // 🗺️ Botón de Mapa de Entregas
+                      SizedBox(
+                        width: isTablet ? 400 : double.infinity,
+                        height: buttonSize,
+                         child: ElevatedButton(
+                           style: ElevatedButton.styleFrom(
+                             backgroundColor: const Color(0xFF2563EB), // Blue
+                             foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            elevation: 10,
+                            shadowColor: Colors.black,
+                          ),
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const MapaEntregasScreen(),
+                              ),
+                            );
+                          },
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.map,
+                                size: iconSize,
+                                color: Colors.white,
+                              ),
+                              const SizedBox(width: 10),
+                              Flexible(
+                                child: Text(
+                                  'Mapa de Entregas',
+                                  style: TextStyle(
+                                    fontSize: fontSize,
+                                    fontWeight: FontWeight.bold,
                                   ),
                                   textAlign: TextAlign.center,
                                 ),

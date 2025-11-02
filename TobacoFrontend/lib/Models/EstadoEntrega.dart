@@ -8,8 +8,18 @@ enum EstadoEntrega {
 extension EstadoEntregaExtension on EstadoEntrega {
   int toJson() => index;
 
-  static EstadoEntrega fromJson(int value) {
-    switch (value) {
+  static EstadoEntrega fromJson(dynamic value) {
+    // Handle both int and String values
+    int intValue;
+    if (value is int) {
+      intValue = value;
+    } else if (value is String) {
+      intValue = int.tryParse(value) ?? 0; // Default to noEntregada if parsing fails
+    } else {
+      intValue = 0; // Default to noEntregada
+    }
+    
+    switch (intValue) {
       case 0:
         return EstadoEntrega.noEntregada;
       case 1:

@@ -176,33 +176,46 @@ class _CustomLoadingWidgetState extends State<CustomLoadingWidget>
   }
 
   Widget _buildAnimatedDots() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(3, (index) {
-        return AnimatedBuilder(
-          animation: _pulseController,
-          builder: (context, child) {
-            final delay = index * 0.2;
-            final animationValue = (_pulseController.value + delay) % 1.0;
-            final opacity = (1.0 - (animationValue - 0.5).abs() * 2).clamp(0.0, 1.0);
-            
-            return Container(
-              margin: const EdgeInsets.symmetric(horizontal: 4),
-              child: Opacity(
-                opacity: opacity,
-                child: Container(
-                  width: 8,
-                  height: 8,
-                  decoration: BoxDecoration(
-                    color: AppTheme.primaryColor,
-                    shape: BoxShape.circle,
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: List.generate(3, (index) {
+          return AnimatedBuilder(
+            animation: _pulseController,
+            builder: (context, child) {
+              final delay = index * 0.18;
+              final animationValue = (_pulseController.value + delay) % 1.0;
+              final scale = 0.8 + (animationValue * 0.4);
+              return Container(
+                margin: const EdgeInsets.symmetric(horizontal: 5),
+                child: Transform.scale(
+                  scale: scale,
+                  child: Container(
+                    width: 10,
+                    height: 10,
+                    decoration: const BoxDecoration(
+                      color: Colors.black,
+                      shape: BoxShape.circle,
+                    ),
                   ),
                 ),
-              ),
-            );
-          },
-        );
-      }),
+              );
+            },
+          );
+        }),
+      ),
     );
   }
 }

@@ -4,6 +4,7 @@ import '../../Services/User_Service/user_provider.dart';
 import '../../Services/Auth_Service/auth_provider.dart';
 import '../../Services/Auth_Service/auth_service.dart';
 import '../../Models/User.dart';
+import '../../Models/TipoVendedor.dart';
 import '../../Theme/app_theme.dart';
 import '../../Theme/dialogs.dart';
 import '../../Theme/headers.dart';
@@ -18,6 +19,18 @@ bool _isLastAdmin(User user, UserProvider userProvider) {
       .length;
 
   return activeAdmins == 0;
+}
+
+// Helper function to get localized role name
+String _getRoleDisplayName(String role) {
+  switch (role) {
+    case 'Admin':
+      return 'Administrador';
+    case 'Employee':
+      return 'Empleado';
+    default:
+      return role;
+  }
 }
 
 // Show warning dialog for last admin role change
@@ -784,7 +797,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                             ),
                           ),
                           child: Text(
-                            user.role,
+                            _getRoleDisplayName(user.role),
                             style: TextStyle(
                               fontSize: 10,
                               color: user.isAdmin
@@ -1115,7 +1128,6 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     if (!mounted) return;
 
     // Store context reference before using it
-    final scaffoldMessenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
 
     if (result['success']) {
@@ -1125,7 +1137,8 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
         await AuthService.logout();
 
         // Show message and redirect to login
-        scaffoldMessenger.showSnackBar(
+        AppTheme.showSnackBar(
+          context,
           SnackBar(
             content: IntrinsicHeight(
               child: Row(
@@ -1158,23 +1171,11 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
         });
       } else {
         // Normal success message
-        scaffoldMessenger.showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                Icon(
-                  user.isActive ? Icons.pause_circle : Icons.play_circle,
-                  color: Colors.white,
-                ),
-                const SizedBox(width: 8),
-                Text(user.isActive
-                    ? 'Usuario desactivado exitosamente'
-                    : 'Usuario activado exitosamente'),
-              ],
-            ),
-            backgroundColor: user.isActive ? Colors.orange : Colors.green,
-            duration: const Duration(seconds: 3),
-          ),
+        AppTheme.showSnackBar(
+          context,
+          AppTheme.successSnackBar(user.isActive
+              ? 'Usuario desactivado exitosamente'
+              : 'Usuario activado exitosamente'),
         );
       }
     } else {
@@ -1184,42 +1185,21 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
           'Error al actualizar usuario';
       final isTokenExpired = errorMessage.contains('Sesión expirada');
 
-      scaffoldMessenger.showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              Icon(
-                isTokenExpired ? Icons.access_time : Icons.error,
-                color: Colors.white,
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  isTokenExpired
-                      ? 'Sesión expirada. Por favor, inicia sesión nuevamente.'
-                      : errorMessage,
-                ),
-              ),
-            ],
-          ),
-          backgroundColor: isTokenExpired ? Colors.orange : Colors.red,
-          duration: const Duration(seconds: 4),
-          action: isTokenExpired
-              ? SnackBarAction(
-                  label: 'Ir al Login',
-                  textColor: Colors.white,
-                  onPressed: () {
-                    if (mounted) {
-                      navigator.pushNamedAndRemoveUntil(
-                        '/login',
-                        (route) => false,
-                      );
-                    }
-                  },
-                )
-              : null,
-        ),
-      );
+      if (isTokenExpired) {
+        await AppDialogs.showWarningDialog(
+          context: context,
+          title: 'Sesión Expirada',
+          message: 'Por favor, inicia sesión nuevamente.',
+        );
+        if (mounted) {
+          navigator.pushNamedAndRemoveUntil('/login', (route) => false);
+        }
+      } else {
+        AppTheme.showSnackBar(
+          context,
+          AppTheme.errorSnackBar(errorMessage),
+        );
+      }
 
       // Clear the error from provider after showing snackbar
       userProvider.clearError();
@@ -1337,7 +1317,6 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     if (!mounted) return;
 
     // Store context reference before using it
-    final scaffoldMessenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
 
     if (result['success']) {
@@ -1347,7 +1326,8 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
         await AuthService.logout();
 
         // Show message and redirect to login
-        scaffoldMessenger.showSnackBar(
+        AppTheme.showSnackBar(
+          context,
           SnackBar(
             content: IntrinsicHeight(
               child: Row(
@@ -1380,18 +1360,9 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
         });
       } else {
         // Normal success message
-        scaffoldMessenger.showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.check_circle, color: Colors.white),
-                const SizedBox(width: 8),
-                Text('Usuario "${user.userName}" eliminado exitosamente'),
-              ],
-            ),
-            backgroundColor: Colors.green,
-            duration: const Duration(seconds: 3),
-          ),
+        AppTheme.showSnackBar(
+          context,
+          AppTheme.successSnackBar('Usuario "${user.userName}" eliminado exitosamente'),
         );
       }
     } else {
@@ -1401,42 +1372,21 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
           'Error al eliminar usuario';
       final isTokenExpired = errorMessage.contains('Sesión expirada');
 
-      scaffoldMessenger.showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              Icon(
-                isTokenExpired ? Icons.access_time : Icons.error,
-                color: Colors.white,
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  isTokenExpired
-                      ? 'Sesión expirada. Por favor, inicia sesión nuevamente.'
-                      : errorMessage,
-                ),
-              ),
-            ],
-          ),
-          backgroundColor: isTokenExpired ? Colors.orange : Colors.red,
-          duration: const Duration(seconds: 4),
-          action: isTokenExpired
-              ? SnackBarAction(
-                  label: 'Ir al Login',
-                  textColor: Colors.white,
-                  onPressed: () {
-                    if (mounted) {
-                      navigator.pushNamedAndRemoveUntil(
-                        '/login',
-                        (route) => false,
-                      );
-                    }
-                  },
-                )
-              : null,
-        ),
-      );
+      if (isTokenExpired) {
+        await AppDialogs.showWarningDialog(
+          context: context,
+          title: 'Sesión Expirada',
+          message: 'Por favor, inicia sesión nuevamente.',
+        );
+        if (mounted) {
+          navigator.pushNamedAndRemoveUntil('/login', (route) => false);
+        }
+      } else {
+        AppTheme.showSnackBar(
+          context,
+          AppTheme.errorSnackBar(errorMessage),
+        );
+      }
 
       // Clear the error from provider after showing snackbar
       userProvider.clearError();
@@ -1454,7 +1404,9 @@ class _CreateUserDialogState extends State<_CreateUserDialog> {
   final _userNameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _zonaController = TextEditingController();
   String _selectedRole = 'Employee';
+  TipoVendedor _selectedTipoVendedor = TipoVendedor.repartidor;
 
   // Error states for each field
   bool _hasUserNameError = false;
@@ -1466,6 +1418,7 @@ class _CreateUserDialogState extends State<_CreateUserDialog> {
     _userNameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
+    _zonaController.dispose();
     super.dispose();
   }
 
@@ -1822,6 +1775,123 @@ class _CreateUserDialogState extends State<_CreateUserDialog> {
                                 });
                               },
                             ),
+                            // Mostrar selector de TipoVendedor solo si es Employee
+                            if (_selectedRole == 'Employee') ...[
+                              const SizedBox(height: 16),
+                              DropdownButtonFormField<TipoVendedor>(
+                                value: _selectedTipoVendedor,
+                                dropdownColor:
+                                    Theme.of(context).brightness == Brightness.dark
+                                        ? const Color(0xFF1A1A1A)
+                                        : Colors.white,
+                                style: TextStyle(
+                                  color: Theme.of(context).brightness == Brightness.dark
+                                      ? const Color(0xFFE0E0E0)
+                                      : Colors.black,
+                                ),
+                                decoration: InputDecoration(
+                                  labelText: 'Tipo de Usuario',
+                                  labelStyle: TextStyle(
+                                    color: Theme.of(context).brightness == Brightness.dark
+                                        ? Colors.white
+                                        : const Color(0xFF4CAF50),
+                                  ),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: const BorderSide(
+                                      color: Color(0xFF4CAF50),
+                                      width: 2,
+                                    ),
+                                  ),
+                                  prefixIcon: const Icon(
+                                    Icons.badge,
+                                    color: Color(0xFF4CAF50),
+                                  ),
+                                  isDense: true,
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 8,
+                                  ),
+                                ),
+                                items: TipoVendedor.values.map((tipo) {
+                                  return DropdownMenuItem(
+                                    value: tipo,
+                                    child: Text(
+                                      tipo.displayName,
+                                      style: TextStyle(
+                                        color: Theme.of(context).brightness == Brightness.dark
+                                            ? Colors.white
+                                            : Colors.black,
+                                        fontSize: 14,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  );
+                                }).toList(),
+                                onChanged: (value) {
+                                  setState(() {
+                                    _selectedTipoVendedor = value!;
+                                  });
+                                },
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                _selectedTipoVendedor.description,
+                                style: TextStyle(
+                                  color: Theme.of(context).brightness == Brightness.dark
+                                      ? Colors.grey[400]
+                                      : Colors.grey[700],
+                                  fontSize: 12,
+                                  fontStyle: FontStyle.italic,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              TextFormField(
+                                controller: _zonaController,
+                                style: TextStyle(
+                                  color: Theme.of(context).brightness == Brightness.dark
+                                      ? const Color(0xFFE0E0E0)
+                                      : Colors.black,
+                                ),
+                                decoration: InputDecoration(
+                                  labelText: 'Zona (opcional)',
+                                  labelStyle: TextStyle(
+                                    color: Theme.of(context).brightness == Brightness.dark
+                                        ? Colors.white
+                                        : const Color(0xFF4CAF50),
+                                  ),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: const BorderSide(
+                                      color: Color(0xFF4CAF50),
+                                      width: 2,
+                                    ),
+                                  ),
+                                  prefixIcon: const Icon(
+                                    Icons.location_on,
+                                    color: Color(0xFF4CAF50),
+                                  ),
+                                  isDense: true,
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 16,
+                                  ),
+                                  helperText: 'Ej: Zona Norte, Zona Sur, Centro',
+                                  helperStyle: TextStyle(
+                                    color: Theme.of(context).brightness == Brightness.dark
+                                        ? Colors.grey[500]
+                                        : Colors.grey[600],
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       ),
@@ -1842,9 +1912,9 @@ class _CreateUserDialogState extends State<_CreateUserDialog> {
                               child: Text(
                                 'Cancelar',
                                 style: TextStyle(
-                                  color: Theme.of(context).brightness == Brightness.dark 
-                                      ? Colors.grey.shade300 
-                                      : Colors.grey.shade700,
+                                  color: Theme.of(context).brightness == Brightness.dark
+                                      ? Colors.white
+                                      : Colors.black,
                                   fontWeight: FontWeight.w600,
                                   fontSize: 14,
                                 ),
@@ -1860,7 +1930,7 @@ class _CreateUserDialogState extends State<_CreateUserDialog> {
                                       ? null
                                       : () => _createUser(context, userProvider),
                                   style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF4CAF50),
+                            backgroundColor: AppTheme.primaryColor,
                                     foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 12),
                                     shape: RoundedRectangleBorder(
@@ -1900,6 +1970,10 @@ class _CreateUserDialogState extends State<_CreateUserDialog> {
         email: _emailController.text.trim().isEmpty
             ? null
             : _emailController.text.trim(),
+        tipoVendedor: _selectedRole == 'Employee' ? _selectedTipoVendedor : null,
+        zona: _zonaController.text.trim().isEmpty 
+            ? null 
+            : _zonaController.text.trim(),
       );
 
       // Check if widget is still mounted before accessing context
@@ -1907,23 +1981,12 @@ class _CreateUserDialogState extends State<_CreateUserDialog> {
 
       // Store context reference before using it
       final navigator = Navigator.of(context);
-      final scaffoldMessenger = ScaffoldMessenger.of(context);
 
         if (success) {
         navigator.pop();
-        scaffoldMessenger.showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.check_circle, color: Colors.white),
-                const SizedBox(width: 8),
-                Text(
-                    'Usuario "${_userNameController.text.trim()}" creado exitosamente'),
-              ],
-            ),
-            backgroundColor: Colors.green,
-            duration: const Duration(seconds: 3),
-          ),
+        AppTheme.showSnackBar(
+          context,
+          AppTheme.successSnackBar('Usuario "${_userNameController.text.trim()}" creado exitosamente'),
         );
       } else {
         // Get the error message and make it more user-friendly
@@ -1998,7 +2061,9 @@ class _EditUserDialogState extends State<_EditUserDialog> {
   late TextEditingController _userNameController;
   late TextEditingController _emailController;
   late TextEditingController _passwordController;
+  late TextEditingController _zonaController;
   late String _selectedRole;
+  late TipoVendedor _selectedTipoVendedor;
   late bool _isActive;
 
   // Error states for each field
@@ -2012,7 +2077,9 @@ class _EditUserDialogState extends State<_EditUserDialog> {
     _userNameController = TextEditingController(text: widget.user.userName);
     _emailController = TextEditingController(text: widget.user.email ?? '');
     _passwordController = TextEditingController();
+    _zonaController = TextEditingController(text: widget.user.zona ?? '');
     _selectedRole = widget.user.role;
+    _selectedTipoVendedor = widget.user.tipoVendedor;
     _isActive = widget.user.isActive;
   }
 
@@ -2021,6 +2088,7 @@ class _EditUserDialogState extends State<_EditUserDialog> {
     _userNameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
+    _zonaController.dispose();
     super.dispose();
   }
 
@@ -2389,6 +2457,123 @@ class _EditUserDialogState extends State<_EditUserDialog> {
                                 });
                               },
                       ),
+                      // Mostrar selector de TipoVendedor solo si es Employee
+                      if (_selectedRole == 'Employee') ...[
+                        const SizedBox(height: 16),
+                        DropdownButtonFormField<TipoVendedor>(
+                          value: _selectedTipoVendedor,
+                          dropdownColor:
+                              Theme.of(context).brightness == Brightness.dark
+                                  ? const Color(0xFF1A1A1A)
+                                  : Colors.white,
+                          style: TextStyle(
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? const Color(0xFFE0E0E0)
+                                : Colors.black,
+                          ),
+                          decoration: InputDecoration(
+                            labelText: 'Tipo de Usuario',
+                            labelStyle: TextStyle(
+                              color: Theme.of(context).brightness == Brightness.dark
+                                  ? Colors.white
+                                  : const Color(0xFF4CAF50),
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(
+                                color: Color(0xFF4CAF50),
+                                width: 2,
+                              ),
+                            ),
+                            prefixIcon: const Icon(
+                              Icons.badge,
+                              color: Color(0xFF4CAF50),
+                            ),
+                            isDense: true,
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
+                          ),
+                          items: TipoVendedor.values.map((tipo) {
+                            return DropdownMenuItem(
+                              value: tipo,
+                              child: Text(
+                                tipo.displayName,
+                                style: TextStyle(
+                                  color: Theme.of(context).brightness == Brightness.dark
+                                      ? Colors.white
+                                      : Colors.black,
+                                  fontSize: 14,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            );
+                          }).toList(),
+                          onChanged: (value) {
+                            setState(() {
+                              _selectedTipoVendedor = value!;
+                            });
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          _selectedTipoVendedor.description,
+                          style: TextStyle(
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? Colors.grey[400]
+                                : Colors.grey[700],
+                            fontSize: 12,
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: _zonaController,
+                          style: TextStyle(
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? const Color(0xFFE0E0E0)
+                                : Colors.black,
+                          ),
+                          decoration: InputDecoration(
+                            labelText: 'Zona (opcional)',
+                            labelStyle: TextStyle(
+                              color: Theme.of(context).brightness == Brightness.dark
+                                  ? Colors.white
+                                  : const Color(0xFF4CAF50),
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(
+                                color: Color(0xFF4CAF50),
+                                width: 2,
+                              ),
+                            ),
+                            prefixIcon: const Icon(
+                              Icons.location_on,
+                              color: Color(0xFF4CAF50),
+                            ),
+                            isDense: true,
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 16,
+                            ),
+                            helperText: 'Ej: Zona Norte, Zona Sur, Centro',
+                            helperStyle: TextStyle(
+                              color: Theme.of(context).brightness == Brightness.dark
+                                  ? Colors.grey[500]
+                                  : Colors.grey[600],
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      ],
                       const SizedBox(height: 16),
                       Container(
                         padding: const EdgeInsets.all(12),
@@ -2466,9 +2651,9 @@ class _EditUserDialogState extends State<_EditUserDialog> {
                               child: Text(
                                 'Cancelar',
                                 style: TextStyle(
-                                  color: Theme.of(context).brightness == Brightness.dark 
-                                      ? Colors.grey.shade300 
-                                      : Colors.grey.shade700,
+                                  color: Theme.of(context).brightness == Brightness.dark
+                                      ? Colors.white
+                                      : Colors.black,
                                   fontWeight: FontWeight.w600,
                                   fontSize: 14,
                                 ),
@@ -2484,7 +2669,7 @@ class _EditUserDialogState extends State<_EditUserDialog> {
                                       ? null
                                       : () => _updateUser(context, userProvider),
                                   style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF2E7D32),
+                          backgroundColor: AppTheme.primaryColor,
                                     foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 12),
                                     shape: RoundedRectangleBorder(
@@ -2538,6 +2723,10 @@ class _EditUserDialogState extends State<_EditUserDialog> {
               _passwordController.text.isEmpty ? null : _passwordController.text,
           role: _selectedRole,
           isActive: _isActive,
+          tipoVendedor: _selectedRole == 'Employee' ? _selectedTipoVendedor : null,
+          zona: _zonaController.text.trim().isEmpty 
+              ? null 
+              : _zonaController.text.trim(),
         );
       } catch (e) {
         if (mounted && Apihandler.isConnectionError(e)) {
@@ -2559,7 +2748,6 @@ class _EditUserDialogState extends State<_EditUserDialog> {
 
       // Store context reference before using it
       final navigator = Navigator.of(context);
-      final scaffoldMessenger = ScaffoldMessenger.of(context);
 
       if (result['success']) {
         // Check if current user was affected (deactivated themselves)
@@ -2568,7 +2756,8 @@ class _EditUserDialogState extends State<_EditUserDialog> {
           await AuthService.logout();
 
           // Show message and redirect to login
-          scaffoldMessenger.showSnackBar(
+          AppTheme.showSnackBar(
+            context,
             SnackBar(
               content: IntrinsicHeight(
                 child: Row(
@@ -2609,44 +2798,21 @@ class _EditUserDialogState extends State<_EditUserDialog> {
               widget.user.role == 'Admin' &&
               _selectedRole == 'Employee') {
             // Show success message
-            scaffoldMessenger.showSnackBar(
-              SnackBar(
-                content: Row(
-                  children: [
-                    const Icon(Icons.check_circle, color: Colors.white),
-                    const SizedBox(width: 8),
-                    Text(
-                        'Usuario "${_userNameController.text.trim()}" actualizado exitosamente. Redirigiendo al inicio...'),
-                  ],
-                ),
-                backgroundColor: Colors.green,
-                duration: const Duration(seconds: 3),
-              ),
-            );
-            // Close dialog first
             navigator.pop();
-            // Then redirect to home after a short delay
-            Future.delayed(const Duration(milliseconds: 500), () {
-              if (mounted) {
-                navigator.pushNamedAndRemoveUntil('/menu', (route) => false);
-              }
-            });
+            AppTheme.showSnackBar(
+              context,
+              AppTheme.successSnackBar('Usuario "${_userNameController.text.trim()}" actualizado exitosamente'),
+            );
+            // Then redirect to home
+            if (mounted) {
+              navigator.pushNamedAndRemoveUntil('/menu', (route) => false);
+            }
         } else {
             navigator.pop();
-            scaffoldMessenger.showSnackBar(
-              SnackBar(
-                content: Row(
-                  children: [
-                    const Icon(Icons.check_circle, color: Colors.white),
-                    const SizedBox(width: 8),
-                    Text(
-                        'Usuario "${_userNameController.text.trim()}" actualizado exitosamente'),
-                  ],
-                ),
-                backgroundColor: Colors.green,
-                duration: const Duration(seconds: 3),
-            ),
-          );
+            AppTheme.showSnackBar(
+              context,
+              AppTheme.successSnackBar('Usuario "${_userNameController.text.trim()}" actualizado exitosamente'),
+            );
         }
       }
       } else {
