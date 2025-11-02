@@ -6,6 +6,8 @@ import 'package:tobaco/Services/Ventas_Service/ventas_service.dart';
 import 'package:tobaco/Helpers/api_handler.dart';
 import 'package:printing/printing.dart';
 import 'package:tobaco/Utils/pdf/venta_pdf_builder.dart';
+import 'package:tobaco/Services/Printer_Service/bluetooth_printer_service.dart';
+import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
 class ResumenVentaScreen extends StatefulWidget {
   final Ventas? venta; // Recibir la venta como parámetro opcional
@@ -548,8 +550,9 @@ class _ResumenVentaScreenState extends State<ResumenVentaScreen> {
                             ListTile(
                               leading: const Icon(Icons.receipt_long, color: AppTheme.primaryColor),
                               title: const Text('Imprimir ticket'),
-                              onTap: () {
+                              onTap: () async {
                                 Navigator.of(context).pop();
+                                await _imprimirTicketTermico(context);
                               },
                             ),
                             ListTile(
@@ -739,4 +742,151 @@ class _ResumenVentaScreenState extends State<ResumenVentaScreen> {
     }
   }
 
+  Future<void> _imprimirTicketTermico(BuildContext context) async {
+    try {
+      final ventaParaImprimir = ventaCargadaBD ?? venta;
+      if (ventaParaImprimir == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No hay información de venta para imprimir')),
+        );
+        return;
+      }
+
+      final printerService = BluetoothPrinterService.instance;
+
+      // Verificar si ya está conectada una impresora
+      if (printerService.isConnected) {
+        // Imprimir directamente
+        await printerService.printTicket(ventaParaImprimir);
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Ticket enviado a la impresora')),
+        );
+        return;
+      }
+
+      // Mostrar diálogo de selección de impresora
+      if (!context.mounted) return;
+      
+      final selectedPrinter = await showDialog<BluetoothDevice>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) => _PrinterSelectionDialog(),
+      );
+
+      if (selectedPrinter == null) {
+        return;
+      }
+
+      // Conectar e imprimir
+      await printerService.connectToDevice(selectedPrinter);
+      
+      if (!context.mounted) return;
+      
+      await printerService.printTicket(ventaParaImprimir);
+      
+      if (!context.mounted) return;
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Ticket enviado a la impresora')),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al imprimir ticket: $e')),
+      );
+    }
+  }
+
 }
+
+// Diálogo para seleccionar impresora
+class _PrinterSelectionDialog extends StatefulWidget {
+  @override
+  State<_PrinterSelectionDialog> createState() => _PrinterSelectionDialogState();
+}
+
+class _PrinterSelectionDialogState extends State<_PrinterSelectionDialog> {
+  List<BluetoothDevice> printers = [];
+  bool isLoading = true;
+  String? errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _scanForPrinters();
+  }
+
+  Future<void> _scanForPrinters() async {
+    try {
+      setState(() {
+        isLoading = true;
+        errorMessage = null;
+      });
+
+      final printerService = BluetoothPrinterService.instance;
+      final foundPrinters = await printerService.scanForPrinters();
+
+      setState(() {
+        printers = foundPrinters;
+        isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        errorMessage = 'Error al buscar impresoras: $e';
+        isLoading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Seleccionar Impresora'),
+      content: SizedBox(
+        width: double.maxFinite,
+        child: isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : errorMessage != null
+                ? Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(errorMessage!),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: _scanForPrinters,
+                        child: const Text('Reintentar'),
+                      ),
+                    ],
+                  )
+                : printers.isEmpty
+                    ? const Text('No se encontraron impresoras')
+                    : ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: printers.length,
+                        itemBuilder: (context, index) {
+                          final printer = printers[index];
+                          return ListTile(
+                            leading: const Icon(Icons.print),
+                            title: Text(printer.name.isEmpty ? 'Impresora desconocida' : printer.name),
+                            subtitle: Text(printer.remoteId.toString()),
+                            onTap: () => Navigator.of(context).pop(printer),
+                          );
+                        },
+                      ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancelar'),
+        ),
+        if (!isLoading && printers.isEmpty)
+          TextButton(
+            onPressed: _scanForPrinters,
+            child: const Text('Buscar de nuevo'),
+          ),
+      ],
+    );
+  }
+}
+
