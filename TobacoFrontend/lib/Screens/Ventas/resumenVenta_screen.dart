@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:tobaco/Models/Ventas.dart';
 import 'package:tobaco/Models/metodoPago.dart';
 import 'package:tobaco/Theme/app_theme.dart';
-import 'package:tobaco/Theme/dialogs.dart';
 import 'package:tobaco/Services/Ventas_Service/ventas_service.dart';
 import 'package:tobaco/Helpers/api_handler.dart';
+import 'package:printing/printing.dart';
+import 'package:tobaco/Utils/pdf/venta_pdf_builder.dart';
+import 'package:tobaco/Services/Printer_Service/bluetooth_printer_service.dart';
+import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
 class ResumenVentaScreen extends StatefulWidget {
   final Ventas? venta; // Recibir la venta como parámetro opcional
@@ -21,6 +24,7 @@ class ResumenVentaScreen extends StatefulWidget {
 class _ResumenVentaScreenState extends State<ResumenVentaScreen> {
   final VentasService _ventasService = VentasService();
   Ventas? venta;
+  Ventas? ventaCargadaBD;
   bool isLoading = true;
   String? errorMessage;
 
@@ -43,6 +47,9 @@ class _ResumenVentaScreenState extends State<ResumenVentaScreen> {
       // Si no, intentar obtener la última venta del servidor
       _cargarUltimaVenta();
     }
+    // Asignar venta si viene por parámetro y cargar última venta del cliente
+    venta = widget.venta;
+    _cargarUltimaVenta();
   }
 
   Future<void> _cargarVentaPorId(int id) async {
@@ -121,13 +128,35 @@ class _ResumenVentaScreenState extends State<ResumenVentaScreen> {
         errorMessage = null;
       });
 
-      final ultimaVenta = await _ventasService.obtenerUltimaVenta();
-      
-      if (!mounted) return;
-      setState(() {
-        venta = ultimaVenta;
-        isLoading = false;
-      });
+      // Si tenemos un cliente en la venta actual, traer su última venta
+      final clienteId = venta?.cliente.id;
+
+      if (clienteId != null) {
+        final data = await _ventasService.obtenerVentasPorCliente(
+          clienteId,
+          pageNumber: 1,
+          pageSize: 1,
+        );
+
+        final List<Ventas> ventasCliente = (data['ventas'] as List<Ventas>);
+
+        // Si no está garantizado el orden por fecha, ordenar localmente desc
+        ventasCliente.sort((a, b) => b.fecha.compareTo(a.fecha));
+
+        final ultimaDelCliente = ventasCliente.isNotEmpty ? ventasCliente.first : null;
+
+        if (!mounted) return;
+        setState(() {
+          ventaCargadaBD = ultimaDelCliente;
+          isLoading = false;
+        });
+      } else {
+        // Sin cliente conocido, no podemos filtrar; no alterar 'venta'
+        if (!mounted) return;
+        setState(() {
+          isLoading = false;
+        });
+      }
     } catch (e) {
       if (!mounted) return;
       
@@ -572,10 +601,58 @@ class _ResumenVentaScreenState extends State<ResumenVentaScreen> {
       child: SafeArea(
         child: Row(
           children: [
-            Expanded(
+                        Expanded(
               child: ElevatedButton.icon(
                 onPressed: () {
-                  // TODO: Implementar funcionalidad de impresión
+                  showModalBottomSheet(
+                    context: context,
+                    shape: const RoundedRectangleBorder(
+                      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                    ),
+                    builder: (context) {
+                      return SafeArea(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            ListTile(
+                              leading: const Icon(Icons.picture_as_pdf, color: AppTheme.primaryColor),
+                              title: const Text('Imprimir PDF'),
+                              onTap: () async {
+                                Navigator.of(context).pop();
+                                try {
+                                  final ventaParaPdf = ventaCargadaBD ?? venta;
+                                  if (ventaParaPdf == null) return;
+                                  final bytes = await buildVentaPdf(ventaParaPdf);
+                                  await Printing.layoutPdf(onLayout: (_) async => bytes);
+                                } catch (e) {
+                                  // ignore: use_build_context_synchronously
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('Error al generar PDF: $e')),
+                                  );
+                                }
+                              },
+                            ),
+                            ListTile(
+                              leading: const Icon(Icons.receipt_long, color: AppTheme.primaryColor),
+                              title: const Text('Imprimir ticket'),
+                              onTap: () async {
+                                Navigator.of(context).pop();
+                                await _imprimirTicketTermico(context);
+                              },
+                            ),
+                            ListTile(
+                              leading: const Icon(Icons.share, color: AppTheme.primaryColor),
+                              title: const Text('Compartir PDF por WhatsApp'),
+                              onTap: () {
+                                Navigator.of(context).pop();
+                              },
+                            ),
+                            const SizedBox(height: 8),
+                          ],
+                        ),
+                      );
+                    },
+                  );
                 },
                 icon: const Icon(Icons.print, size: 20),
                 label: const Text('Imprimir'),
@@ -749,4 +826,152 @@ class _ResumenVentaScreenState extends State<ResumenVentaScreen> {
         return Icons.receipt_long;
     }
   }
+
+  Future<void> _imprimirTicketTermico(BuildContext context) async {
+    try {
+      final ventaParaImprimir = ventaCargadaBD ?? venta;
+      if (ventaParaImprimir == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No hay información de venta para imprimir')),
+        );
+        return;
+      }
+
+      final printerService = BluetoothPrinterService.instance;
+
+      // Verificar si ya está conectada una impresora
+      if (printerService.isConnected) {
+        // Imprimir directamente
+        await printerService.printTicket(ventaParaImprimir);
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Ticket enviado a la impresora')),
+        );
+        return;
+      }
+
+      // Mostrar diálogo de selección de impresora
+      if (!context.mounted) return;
+      
+      final selectedPrinter = await showDialog<BluetoothDevice>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) => _PrinterSelectionDialog(),
+      );
+
+      if (selectedPrinter == null) {
+        return;
+      }
+
+      // Conectar e imprimir
+      await printerService.connectToDevice(selectedPrinter);
+      
+      if (!context.mounted) return;
+      
+      await printerService.printTicket(ventaParaImprimir);
+      
+      if (!context.mounted) return;
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Ticket enviado a la impresora')),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al imprimir ticket: $e')),
+      );
+    }
+  }
+
 }
+
+// Diálogo para seleccionar impresora
+class _PrinterSelectionDialog extends StatefulWidget {
+  @override
+  State<_PrinterSelectionDialog> createState() => _PrinterSelectionDialogState();
+}
+
+class _PrinterSelectionDialogState extends State<_PrinterSelectionDialog> {
+  List<BluetoothDevice> printers = [];
+  bool isLoading = true;
+  String? errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _scanForPrinters();
+  }
+
+  Future<void> _scanForPrinters() async {
+    try {
+      setState(() {
+        isLoading = true;
+        errorMessage = null;
+      });
+
+      final printerService = BluetoothPrinterService.instance;
+      final foundPrinters = await printerService.scanForPrinters();
+
+      setState(() {
+        printers = foundPrinters;
+        isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        errorMessage = 'Error al buscar impresoras: $e';
+        isLoading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Seleccionar Impresora'),
+      content: SizedBox(
+        width: double.maxFinite,
+        child: isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : errorMessage != null
+                ? Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(errorMessage!),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: _scanForPrinters,
+                        child: const Text('Reintentar'),
+                      ),
+                    ],
+                  )
+                : printers.isEmpty
+                    ? const Text('No se encontraron impresoras')
+                    : ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: printers.length,
+                        itemBuilder: (context, index) {
+                          final printer = printers[index];
+                          return ListTile(
+                            leading: const Icon(Icons.print),
+                            title: Text(printer.name.isEmpty ? 'Impresora desconocida' : printer.name),
+                            subtitle: Text(printer.remoteId.toString()),
+                            onTap: () => Navigator.of(context).pop(printer),
+                          );
+                        },
+                      ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancelar'),
+        ),
+        if (!isLoading && printers.isEmpty)
+          TextButton(
+            onPressed: _scanForPrinters,
+            child: const Text('Buscar de nuevo'),
+          ),
+      ],
+    );
+  }
+}
+

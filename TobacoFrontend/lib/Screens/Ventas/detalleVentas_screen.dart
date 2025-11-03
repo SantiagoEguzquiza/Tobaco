@@ -5,8 +5,10 @@ import 'package:tobaco/Models/metodoPago.dart';
 import 'package:tobaco/Models/EstadoEntrega.dart';
 import 'package:tobaco/Services/Ventas_Service/ventas_provider.dart';
 import 'package:tobaco/Theme/app_theme.dart';
-import 'package:tobaco/Theme/dialogs.dart';
-import 'package:tobaco/Helpers/api_handler.dart';
+import 'package:printing/printing.dart';
+import 'package:tobaco/Utils/pdf/venta_pdf_builder.dart';
+import 'package:tobaco/Services/Printer_Service/bluetooth_printer_service.dart';
+import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
 class DetalleVentaScreen extends StatefulWidget {
   final Ventas venta;
@@ -768,6 +770,70 @@ class _DetalleVentaScreenState extends State<DetalleVentaScreen> {
             Row(
               children: [
                 Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      showModalBottomSheet(
+                        context: context,
+                        shape: const RoundedRectangleBorder(
+                          borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                        ),
+                        builder: (context) {
+                          return SafeArea(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                ListTile(
+                                  leading: const Icon(Icons.picture_as_pdf, color: AppTheme.primaryColor),
+                                  title: const Text('Imprimir PDF'),
+                                  onTap: () async {
+                                    Navigator.of(context).pop();
+                                    try {
+                                      final bytes = await buildVentaPdf(widget.venta);
+                                      await Printing.layoutPdf(onLayout: (_) async => bytes);
+                                    } catch (e) {
+                                      // ignore: use_build_context_synchronously
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(content: Text('Error al generar PDF: $e')),
+                                      );
+                                    }
+                                  },
+                                ),
+                                ListTile(
+                                  leading: const Icon(Icons.receipt_long, color: AppTheme.primaryColor),
+                                  title: const Text('Imprimir ticket'),
+                                  onTap: () async {
+                                    Navigator.of(context).pop();
+                                    await _imprimirTicketTermico(context);
+                                  },
+                                ),
+                                ListTile(
+                                  leading: const Icon(Icons.share, color: AppTheme.primaryColor),
+                                  title: const Text('Compartir PDF por WhatsApp'),
+                                  onTap: () {
+                                    Navigator.of(context).pop();
+                                  },
+                                ),
+                                const SizedBox(height: 8),
+                              ],
+                            ),
+                          );
+                        },
+                      );
+                    },
+                    icon: const Icon(Icons.print, size: 20),
+                    label: const Text('Imprimir'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryColor,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      elevation: 2,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
                   child: OutlinedButton(
                     onPressed: () => Navigator.pop(context, hasGuardadoCambios ? 'updated' : null),
                     style: OutlinedButton.styleFrom(
@@ -784,28 +850,6 @@ class _DetalleVentaScreenState extends State<DetalleVentaScreen> {
                         color: Theme.of(context).brightness == Brightness.dark
                             ? Colors.white
                             : Colors.black,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 16,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () => _confirmDelete(context),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red.shade600,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      elevation: 2,
-                    ),
-                    child: const Text(
-                      'Eliminar Venta',
-                      style: TextStyle(
-                        color: Colors.white,
                         fontWeight: FontWeight.w600,
                         fontSize: 16,
                       ),
@@ -892,35 +936,6 @@ class _DetalleVentaScreenState extends State<DetalleVentaScreen> {
   // Función para formatear fecha manualmente
   String _formatFecha(DateTime fecha) {
     return '${fecha.day}/${fecha.month}/${fecha.year} ${fecha.hour}:${fecha.minute.toString().padLeft(2, '0')}';
-  }
-
-  // Función para confirmar eliminación
-  void _confirmDelete(BuildContext context) async {
-    final confirm = await AppDialogs.showDeleteConfirmationDialog(
-      context: context,
-      title: 'Eliminar Venta',
-      message: '¿Está seguro de que desea eliminar esta venta? Esta acción no se puede deshacer.',
-    );
-
-    if (confirm == true) {
-      try {
-        await VentasProvider().eliminarVenta(widget.venta.id!);
-        if (context.mounted) {
-          Navigator.of(context).pop(true); // Return true to indicate deletion
-          AppTheme.showSnackBar(
-            context,
-            AppTheme.successSnackBar('Venta eliminada correctamente'),
-          );
-        }
-      } catch (e) {
-        if (context.mounted) {
-          AppTheme.showSnackBar(
-            context,
-            AppTheme.errorSnackBar('Error al eliminar venta: $e'),
-          );
-        }
-      }
-    }
   }
 
   // Función para obtener todos los métodos de pago separados por comas
@@ -1479,5 +1494,143 @@ class _DetalleVentaScreenState extends State<DetalleVentaScreen> {
       return EstadoEntrega.parcial;            // 🟠 Algunos entregados
     }
   }
+
+  Future<void> _imprimirTicketTermico(BuildContext context) async {
+    try {
+      final printerService = BluetoothPrinterService.instance;
+
+      // Verificar si ya está conectada una impresora
+      if (printerService.isConnected) {
+        // Imprimir directamente
+        await printerService.printTicket(widget.venta);
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Ticket enviado a la impresora')),
+        );
+        return;
+      }
+
+      // Mostrar diálogo de selección de impresora
+      if (!context.mounted) return;
+      
+      final selectedPrinter = await showDialog<BluetoothDevice>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) => _PrinterSelectionDialog(),
+      );
+
+      if (selectedPrinter == null) {
+        return;
+      }
+
+      // Conectar e imprimir
+      await printerService.connectToDevice(selectedPrinter);
+      
+      if (!context.mounted) return;
+      
+      await printerService.printTicket(widget.venta);
+      
+      if (!context.mounted) return;
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Ticket enviado a la impresora')),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al imprimir ticket: $e')),
+      );
+    }
+  }
+
 }
 
+// Diálogo para seleccionar impresora
+class _PrinterSelectionDialog extends StatefulWidget {
+  @override
+  State<_PrinterSelectionDialog> createState() => _PrinterSelectionDialogState();
+}
+
+class _PrinterSelectionDialogState extends State<_PrinterSelectionDialog> {
+  List<BluetoothDevice> printers = [];
+  bool isLoading = true;
+  String? errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _scanForPrinters();
+  }
+
+  Future<void> _scanForPrinters() async {
+    try {
+      setState(() {
+        isLoading = true;
+        errorMessage = null;
+      });
+
+      final printerService = BluetoothPrinterService.instance;
+      final foundPrinters = await printerService.scanForPrinters();
+
+      setState(() {
+        printers = foundPrinters;
+        isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        errorMessage = 'Error al buscar impresoras: $e';
+        isLoading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Seleccionar Impresora'),
+      content: SizedBox(
+        width: double.maxFinite,
+        child: isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : errorMessage != null
+                ? Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(errorMessage!),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: _scanForPrinters,
+                        child: const Text('Reintentar'),
+                      ),
+                    ],
+                  )
+                : printers.isEmpty
+                    ? const Text('No se encontraron impresoras')
+                    : ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: printers.length,
+                        itemBuilder: (context, index) {
+                          final printer = printers[index];
+                          return ListTile(
+                            leading: const Icon(Icons.print),
+                            title: Text(printer.name.isEmpty ? 'Impresora desconocida' : printer.name),
+                            subtitle: Text(printer.remoteId.toString()),
+                            onTap: () => Navigator.of(context).pop(printer),
+                          );
+                        },
+                      ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancelar'),
+        ),
+        if (!isLoading && printers.isEmpty)
+          TextButton(
+            onPressed: _scanForPrinters,
+            child: const Text('Buscar de nuevo'),
+          ),
+      ],
+    );
+  }
+}
