@@ -59,17 +59,16 @@ class EntregasProvider with ChangeNotifier {
     }
   }
 
-  /// Carga las entregas del día
+  /// Carga las entregas o recorridos del día según el tipo de usuario
   Future<void> cargarEntregasDelDia() async {
     try {
       _isLoading = true;
       _error = null;
       if (!_disposed && hasListeners) notifyListeners();
 
-      _entregas = await entregasService.obtenerEntregasDelDia();
-      
-      // Sin logs innecesarios
-      
+      // Obtener entregas o recorridos según el tipo de usuario
+      _entregas = await entregasService.obtenerEntregasORecorridosDelDia();
+
       // Ordenar por cercanía si tenemos posición actual
       if (_posicionActual != null) {
         _entregas = ubicacionService.ordenarEntregasPorCercania(

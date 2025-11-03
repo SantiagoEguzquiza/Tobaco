@@ -34,34 +34,10 @@ class EntregasService {
     }
   }
 
-  /// Obtiene los recorridos (visitas) del día para el vendedor actual
-  /// Solo para vendedores con camión separado (tipo 0)
-  Future<List<Entrega>> obtenerRecorridosDelDia() async {
-    try {
-      // Intentar obtener desde el servidor si hay conexión
-      if (connectivityService.isFullyConnected) {
-        return await _obtenerRecorridosDelServidor();
-      } else {
-        // Si no hay conexión, obtener desde la base de datos local
-        return await _obtenerRecorridosLocales();
-      }
-    } catch (e) {
-      // En caso de error, intentar cargar desde local
-      return await _obtenerRecorridosLocales();
-    }
-  }
-
   /// Obtiene entregas o recorridos según el tipo de usuario
   /// Para RepartidorVendedor: el endpoint /mis-entregas devuelve sus recorridos programados del día
   /// Para Repartidor: el endpoint /mis-entregas devuelve sus entregas asignadas
   Future<List<Entrega>> obtenerEntregasORecorridosDelDia() async {
-    final usuario = await AuthService.getCurrentUser();
-    if (usuario == null) {
-      return [];
-    }
-
-    // Para ambos tipos de vendedores, usar el mismo endpoint /mis-entregas
-    // El backend se encarga de devolver lo correcto según el tipo de vendedor
     return await obtenerEntregasDelDia();
   }
 
@@ -134,49 +110,12 @@ class EntregasService {
     }
   }
 
-  /// Obtiene los recorridos desde el servidor
-  Future<List<Entrega>> _obtenerRecorridosDelServidor() async {
-    final token = await AuthService.getToken();
-    if (token == null) throw Exception('No hay token de autenticación');
-
-    final url = Apihandler.baseUrl.resolve('/api/Entregas/mis-recorridos');
-    final response = await Apihandler.client.get(
-      url,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-    );
-
-    if (response.statusCode == 200) {
-      List<dynamic> jsonData = json.decode(response.body);
-      List<Entrega> recorridos = jsonData.map((e) => Entrega.fromJson(e)).toList();
-      // Los recorridos (visitas) no tienen estado de entrega, así que los mostramos todos
-      // Guardar en cache local
-      await _guardarRecorridosEnLocal(recorridos);
-      
-      return recorridos;
-    } else {
-      throw Exception('Error al obtener recorridos: ${response.statusCode}');
-    }
-  }
-
   /// Obtiene las entregas desde la base de datos local
   Future<List<Entrega>> _obtenerEntregasLocales() async {
     // Obtener usuario actual para filtrar por repartidor
     final usuario = await AuthService.getCurrentUser();
     final repartidorId = usuario?.id;
     
-    return await databaseHelper.obtenerEntregasDelDia(repartidorId: repartidorId);
-  }
-
-  /// Obtiene los recorridos desde la base de datos local
-  Future<List<Entrega>> _obtenerRecorridosLocales() async {
-    // Obtener usuario actual para filtrar por repartidor
-    final usuario = await AuthService.getCurrentUser();
-    final repartidorId = usuario?.id;
-    
-    // Por ahora usamos la misma tabla, pero podríamos tener una tabla separada
     return await databaseHelper.obtenerEntregasDelDia(repartidorId: repartidorId);
   }
 
@@ -208,37 +147,6 @@ class EntregasService {
     // Guardar/actualizar las entregas del servidor
     for (var entrega in entregas) {
       await databaseHelper.insertarEntrega(entrega);
-    }
-  }
-
-  /// Guarda los recorridos en la base de datos local
-  /// Primero elimina los recorridos del día actual que no están en la lista del servidor
-  Future<void> _guardarRecorridosEnLocal(List<Entrega> recorridos) async {
-    // Obtener usuario actual para filtrar por repartidor
-    final usuario = await AuthService.getCurrentUser();
-    final repartidorId = usuario?.id;
-    
-    // Obtener IDs de los recorridos que vienen del servidor
-    final idsDelServidor = recorridos.map((e) => e.id).whereType<int>().toSet();
-    
-    // Obtener solo los recorridos del día actual del cache del usuario actual (recorridos tienen ventaId == 0)
-    final entregasDelDia = await databaseHelper.obtenerEntregasDelDia(repartidorId: repartidorId);
-    final recorridosDelDia = entregasDelDia.where((e) => e.ventaId == 0).toList();
-    
-    // Eliminar los recorridos del cache que ya no están en el servidor
-    // (excepto los que están completados localmente)
-    for (var recorridoCache in recorridosDelDia) {
-      if (recorridoCache.id != null && 
-          !idsDelServidor.contains(recorridoCache.id) &&
-          !recorridoCache.estaCompletada) {
-        // Este recorrido fue eliminado del servidor, eliminarlo del cache
-        await databaseHelper.eliminarEntregaPorId(recorridoCache.id!);
-      }
-    }
-    
-    // Guardar/actualizar los recorridos del servidor
-    for (var recorrido in recorridos) {
-      await databaseHelper.insertarEntrega(recorrido);
     }
   }
 

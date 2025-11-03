@@ -9,6 +9,7 @@ import '../../Services/Clientes_Service/clientes_provider.dart';
 import '../../Services/User_Service/user_provider.dart';
 import '../../Services/Auth_Service/auth_service.dart';
 import '../../Theme/app_theme.dart';
+import '../../Helpers/api_handler.dart';
 import '../../Theme/dialogs.dart';
 import '../../Theme/headers.dart';
 
@@ -68,7 +69,10 @@ class _RecorridosProgramadosScreenState extends State<RecorridosProgramadosScree
             await _cargarRecorridos();
           }
         } catch (e) {
-          if (mounted) {
+          if (!mounted) return;
+          if (Apihandler.isConnectionError(e)) {
+            await Apihandler.handleConnectionError(context, e);
+          } else {
             AppTheme.showSnackBar(
               context,
               AppTheme.errorSnackBar('Error al cargar empleados: $e'),
@@ -84,7 +88,10 @@ class _RecorridosProgramadosScreenState extends State<RecorridosProgramadosScree
         await _cargarRecorridos();
       }
     } catch (e) {
-      if (mounted) {
+      if (!mounted) return;
+      if (Apihandler.isConnectionError(e)) {
+        await Apihandler.handleConnectionError(context, e);
+      } else {
         AppTheme.showSnackBar(
           context,
           AppTheme.errorSnackBar('Error al cargar datos: $e'),
@@ -100,7 +107,10 @@ class _RecorridosProgramadosScreenState extends State<RecorridosProgramadosScree
       final provider = context.read<RecorridosProgramadosProvider>();
       await provider.obtenerRecorridosPorVendedor(_vendedorSeleccionado!.id);
     } catch (e) {
-      if (mounted) {
+      if (!mounted) return;
+      if (Apihandler.isConnectionError(e)) {
+        await Apihandler.handleConnectionError(context, e);
+      } else {
         AppTheme.showSnackBar(
           context,
           AppTheme.errorSnackBar('Error al cargar recorridos: $e'),

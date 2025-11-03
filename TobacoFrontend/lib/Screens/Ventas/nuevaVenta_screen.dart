@@ -1080,8 +1080,19 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                   );
                 }
               }
+            } else if (usuario.esVendedor) {
+              // Vendedor: mostrar diálogo informativo de que la venta queda pendiente de asignación
+              if (mounted) {
+                await AppDialogs.showWarningDialog(
+                  context: context,
+                  title: 'Venta Creada',
+                  message: 'Queda la venta pendiente de asignación para repartir o entregar',
+                  buttonText: 'Entendido',
+                  icon: Icons.info_outline,
+                );
+              }
             } else {
-              // Para otros tipos de empleados, mostrar el diálogo de asignación
+              // Para otros tipos de empleados (Admin, Repartidor), mostrar el diálogo de asignación
               final opcionAsignacion = await _mostrarDialogoAsignacionVenta(context);
               
               if (mounted) {

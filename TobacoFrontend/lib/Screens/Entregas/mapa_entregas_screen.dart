@@ -23,10 +23,11 @@ class _MapaEntregasScreenState extends State<MapaEntregasScreen> {
   GoogleMapController? _mapController;
   final Set<Marker> _markers = {};
   final Set<Polyline> _polylines = {};
-  bool _usandoRutaCalles = false;
+  bool _usandoRutaCalles = true; // Iniciar con ruta por calles activada por defecto
   bool _mostrarResumen = false;
   EntregasProvider? _provider;
   bool _yaRefrescado = false;
+  Timer? _updateTimer;
 
   @override
   void initState() {
@@ -34,7 +35,20 @@ class _MapaEntregasScreenState extends State<MapaEntregasScreen> {
     // Inicializar después de que el frame actual se haya construido
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _inicializarMapa();
+      _configurarListener();
     });
+  }
+
+  void _configurarListener() {
+    final provider = Provider.of<EntregasProvider>(context, listen: false);
+    // Escuchar cambios en entregas y posición para actualizar marcadores
+    provider.addListener(_onProviderChanged);
+  }
+
+  void _onProviderChanged() {
+    if (mounted) {
+      _actualizarMarcadoresYRutas();
+    }
   }
 
   @override
@@ -43,23 +57,11 @@ class _MapaEntregasScreenState extends State<MapaEntregasScreen> {
     // Guardar referencia al provider de forma segura
     final newProvider = Provider.of<EntregasProvider>(context, listen: false);
     
-    // Solo refrescar si el provider cambió o es la primera vez
+    // Si cambió el provider, remover listener del anterior y agregar al nuevo
     if (_provider != newProvider) {
+      _provider?.removeListener(_onProviderChanged);
       _provider = newProvider;
-      
-      // Refrescar entregas cuando se entra a la pantalla para obtener cambios (como eliminaciones de recorridos)
-      if (!_yaRefrescado) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted && _provider != null) {
-            _yaRefrescado = true;
-            _provider!.refrescar().then((_) {
-              if (mounted) {
-                _actualizarMarcadoresYRutas();
-              }
-            });
-          }
-        });
-      }
+      _provider?.addListener(_onProviderChanged);
     }
   }
 
@@ -67,19 +69,32 @@ class _MapaEntregasScreenState extends State<MapaEntregasScreen> {
     if (!mounted) return;
     
     final provider = Provider.of<EntregasProvider>(context, listen: false);
-    await provider.inicializar();
+    
+    // Solo inicializar si no se ha hecho ya
+    if (!_yaRefrescado) {
+      _yaRefrescado = true;
+      await provider.inicializar();
+    }
     
     if (!mounted) return;
     
     provider.iniciarSeguimientoUbicacion();
-    setState(() {
-      _usandoRutaCalles = true; // activar rutas por calles por defecto
+    // _usandoRutaCalles ya es true por defecto, no necesitamos setState aquí
+    
+    // Esperar un frame antes de actualizar marcadores para que la ubicación esté lista
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _actualizarMarcadoresYRutas();
+      }
     });
-    _actualizarMarcadoresYRutas();
   }
 
   @override
   void dispose() {
+    // Cancelar timer pendiente
+    _updateTimer?.cancel();
+    // Remover listener del provider
+    _provider?.removeListener(_onProviderChanged);
     // Detener el seguimiento PRIMERO antes de dispose del widget
     _provider?.detenerSeguimientoUbicacion();
     _mapController?.dispose();
@@ -90,44 +105,54 @@ class _MapaEntregasScreenState extends State<MapaEntregasScreen> {
   void _actualizarMarcadoresYRutas() {
     if (!mounted) return;
     
-    final provider = Provider.of<EntregasProvider>(context, listen: false);
+    // Debounce: cancelar actualización anterior si existe
+    _updateTimer?.cancel();
     
-    if (!mounted) return;
-    
-    setState(() {
-      _markers.clear();
-      _polylines.clear();
+    // Programar actualización después de un breve delay para evitar múltiples updates
+    _updateTimer = Timer(const Duration(milliseconds: 100), () {
+      if (!mounted) return;
+      
+      final provider = Provider.of<EntregasProvider>(context, listen: false);
+      
+      if (!mounted) return;
+      
+      setState(() {
+        _markers.clear();
+        _polylines.clear(); // Siempre limpiar primero para evitar mostrar línea recta
 
-      // Marcador de ubicación actual - Verde (primaryColor)
-      if (provider.posicionActual != null) {
-        _markers.add(
-          Marker(
-            markerId: const MarkerId('ubicacion_actual'),
-            position: LatLng(
-              provider.posicionActual!.latitude,
-              provider.posicionActual!.longitude,
+        // Marcador de ubicación actual - Verde (primaryColor)
+        if (provider.posicionActual != null) {
+          _markers.add(
+            Marker(
+              markerId: const MarkerId('ubicacion_actual'),
+              position: LatLng(
+                provider.posicionActual!.latitude,
+                provider.posicionActual!.longitude,
+              ),
+              icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen), // Verde = primaryColor
+              infoWindow: const InfoWindow(
+                title: '📍 Tú estás aquí',
+              ),
             ),
-            icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen), // Verde = primaryColor
-            infoWindow: const InfoWindow(
-              title: '📍 Tú estás aquí',
-            ),
-          ),
-        );
-      }
-
-      // Marcadores de entregas (ocultar completadas)
-      for (var entrega in provider.entregas) {
-        if (entrega.tieneCoordenadasValidas && !entrega.estaCompletada) {
-          _markers.add(_crearMarcadorEntrega(entrega));
+          );
         }
-      }
 
-      // Crear polylines (rutas)
-      if (_usandoRutaCalles) {
-        _cargarRutaPorCalles(provider);
-      } else {
-        _crearRutas(provider);
-      }
+        // Marcadores de entregas (ocultar completadas)
+        for (var entrega in provider.entregas) {
+          if (entrega.tieneCoordenadasValidas && !entrega.estaCompletada) {
+            _markers.add(_crearMarcadorEntrega(entrega));
+          }
+        }
+
+        // Crear polylines (rutas)
+        if (_usandoRutaCalles) {
+          // Cargar ruta por calles de forma asíncrona (la polyline se agregará cuando esté lista)
+          // No crear línea recta mientras tanto
+          _cargarRutaPorCalles(provider);
+        } else {
+          _crearRutas(provider);
+        }
+      });
     });
   }
 
@@ -216,6 +241,8 @@ class _MapaEntregasScreenState extends State<MapaEntregasScreen> {
       );
       if (mounted) {
         setState(() {
+          // Limpiar polylines anteriores ANTES de agregar la nueva
+          _polylines.clear();
           _polylines.add(
             Polyline(
               polylineId: const PolylineId('ruta_calles'),
@@ -235,6 +262,7 @@ class _MapaEntregasScreenState extends State<MapaEntregasScreen> {
         // Fallback a líneas rectas
         setState(() {
           _usandoRutaCalles = false;
+          _polylines.clear();
         });
         _crearRutas(provider);
       }
@@ -385,13 +413,9 @@ class _MapaEntregasScreenState extends State<MapaEntregasScreen> {
       ),
       body: Consumer<EntregasProvider>(
         builder: (context, provider, child) {
-          // Actualizar marcadores cuando cambien las entregas (después del frame actual)
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) {
-              _actualizarMarcadoresYRutas();
-            }
-          });
-
+          // El listener ya actualiza los marcadores automáticamente
+          // Solo renderizar el UI aquí
+          
           if (provider.isLoading) {
             return const Center(
               child: CircularProgressIndicator(
@@ -428,6 +452,7 @@ class _MapaEntregasScreenState extends State<MapaEntregasScreen> {
           return Stack(
             children: [
               // Mapa - Sigue el tema de la app (claro/oscuro)
+              // Usar key para evitar recreaciones innecesarias
               Consumer<ThemeProvider>(
                 builder: (context, themeProvider, child) {
                   // Calcular el estilo del mapa FUERA del callback
@@ -437,11 +462,14 @@ class _MapaEntregasScreenState extends State<MapaEntregasScreen> {
                   final mapStyle = isDark ? MapStyles.darkMode : MapStyles.lightMode;
                   
                   return GoogleMap(
+                    key: const ValueKey('mapa_entregas'), // Key fijo para evitar recreaciones
                     onMapCreated: (controller) {
                       _mapController = controller;
-                      // Aplicar el estilo precalculado
-                      controller.setMapStyle(mapStyle);
-                      _mostrarTodasLasEntregas();
+                      // Aplicar el estilo precalculado solo una vez
+                      if (_mapController != null) {
+                        _mapController!.setMapStyle(mapStyle);
+                        _mostrarTodasLasEntregas();
+                      }
                     },
                     initialCameraPosition: CameraPosition(
                       target: provider.posicionActual != null
@@ -458,6 +486,9 @@ class _MapaEntregasScreenState extends State<MapaEntregasScreen> {
                     myLocationButtonEnabled: false,
                     zoomControlsEnabled: false,
                     mapToolbarEnabled: false,
+                    // Evitar rebuilds innecesarios del mapa
+                    onTap: (_) {},
+                    onLongPress: (_) {},
                   );
                 },
               ),

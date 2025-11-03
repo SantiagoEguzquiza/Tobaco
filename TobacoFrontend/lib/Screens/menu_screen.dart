@@ -137,8 +137,9 @@ class MenuScreen extends StatelessWidget {
                         ),
                       ),
                       
-                      // Empleado Repartidor-Vendedor Section (recorridos programados)
-                      if (authProvider.currentUser?.esRepartidorVendedor == true && 
+                      // Vendedor o Repartidor-Vendedor: acceso a Recorridos (si no es Admin)
+                      if ((authProvider.currentUser?.esRepartidorVendedor == true ||
+                           authProvider.currentUser?.esVendedor == true) &&
                           authProvider.currentUser?.isAdmin != true) ...[
                         Container(
                           width: double.infinity,

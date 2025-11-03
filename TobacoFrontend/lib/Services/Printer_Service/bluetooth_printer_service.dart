@@ -81,8 +81,11 @@ class BluetoothPrinterService {
       
       _connectedDevice = device;
       
-      // Conectar al dispositivo
-      await device.connect(timeout: const Duration(seconds: 15));
+      // Conectar al dispositivo (flutter_blue_plus v2 requiere 'license')
+      await device.connect(
+        license: License.free,
+        timeout: const Duration(seconds: 15),
+      );
       
       // Esperar a que la conexión se establezca completamente
       await Future.delayed(const Duration(milliseconds: 500));
