@@ -6,7 +6,7 @@ import 'package:tobaco/Theme/app_theme.dart';
 import 'package:tobaco/Services/Ventas_Service/ventas_service.dart';
 import 'package:tobaco/Helpers/api_handler.dart';
 import 'package:printing/printing.dart';
-import 'package:tobaco/Utils/pdf/venta_pdf_builder.dart';
+import 'package:tobaco/Utils/pdf_generator/venta_pdf_builder.dart';
 import 'package:tobaco/Services/Printer_Service/bluetooth_printer_service.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 

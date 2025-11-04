@@ -10,7 +10,7 @@ import 'package:tobaco/Screens/Ventas/metodoPago_screen.dart';
 import 'package:tobaco/Screens/Ventas/seleccionarProducto_screen.dart';
 import 'package:tobaco/Services/Clientes_Service/clientes_provider.dart';
 import 'package:tobaco/Services/Ventas_Service/ventas_provider.dart';
-import 'package:tobaco/Services/Ventas_Service/ventas_offline_service.dart';
+
 import 'package:tobaco/Services/PrecioEspecialService.dart';
 import 'package:tobaco/Services/VentaBorrador_Service/venta_borrador_provider.dart';
 import 'package:tobaco/Theme/app_theme.dart';
@@ -20,7 +20,7 @@ import 'package:tobaco/Models/Ventas.dart';
 import 'package:tobaco/Theme/confirmAnimation.dart';
 import 'package:tobaco/Screens/Ventas/resumenVenta_screen.dart';
 import 'package:tobaco/Services/Auth_Service/auth_service.dart';
-import 'package:tobaco/Models/User.dart';
+
 // Nuevos widgets modulares
 import 'NuevaVenta/widgets/widgets.dart';
 
@@ -611,8 +611,8 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
     });
 
     try {
-      final clienteProvider = Provider.of<ClienteProvider>(context, listen: false);
-      final clientes = await clienteProvider.obtenerClientes();
+      final provider = Provider.of<ClienteProvider>(context, listen: false);
+      final clientes = await provider.obtenerClientes();
       if (mounted) {
         setState(() {
           clientesIniciales = clientes;
@@ -893,6 +893,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
 
   void buscarClientes(String query) async {
     final trimmedQuery = query.trim();
+    final provider = Provider.of<ClienteProvider>(context, listen: false);
 
     if (trimmedQuery.isEmpty) {
       setState(() {
@@ -909,8 +910,13 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
     });
 
     try {
-      final clienteProvider = Provider.of<ClienteProvider>(context, listen: false);
-      final clientes = await clienteProvider.buscarClientes(trimmedQuery);
+      await provider.buscarClientes(trimmedQuery);
+      
+      if (!mounted) return;
+      
+      // Obtener los resultados del provider después de la búsqueda
+      final clientes = provider.clientes;
+      
       setState(() {
         clientesFiltrados = clientes;
         isLoadingClientes = false;
@@ -920,6 +926,8 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
       });
     } catch (e) {
       debugPrint('Error al buscar clientes: $e');
+      if (!mounted) return;
+      
       setState(() {
         clientesFiltrados = [];
         isLoadingClientes = false;
