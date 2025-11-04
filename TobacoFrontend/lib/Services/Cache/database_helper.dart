@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import '../../Models/Ventas.dart';
@@ -8,6 +9,7 @@ import '../../Models/ventasPago.dart';
 import '../../Models/metodoPago.dart';
 import '../../Models/EstadoEntrega.dart';
 import '../../Models/User.dart';
+import '../../Models/Entrega.dart';
 
 /// Helper para la base de datos SQLite local
 /// Maneja el almacenamiento offline de ventas pendientes de sincronización
@@ -18,12 +20,13 @@ class DatabaseHelper {
 
   static Database? _database;
   static const String _databaseName = 'tobaco_offline.db';
-  static const int _databaseVersion = 1;
+  static const int _databaseVersion = 3;
 
   // Nombres de tablas
   static const String _ventasTable = 'ventas_offline';
   static const String _productosTable = 'ventas_productos_offline';
   static const String _pagosTable = 'ventas_pagos_offline';
+  static const String _entregasTable = 'entregas_offline';
 
   Future<Database> get database async {
     if (_database != null) return _database!;
@@ -32,7 +35,7 @@ class DatabaseHelper {
   }
 
   Future<Database> _initDatabase() async {
-    print('📦 DatabaseHelper: Inicializando base de datos...');
+    
     
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, _databaseName);
@@ -46,7 +49,7 @@ class DatabaseHelper {
   }
 
   Future<void> _onCreate(Database db, int version) async {
-    print('📦 DatabaseHelper: Creando tablas...');
+    
 
     // Tabla de ventas offline
     await db.execute('''
@@ -58,8 +61,10 @@ class DatabaseHelper {
         total REAL NOT NULL,
         fecha TEXT NOT NULL,
         metodo_pago INTEGER,
-        usuario_id INTEGER,
-        usuario_json TEXT,
+        usuario_id_creador INTEGER,
+        usuario_creador_json TEXT,
+        usuario_id_asignado INTEGER,
+        usuario_asignado_json TEXT,
         estado_entrega INTEGER NOT NULL,
         sync_status TEXT NOT NULL DEFAULT 'pending',
         sync_attempts INTEGER NOT NULL DEFAULT 0,
@@ -102,23 +107,106 @@ class DatabaseHelper {
       )
     ''');
 
+    // Tabla de entregas
+    await db.execute('''
+      CREATE TABLE $_entregasTable (
+        id INTEGER PRIMARY KEY,
+        venta_id INTEGER NOT NULL,
+        cliente_id INTEGER NOT NULL,
+        cliente_nombre TEXT NOT NULL,
+        cliente_direccion TEXT,
+        latitud REAL,
+        longitud REAL,
+        estado INTEGER NOT NULL DEFAULT 0,
+        fecha_asignacion TEXT NOT NULL,
+        fecha_entrega TEXT,
+        repartidor_id INTEGER,
+        orden INTEGER NOT NULL DEFAULT 0,
+        notas TEXT,
+        distancia_desde_ubicacion_actual REAL,
+        sync_status TEXT NOT NULL DEFAULT 'synced',
+        pendiente_sincronizar INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )
+    ''');
+
     // Índices para mejorar el rendimiento
     await db.execute('CREATE INDEX idx_venta_sync_status ON $_ventasTable(sync_status)');
     await db.execute('CREATE INDEX idx_venta_created_at ON $_ventasTable(created_at)');
     await db.execute('CREATE INDEX idx_productos_venta ON $_productosTable(venta_local_id)');
     await db.execute('CREATE INDEX idx_pagos_venta ON $_pagosTable(venta_local_id)');
+    await db.execute('CREATE INDEX idx_entregas_fecha ON $_entregasTable(fecha_asignacion)');
+    await db.execute('CREATE INDEX idx_entregas_repartidor ON $_entregasTable(repartidor_id)');
+    await db.execute('CREATE INDEX idx_entregas_estado ON $_entregasTable(estado)');
+    await db.execute('CREATE INDEX idx_entregas_sync ON $_entregasTable(pendiente_sincronizar)');
 
-    print('✅ DatabaseHelper: Tablas creadas correctamente');
+    
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    print('📦 DatabaseHelper: Actualizando base de datos de v$oldVersion a v$newVersion');
-    // Aquí puedes agregar migraciones futuras
+    
+    
+    // Migración de v1 a v2: agregar tabla de entregas
+    if (oldVersion < 2) {
+      
+      await db.execute('''
+        CREATE TABLE $_entregasTable (
+          id INTEGER PRIMARY KEY,
+          venta_id INTEGER NOT NULL,
+          cliente_id INTEGER NOT NULL,
+          cliente_nombre TEXT NOT NULL,
+          cliente_direccion TEXT,
+          latitud REAL,
+          longitud REAL,
+          estado INTEGER NOT NULL DEFAULT 0,
+          fecha_asignacion TEXT NOT NULL,
+          fecha_entrega TEXT,
+          repartidor_id INTEGER,
+          orden INTEGER NOT NULL DEFAULT 0,
+          notas TEXT,
+          distancia_desde_ubicacion_actual REAL,
+          sync_status TEXT NOT NULL DEFAULT 'synced',
+          pendiente_sincronizar INTEGER NOT NULL DEFAULT 0,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        )
+      ''');
+      
+      await db.execute('CREATE INDEX idx_entregas_fecha ON $_entregasTable(fecha_asignacion)');
+      await db.execute('CREATE INDEX idx_entregas_repartidor ON $_entregasTable(repartidor_id)');
+      await db.execute('CREATE INDEX idx_entregas_estado ON $_entregasTable(estado)');
+      await db.execute('CREATE INDEX idx_entregas_sync ON $_entregasTable(pendiente_sincronizar)');
+      
+      
+    }
+    
+    // Migración de v2 a v3: dividir usuario en creador y asignado
+    if (oldVersion < 3) {
+      // Agregar nuevos campos
+      await db.execute('ALTER TABLE $_ventasTable ADD COLUMN usuario_id_creador INTEGER');
+      await db.execute('ALTER TABLE $_ventasTable ADD COLUMN usuario_creador_json TEXT');
+      await db.execute('ALTER TABLE $_ventasTable ADD COLUMN usuario_id_asignado INTEGER');
+      await db.execute('ALTER TABLE $_ventasTable ADD COLUMN usuario_asignado_json TEXT');
+      
+      // Migrar datos existentes: mover usuario_id/usuario_json a usuario_id_creador/usuario_creador_json
+      await db.execute('''
+        UPDATE $_ventasTable 
+        SET usuario_id_creador = usuario_id, 
+            usuario_creador_json = usuario_json
+        WHERE usuario_id IS NOT NULL
+      ''');
+      
+      // Eliminar columnas antiguas
+      // Nota: SQLite no soporta DROP COLUMN directamente, pero como estamos 
+      // en la v3 nueva, esto solo afecta a usuarios que ya tenían v2
+      // Las nuevas instalaciones usarán el esquema correcto de v3 desde el inicio
+    }
   }
 
   /// Guarda una venta offline
   Future<String> saveVentaOffline(Ventas venta) async {
-    print('💾 DatabaseHelper: Guardando venta offline...');
+    
     
     final db = await database;
     final now = DateTime.now().toIso8601String();
@@ -134,8 +222,10 @@ class DatabaseHelper {
           'total': venta.total,
           'fecha': venta.fecha.toIso8601String(),
           'metodo_pago': venta.metodoPago?.index,
-          'usuario_id': venta.usuarioId,
-          'usuario_json': venta.usuario != null ? jsonEncode(venta.usuario!.toJson()) : null,
+          'usuario_id_creador': venta.usuarioIdCreador,
+          'usuario_creador_json': venta.usuarioCreador != null ? jsonEncode(venta.usuarioCreador!.toJson()) : null,
+          'usuario_id_asignado': venta.usuarioIdAsignado,
+          'usuario_asignado_json': venta.usuarioAsignado != null ? jsonEncode(venta.usuarioAsignado!.toJson()) : null,
           'estado_entrega': venta.estadoEntrega.toJson(),
           'sync_status': 'pending',
           'sync_attempts': 0,
@@ -174,10 +264,10 @@ class DatabaseHelper {
         }
       });
 
-      print('✅ DatabaseHelper: Venta offline guardada con ID: $localId');
+      
       return localId;
     } catch (e) {
-      print('❌ DatabaseHelper: Error guardando venta offline: $e');
+      
       rethrow;
     }
   }
@@ -219,7 +309,7 @@ class DatabaseHelper {
       });
     }
 
-    print('📋 DatabaseHelper: ${result.length} ventas pendientes de sincronización');
+    
     return result;
   }
 
@@ -290,11 +380,18 @@ class DatabaseHelper {
     final clienteJson = jsonDecode(ventaRow['cliente_json'] as String);
     final cliente = Cliente.fromJson(clienteJson);
 
-    // Construir usuario si existe
-    User? usuario;
-    if (ventaRow['usuario_json'] != null) {
-      final usuarioJson = jsonDecode(ventaRow['usuario_json'] as String);
-      usuario = User.fromJson(usuarioJson);
+    // Construir usuario creador si existe
+    User? usuarioCreador;
+    if (ventaRow['usuario_creador_json'] != null) {
+      final usuarioJson = jsonDecode(ventaRow['usuario_creador_json'] as String);
+      usuarioCreador = User.fromJson(usuarioJson);
+    }
+    
+    // Construir usuario asignado si existe
+    User? usuarioAsignado;
+    if (ventaRow['usuario_asignado_json'] != null) {
+      final usuarioJson = jsonDecode(ventaRow['usuario_asignado_json'] as String);
+      usuarioAsignado = User.fromJson(usuarioJson);
     }
 
     return Ventas(
@@ -308,8 +405,10 @@ class DatabaseHelper {
         ? MetodoPago.values[ventaRow['metodo_pago'] as int]
         : null,
       pagos: pagos,
-      usuarioId: ventaRow['usuario_id'] as int?,
-      usuario: usuario,
+      usuarioIdCreador: ventaRow['usuario_id_creador'] as int?,
+      usuarioCreador: usuarioCreador,
+      usuarioIdAsignado: ventaRow['usuario_id_asignado'] as int?,
+      usuarioAsignado: usuarioAsignado,
       estadoEntrega: EstadoEntregaExtension.fromJson(ventaRow['estado_entrega'] as int),
     );
   }
@@ -329,7 +428,7 @@ class DatabaseHelper {
       whereArgs: [localId],
     );
 
-    print('✅ DatabaseHelper: Venta $localId marcada como sincronizada (ID servidor: $serverId)');
+    
   }
 
   /// Marca una venta como fallida en la sincronización
@@ -360,7 +459,7 @@ class DatabaseHelper {
       whereArgs: [localId],
     );
 
-    print('⚠️ DatabaseHelper: Venta $localId marcada como fallida (intento $attempts): $errorMessage');
+    
   }
 
   /// Reintentar sincronización de una venta fallida
@@ -378,7 +477,7 @@ class DatabaseHelper {
       whereArgs: [localId],
     );
 
-    print('🔄 DatabaseHelper: Venta $localId marcada para reintentar sincronización');
+    
   }
 
   /// Elimina una venta offline
@@ -391,7 +490,7 @@ class DatabaseHelper {
       whereArgs: [localId],
     );
 
-    print('🗑️ DatabaseHelper: Venta offline $localId eliminada');
+    
   }
 
   /// Limpia ventas sincronizadas antiguas (más de 30 días)
@@ -405,8 +504,34 @@ class DatabaseHelper {
       whereArgs: ['synced', cutoffDate],
     );
 
-    print('🧹 DatabaseHelper: $deleted ventas antiguas eliminadas');
+    
     return deleted;
+  }
+
+  /// Borra TODAS las ventas del caché SQLite (incluyendo productos y pagos)
+  Future<void> borrarTodasLasVentas() async {
+    final db = await database;
+    
+    try {
+      await db.transaction((txn) async {
+        // Borrar productos (se borran automáticamente por CASCADE, pero lo hacemos explícito)
+        final productosBorrados = await txn.delete(_productosTable);
+        debugPrint('🗑️ DatabaseHelper: $productosBorrados productos borrados');
+        
+        // Borrar pagos (se borran automáticamente por CASCADE, pero lo hacemos explícito)
+        final pagosBorrados = await txn.delete(_pagosTable);
+        debugPrint('🗑️ DatabaseHelper: $pagosBorrados pagos borrados');
+        
+        // Borrar todas las ventas
+        final ventasBorradas = await txn.delete(_ventasTable);
+        debugPrint('🗑️ DatabaseHelper: $ventasBorradas ventas borradas');
+      });
+      
+      debugPrint('✅ DatabaseHelper: Todas las ventas borradas del caché SQLite');
+    } catch (e) {
+      debugPrint('❌ DatabaseHelper: Error al borrar ventas: $e');
+      rethrow;
+    }
   }
 
   /// Obtiene estadísticas de la base de datos offline
@@ -438,13 +563,13 @@ class DatabaseHelper {
     final db = await database;
     await db.close();
     _database = null;
-    print('📦 DatabaseHelper: Base de datos cerrada');
+    
   }
 
   /// Resetea la base de datos (elimina y recrea)
   /// ADVERTENCIA: Esto eliminará todas las ventas offline pendientes
   Future<void> resetDatabase() async {
-    print('⚠️ DatabaseHelper: Reseteando base de datos...');
+    
     
     try {
       // Cerrar la base de datos si está abierta
@@ -457,22 +582,22 @@ class DatabaseHelper {
       final dbPath = await getDatabasesPath();
       final path = join(dbPath, _databaseName);
       
-      print('🗑️ DatabaseHelper: Eliminando base de datos en: $path');
+      
       await deleteDatabase(path);
       
       // Reinicializar la base de datos (se crearán las tablas nuevamente)
       _database = await _initDatabase();
       
-      print('✅ DatabaseHelper: Base de datos reseteada correctamente');
+      
     } catch (e) {
-      print('❌ DatabaseHelper: Error reseteando base de datos: $e');
+      
       rethrow;
     }
   }
 
   /// Verifica si las tablas existen y las crea si faltan
   Future<void> ensureTablesExist() async {
-    print('🔍 DatabaseHelper: Verificando tablas...');
+    
     
     final db = await database;
     
@@ -482,11 +607,281 @@ class DatabaseHelper {
     );
     
     if (tables.isEmpty) {
-      print('⚠️ DatabaseHelper: Tabla $_ventasTable no existe, recreando base de datos...');
+      
       await resetDatabase();
     } else {
-      print('✅ DatabaseHelper: Tablas existen correctamente');
+      
     }
+  }
+
+  // ==================== MÉTODOS PARA ENTREGAS ====================
+
+  /// Inserta o actualiza una entrega en la base de datos local
+  /// Preserva el estado local si la entrega ya fue marcada como completada
+  /// IMPORTANTE: Si la entrega que se pasa ya tiene estado completado, preserva ese estado
+  Future<void> insertarEntrega(Entrega entrega) async {
+    final db = await database;
+    final now = DateTime.now().toIso8601String();
+
+    // Verificar si la entrega ya existe
+    final entregaExistente = await obtenerEntregaPorId(entrega.id!);
+    
+    // Determinar qué estado usar:
+    // 1. Si la entrega que viene YA está completada, usar ese estado (fue preservado en el provider)
+    // 2. Si existe localmente y está completada, preservar ese estado
+    // 3. Si no existe o está pendiente, usar el estado de la entrega que viene
+    final estadoFinal = entrega.estaCompletada 
+        ? entrega.estado 
+        : (entregaExistente?.estaCompletada == true 
+            ? entregaExistente!.estado 
+            : entrega.estado);
+    
+    final fechaEntregaFinal = entrega.estaCompletada && entrega.fechaEntrega != null
+        ? entrega.fechaEntrega
+        : (entregaExistente?.estaCompletada == true && entregaExistente?.fechaEntrega != null
+            ? entregaExistente!.fechaEntrega
+            : entrega.fechaEntrega);
+    
+    final notasFinales = entrega.estaCompletada && entrega.notas != null
+        ? entrega.notas
+        : (entregaExistente?.estaCompletada == true && entregaExistente?.notas != null
+            ? entregaExistente!.notas
+            : entrega.notas);
+    
+    await db.insert(
+      _entregasTable,
+      {
+        'id': entrega.id,
+        'venta_id': entrega.ventaId,
+        'cliente_id': entrega.clienteId,
+        'cliente_nombre': entrega.cliente.nombre,
+        'cliente_direccion': entrega.cliente.direccion,
+        'latitud': entrega.latitud,
+        'longitud': entrega.longitud,
+        'estado': estadoFinal.toJson(),
+        'fecha_asignacion': entrega.fechaAsignacion.toIso8601String(),
+        'fecha_entrega': fechaEntregaFinal?.toIso8601String(),
+        'repartidor_id': entrega.repartidorId,
+        'orden': entrega.orden,
+        'notas': notasFinales,
+        'distancia_desde_ubicacion_actual': entrega.distanciaDesdeUbicacionActual,
+        'sync_status': entrega.estaCompletada && entregaExistente?.estaCompletada != true 
+            ? 'pending' 
+            : 'synced',
+        'pendiente_sincronizar': entrega.estaCompletada && entregaExistente?.estaCompletada != true 
+            ? 1 
+            : 0,
+        'created_at': entregaExistente != null ? now : now,
+        'updated_at': now,
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  /// Obtiene las entregas del día actual
+  /// Incluye entregas asignadas hoy Y entregas completadas hoy (por fecha de entrega)
+  /// [repartidorId] Si se proporciona, filtra las entregas por repartidor
+  Future<List<Entrega>> obtenerEntregasDelDia({int? repartidorId}) async {
+    final db = await database;
+    final hoy = DateTime.now();
+    final inicioDelDia = DateTime(hoy.year, hoy.month, hoy.day).toIso8601String();
+    final finDelDia = DateTime(hoy.year, hoy.month, hoy.day, 23, 59, 59).toIso8601String();
+
+    // Consulta que incluye:
+    // 1. Entregas asignadas hoy (sin importar si están completadas o no)
+    // 2. Entregas completadas hoy (por fecha de entrega)
+    String whereClause = '(fecha_asignacion >= ? AND fecha_asignacion <= ?) OR (fecha_entrega >= ? AND fecha_entrega <= ?)';
+    List<dynamic> whereArgs = [inicioDelDia, finDelDia, inicioDelDia, finDelDia];
+    
+    // Si se especifica un repartidor, filtrar por él
+    if (repartidorId != null) {
+      whereClause = '($whereClause) AND repartidor_id = ?';
+      whereArgs.add(repartidorId);
+    }
+
+    final List<Map<String, dynamic>> maps = await db.query(
+      _entregasTable,
+      where: whereClause,
+      whereArgs: whereArgs,
+      orderBy: 'orden ASC',
+    );
+
+    return List.generate(maps.length, (i) {
+      return Entrega.fromMap(maps[i], clienteData: Cliente(
+        id: maps[i]['cliente_id'],
+        nombre: maps[i]['cliente_nombre'],
+        direccion: maps[i]['cliente_direccion'],
+      ));
+    });
+  }
+
+  /// Obtiene una entrega por su ID
+  Future<Entrega?> obtenerEntregaPorId(int id) async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      _entregasTable,
+      where: 'id = ?',
+      whereArgs: [id],
+      limit: 1,
+    );
+
+    if (maps.isEmpty) return null;
+
+    return Entrega.fromMap(maps.first, clienteData: Cliente(
+      id: maps.first['cliente_id'],
+      nombre: maps.first['cliente_nombre'],
+      direccion: maps.first['cliente_direccion'],
+    ));
+  }
+
+  /// Elimina una entrega por su ID
+  Future<void> eliminarEntregaPorId(int id) async {
+    final db = await database;
+    await db.delete(
+      _entregasTable,
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  /// Actualiza el estado de una entrega
+  Future<void> actualizarEstadoEntrega(int id, EstadoEntrega nuevoEstado) async {
+    final db = await database;
+    await db.update(
+      _entregasTable,
+      {
+        'estado': nuevoEstado.toJson(),
+        'updated_at': DateTime.now().toIso8601String(),
+      },
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  /// Marca una entrega como completada
+  Future<void> marcarEntregaComoEntregada(int id, String? notas) async {
+    final db = await database;
+    await db.update(
+      _entregasTable,
+      {
+        'estado': EstadoEntrega.entregada.toJson(),
+        'fecha_entrega': DateTime.now().toIso8601String(),
+        'notas': notas,
+        'pendiente_sincronizar': 1,
+        'updated_at': DateTime.now().toIso8601String(),
+      },
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  /// Marca una entrega para sincronizar con el servidor
+  Future<void> marcarEntregaParaSincronizar(int id) async {
+    final db = await database;
+    await db.update(
+      _entregasTable,
+      {
+        'pendiente_sincronizar': 1,
+        'updated_at': DateTime.now().toIso8601String(),
+      },
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  /// Marca una entrega como sincronizada
+  Future<void> marcarEntregaSincronizada(int id) async {
+    final db = await database;
+    await db.update(
+      _entregasTable,
+      {
+        'pendiente_sincronizar': 0,
+        'sync_status': 'synced',
+        'updated_at': DateTime.now().toIso8601String(),
+      },
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  /// Elimina todas las entregas del día actual (excepto las completadas localmente)
+  /// Esto asegura que el cache esté sincronizado con el servidor
+  Future<void> eliminarEntregasDelDia() async {
+    final db = await database;
+    final hoy = DateTime.now();
+    final inicioDelDia = DateTime(hoy.year, hoy.month, hoy.day).toIso8601String();
+    final finDelDia = DateTime(hoy.year, hoy.month, hoy.day, 23, 59, 59).toIso8601String();
+
+    // Eliminar todas las entregas del día actual que no estén completadas o pendientes de sincronizar
+    await db.delete(
+      _entregasTable,
+      where: 'fecha_asignacion >= ? AND fecha_asignacion <= ? AND estado != ? AND pendiente_sincronizar = ?',
+      whereArgs: [inicioDelDia, finDelDia, EstadoEntrega.entregada.toJson(), 0],
+    );
+  }
+
+  /// Obtiene las entregas pendientes de sincronizar
+  Future<List<Entrega>> obtenerEntregasPendientesDeSincronizar() async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      _entregasTable,
+      where: 'pendiente_sincronizar = ?',
+      whereArgs: [1],
+    );
+
+    return List.generate(maps.length, (i) {
+      return Entrega.fromMap(maps[i], clienteData: Cliente(
+        id: maps[i]['cliente_id'],
+        nombre: maps[i]['cliente_nombre'],
+        direccion: maps[i]['cliente_direccion'],
+      ));
+    });
+  }
+
+  /// Actualiza las notas de una entrega
+  Future<void> actualizarNotasEntrega(int id, String notas) async {
+    final db = await database;
+    await db.update(
+      _entregasTable,
+      {
+        'notas': notas,
+        'updated_at': DateTime.now().toIso8601String(),
+      },
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  /// Actualiza el orden de las entregas
+  Future<void> actualizarOrdenEntregas(List<Entrega> entregas) async {
+    final db = await database;
+    await db.transaction((txn) async {
+      for (var entrega in entregas) {
+        await txn.update(
+          _entregasTable,
+          {
+            'orden': entrega.orden,
+            'updated_at': DateTime.now().toIso8601String(),
+          },
+          where: 'id = ?',
+          whereArgs: [entrega.id],
+        );
+      }
+    });
+  }
+
+  /// Elimina todas las entregas del día (útil para refrescar)
+  Future<void> limpiarEntregasDelDia() async {
+    final db = await database;
+    final hoy = DateTime.now();
+    final inicioDelDia = DateTime(hoy.year, hoy.month, hoy.day).toIso8601String();
+    final finDelDia = DateTime(hoy.year, hoy.month, hoy.day, 23, 59, 59).toIso8601String();
+
+    await db.delete(
+      _entregasTable,
+      where: 'fecha_asignacion >= ? AND fecha_asignacion <= ?',
+      whereArgs: [inicioDelDia, finDelDia],
+    );
   }
 }
 

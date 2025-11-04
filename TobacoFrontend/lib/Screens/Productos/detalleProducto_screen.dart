@@ -241,7 +241,7 @@ class DetalleProductoScreen extends StatelessWidget {
                           backgroundColor: const Color(0xFF4CAF50),
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(15),
                           ),
                         ),
                       ),
@@ -305,7 +305,7 @@ class DetalleProductoScreen extends StatelessWidget {
                           backgroundColor: Colors.red.shade600,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(15),
                           ),
                         ),
                       ),
@@ -339,7 +339,7 @@ class DetalleProductoScreen extends StatelessWidget {
                         style: OutlinedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(15),
                           ),
                           side: BorderSide(
                             color: Theme.of(context).brightness == Brightness.dark

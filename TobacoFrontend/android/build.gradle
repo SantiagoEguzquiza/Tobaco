@@ -55,6 +55,14 @@ subprojects {
 }
 
 subprojects {
+    // Provide a 'flutter' ext only for legacy plugin subprojects (exclude ':app')
+    if (project.name != "app") {
+        ext.flutter = [
+            compileSdkVersion: rootProject.ext.flutterCompileSdkVersion,
+            minSdkVersion     : rootProject.ext.flutterMinSdkVersion,
+            targetSdkVersion  : rootProject.ext.flutterTargetSdkVersion
+        ]
+    }
     afterEvaluate { project ->
         if (project.hasProperty("android")) {
             project.android {

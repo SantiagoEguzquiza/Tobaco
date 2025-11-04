@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:tobaco/Models/Ventas.dart';
 import 'package:tobaco/Models/metodoPago.dart';
@@ -31,9 +32,122 @@ class _ResumenVentaScreenState extends State<ResumenVentaScreen> {
   @override
   void initState() {
     super.initState();
-    // Asignar venta si viene por parámetro y cargar última venta del cliente
-    venta = widget.venta;
-    _cargarUltimaVenta();
+    
+    // Si se pasó una venta como parámetro, usarla directamente (especialmente si es offline)
+    if (widget.venta != null) {
+      // Si la venta NO tiene ID, es una venta offline recién creada - usar directamente
+      if (widget.venta!.id == null) {
+        setState(() {
+          venta = widget.venta;
+          isLoading = false;
+        });
+        return; // No intentar cargar del servidor
+      }
+      
+      // Si tiene ID pero es un ID local (empieza con "servidor_"), también es offline
+      // Usar la venta directamente y opcionalmente intentar cargar del servidor en background
+      setState(() {
+        venta = widget.venta;
+        isLoading = false;
+      });
+      
+      // Intentar cargar del servidor en background solo si tiene ID numérico válido
+      // Pero no bloquear la UI
+      _cargarVentaPorIdEnBackground(widget.venta!.id!);
+    } else {
+      // Si no hay venta pasada, intentar obtener la última venta del servidor
+      _cargarUltimaVenta();
+    }
+  }
+
+  /// Carga la venta del servidor en background sin bloquear la UI
+  Future<void> _cargarVentaPorIdEnBackground(int id) async {
+    try {
+      final ventaCargada = await _ventasService.obtenerVentaPorId(id)
+          .timeout(const Duration(seconds: 3));
+      
+      if (!mounted) return;
+      
+      setState(() {
+        venta = ventaCargada;
+        ventaCargadaBD = ventaCargada;
+      });
+    } on TimeoutException {
+      // Si timeout, mantener la venta local sin error visible
+      debugPrint('⚠️ Timeout al cargar venta del servidor en background, usando venta local');
+    } catch (e) {
+      // Silenciar error, mantener la venta local
+      debugPrint('⚠️ No se pudo cargar venta del servidor en background: $e');
+    }
+  }
+
+  Future<void> _cargarVentaPorId(int id) async {
+    try {
+      setState(() {
+        isLoading = true;
+        errorMessage = null;
+      });
+
+      final ventaCargada = await _ventasService.obtenerVentaPorId(id);
+      
+      if (!mounted) return;
+      setState(() {
+        venta = ventaCargada;
+        isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      
+      if (Apihandler.isConnectionError(e)) {
+        setState(() {
+          isLoading = false;
+          // Si falla cargar del servidor, usar la venta local como respaldo
+          venta = widget.venta;
+        });
+        await Apihandler.handleConnectionError(context, e);
+      } else {
+        setState(() {
+          errorMessage = 'Error al cargar la venta: ${e.toString().replaceFirst('Exception: ', '')}';
+          isLoading = false;
+          venta = widget.venta;
+        });
+      }
+    }
+  }
+
+  Future<void> _cargarUltimaVentaConRespaldo(Ventas ventaRespaldo) async {
+    try {
+      setState(() {
+        isLoading = true;
+        errorMessage = null;
+      });
+
+      final ultimaVenta = await _ventasService.obtenerUltimaVenta();
+      
+      if (!mounted) return;
+      setState(() {
+        venta = ultimaVenta;
+        isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      
+      if (Apihandler.isConnectionError(e)) {
+        setState(() {
+          // Si falla cargar del servidor, usar la venta local como respaldo
+          venta = ventaRespaldo;
+          isLoading = false;
+        });
+        await Apihandler.handleConnectionError(context, e);
+      } else {
+        setState(() {
+          errorMessage = 'Error al cargar la venta: ${e.toString().replaceFirst('Exception: ', '')}';
+          // Usar la venta de respaldo
+          venta = ventaRespaldo;
+          isLoading = false;
+        });
+      }
+    }
   }
 
   Future<void> _cargarUltimaVenta() async {
@@ -387,7 +501,7 @@ class _ResumenVentaScreenState extends State<ResumenVentaScreen> {
                 const SizedBox(height: 12),
                 _buildInfoRow(Icons.payment, 'Método de Pago', _getAllPaymentMethodsString(venta!)),
                 const SizedBox(height: 12),
-                _buildInfoRow(Icons.person, 'Usuario', venta!.usuario?.userName ?? 'No disponible'),
+                _buildInfoRow(Icons.person, 'Usuario', venta!.usuarioCreador?.userName ?? 'No disponible'),
               ],
             ),
           ),

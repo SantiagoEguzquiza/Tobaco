@@ -842,7 +842,7 @@ class _DetalleDeudaScreenState extends State<DetalleDeudaScreen>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Venta #${venta.id}',
+                        venta.id != null ? 'Venta #${venta.id}' : 'Venta Pendiente',
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,

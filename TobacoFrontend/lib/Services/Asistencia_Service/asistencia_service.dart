@@ -12,12 +12,12 @@ class AsistenciaService {
   // Registrar entrada
   static Future<Asistencia> registrarEntrada(int userId) async {
     try {
-      print('🔍 AsistenciaService: Iniciando registro de entrada para usuario $userId');
+      
       
       // Obtener ubicación
-      print('📍 AsistenciaService: Obteniendo ubicación...');
+      
       final locationData = await _getLocationData();
-      print('📍 AsistenciaService: Ubicación obtenida: ${locationData['address']}');
+      
 
       final registrarEntradaDto = RegistrarEntradaDTO(
         userId: userId,
@@ -26,13 +26,13 @@ class AsistenciaService {
         longitudEntrada: locationData['longitude'],
       );
 
-      print('📡 AsistenciaService: Preparando petición al backend...');
+      
       final headers = await AuthService.getAuthHeaders();
-      print('📡 AsistenciaService: Headers obtenidos');
+      
       
       final url = Apihandler.baseUrl.resolve('$_baseEndpoint/registrar-entrada');
-      print('📡 AsistenciaService: URL: $url');
-      print('📡 AsistenciaService: Body: ${jsonEncode(registrarEntradaDto.toJson())}');
+      
+      
       
       final response = await Apihandler.client.post(
         url,
@@ -40,21 +40,21 @@ class AsistenciaService {
         body: jsonEncode(registrarEntradaDto.toJson()),
       ).timeout(_timeoutDuration);
 
-      print('📡 AsistenciaService: Respuesta recibida: ${response.statusCode}');
+      
 
       if (response.statusCode == 200) {
-        print('✅ AsistenciaService: Entrada registrada exitosamente');
+        
         return Asistencia.fromJson(jsonDecode(response.body));
       } else if (response.statusCode == 400) {
         final errorData = jsonDecode(response.body);
-        print('❌ AsistenciaService: Error 400: ${errorData['message']}');
+        
         throw Exception(errorData['message'] ?? 'Error al registrar la entrada');
       } else {
-        print('❌ AsistenciaService: Error del servidor: ${response.statusCode}');
+        
         throw Exception('Error del servidor. Intenta nuevamente más tarde.');
       }
     } catch (e) {
-      print('❌ AsistenciaService: Excepción capturada: $e');
+      
       String errorMessage = e.toString();
       if (errorMessage.contains('Exception: ')) {
         errorMessage = errorMessage.replaceFirst('Exception: ', '');
@@ -214,18 +214,18 @@ class AsistenciaService {
   // Obtener ubicación del dispositivo
   static Future<Map<String, String?>> _getLocationData() async {
     try {
-      print('📍 _getLocationData: Iniciando obtención de ubicación...');
+      
       
       // Verificar si los servicios de ubicación están habilitados
-      print('📍 _getLocationData: Verificando servicios de ubicación...');
+      
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled()
           .timeout(Duration(seconds: 3), onTimeout: () {
-        print('⏱️ _getLocationData: Timeout verificando servicios');
+        
         return false;
       });
       
       if (!serviceEnabled) {
-        print('⚠️ _getLocationData: Servicios de ubicación deshabilitados');
+        
         return {
           'latitude': null,
           'longitude': null,
@@ -233,24 +233,24 @@ class AsistenciaService {
         };
       }
 
-      print('📍 _getLocationData: Verificando permisos...');
+      
       // Verificar permisos
       LocationPermission permission = await Geolocator.checkPermission()
           .timeout(Duration(seconds: 3), onTimeout: () {
-        print('⏱️ _getLocationData: Timeout verificando permisos');
+        
         return LocationPermission.denied;
       });
       
       if (permission == LocationPermission.denied) {
-        print('📍 _getLocationData: Solicitando permisos...');
+        
         permission = await Geolocator.requestPermission()
             .timeout(Duration(seconds: 5), onTimeout: () {
-          print('⏱️ _getLocationData: Timeout solicitando permisos');
+          
           return LocationPermission.denied;
         });
         
         if (permission == LocationPermission.denied) {
-          print('⚠️ _getLocationData: Permisos denegados');
+          
           return {
             'latitude': null,
             'longitude': null,
@@ -260,7 +260,7 @@ class AsistenciaService {
       }
 
       if (permission == LocationPermission.deniedForever) {
-        print('⚠️ _getLocationData: Permisos denegados permanentemente');
+        
         return {
           'latitude': null,
           'longitude': null,
@@ -268,27 +268,27 @@ class AsistenciaService {
         };
       }
 
-      print('📍 _getLocationData: Obteniendo posición actual...');
+      
       // Obtener posición actual con timeout
       Position position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.medium,
         timeLimit: Duration(seconds: 5),
       ).timeout(Duration(seconds: 7), onTimeout: () {
-        print('⏱️ _getLocationData: Timeout obteniendo posición');
+        
         throw Exception('Timeout obteniendo ubicación');
       });
 
-      print('✅ _getLocationData: Posición obtenida: ${position.latitude}, ${position.longitude}');
+      
 
       // Intentar obtener la dirección
       String address = 'Ubicación obtenida';
       try {
-        print('📍 _getLocationData: Obteniendo dirección...');
+        
         List<Placemark> placemarks = await placemarkFromCoordinates(
           position.latitude,
           position.longitude,
         ).timeout(Duration(seconds: 3), onTimeout: () {
-          print('⏱️ _getLocationData: Timeout obteniendo dirección');
+          
           return [];
         });
 
@@ -300,12 +300,12 @@ class AsistenciaService {
             place.administrativeArea,
             place.country,
           ].where((e) => e != null && e.isNotEmpty).join(', ');
-          print('✅ _getLocationData: Dirección obtenida: $address');
+          
         } else {
           address = 'Lat: ${position.latitude.toStringAsFixed(6)}, Lon: ${position.longitude.toStringAsFixed(6)}';
         }
       } catch (e) {
-        print('⚠️ _getLocationData: Error obteniendo dirección: $e');
+        
         // Si falla la geocodificación, usar las coordenadas
         address = 'Lat: ${position.latitude.toStringAsFixed(6)}, Lon: ${position.longitude.toStringAsFixed(6)}';
       }
@@ -316,7 +316,7 @@ class AsistenciaService {
         'address': address,
       };
     } catch (e) {
-      print('❌ _getLocationData: Error general: $e');
+      
       // En lugar de fallar, continuar sin ubicación
       return {
         'latitude': null,

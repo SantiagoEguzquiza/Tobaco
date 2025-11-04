@@ -46,9 +46,20 @@
 		<key>UIApplicationSupportsIndirectInputEvents</key>
 		<true/>
 		<key>NSLocationWhenInUseUsageDescription</key>
-		<string>Necesitamos tu ubicación para registrar tu asistencia al trabajo</string>
+		<string>Necesitamos tu ubicación para mostrar tu posición en el mapa de entregas y calcular rutas óptimas</string>
 		<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-		<string>Necesitamos tu ubicación para registrar tu asistencia al trabajo</string>
+		<string>Necesitamos acceso continuo a tu ubicación para rastrear entregas en tiempo real y registrar asistencia</string>
+		<key>NSLocationAlwaysUsageDescription</key>
+		<string>Necesitamos acceso continuo a tu ubicación para rastrear entregas en tiempo real</string>
+		<key>NSLocationTemporaryUsageDescriptionDictionary</key>
+		<dict>
+			<key>DeliveryTracking</key>
+			<string>Se requiere tu ubicación para rastrear las entregas del día</string>
+		</dict>
+		<key>UIBackgroundModes</key>
+		<array>
+			<string>location</string>
+		</array>
 		<key>UIStatusBarHidden</key>
 		<true/>
 		<key>UIViewControllerBasedStatusBarAppearance</key>

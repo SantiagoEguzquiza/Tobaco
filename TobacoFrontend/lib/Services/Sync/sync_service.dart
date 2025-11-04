@@ -143,7 +143,7 @@ class SyncService {
     try {
       print('🔄 SyncService: Obteniendo ventas pendientes...');
       final pendingVentas = await _dbHelper.getPendingVentas();
-      print('🔄 SyncService: ${pendingVentas.length} ventas pendientes encontradas');
+      
 
       for (var ventaData in pendingVentas) {
         try {
@@ -276,11 +276,18 @@ class SyncService {
     final clienteJson = jsonDecode(ventaRow['cliente_json'] as String);
     final cliente = Cliente.fromJson(clienteJson);
 
-    // Construir usuario si existe
-    User? usuario;
-    if (ventaRow['usuario_json'] != null) {
-      final usuarioJson = jsonDecode(ventaRow['usuario_json'] as String);
-      usuario = User.fromJson(usuarioJson);
+    // Construir usuario creador si existe
+    User? usuarioCreador;
+    if (ventaRow['usuario_creador_json'] != null) {
+      final usuarioJson = jsonDecode(ventaRow['usuario_creador_json'] as String);
+      usuarioCreador = User.fromJson(usuarioJson);
+    }
+    
+    // Construir usuario asignado si existe
+    User? usuarioAsignado;
+    if (ventaRow['usuario_asignado_json'] != null) {
+      final usuarioJson = jsonDecode(ventaRow['usuario_asignado_json'] as String);
+      usuarioAsignado = User.fromJson(usuarioJson);
     }
 
     return Ventas(
@@ -293,8 +300,10 @@ class SyncService {
         ? MetodoPago.values[ventaRow['metodo_pago'] as int]
         : null,
       pagos: pagos,
-      usuarioId: ventaRow['usuario_id'] as int?,
-      usuario: usuario,
+      usuarioIdCreador: ventaRow['usuario_id_creador'] as int?,
+      usuarioCreador: usuarioCreador,
+      usuarioIdAsignado: ventaRow['usuario_id_asignado'] as int?,
+      usuarioAsignado: usuarioAsignado,
       estadoEntrega: EstadoEntregaExtension.fromJson(ventaRow['estado_entrega'] as int),
     );
   }

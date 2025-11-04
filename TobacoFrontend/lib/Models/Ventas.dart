@@ -14,8 +14,10 @@ class Ventas {
   DateTime fecha;
   List<VentaPago>? pagos;
   MetodoPago? metodoPago;
-  int? usuarioId;
-  User? usuario;
+  int? usuarioIdCreador;
+  User? usuarioCreador;
+  int? usuarioIdAsignado;
+  User? usuarioAsignado;
   EstadoEntrega estadoEntrega;
 
   Ventas({
@@ -27,8 +29,10 @@ class Ventas {
     required this.fecha,
     this.metodoPago,
     this.pagos,
-    this.usuarioId,
-    this.usuario,
+    this.usuarioIdCreador,
+    this.usuarioCreador,
+    this.usuarioIdAsignado,
+    this.usuarioAsignado,
     this.estadoEntrega = EstadoEntrega.noEntregada,
   });
 
@@ -49,14 +53,17 @@ class Ventas {
                 .map((e) => VentaPago.fromJson(e))
                 .toList()
             : null,
-        usuarioId: json['usuarioId'],
-        usuario: json['usuario'] != null ? User.fromJson(json['usuario']) : null,
+        usuarioIdCreador: json['usuarioIdCreador'],
+        usuarioCreador: json['usuarioCreador'] != null ? User.fromJson(json['usuarioCreador']) : null,
+        usuarioIdAsignado: json['usuarioIdAsignado'],
+        usuarioAsignado: json['usuarioAsignado'] != null ? User.fromJson(json['usuarioAsignado']) : null,
         estadoEntrega: json['estadoEntrega'] != null
-            ? EstadoEntregaExtension.fromJson(json['estadoEntrega'] as int)
+            ? EstadoEntregaExtension.fromJson(json['estadoEntrega'])
             : EstadoEntrega.noEntregada,
       );
 
   Map<String, dynamic> toJson() => {
+        if (id != null) 'id': id,
         'clienteId': clienteId,
         'cliente': cliente.toJson(),
         'ventaProductos': ventasProductos.map((e) => e.toJson()).toList(),
@@ -64,8 +71,10 @@ class Ventas {
         'fecha': fecha.toIso8601String(),
         'metodoPago': metodoPago?.index,
         'ventaPagos': pagos?.map((e) => e.toJson()).toList() ?? [],
-        'usuarioId': usuarioId,
-        'usuario': usuario?.toJson(),
+        'usuarioIdCreador': usuarioIdCreador,
+        'usuarioCreador': usuarioCreador?.toJson(),
+        'usuarioIdAsignado': usuarioIdAsignado,
+        'usuarioAsignado': usuarioAsignado?.toJson(),
         'estadoEntrega': estadoEntrega.toJson(),
       };    
 }

@@ -10,6 +10,8 @@ class Cliente {
   String? deuda;
   double descuentoGlobal;
   List<PrecioEspecial> preciosEspeciales;
+  double? latitud;
+  double? longitud;
 
 
   Cliente(
@@ -20,6 +22,8 @@ class Cliente {
       this.deuda,
       this.descuentoGlobal = 0.0,
       this.preciosEspeciales = const [],
+      this.latitud,
+      this.longitud,
       });
 
   factory Cliente.fromJson(Map<String, dynamic> json) {
@@ -40,6 +44,8 @@ class Cliente {
       deuda: json['deuda'] as String?,
       descuentoGlobal: (json['descuentoGlobal'] as num?)?.toDouble() ?? 0.0,
       preciosEspeciales: precios,
+      latitud: (json['latitud'] as num?)?.toDouble(),
+      longitud: (json['longitud'] as num?)?.toDouble(),
     );
   }
 
@@ -50,6 +56,8 @@ class Cliente {
       'telefono': telefono?.toString(),
       'deuda': deuda,
       'descuentoGlobal': descuentoGlobal,
+      'latitud': latitud,
+      'longitud': longitud,
     };
     
     // Solo incluir el id si no es null (para actualizaciones)
@@ -68,6 +76,8 @@ class Cliente {
       'telefono': telefono?.toString(),
       'deuda': deuda,
       'descuentoGlobal': descuentoGlobal,
+      'latitud': latitud,
+      'longitud': longitud,
     };
   }
 }

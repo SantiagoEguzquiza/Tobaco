@@ -402,7 +402,7 @@ class _ClientesScreenState extends State<ClientesScreen> {
                                 builder: (context) => const WizardNuevoClienteScreen(),
                               ),
                             );
-                            if (result == true) {
+                            if (result != null) {
                               _cargarClientes();
                             }
                           },

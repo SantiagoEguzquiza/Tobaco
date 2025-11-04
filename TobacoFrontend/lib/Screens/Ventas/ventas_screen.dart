@@ -10,6 +10,7 @@ import 'package:tobaco/Screens/Ventas/nuevaVenta_screen.dart';
 import 'package:tobaco/Screens/Ventas/detalleVentas_screen.dart';
 import 'package:tobaco/Services/Ventas_Service/ventas_provider.dart';
 import 'package:tobaco/Services/Cache/ventas_cache_service.dart';
+import 'package:tobaco/Services/Cache/database_helper.dart';
 import 'package:tobaco/Theme/app_theme.dart';
 import 'package:tobaco/Theme/dialogs.dart';
 import 'package:tobaco/Theme/headers.dart';
@@ -30,6 +31,8 @@ class _VentasScreenState extends State<VentasScreen> {
   List<Ventas> ventas = [];
   late ScaffoldMessengerState scaffoldMessenger;
   bool _offlineMessageShown = false; // Para mostrar el mensaje solo la primera vez
+  bool _isSincronizando = false; // Flag para evitar sincronizaciones múltiples
+  final GlobalKey<_SincronizarButtonState> _syncButtonKey = GlobalKey<_SincronizarButtonState>();
 
   // Variables para infinite scroll
   bool _isLoadingMore = false;
@@ -66,7 +69,7 @@ class _VentasScreenState extends State<VentasScreen> {
     }
   }
 
-  Future<void> _loadVentas() async {
+  Future<void> _loadVentas({bool usarTimeoutNormal = false}) async {
     if (!mounted) return;
     
     setState(() {
@@ -78,12 +81,12 @@ class _VentasScreenState extends State<VentasScreen> {
     });
 
     try {
-      print('🔄 VentasScreen: Iniciando carga de ventas...');
+      
       
       final ventasProvider = Provider.of<VentasProvider>(context, listen: false);
       
-      print('🔄 VentasScreen: Obteniendo ventas...');
-      final ventasList = await ventasProvider.obtenerVentas();
+      
+      final ventasList = await ventasProvider.obtenerVentas(usarTimeoutNormal: usarTimeoutNormal);
       
       if (!mounted) return;
       
@@ -93,7 +96,7 @@ class _VentasScreenState extends State<VentasScreen> {
         isLoading = false;
       });
       
-      print('✅ VentasScreen: ${ventas.length} ventas cargadas exitosamente');
+      
       
       // Verificar si estamos en modo offline
       // Si hay ventas y hay caché, verificar si el servidor está realmente disponible
@@ -136,7 +139,7 @@ class _VentasScreenState extends State<VentasScreen> {
     } catch (e, stackTrace) {
       if (!mounted) return;
       
-      print('❌ VentasScreen: Error al cargar las ventas: $e');
+      
       print('Stack trace: $stackTrace');
       
       // Verificar si hay datos del caché disponibles
@@ -193,7 +196,7 @@ class _VentasScreenState extends State<VentasScreen> {
     // En modo offline no hay paginación, todas las ventas se cargan de una vez
     if (_isLoadingMore || !_hasMoreData || !mounted) return;
     
-    print('📋 VentasScreen: Paginación no disponible en modo offline');
+    
     
     // Por ahora, deshabilitamos la paginación ya que obtenerVentas() 
     // trae todas las ventas offline de una vez
@@ -208,43 +211,128 @@ class _VentasScreenState extends State<VentasScreen> {
         title: const Text('Ventas', style: AppTheme.appBarTitleStyle),
         actions: [
           // Badge de sincronización en el AppBar
-          FutureBuilder<int>(
-            future: Provider.of<VentasProvider>(context, listen: false).contarVentasPendientes(),
-            builder: (context, snapshot) {
-              if (snapshot.data != null && snapshot.data! > 0) {
-                return Padding(
-                  padding: const EdgeInsets.only(right: 8.0),
-                  child: IconButton(
-                    icon: Badge(
-                      label: Text('${snapshot.data}'),
-                      backgroundColor: Colors.red,
-                      child: const Icon(Icons.cloud_upload),
-                    ),
-                    tooltip: '${snapshot.data} ventas pendientes',
-                    onPressed: () async {
-                      final provider = Provider.of<VentasProvider>(context, listen: false);
-                      final result = await provider.sincronizarAhora();
-                      
-                      if (context.mounted) {
-                        // Usar snackbar personalizado de AppTheme
-                        if (result['success']) {
-                          AppTheme.showSnackBar(
-                            context,
-                            AppTheme.successSnackBar(result['message']),
-                          );
-                        } else {
-                          AppTheme.showSnackBar(
-                            context,
-                            AppTheme.warningSnackBar(result['message']),
-                          );
-                        }
-                        _loadVentas();
+          _SincronizarButton(
+            key: _syncButtonKey,
+            isSincronizando: _isSincronizando,
+            onSincronizar: () async {
+              setState(() {
+                _isSincronizando = true;
+              });
+              
+              try {
+                final provider = Provider.of<VentasProvider>(context, listen: false);
+                
+                debugPrint('');
+                debugPrint('🔄 VentasScreen: Iniciando sincronización...');
+                final result = await provider.sincronizarAhora();
+                
+                debugPrint('');
+                debugPrint('═══════════════════════════════════════════════════════════');
+                debugPrint('📱 VentasScreen: RESULTADO DE SINCRONIZACIÓN RECIBIDO');
+                debugPrint('═══════════════════════════════════════════════════════════');
+                debugPrint('   Result completo: $result');
+                debugPrint('   Keys disponibles: ${result.keys.toList()}');
+                debugPrint('   Tipo de result: ${result.runtimeType}');
+                
+                if (context.mounted) {
+                  final sincronizadas = result['sincronizadas'] ?? 0;
+                  final fallidas = result['fallidas'] ?? 0;
+                  final success = result['success'] ?? false;
+                  
+                  debugPrint('   sincronizadas: $sincronizadas (tipo: ${sincronizadas.runtimeType})');
+                  debugPrint('   fallidas: $fallidas (tipo: ${fallidas.runtimeType})');
+                  debugPrint('   success: $success (tipo: ${success.runtimeType})');
+                  debugPrint('   message: ${result['message']}');
+                  debugPrint('═══════════════════════════════════════════════════════════');
+                  debugPrint('');
+                  
+                  // Mostrar mensaje según el resultado
+                  if (success) {
+                    if (sincronizadas > 0 && fallidas == 0) {
+                      // Todas sincronizadas correctamente
+                      AppTheme.showSnackBar(
+                        context,
+                        AppTheme.successSnackBar(
+                          sincronizadas == 1 
+                            ? '1 venta sincronizada correctamente'
+                            : '$sincronizadas ventas sincronizadas correctamente'
+                        ),
+                      );
+                      // Recargar ventas para mostrar las sincronizadas (con timeout normal)
+                      _loadVentas(usarTimeoutNormal: true);
+                    } else if (sincronizadas > 0 && fallidas > 0) {
+                      // Algunas sincronizadas, algunas fallaron
+                      AppTheme.showSnackBar(
+                        context,
+                        AppTheme.warningSnackBar(
+                          '$sincronizadas ventas sincronizadas. $fallidas fallaron.'
+                        ),
+                      );
+                      // Recargar ventas para mostrar las sincronizadas (con timeout normal)
+                      _loadVentas(usarTimeoutNormal: true);
+                    } else if (sincronizadas == 0 && fallidas == 0) {
+                      // No hay ventas pendientes (éxito silencioso)
+                      AppTheme.showSnackBar(
+                        context,
+                        AppTheme.successSnackBar('No hay ventas pendientes de sincronizar'),
+                      );
+                      // Recargar ventas para actualizar
+                      _loadVentas(usarTimeoutNormal: true);
+                    } else {
+                      // Caso raro: success pero con algún problema
+                      AppTheme.showSnackBar(
+                        context,
+                        AppTheme.warningSnackBar(result['message'] ?? 'Sincronización completada'),
+                      );
+                      // Recargar ventas
+                      _loadVentas(usarTimeoutNormal: true);
+                    }
+                  } else {
+                    // Error en la sincronización (sin conexión o error del servidor)
+                    // Si hay ventas fallidas (pendientes), mostrar mensaje en amarillo
+                    if (fallidas > 0) {
+                      final mensajeError = result['message'] ?? '';
+                      // Si el mensaje indica error de conexión, mostrar mensaje específico
+                      if (mensajeError.contains('conexión') || mensajeError.contains('backend')) {
+                        AppTheme.showSnackBar(
+                          context,
+                          AppTheme.warningSnackBar(
+                            '$sincronizadas ventas sincronizadas. $fallidas fallaron.'
+                          ),
+                        );
+                      } else {
+                        // Error del servidor (400, 500, etc.)
+                        AppTheme.showSnackBar(
+                          context,
+                          AppTheme.errorSnackBar(
+                            '$sincronizadas ventas sincronizadas. $fallidas fallaron. Revisa los datos de las ventas.'
+                          ),
+                        );
                       }
-                    },
-                  ),
-                );
+                    } else {
+                      // Error genérico sin ventas pendientes
+                      AppTheme.showSnackBar(
+                        context,
+                        AppTheme.errorSnackBar(result['message'] ?? 'Error al sincronizar ventas'),
+                      );
+                    }
+                    // No recargar ventas si falló - el botón debe permanecer visible
+                  }
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  AppTheme.showSnackBar(
+                    context,
+                    AppTheme.errorSnackBar('Error al sincronizar: $e'),
+                  );
+                }
+              } finally {
+                if (context.mounted) {
+                  setState(() {
+                    _isSincronizando = false;
+                  });
+                }
               }
-              return const SizedBox.shrink();
             },
           ),
         ],
@@ -307,7 +395,15 @@ class _VentasScreenState extends State<VentasScreen> {
                   builder: (context) => const NuevaVentaScreen(),
                 ),
               );
+              // Recargar ventas y actualizar el botón de sincronización
               _loadVentas();
+              // Actualizar el botón de sincronización después de un pequeño delay
+              // para asegurar que la venta se guardó en la BD
+              Future.delayed(const Duration(milliseconds: 500), () {
+                if (mounted && _syncButtonKey.currentState != null) {
+                  _syncButtonKey.currentState!.recargarPendientes();
+                }
+              });
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.primaryColor,
@@ -928,5 +1024,151 @@ class _VentasScreenState extends State<VentasScreen> {
         ],
       ),
     );
+  }
+}
+
+/// Widget para el botón de sincronización que se actualiza automáticamente
+class _SincronizarButton extends StatefulWidget {
+  final bool isSincronizando;
+  final VoidCallback onSincronizar;
+
+  const _SincronizarButton({
+    super.key,
+    required this.isSincronizando,
+    required this.onSincronizar,
+  });
+
+  @override
+  State<_SincronizarButton> createState() => _SincronizarButtonState();
+}
+
+class _SincronizarButtonState extends State<_SincronizarButton> {
+  int? _pendientes;
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _cargarPendientes();
+  }
+
+  // Método público para recargar pendientes (llamado desde el padre)
+  void recargarPendientes() {
+    _cargarPendientes();
+  }
+
+  Future<void> _cargarPendientes() async {
+    if (_isLoading) return; // Evitar cargas simultáneas
+    
+    setState(() {
+      _isLoading = true;
+    });
+    
+    try {
+      final provider = Provider.of<VentasProvider>(context, listen: false);
+      final count = await provider.contarVentasPendientes();
+      
+      if (mounted) {
+        setState(() {
+          _pendientes = count;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      // Si falla al cargar, NO cambiar _pendientes a 0
+      // Mantener el valor anterior para que el botón no desaparezca
+      if (mounted) {
+        setState(() {
+          // Si ya teníamos un valor, mantenerlo; si no, usar 1 como fallback
+          if (_pendientes == null) {
+            _pendientes = 1; // Fallback: asumir que hay al menos una pendiente
+          }
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  @override
+  void didUpdateWidget(_SincronizarButton oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Si terminó de sincronizar (exitosa o fallida), SIEMPRE recargar el contador
+    if (oldWidget.isSincronizando && !widget.isSincronizando) {
+      // Esperar un momento para asegurar que la BD se actualizó
+      Future.delayed(const Duration(milliseconds: 300), () {
+        if (mounted) {
+          _cargarPendientes();
+        }
+      });
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Recargar pendientes cuando cambian las dependencias (por ejemplo, al volver a la pantalla)
+    // Solo si no está cargando actualmente
+    if (!_isLoading && _pendientes == null) {
+      _cargarPendientes();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Siempre mostrar el botón si hay ventas pendientes o si está cargando
+    // NO ocultar el botón si está cargando, para evitar que desaparezca temporalmente
+    if (_pendientes != null && _pendientes! > 0) {
+      return Padding(
+        padding: const EdgeInsets.only(right: 8.0),
+        child: IconButton(
+          icon: widget.isSincronizando
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              : Badge(
+                  label: Text('$_pendientes'),
+                  backgroundColor: Colors.red,
+                  child: const Icon(Icons.cloud_upload),
+                ),
+          tooltip: widget.isSincronizando 
+              ? 'Sincronizando...' 
+              : '$_pendientes ventas pendientes',
+          onPressed: widget.isSincronizando ? null : widget.onSincronizar,
+        ),
+      );
+    }
+    
+    // Si está cargando, mostrar el botón aunque el contador aún no esté listo
+    // Esto evita que el botón desaparezca temporalmente durante la recarga
+    if (_isLoading) {
+      return Padding(
+        padding: const EdgeInsets.only(right: 8.0),
+        child: IconButton(
+          icon: widget.isSincronizando
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              : Badge(
+                  label: const Text('?'),
+                  backgroundColor: Colors.red,
+                  child: const Icon(Icons.cloud_upload),
+                ),
+          tooltip: widget.isSincronizando ? 'Sincronizando...' : 'Verificando ventas pendientes...',
+          onPressed: widget.isSincronizando ? null : widget.onSincronizar,
+        ),
+      );
+    }
+    
+    return const SizedBox.shrink();
   }
 }

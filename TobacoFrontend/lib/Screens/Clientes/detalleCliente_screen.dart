@@ -3,6 +3,8 @@ import 'package:tobaco/Models/Cliente.dart';
 import 'package:tobaco/Theme/app_theme.dart'; // Importa el tema
 import 'package:url_launcher/url_launcher.dart';
 import 'preciosEspeciales_screen.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:tobaco/Theme/map_styles.dart';
 import 'historialVentas_screen.dart';
 import 'productosAFavor_screen.dart';
 
@@ -14,7 +16,7 @@ class DetalleClienteScreen extends StatelessWidget {
   // Función para parsear correctamente los valores de deuda
   double _parsearDeuda(String? deuda) {
     if (deuda == null || deuda.isEmpty) return 0.0;
-    print('DEBUG - Valor deuda recibido: "$deuda"');
+    
     
     // Si contiene coma, tratar como separador decimal
     if (deuda.contains(',')) {
@@ -32,7 +34,7 @@ class DetalleClienteScreen extends StatelessWidget {
         }
         
         String numeroCorregido = '$parteEntera.$decimalesFinales';
-        print('DEBUG - Formato corregido: "$deuda" -> "$numeroCorregido"');
+        
         return double.tryParse(numeroCorregido) ?? 0.0;
       }
     }
@@ -40,7 +42,7 @@ class DetalleClienteScreen extends StatelessWidget {
     // Si no contiene coma, intentar parsear directamente
     String deudaLimpia = deuda.replaceAll(',', '');
     double? resultado = double.tryParse(deudaLimpia);
-    print('DEBUG - Valor limpio: "$deudaLimpia" -> $resultado');
+    
     return resultado ?? 0.0;
   }
 
@@ -73,6 +75,58 @@ class DetalleClienteScreen extends StatelessWidget {
             // Información del cliente
             _buildClienteInfo(context),
             const SizedBox(height: 24),
+
+        // Mapa de ubicación (solo vista)
+        if (cliente.latitud != null && cliente.longitud != null)
+          Container(
+            height: 220,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? const Color(0xFF1A1A1A)
+                  : Colors.white,
+              boxShadow: [
+                BoxShadow(
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.black.withOpacity(0.3)
+                      : Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: GoogleMap(
+                onMapCreated: (controller) {
+                  final isDark = Theme.of(context).brightness == Brightness.dark;
+                  final style = isDark ? MapStyles.darkMode : MapStyles.lightMode;
+                  controller.setMapStyle(style);
+                },
+                initialCameraPosition: CameraPosition(
+                  target: LatLng(cliente.latitud!, cliente.longitud!),
+                  zoom: 16,
+                ),
+                markers: {
+                  Marker(
+                    markerId: const MarkerId('cliente'),
+                    position: LatLng(cliente.latitud!, cliente.longitud!),
+                    infoWindow: InfoWindow(title: cliente.nombre),
+                  ),
+                },
+                zoomControlsEnabled: false,
+                myLocationEnabled: false,
+                myLocationButtonEnabled: false,
+                scrollGesturesEnabled: true,
+                rotateGesturesEnabled: false,
+                tiltGesturesEnabled: false,
+                compassEnabled: false,
+                mapToolbarEnabled: false,
+              ),
+            ),
+          ),
+        if (cliente.latitud != null && cliente.longitud != null)
+          const SizedBox(height: 24),
 
             // Acciones de contacto
             _buildContactActions(context),

@@ -202,7 +202,7 @@ class AppTheme {
     return ElevatedButton.styleFrom(
       padding: const EdgeInsets.symmetric(vertical: 20),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(15),
       ),
       backgroundColor: backgroundColor,
     );
@@ -211,7 +211,7 @@ class AppTheme {
   static ButtonStyle outlinedButtonStyle = ElevatedButton.styleFrom(
     padding: const EdgeInsets.symmetric(vertical: 20),
     shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(10),
+      borderRadius: BorderRadius.circular(15),
     ),
     side: const BorderSide(color: Colors.grey),
     backgroundColor: Colors.white, // This will be overridden by theme
@@ -286,9 +286,14 @@ class AppTheme {
           backgroundColor: primaryColor,
           foregroundColor: Colors.white,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(15),
           ),
         ),
+      ),
+      textSelectionTheme: TextSelectionThemeData(
+        cursorColor: primaryColor,
+        selectionColor: primaryColor.withOpacity(0.25),
+        selectionHandleColor: primaryColor,
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
@@ -296,7 +301,7 @@ class AppTheme {
           foregroundColor: Colors.black,
           side: const BorderSide(color: Colors.grey),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(15),
           ),
         ),
       ),
@@ -312,6 +317,7 @@ class AppTheme {
           fontFamily: 'LibreFranklin',
         ),
       ),
+      
       inputDecorationTheme: const InputDecorationTheme(
         labelStyle: TextStyle(
           color: Colors.grey,
@@ -401,6 +407,11 @@ class AppTheme {
             borderRadius: BorderRadius.circular(10),
           ),
         ),
+      ),
+      textSelectionTheme: const TextSelectionThemeData(
+        cursorColor: Color(0xFF4CAF50),
+        selectionColor: Color(0xFF4CAF50),
+        selectionHandleColor: Color(0xFF4CAF50),
       ),
       textTheme: const TextTheme(
         bodyLarge: TextStyle(
@@ -607,10 +618,8 @@ class AppTheme {
                   ),
                   child: Text(
                     cancelText,
-                    style: TextStyle(
-                      color: Theme.of(context).brightness == Brightness.dark 
-                          ? Colors.grey.shade300 
-                          : Colors.grey.shade700,
+                    style: const TextStyle(
+                      color: Colors.black,
                       fontWeight: FontWeight.w600,
                       fontSize: 14,
                     ),

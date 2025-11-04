@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../../Models/Cliente.dart';
 import '../../Services/Clientes_Service/clientes_provider.dart';
 import '../../Theme/app_theme.dart';
 import '../../Helpers/api_handler.dart';
 import 'editarPreciosEspeciales_screen.dart';
+import 'map_picker_screen.dart';
 
 class WizardEditarClienteScreen extends StatefulWidget {
   final Cliente cliente;
@@ -28,6 +30,8 @@ class _WizardEditarClienteScreenState extends State<WizardEditarClienteScreen> {
   final _direccionController = TextEditingController();
   final _deudaController = TextEditingController();
   final _descuentoGlobalController = TextEditingController();
+  double? _latitud;
+  double? _longitud;
   
   Cliente? _clienteActualizado;
   bool _isLoading = false;
@@ -51,6 +55,8 @@ class _WizardEditarClienteScreenState extends State<WizardEditarClienteScreen> {
     _descuentoGlobalController.text = widget.cliente.descuentoGlobal == 0.0 
         ? '' 
         : widget.cliente.descuentoGlobal.toString();
+    _latitud = widget.cliente.latitud;
+    _longitud = widget.cliente.longitud;
   }
 
   @override
@@ -88,6 +94,8 @@ class _WizardEditarClienteScreenState extends State<WizardEditarClienteScreen> {
             ? 0.0 
             : double.tryParse(_descuentoGlobalController.text.trim()) ?? 0.0,
         preciosEspeciales: widget.cliente.preciosEspeciales,
+        latitud: _latitud,
+        longitud: _longitud,
       );
 
       await _clienteProvider.editarCliente(clienteActualizado);
@@ -314,6 +322,61 @@ class _WizardEditarClienteScreenState extends State<WizardEditarClienteScreen> {
                 }
                 return null;
               },
+            ),
+            const SizedBox(height: 20),
+            // Coordenadas
+            Row(
+              children: [
+                Expanded(
+                  child: TextFormField(
+                    readOnly: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Latitud',
+                      prefixIcon: Icon(Icons.map),
+                      border: OutlineInputBorder(),
+                    ),
+                    controller: TextEditingController(text: _latitud?.toStringAsFixed(6) ?? ''),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: TextFormField(
+                    readOnly: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Longitud',
+                      prefixIcon: Icon(Icons.map),
+                      border: OutlineInputBorder(),
+                    ),
+                    controller: TextEditingController(text: _longitud?.toStringAsFixed(6) ?? ''),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () async {
+                  final result = await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => MapPickerScreen(
+                        initial: (_latitud != null && _longitud != null)
+                            ? LatLng(_latitud!, _longitud!)
+                            : null,
+                      ),
+                    ),
+                  );
+                  if (result is List && result.length == 2) {
+                    setState(() {
+                      _latitud = result[0] as double;
+                      _longitud = result[1] as double;
+                    });
+                  }
+                },
+                icon: const Icon(Icons.place),
+                label: const Text('Editar ubicación en mapa'),
+              ),
             ),
             const SizedBox(height: 20),
             
