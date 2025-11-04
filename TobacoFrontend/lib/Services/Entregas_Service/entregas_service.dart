@@ -1,44 +1,36 @@
 import 'dart:convert';
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:tobaco/Models/Entrega.dart';
 import 'package:tobaco/Models/EstadoEntrega.dart';
+import 'package:tobaco/Models/RecorridoProgramado.dart';
+import 'package:tobaco/Models/DiaSemana.dart';
+import 'package:tobaco/Models/Cliente.dart';
 import 'package:tobaco/Helpers/api_handler.dart';
 import 'package:tobaco/Services/Auth_Service/auth_service.dart';
-import 'package:tobaco/Services/Cache/database_helper.dart';
-import 'package:tobaco/Services/Connectivity/connectivity_service.dart';
+import 'package:tobaco/Services/RecorridosProgramados_Service/recorridos_programados_service.dart';
 
-/// Servicio para gestionar entregas y recorridos (online y offline)
+/// Servicio para gestionar entregas y recorridos (solo llamadas al servidor)
 class EntregasService {
-  final ConnectivityService connectivityService;
-  final DatabaseHelper databaseHelper;
+  final RecorridosProgramadosService _recorridosService = RecorridosProgramadosService();
+  
+  EntregasService();
 
-  EntregasService({
-    required this.connectivityService,
-    required this.databaseHelper,
-  });
-
-  /// Obtiene las entregas del día para el repartidor actual
-  /// Solo para vendedores-repartidores (tipo 1)
-  Future<List<Entrega>> obtenerEntregasDelDia() async {
-    try {
-      // Intentar obtener desde el servidor si hay conexión
-      if (connectivityService.isFullyConnected) {
-        return await _obtenerEntregasDelServidor();
-      } else {
-        // Si no hay conexión, obtener desde la base de datos local
-        return await _obtenerEntregasLocales();
-      }
-    } catch (e) {
-      // En caso de error, intentar cargar desde local
-      return await _obtenerEntregasLocales();
+  /// Obtiene las entregas del día desde el servidor
+  /// Para Vendedor: solo obtiene recorridos programados (NO entregas asignadas)
+  Future<List<Entrega>> obtenerEntregasDelServidor() async {
+    final usuario = await AuthService.getCurrentUser();
+    final entregas = await _obtenerEntregasDelServidor();
+    
+    // Si es Vendedor (no Admin), solo debe ver recorridos programados, NO entregas asignadas
+    // Filtrar cualquier entrega de venta asignada (ventaId > 0) que venga del servidor
+    if (usuario?.esVendedor == true && !usuario!.isAdmin) {
+      // Filtrar para solo mantener recorridos programados (ventaId == 0)
+      entregas.removeWhere((e) => e.ventaId != null && e.ventaId! > 0);
+      debugPrint('📋 Vendedor: Filtrando entregas asignadas, quedan ${entregas.length} recorridos programados');
     }
-  }
-
-  /// Obtiene entregas o recorridos según el tipo de usuario
-  /// Para RepartidorVendedor: el endpoint /mis-entregas devuelve sus recorridos programados del día
-  /// Para Repartidor: el endpoint /mis-entregas devuelve sus entregas asignadas
-  Future<List<Entrega>> obtenerEntregasORecorridosDelDia() async {
-    return await obtenerEntregasDelDia();
+    
+    return entregas;
   }
 
   /// Obtiene las entregas desde el servidor
@@ -69,11 +61,18 @@ class EntregasService {
     final url = Apihandler.baseUrl.resolve('/api/Entregas/mis-entregas');
     debugPrint('📡 Llamando a: $url');
     
+    // Agregar timeout para evitar que se quede bloqueado si el backend está apagado
     final response = await Apihandler.client.get(
       url,
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
+      },
+    ).timeout(
+      const Duration(seconds: 10),
+      onTimeout: () {
+        debugPrint('⚠️ Timeout al conectar con el servidor');
+        throw TimeoutException('No se pudo conectar con el servidor en 10 segundos');
       },
     );
 
@@ -84,21 +83,38 @@ class EntregasService {
       List<Entrega> entregas = jsonData.map((e) => Entrega.fromJson(e)).toList();
       debugPrint('📦 Total de entregas/recorridos recibidos: ${entregas.length}');
       
-      // Guardar TODAS las entregas en cache local (para preservar estados locales)
-      await _guardarEntregasEnLocal(entregas);
+      // Filtrar entregas del día actual
+      final hoy = DateTime.now();
+      final inicioDelDia = DateTime(hoy.year, hoy.month, hoy.day);
+      final finDelDia = DateTime(hoy.year, hoy.month, hoy.day, 23, 59, 59);
       
-      // Recargar desde local para obtener estados actualizados
-      entregas = await _obtenerEntregasLocales();
+      // Para Repartidor: solo mostrar entregas de ventas asignadas (no recorridos programados)
+      final esRepartidor = usuario?.esRepartidor == true && !usuario!.isAdmin;
       
-      // Para RepartidorVendedor, los recorridos programados NO se deben filtrar
-      // Solo filtrar entregas completadas si NO son recorridos programados (VentaId == 0)
       entregas = entregas.where((e) {
-        // Si es un recorrido programado (VentaId == 0), siempre mostrarlo
-        if (e.ventaId == 0) {
-          return true;
+        // Repartidor: NO debe ver recorridos programados (ventaId == 0)
+        if (esRepartidor && e.ventaId == 0) {
+          return false;
         }
-        // Si es una entrega real, filtrar las completadas
-        return !e.estaCompletada;
+        
+        // Verificar que la fecha de asignación sea del día actual
+        if (e.fechaAsignacion.isBefore(inicioDelDia) || e.fechaAsignacion.isAfter(finDelDia)) {
+          return false;
+        }
+        
+        // Si es un recorrido programado (VentaId == 0), solo para Vendedor/RepartidorVendedor
+        if (e.ventaId == 0) {
+          return true; // Ya filtramos arriba si es Repartidor
+        }
+        
+        // Para entregas completadas, verificar que la fecha de entrega sea del día actual
+        if (e.estaCompletada && e.fechaEntrega != null) {
+          return e.fechaEntrega!.isAfter(inicioDelDia.subtract(const Duration(days: 1))) &&
+                 e.fechaEntrega!.isBefore(finDelDia.add(const Duration(days: 1)));
+        }
+        
+        // Mostrar entregas pendientes y parciales del día
+        return true;
       }).toList();
       
       debugPrint('📋 Entregas/recorridos después del filtro: ${entregas.length}');
@@ -110,70 +126,62 @@ class EntregasService {
     }
   }
 
-  /// Obtiene las entregas desde la base de datos local
-  Future<List<Entrega>> _obtenerEntregasLocales() async {
-    // Obtener usuario actual para filtrar por repartidor
-    final usuario = await AuthService.getCurrentUser();
-    final repartidorId = usuario?.id;
+  /// Obtiene los recorridos programados del día actual para un vendedor
+  Future<List<RecorridoProgramado>> _obtenerRecorridosProgramadosDelDia(int vendedorId) async {
+    // Obtener todos los recorridos del vendedor
+    final todosLosRecorridos = await _recorridosService.obtenerRecorridosPorVendedor(vendedorId);
     
-    return await databaseHelper.obtenerEntregasDelDia(repartidorId: repartidorId);
+    // Obtener el día actual de la semana
+    final hoy = DateTime.now();
+    final diaActual = _obtenerDiaSemana(hoy);
+    
+    // Filtrar solo los recorridos del día actual y activos
+    return todosLosRecorridos.where((r) => 
+      r.diaSemana == diaActual && 
+      r.activo
+    ).toList();
   }
 
-  /// Guarda las entregas en la base de datos local
-  /// Primero elimina las entregas del día actual que no están en la lista del servidor
-  /// (excepto las completadas localmente) para mantener el cache sincronizado
-  Future<void> _guardarEntregasEnLocal(List<Entrega> entregas) async {
-    // Obtener usuario actual para filtrar por repartidor
-    final usuario = await AuthService.getCurrentUser();
-    final repartidorId = usuario?.id;
-    
-    // Obtener IDs de las entregas que vienen del servidor
-    final idsDelServidor = entregas.map((e) => e.id).whereType<int>().toSet();
-    
-    // Obtener solo las entregas del día actual del cache del usuario actual
-    final entregasDelDia = await databaseHelper.obtenerEntregasDelDia(repartidorId: repartidorId);
-    
-    // Eliminar las entregas del cache que ya no están en el servidor
-    // (excepto las que están completadas localmente y pendientes de sincronizar)
-    for (var entregaCache in entregasDelDia) {
-      if (entregaCache.id != null && 
-          !idsDelServidor.contains(entregaCache.id) &&
-          !entregaCache.estaCompletada) {
-        // Esta entrega fue eliminada del servidor, eliminarla del cache
-        await databaseHelper.eliminarEntregaPorId(entregaCache.id!);
-      }
-    }
-    
-    // Guardar/actualizar las entregas del servidor
-    for (var entrega in entregas) {
-      await databaseHelper.insertarEntrega(entrega);
-    }
+  /// Obtiene el día de la semana actual
+  DiaSemana _obtenerDiaSemana(DateTime fecha) {
+    // DateTime.weekday: 1=Lunes, 2=Martes, ..., 7=Domingo
+    // Nuestro enum: 0=Domingo, 1=Lunes, 2=Martes, ..., 6=Sábado
+    int diaValue = fecha.weekday % 7; // Convierte 7 (domingo) a 0
+    return DiaSemana.values.firstWhere(
+      (d) => d.value == diaValue,
+      orElse: () => DiaSemana.lunes,
+    );
   }
 
-  /// Actualiza el estado de una entrega
+  /// Convierte recorridos programados a entregas para mostrarlos en el mapa
+  List<Entrega> _convertirRecorridosAEntregas(List<RecorridoProgramado> recorridos) {
+    final hoy = DateTime.now();
+    final inicioDelDia = DateTime(hoy.year, hoy.month, hoy.day);
+    
+    return recorridos.map((recorrido) {
+      return Entrega(
+        id: recorrido.id, // Usar el ID del recorrido programado
+        ventaId: 0, // VentaId = 0 indica que es un recorrido programado
+        clienteId: recorrido.clienteId,
+        cliente: Cliente(
+          id: recorrido.clienteId,
+          nombre: recorrido.clienteNombre ?? 'Cliente',
+          direccion: recorrido.clienteDireccion,
+          latitud: recorrido.clienteLatitud,
+          longitud: recorrido.clienteLongitud,
+        ),
+        latitud: recorrido.clienteLatitud,
+        longitud: recorrido.clienteLongitud,
+        estado: EstadoEntrega.noEntregada, // Siempre pendiente hasta que se visite
+        fechaAsignacion: inicioDelDia, // Fecha del día actual
+        repartidorId: recorrido.vendedorId, // El vendedor es el "repartidor" del recorrido
+        orden: recorrido.orden,
+      );
+    }).toList();
+  }
+
+  /// Actualiza el estado de una entrega en el servidor
   Future<bool> actualizarEstadoEntrega(
-    int entregaId,
-    EstadoEntrega nuevoEstado,
-  ) async {
-    try {
-      // Actualizar en local primero
-      await databaseHelper.actualizarEstadoEntrega(entregaId, nuevoEstado);
-
-      // Si hay conexión, sincronizar con el servidor
-      if (connectivityService.isFullyConnected) {
-        return await _actualizarEstadoEnServidor(entregaId, nuevoEstado);
-      }
-
-      // Si no hay conexión, marcar para sincronización posterior
-      await databaseHelper.marcarEntregaParaSincronizar(entregaId);
-      return true;
-    } catch (e) {
-      return false;
-    }
-  }
-
-  /// Actualiza el estado en el servidor
-  Future<bool> _actualizarEstadoEnServidor(
     int entregaId,
     EstadoEntrega nuevoEstado,
   ) async {
@@ -197,126 +205,33 @@ class EntregasService {
     return response.statusCode == 200;
   }
 
-  /// Marca una entrega como completada
+  /// Marca una entrega como completada en el servidor
   Future<bool> marcarComoEntregada(int entregaId, {String? notas}) async {
-    try {
-      // Actualizar en local
-      await databaseHelper.marcarEntregaComoEntregada(entregaId, notas);
-
-      // Sincronizar con servidor si hay conexión
-      if (connectivityService.isFullyConnected) {
-        // Actualizar estado en servidor usando endpoint de estado
-        final exito = await _actualizarEstadoEnServidor(
-          entregaId,
-          EstadoEntrega.entregada,
-        );
-
-        if (exito) {
-          await databaseHelper.marcarEntregaSincronizada(entregaId);
-          return true;
-        }
-      } else {
-        // Marcar para sincronización posterior
-        await databaseHelper.marcarEntregaParaSincronizar(entregaId);
-      }
-      
-      return true;
-    } catch (e) {
-      return false;
-    }
+    // Actualizar estado en servidor
+    return await actualizarEstadoEntrega(
+      entregaId,
+      EstadoEntrega.entregada,
+    );
   }
 
-  /// Sincroniza las entregas pendientes con el servidor
-  Future<int> sincronizarEntregasPendientes() async {
-    try {
-      if (!connectivityService.isFullyConnected) {
-        return 0;
-      }
 
-      List<Entrega> entregasPendientes = 
-          await databaseHelper.obtenerEntregasPendientesDeSincronizar();
-      
-      int sincronizadas = 0;
-      
-      for (var entrega in entregasPendientes) {
-        bool exito = await _actualizarEstadoEnServidor(
-          entrega.id!,
-          entrega.estado,
-        );
-        
-        if (exito) {
-          await databaseHelper.marcarEntregaSincronizada(entrega.id!);
-          sincronizadas++;
-        }
-      }
-      
-      return sincronizadas;
-    } catch (e) {
-      return 0;
-    }
-  }
-
-  /// Obtiene estadísticas del día
-  Future<Map<String, dynamic>> obtenerEstadisticasDelDia() async {
-    List<Entrega> entregas = await obtenerEntregasDelDia();
-    
-    int totales = entregas.length;
-    int completadas = entregas.where((e) => e.estaCompletada).length;
-    int pendientes = entregas.where((e) => e.estaPendiente).length;
-    int parciales = entregas.where((e) => e.estado == EstadoEntrega.parcial).length;
-    
-    // Calcular distancia total (solo de entregas completadas)
-    double distanciaTotal = 0;
-    for (int i = 0; i < entregas.length - 1; i++) {
-      if (entregas[i].estaCompletada && 
-          entregas[i].tieneCoordenadasValidas && 
-          entregas[i + 1].tieneCoordenadasValidas) {
-        distanciaTotal += entregas[i].distanciaDesdeUbicacionActual ?? 0;
-      }
-    }
-    
-    return {
-      'totales': totales,
-      'completadas': completadas,
-      'pendientes': pendientes,
-      'parciales': parciales,
-      'distanciaTotal': distanciaTotal,
-      'porcentajeCompletado': totales > 0 ? (completadas / totales * 100).round() : 0,
-    };
-  }
-
-  /// Agrega notas a una entrega
+  /// Agrega notas a una entrega en el servidor
   Future<bool> agregarNotas(int entregaId, String notas) async {
-    try {
-      await databaseHelper.actualizarNotasEntrega(entregaId, notas);
-      
-      if (connectivityService.isFullyConnected) {
-        final token = await AuthService.getToken();
-        if (token == null) return false;
+    final token = await AuthService.getToken();
+    if (token == null) return false;
 
-        final url = Apihandler.baseUrl.resolve('/api/Entregas/$entregaId/notas');
-        
-        final response = await Apihandler.client.put(
-          url,
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer $token',
-          },
-          body: json.encode({'notas': notas}),
-        );
+    final url = Apihandler.baseUrl.resolve('/api/Entregas/$entregaId/notas');
+    
+    final response = await Apihandler.client.put(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: json.encode({'notas': notas}),
+    );
 
-        return response.statusCode == 200;
-      }
-      
-      return true;
-    } catch (e) {
-      return false;
-    }
-  }
-
-  /// Obtiene una entrega específica
-  Future<Entrega?> obtenerEntrega(int entregaId) async {
-    return await databaseHelper.obtenerEntregaPorId(entregaId);
+    return response.statusCode == 200;
   }
 }
 

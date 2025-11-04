@@ -7,7 +7,7 @@ import 'package:tobaco/Services/Auth_Service/auth_service.dart';
 
 class VentasService {
   final Uri baseUrl = Apihandler.baseUrl;
-  static const Duration _timeoutDuration = Duration(seconds: 10); // Timeout normal para operaciones
+  static const Duration _timeoutDuration = Duration(seconds: 30); // Timeout normal para operaciones (aumentado para sincronización)
   static const Duration _timeoutRapidoDuration = Duration(milliseconds: 500); // Timeout rápido para detección offline
 
   Future<List<Ventas>> obtenerVentas({bool timeoutRapido = false, bool timeoutNormal = false}) async {
@@ -59,31 +59,109 @@ class VentasService {
       // Debug: Imprimir los datos que se están enviando
       final ventaJson = venta.toJson();
       
+      // Asegurar que los pagos tengan id: 0 y ventaId: 0 para nuevas ventas
+      if (ventaJson['ventaPagos'] != null && ventaJson['ventaPagos'] is List) {
+        final pagos = ventaJson['ventaPagos'] as List;
+        debugPrint('💰 VentasService: Normalizando ${pagos.length} pago(s)...');
+        for (var i = 0; i < pagos.length; i++) {
+          var pago = pagos[i];
+          if (pago is Map<String, dynamic>) {
+            debugPrint('   Pago $i antes: $pago');
+            pago['id'] = 0; // Asegurar que el ID sea 0
+            pago['ventaId'] = 0; // Asegurar que ventaId sea 0
+            debugPrint('   Pago $i después: $pago');
+          }
+        }
+        debugPrint('✅ VentasService: Pagos normalizados para creación (todos con id=0 y ventaId=0)');
+      } else {
+        debugPrint('⚠️ VentasService: No hay ventaPagos en el JSON o no es una lista');
+        debugPrint('   ventaPagos: ${ventaJson['ventaPagos']}');
+        debugPrint('   Tipo: ${ventaJson['ventaPagos']?.runtimeType}');
+      }
       
+      debugPrint('📤 VentasService: Enviando POST a $baseUrl/Ventas');
+      debugPrint('   VentasPagos en JSON: ${ventaJson['ventaPagos']}');
+      debugPrint('   VentasPagos length: ${(ventaJson['ventaPagos'] as List?)?.length ?? 0}');
+      debugPrint('   Headers: ${headers.keys.toList()}');
+      debugPrint('   Timeout configurado: ${customTimeout ?? _timeoutDuration}');
+      
+      final jsonBody = jsonEncode(ventaJson);
+      debugPrint('   Tamaño del body: ${jsonBody.length} bytes');
+      debugPrint('   Body completo (primeros 500 chars): ${jsonBody.length > 500 ? jsonBody.substring(0, 500) + "..." : jsonBody}');
+      
+      // Verificar específicamente los pagos en el JSON
+      try {
+        final bodyParsed = jsonDecode(jsonBody);
+        if (bodyParsed['ventaPagos'] != null) {
+          debugPrint('   ✅ ventaPagos encontrado en JSON: ${bodyParsed['ventaPagos']}');
+        } else {
+          debugPrint('   ❌ ventaPagos NO encontrado en JSON');
+        }
+      } catch (e) {
+        debugPrint('   ⚠️ Error parseando JSON: $e');
+      }
+      
+      final stopwatch = Stopwatch()..start();
       final response = await Apihandler.client.post(
         Uri.parse('$baseUrl/Ventas'),
         headers: headers,
-        body: jsonEncode(ventaJson),
+        body: jsonBody,
       ).timeout(customTimeout ?? _timeoutDuration);
-
+      stopwatch.stop();
       
+      debugPrint('⏱️ VentasService: Tiempo de respuesta: ${stopwatch.elapsedMilliseconds}ms');
+
+      debugPrint('📥 VentasService: Respuesta recibida del servidor');
+      debugPrint('   Status Code: ${response.statusCode}');
+      debugPrint('   Body: ${response.body}');
+      debugPrint('   Headers: ${response.headers}');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         // Parsear la respuesta del servidor
+        debugPrint('✅ VentasService: Status code es 200 o 201, parseando respuesta...');
         final responseData = jsonDecode(response.body);
-        return {
+        debugPrint('   ResponseData: $responseData');
+        debugPrint('   ventaId: ${responseData['ventaId']}');
+        debugPrint('   message: ${responseData['message']}');
+        
+        final result = {
           'ventaId': responseData['ventaId'],
           'message': responseData['message'] ?? 'Venta creada exitosamente',
           'asignada': responseData['asignada'] ?? false,
           'usuarioAsignadoId': responseData['usuarioAsignadoId'],
           'usuarioAsignadoNombre': responseData['usuarioAsignadoNombre'],
         };
+        
+        debugPrint('✅ VentasService: Retornando resultado: $result');
+        return result;
       } else {
-        throw Exception(
-            'Error al guardar la venta. Código de estado: ${response.statusCode}, Respuesta: ${response.body}');
+        debugPrint('❌ VentasService: Status code NO es 200/201');
+        debugPrint('   Status Code recibido: ${response.statusCode}');
+        debugPrint('   Body completo: ${response.body}');
+        
+        // Intentar parsear el error para obtener más detalles
+        String errorDetails = response.body;
+        try {
+          final errorJson = jsonDecode(response.body);
+          if (errorJson is Map && errorJson.containsKey('message')) {
+            errorDetails = errorJson['message'] as String;
+            debugPrint('   Mensaje de error parseado: $errorDetails');
+          }
+          if (errorJson is Map && errorJson.containsKey('innerException')) {
+            debugPrint('   Inner Exception: ${errorJson['innerException']}');
+          }
+        } catch (parseError) {
+          debugPrint('   No se pudo parsear el error: $parseError');
+        }
+        
+        final errorMsg = 'Error al guardar la venta. Código de estado: ${response.statusCode}, Respuesta: $errorDetails';
+        debugPrint('   Error final: $errorMsg');
+        throw Exception(errorMsg);
       }
     } catch (e) {
-      debugPrint('Error al guardar la venta: $e');
+      debugPrint('❌ VentasService: Excepción capturada al guardar venta');
+      debugPrint('   Error: $e');
+      debugPrint('   Tipo: ${e.runtimeType}');
       rethrow;
     }
   }

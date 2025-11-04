@@ -202,7 +202,7 @@ class AppTheme {
     return ElevatedButton.styleFrom(
       padding: const EdgeInsets.symmetric(vertical: 20),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(15),
       ),
       backgroundColor: backgroundColor,
     );
@@ -211,7 +211,7 @@ class AppTheme {
   static ButtonStyle outlinedButtonStyle = ElevatedButton.styleFrom(
     padding: const EdgeInsets.symmetric(vertical: 20),
     shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(10),
+      borderRadius: BorderRadius.circular(15),
     ),
     side: const BorderSide(color: Colors.grey),
     backgroundColor: Colors.white, // This will be overridden by theme
@@ -286,7 +286,7 @@ class AppTheme {
           backgroundColor: primaryColor,
           foregroundColor: Colors.white,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(15),
           ),
         ),
       ),
@@ -301,7 +301,7 @@ class AppTheme {
           foregroundColor: Colors.black,
           side: const BorderSide(color: Colors.grey),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(15),
           ),
         ),
       ),

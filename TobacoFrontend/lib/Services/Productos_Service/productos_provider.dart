@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:tobaco/Models/Producto.dart';
 import 'package:tobaco/Services/Productos_Service/productos_service.dart';
-import 'package:tobaco/Services/Cache/datos_cache_service.dart';
+import 'package:tobaco/Services/Catalogo_Local/catalogo_local_service.dart';
 
 class ProductoProvider with ChangeNotifier {
   final ProductoService _productoService = ProductoService();
-  final DatosCacheService _cacheService = DatosCacheService();
+  final CatalogoLocalService _catalogoLocal = CatalogoLocalService();
 
   List<Producto> _productos = [];
 
   List<Producto> get productos => _productos;
 
-  /// Obtiene productos: intenta del servidor, si falla usa caché
+  /// Obtiene productos: intenta del servidor, si falla usa SQLite local
   Future<List<Producto>> obtenerProductos() async {
     print('📡 ProductoProvider: Intentando obtener productos del servidor...');
     
@@ -22,24 +22,23 @@ class ProductoProvider with ChangeNotifier {
       
       print('✅ ProductoProvider: ${_productos.length} productos obtenidos del servidor');
       
-      // Guardar en caché para uso offline
+      // Guardar localmente para uso offline
       if (_productos.isNotEmpty) {
-        await _cacheService.guardarProductosEnCache(_productos);
-        print('✅ ProductoProvider: ${_productos.length} productos guardados en caché');
+        await _catalogoLocal.guardarProductos(_productos);
+        print('✅ ProductoProvider: ${_productos.length} productos guardados localmente');
       }
       
     } catch (e) {
       print('⚠️ ProductoProvider: Error obteniendo del servidor: $e');
-      print('📦 ProductoProvider: Cargando productos del caché...');
-      
-      // Si falla, cargar del caché
-      _productos = await _cacheService.obtenerProductosDelCache();
+      print('📦 ProductoProvider: Cargando productos locales (SQLite)...');
+      // Si falla, cargar desde SQLite local
+      _productos = await _catalogoLocal.obtenerProductos();
       
       if (_productos.isEmpty) {
-        print('❌ ProductoProvider: No hay productos en caché');
+        print('❌ ProductoProvider: No hay productos locales');
         throw Exception('No hay productos disponibles offline. Conecta para sincronizar.');
       } else {
-        print('✅ ProductoProvider: ${_productos.length} productos cargados del caché');
+        print('✅ ProductoProvider: ${_productos.length} productos cargados de SQLite');
       }
     }
 
@@ -154,26 +153,26 @@ class ProductoProvider with ChangeNotifier {
       
       print('✅ ProductoProvider: ${result['productos'].length} productos obtenidos del servidor');
       
-      // Guardar en caché para uso offline (en background)
+      // Guardar localmente (SQLite) para uso offline (en background)
       if (result['productos'].isNotEmpty) {
-        _cacheService.guardarProductosEnCache(result['productos'] as List<Producto>)
-            .catchError((e) => print('⚠️ Error guardando productos en caché: $e'));
+        _catalogoLocal.guardarProductos(result['productos'] as List<Producto>)
+            .catchError((e) => print('⚠️ Error guardando productos localmente: $e'));
       }
       
       return result;
     } catch (e) {
       print('⚠️ ProductoProvider: Error obteniendo del servidor: $e');
-      print('📦 ProductoProvider: Cargando productos del caché...');
+      print('📦 ProductoProvider: Cargando productos locales (SQLite)...');
       
-      // Si falla, cargar del caché
-      final productosCache = await _cacheService.obtenerProductosDelCache();
+      // Si falla, cargar desde SQLite local
+      final productosCache = await _catalogoLocal.obtenerProductos();
       
       if (productosCache.isEmpty) {
-        print('❌ ProductoProvider: No hay productos en caché');
+        print('❌ ProductoProvider: No hay productos locales');
         rethrow;
       }
       
-      print('✅ ProductoProvider: ${productosCache.length} productos cargados del caché');
+      print('✅ ProductoProvider: ${productosCache.length} productos cargados de SQLite');
       
       // Paginar manualmente desde el caché
       final start = (page - 1) * pageSize;

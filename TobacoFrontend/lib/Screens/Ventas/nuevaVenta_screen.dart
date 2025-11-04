@@ -1058,7 +1058,23 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
           throw Exception(result['message']);
         }
 
-        // Manejar asignación según el tipo de empleado
+        // Mostrar mensaje offline INMEDIATAMENTE si aplica, antes de cualquier otra operación
+        if (result['isOffline']) {
+          // Usar un microtask para asegurar que el diálogo aparezca en el siguiente frame
+          await Future.microtask(() async {
+            if (mounted) {
+              await AppDialogs.showWarningDialog(
+                context: context,
+                title: 'Venta guardada offline',
+                message: 'Venta guardada localmente. Se sincronizará cuando haya conexión.',
+                buttonText: 'Entendido',
+                icon: Icons.cloud_off,
+              );
+            }
+          });
+        }
+
+        // Manejar asignación según el tipo de empleado (en background si es offline)
         if (!result['isOffline'] && result['ventaId'] != null) {
           final usuario = await AuthService.getCurrentUser();
           if (usuario != null && (usuario.isEmployee || usuario.isAdmin)) {
@@ -1127,21 +1143,10 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
         // Marcar que la venta se completó exitosamente
         _ventaCompletada = true;
         
-        // Eliminar borrador después de confirmar la venta (de forma segura)
+        // Eliminar borrador después de confirmar la venta (de forma segura) en background
         _eliminarBorradorDeFormaSegura();
 
-        // Mostrar mensaje si fue offline
-        if (result['isOffline']) {
-          await AppDialogs.showWarningDialog(
-            context: context,
-            title: 'Venta guardada offline',
-            message: 'Venta guardada localmente. Se sincronizará cuando haya conexión.',
-            buttonText: 'Entendido',
-            icon: Icons.cloud_off,
-          );
-        }
-
-        // Mostrar animación de confirmación
+        // Mostrar animación de confirmación después del diálogo
         showGeneralDialog(
           context: context,
           barrierDismissible: false,

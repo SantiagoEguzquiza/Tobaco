@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:tobaco/Models/Categoria.dart';
 import 'package:tobaco/Models/Producto.dart';
-import 'package:tobaco/Screens/Admin/categorias_screen.dart';
+import 'package:tobaco/Screens/Productos/categorias_screen.dart';
 import 'package:tobaco/Screens/Productos/detalleProducto_screen.dart';
 import 'package:tobaco/Screens/Productos/editarProducto_screen.dart';
 import 'package:tobaco/Screens/Productos/nuevoProducto_screen.dart';
@@ -761,7 +761,7 @@ class _ProductosScreenState extends State<ProductosScreen> {
                                             color: AppTheme.primaryColor
                                                 .withOpacity(0.1),
                                             borderRadius:
-                                                BorderRadius.circular(8),
+                                                BorderRadius.circular(15),
                                           ),
                                           child: IconButton(
                                             icon: Icon(
@@ -790,7 +790,7 @@ class _ProductosScreenState extends State<ProductosScreen> {
                                           decoration: BoxDecoration(
                                             color: Colors.red.withOpacity(0.1),
                                             borderRadius:
-                                                BorderRadius.circular(8),
+                                                BorderRadius.circular(15),
                                           ),
                                           child: IconButton(
                                             icon: Icon(

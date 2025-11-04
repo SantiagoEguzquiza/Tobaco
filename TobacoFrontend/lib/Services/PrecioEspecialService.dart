@@ -2,13 +2,13 @@ import 'dart:convert';
 import '../Models/PrecioEspecial.dart';
 import '../Helpers/api_handler.dart';
 import '../Services/Auth_Service/auth_service.dart';
-import 'Cache/datos_cache_service.dart';
+import 'Catalogo_Local/catalogo_local_service.dart';
 
 class PrecioEspecialService {
   static final Uri _baseUrl = Apihandler.baseUrl;
   static const String _endpoint = 'preciosespeciales';
   static const Duration _timeoutDuration = Duration(seconds: 1); // Ultra rápido para modo offline
-  static final DatosCacheService _cacheService = DatosCacheService();
+  static final CatalogoLocalService _catalogoLocal = CatalogoLocalService();
 
   // Obtener todos los precios especiales
   static Future<List<PrecioEspecial>> getAllPreciosEspeciales() async {
@@ -66,9 +66,9 @@ class PrecioEspecialService {
         
         print('✅ PrecioEspecialService: ${precios.length} precios especiales obtenidos del servidor');
         
-        // Guardar en caché para uso offline (en background)
-        _cacheService.guardarPreciosEspecialesEnCache(clienteId, data)
-            .catchError((e) => print('⚠️ Error guardando precios especiales en caché: $e'));
+        // Guardar localmente (SQLite) para uso offline (en background)
+        _catalogoLocal.guardarPreciosEspeciales(clienteId, data)
+            .catchError((e) => print('⚠️ Error guardando precios especiales localmente: $e'));
         
         return precios;
       } else {
@@ -76,10 +76,9 @@ class PrecioEspecialService {
       }
     } catch (e) {
       print('⚠️ PrecioEspecialService: Error obteniendo del servidor: $e');
-      print('📦 PrecioEspecialService: Cargando precios especiales del caché...');
-      
-      // Si falla, cargar del caché
-      final List<dynamic> preciosCache = await _cacheService.obtenerPreciosEspecialesDelCache(clienteId);
+      print('📦 PrecioEspecialService: Cargando precios especiales locales (SQLite)...');
+      // Si falla, cargar de SQLite local
+      final List<dynamic> preciosCache = await _catalogoLocal.obtenerPreciosEspeciales(clienteId);
       
       if (preciosCache.isEmpty) {
         print('❌ PrecioEspecialService: No hay precios especiales en caché');
@@ -87,7 +86,7 @@ class PrecioEspecialService {
       }
       
       final List<PrecioEspecial> precios = preciosCache.map((json) => PrecioEspecial.fromJson(json)).toList();
-      print('✅ PrecioEspecialService: ${precios.length} precios especiales cargados del caché');
+      print('✅ PrecioEspecialService: ${precios.length} precios especiales cargados de SQLite');
       
       return precios;
     }

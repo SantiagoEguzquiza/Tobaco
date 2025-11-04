@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:tobaco/Models/Categoria.dart';
 import 'package:tobaco/Models/CategoriaReorderDTO.dart';
 import 'package:tobaco/Services/Categoria_Service/categoria_service.dart';
-import 'package:tobaco/Services/Cache/datos_cache_service.dart';
+import 'package:tobaco/Services/Catalogo_Local/catalogo_local_service.dart';
 import 'package:tobaco/Helpers/api_handler.dart';
 
 class CategoriasProvider with ChangeNotifier {
   final CategoriaService _categoriaService = CategoriaService();
-  final DatosCacheService _cacheService = DatosCacheService();
+  final CatalogoLocalService _catalogoLocal = CatalogoLocalService();
 
   List<Categoria> _categorias = [];
   bool loadedFromCache = false; // Indica si la última carga fue del caché
@@ -49,10 +49,10 @@ class CategoriasProvider with ChangeNotifier {
       print('✅ CategoriasProvider: ${_categorias.length} categorías obtenidas del servidor');
       loadedFromCache = false; // Cargado del servidor
       
-      // Guardar en caché para uso offline
+      // Guardar localmente (SQLite) para uso offline
       if (_categorias.isNotEmpty) {
-        await _cacheService.guardarCategoriasEnCache(_categorias);
-        print('✅ CategoriasProvider: ${_categorias.length} categorías guardadas en caché');
+        await _catalogoLocal.guardarCategorias(_categorias);
+        print('✅ CategoriasProvider: ${_categorias.length} categorías guardadas localmente');
       }
       
       // Notificar cambios solo si no es modo silencioso
@@ -63,14 +63,14 @@ class CategoriasProvider with ChangeNotifier {
       
     } catch (e) {
       print('⚠️ CategoriasProvider: Error obteniendo del servidor: $e');
-      print('📦 CategoriasProvider: Cargando categorías del caché...');
+      print('📦 CategoriasProvider: Cargando categorías locales (SQLite)...');
       
       // Si falla, cargar del caché
       try {
-        _categorias = await _cacheService.obtenerCategoriasDelCache();
+        _categorias = await _catalogoLocal.obtenerCategorias();
         
         if (_categorias.isEmpty) {
-          print('❌ CategoriasProvider: No hay categorías en caché');
+          print('❌ CategoriasProvider: No hay categorías locales');
           loadedFromCache = false;
           if (!silent) {
             isLoading = false;
@@ -78,7 +78,7 @@ class CategoriasProvider with ChangeNotifier {
           }
           throw Exception('No hay categorías disponibles offline. Conecta para sincronizar.');
         } else {
-          print('✅ CategoriasProvider: ${_categorias.length} categorías cargadas del caché');
+          print('✅ CategoriasProvider: ${_categorias.length} categorías cargadas de SQLite');
           loadedFromCache = true; // Cargado del caché
           if (!silent) {
             isLoading = false;

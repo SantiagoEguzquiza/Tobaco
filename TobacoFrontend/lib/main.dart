@@ -47,11 +47,10 @@ void main() async {
         // 🗺️ Provider de Entregas y Mapas
         ChangeNotifierProvider(
           create: (ctx) => EntregasProvider(
-            entregasService: EntregasService(
-              connectivityService: ConnectivityService(),
-              databaseHelper: DatabaseHelper(),
-            ),
+            entregasService: EntregasService(),
             ubicacionService: UbicacionService(),
+            databaseHelper: DatabaseHelper(),
+            connectivityService: ConnectivityService(),
           ),
         ),
         // 🛣️ Provider de Recorridos Programados

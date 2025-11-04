@@ -11,6 +11,9 @@ import 'package:tobaco/Theme/theme_provider.dart';
 import 'package:tobaco/Theme/dialogs.dart';
 import 'package:tobaco/Services/Maps/directions_service.dart';
 import 'package:tobaco/Screens/Ventas/nuevaVenta_screen.dart';
+import 'package:tobaco/Screens/Ventas/detalleVentas_screen.dart';
+import 'package:tobaco/Services/Auth_Service/auth_provider.dart';
+import 'package:tobaco/Services/Ventas_Service/ventas_provider.dart';
 
 class MapaEntregasScreen extends StatefulWidget {
   const MapaEntregasScreen({super.key});
@@ -137,9 +140,9 @@ class _MapaEntregasScreenState extends State<MapaEntregasScreen> {
           );
         }
 
-        // Marcadores de entregas (ocultar completadas)
+        // Marcadores de entregas (mostrar todas: pendientes, parciales y completadas)
         for (var entrega in provider.entregas) {
-          if (entrega.tieneCoordenadasValidas && !entrega.estaCompletada) {
+          if (entrega.tieneCoordenadasValidas) {
             _markers.add(_crearMarcadorEntrega(entrega));
           }
         }
@@ -181,7 +184,11 @@ class _MapaEntregasScreenState extends State<MapaEntregasScreen> {
       icon: BitmapDescriptor.defaultMarkerWithHue(hue),
       infoWindow: InfoWindow(
         title: '$emoji ${entrega.nombreCliente}',
-        snippet: entrega.direccion,
+        snippet: entrega.estado == EstadoEntrega.parcial
+            ? '${entrega.direccion}\n⚠️ Parcialmente entregada'
+            : entrega.estado == EstadoEntrega.entregada
+                ? '${entrega.direccion}\n✅ Entregada'
+                : entrega.direccion,
       ),
       onTap: () => _mostrarDetalleEntrega(entrega),
     );
@@ -198,9 +205,10 @@ class _MapaEntregasScreenState extends State<MapaEntregasScreen> {
       provider.posicionActual!.longitude,
     ));
 
-    // Agregar entregas pendientes en orden
-    for (var entrega in provider.entregasPendientes) {
-      if (entrega.tieneCoordenadasValidas) {
+    // Agregar entregas pendientes y parciales en orden (no completadas)
+    for (var entrega in provider.entregas) {
+      if (entrega.tieneCoordenadasValidas && 
+          entrega.estado != EstadoEntrega.entregada) {
         puntos.add(LatLng(entrega.latitud!, entrega.longitud!));
       }
     }
@@ -819,6 +827,17 @@ class _DetalleEntregaSheetState extends State<_DetalleEntregaSheet> {
   @override
   Widget build(BuildContext context) {
     final provider = Provider.of<EntregasProvider>(context, listen: false);
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final usuario = authProvider.currentUser;
+    
+    // Determinar permisos según rol
+    // Admin tiene todos los permisos de Repartidor-Vendedor
+    final esAdmin = usuario?.isAdmin == true;
+    final puedeCrearVenta = esAdmin || usuario?.esVendedor == true || usuario?.esRepartidorVendedor == true;
+    // Vendedor puede marcar recorridos programados como visitados (no puede marcar entregas normales)
+    final puedeMarcarEntrega = esAdmin || usuario?.esRepartidor == true || usuario?.esRepartidorVendedor == true;
+    final puedeMarcarRecorrido = esAdmin || usuario?.esVendedor == true || usuario?.esRepartidorVendedor == true;
+    final esRecorridoProgramado = widget.entrega.ventaId == 0;
 
     return Container(
       padding: const EdgeInsets.all(24),
@@ -829,22 +848,67 @@ class _DetalleEntregaSheetState extends State<_DetalleEntregaSheet> {
           Row(
             children: [
               Icon(
-                widget.entrega.estaCompletada
+                widget.entrega.estado == EstadoEntrega.entregada
                     ? Icons.check_circle
-                    : Icons.pending,
-                color: widget.entrega.estaCompletada
+                    : widget.entrega.estado == EstadoEntrega.parcial
+                        ? Icons.warning
+                        : Icons.pending,
+                color: widget.entrega.estado == EstadoEntrega.entregada
                     ? AppTheme.primaryColor // Verde = primaryColor (success)
-                    : Colors.grey, // Gris para pendientes
+                    : widget.entrega.estado == EstadoEntrega.parcial
+                        ? Colors.orange // Naranja para parcial
+                        : Colors.grey, // Gris para pendientes
                 size: 32,
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: Text(
-                  widget.entrega.nombreCliente,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.entrega.nombreCliente,
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    if (esRecorridoProgramado)
+                      Container(
+                        margin: const EdgeInsets.only(top: 4),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.blue.withOpacity(0.3)),
+                        ),
+                        child: const Text(
+                          'Recorrido Programado',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.blue,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    if (!esRecorridoProgramado && widget.entrega.ventaId != null && widget.entrega.ventaId! > 0)
+                      Container(
+                        margin: const EdgeInsets.only(top: 4),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.green.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.green.withOpacity(0.3)),
+                        ),
+                        child: const Text(
+                          'Venta Asignada',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.green,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               ),
             ],
@@ -862,9 +926,15 @@ class _DetalleEntregaSheetState extends State<_DetalleEntregaSheet> {
               value: '${widget.entrega.distanciaDesdeUbicacionActual!.toStringAsFixed(2)} km',
             ),
           _DetalleItem(
-            icon: Icons.info,
+            icon: widget.entrega.estado == EstadoEntrega.parcial 
+                ? Icons.warning 
+                : widget.entrega.estado == EstadoEntrega.entregada
+                    ? Icons.check_circle
+                    : Icons.info,
             label: 'Estado',
-            value: widget.entrega.estado.displayName,
+            value: widget.entrega.estado == EstadoEntrega.parcial
+                ? 'Parcialmente Entregada (Pendiente)'
+                : widget.entrega.estado.displayName,
           ),
           const SizedBox(height: 16),
           const Text(
@@ -892,9 +962,67 @@ class _DetalleEntregaSheetState extends State<_DetalleEntregaSheet> {
             ),
           ),
           const SizedBox(height: 16),
-          if (!widget.entrega.estaCompletada) ...[
-            // Botón para RepartidorVendedor: crear venta desde recorrido
-            if (widget.entrega.ventaId == 0)
+          // Botón para ver detalles de venta si es una entrega de venta
+          if (!esRecorridoProgramado && widget.entrega.ventaId != null && widget.entrega.ventaId! > 0)
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () async {
+                  try {
+                    // Obtener la venta por ID
+                    final ventasProvider = Provider.of<VentasProvider>(context, listen: false);
+                    final venta = await ventasProvider.obtenerVentaPorId(widget.entrega.ventaId!);
+                    
+                    if (mounted && venta != null) {
+                      Navigator.pop(context); // Cerrar el sheet del mapa primero
+                      
+                      // Navegar al detalle de venta y esperar a que regrese
+                      await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => DetalleVentaScreen(venta: venta),
+                        ),
+                      );
+                      
+                      // Al volver, refrescar las entregas para actualizar el estado
+                      if (mounted) {
+                        final entregasProvider = Provider.of<EntregasProvider>(context, listen: false);
+                        await entregasProvider.refrescar();
+                      }
+                    } else {
+                      if (mounted) {
+                        AppTheme.showSnackBar(
+                          context,
+                          AppTheme.errorSnackBar('No se pudo cargar la venta'),
+                        );
+                      }
+                    }
+                  } catch (e) {
+                    if (mounted) {
+                      AppTheme.showSnackBar(
+                        context,
+                        AppTheme.errorSnackBar('Error al cargar la venta: $e'),
+                      );
+                    }
+                  }
+                },
+                icon: const Icon(Icons.receipt_long),
+                label: const Text('Ver Detalles de la Venta'),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.all(16),
+                  backgroundColor: Colors.green,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ),
+          // Mostrar botones solo si no está completamente entregada
+          // Las entregas parciales pueden seguir siendo editadas
+          if (widget.entrega.estado != EstadoEntrega.entregada) ...[
+            // Espaciado si hay botón de ver detalles de venta
+            if (!esRecorridoProgramado && widget.entrega.ventaId != null && widget.entrega.ventaId! > 0)
+              const SizedBox(height: 8),
+            // Botón para crear venta desde recorrido (solo Vendedor y Repartidor-Vendedor)
+            if (esRecorridoProgramado && puedeCrearVenta)
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
@@ -919,46 +1047,90 @@ class _DetalleEntregaSheetState extends State<_DetalleEntregaSheet> {
                   ),
                 ),
               ),
-            const SizedBox(height: 8),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () async {
-                  final confirmar = await AppDialogs.showConfirmationDialog(
-                    context: context,
-                    title: 'Confirmar Entrega',
-                    message: '¿Confirmar que la entrega fue completada?',
-                    confirmText: 'Confirmar',
-                    cancelText: 'Cancelar',
-                    icon: Icons.check_circle,
-                    iconColor: AppTheme.primaryColor,
-                  );
+            // Botón para marcar como entregado/visitado
+            // - Para entregas de venta: navegar al detalle de la venta (no marcar desde aquí)
+            // - Para recorridos programados: marcar como visitado desde el mapa
+            Builder(
+              builder: (context) {
+                // Si es una entrega de venta (no recorrido programado), no mostrar botón de marcar
+                // porque debe ir al detalle de la venta
+                if (!esRecorridoProgramado && widget.entrega.ventaId != null && widget.entrega.ventaId! > 0) {
+                  return const SizedBox.shrink(); // No mostrar botón, ya está el botón de ver detalles
+                }
+                
+                // Solo para recorridos programados
+                final puedeMarcarEstaEntrega = esRecorridoProgramado && puedeMarcarRecorrido;
+                
+                if (!puedeMarcarEstaEntrega) return const SizedBox.shrink();
+                
+                return Column(
+                  children: [
+                    if (esRecorridoProgramado && puedeCrearVenta) const SizedBox(height: 8),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: () async {
+                          final confirmar = await AppDialogs.showConfirmationDialog(
+                            context: context,
+                            title: 'Confirmar Visita',
+                            message: '¿Confirmar que ya visitaste esta sucursal?',
+                            confirmText: 'Confirmar',
+                            cancelText: 'Cancelar',
+                            icon: Icons.check_circle,
+                            iconColor: AppTheme.primaryColor,
+                          );
 
-                  if (confirmar == true && mounted) {
-                    final exito = await provider.marcarComoEntregada(
-                      widget.entrega.id!,
-                      notas: _notasController.text.isNotEmpty
-                          ? _notasController.text
-                          : null,
-                    );
+                          if (confirmar == true && mounted) {
+                            try {
+                              final exito = await provider.marcarComoEntregada(
+                                widget.entrega.id!,
+                                notas: _notasController.text.isNotEmpty
+                                    ? _notasController.text
+                                    : null,
+                              );
 
-                    if (exito && mounted) {
-                      Navigator.pop(context);
-                      AppTheme.showSnackBar(
-                        context,
-                        AppTheme.successSnackBar('Entrega marcada como completada'),
-                      );
-                    }
-                  }
-                },
-                icon: const Icon(Icons.check),
-                label: const Text('Marcar como Entregado'),
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.all(16),
-                  backgroundColor: AppTheme.primaryColor, // Verde = primaryColor (success)
-                  foregroundColor: Colors.white,
-                ),
-              ),
+                              if (mounted) {
+                                if (exito) {
+                                  Navigator.pop(context);
+                                  AppTheme.showSnackBar(
+                                    context,
+                                    AppTheme.successSnackBar(
+                                      esRecorridoProgramado
+                                          ? 'Visita registrada correctamente'
+                                          : 'Entrega marcada como completada'
+                                    ),
+                                  );
+                                } else {
+                                  AppTheme.showSnackBar(
+                                    context,
+                                    AppTheme.errorSnackBar('Error al marcar como completada. Intenta nuevamente.'),
+                                  );
+                                }
+                              }
+                            } catch (e) {
+                              if (mounted) {
+                                AppTheme.showSnackBar(
+                                  context,
+                                  AppTheme.errorSnackBar('Error: $e'),
+                                );
+                              }
+                            }
+                          }
+                        },
+                        icon: Icon(esRecorridoProgramado ? Icons.place : Icons.check),
+                        label: Text(esRecorridoProgramado 
+                            ? 'Marcar como Visitado' 
+                            : 'Marcar como Entregado'),
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.all(16),
+                          backgroundColor: AppTheme.primaryColor,
+                          foregroundColor: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
           ],
           if (_notasController.text.isNotEmpty &&

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import '../../Models/Ventas.dart';
@@ -507,6 +508,32 @@ class DatabaseHelper {
     return deleted;
   }
 
+  /// Borra TODAS las ventas del caché SQLite (incluyendo productos y pagos)
+  Future<void> borrarTodasLasVentas() async {
+    final db = await database;
+    
+    try {
+      await db.transaction((txn) async {
+        // Borrar productos (se borran automáticamente por CASCADE, pero lo hacemos explícito)
+        final productosBorrados = await txn.delete(_productosTable);
+        debugPrint('🗑️ DatabaseHelper: $productosBorrados productos borrados');
+        
+        // Borrar pagos (se borran automáticamente por CASCADE, pero lo hacemos explícito)
+        final pagosBorrados = await txn.delete(_pagosTable);
+        debugPrint('🗑️ DatabaseHelper: $pagosBorrados pagos borrados');
+        
+        // Borrar todas las ventas
+        final ventasBorradas = await txn.delete(_ventasTable);
+        debugPrint('🗑️ DatabaseHelper: $ventasBorradas ventas borradas');
+      });
+      
+      debugPrint('✅ DatabaseHelper: Todas las ventas borradas del caché SQLite');
+    } catch (e) {
+      debugPrint('❌ DatabaseHelper: Error al borrar ventas: $e');
+      rethrow;
+    }
+  }
+
   /// Obtiene estadísticas de la base de datos offline
   Future<Map<String, int>> getStats() async {
     final db = await database;
@@ -591,72 +618,68 @@ class DatabaseHelper {
 
   /// Inserta o actualiza una entrega en la base de datos local
   /// Preserva el estado local si la entrega ya fue marcada como completada
-  /// IMPORTANTE: Solo preserva el estado si pertenece al mismo repartidor
+  /// IMPORTANTE: Si la entrega que se pasa ya tiene estado completado, preserva ese estado
   Future<void> insertarEntrega(Entrega entrega) async {
     final db = await database;
     final now = DateTime.now().toIso8601String();
 
-    // Verificar si la entrega ya existe y tiene estado completada localmente
+    // Verificar si la entrega ya existe
     final entregaExistente = await obtenerEntregaPorId(entrega.id!);
     
-    // Si existe, está completada localmente Y pertenece al mismo repartidor, preservar ese estado
-    if (entregaExistente != null && 
-        entregaExistente.estaCompletada && 
-        entregaExistente.repartidorId == entrega.repartidorId) {
-      await db.insert(
-        _entregasTable,
-        {
-          'id': entrega.id,
-          'venta_id': entrega.ventaId,
-          'cliente_id': entrega.clienteId,
-          'cliente_nombre': entrega.cliente.nombre,
-          'cliente_direccion': entrega.cliente.direccion,
-          'latitud': entrega.latitud,
-          'longitud': entrega.longitud,
-          'estado': entregaExistente.estado.toJson(), // Preservar estado local
-          'fecha_asignacion': entrega.fechaAsignacion.toIso8601String(),
-          'fecha_entrega': entregaExistente.fechaEntrega?.toIso8601String(), // Preservar fecha entrega
-          'repartidor_id': entrega.repartidorId,
-          'orden': entrega.orden,
-          'notas': entregaExistente.notas ?? entrega.notas, // Preservar notas
-          'distancia_desde_ubicacion_actual': entrega.distanciaDesdeUbicacionActual,
-          'sync_status': 'synced',
-          'pendiente_sincronizar': 0,
-          'created_at': now,
-          'updated_at': now,
-        },
-        conflictAlgorithm: ConflictAlgorithm.replace,
-      );
-    } else {
-      // Si no existe, no está completada, o pertenece a otro repartidor, usar el estado del servidor
-      await db.insert(
-        _entregasTable,
-        {
-          'id': entrega.id,
-          'venta_id': entrega.ventaId,
-          'cliente_id': entrega.clienteId,
-          'cliente_nombre': entrega.cliente.nombre,
-          'cliente_direccion': entrega.cliente.direccion,
-          'latitud': entrega.latitud,
-          'longitud': entrega.longitud,
-          'estado': entrega.estado.toJson(),
-          'fecha_asignacion': entrega.fechaAsignacion.toIso8601String(),
-          'fecha_entrega': entrega.fechaEntrega?.toIso8601String(),
-          'repartidor_id': entrega.repartidorId,
-          'orden': entrega.orden,
-          'notas': entrega.notas,
-          'distancia_desde_ubicacion_actual': entrega.distanciaDesdeUbicacionActual,
-          'sync_status': 'synced',
-          'pendiente_sincronizar': 0,
-          'created_at': now,
-          'updated_at': now,
-        },
-        conflictAlgorithm: ConflictAlgorithm.replace,
-      );
-    }
+    // Determinar qué estado usar:
+    // 1. Si la entrega que viene YA está completada, usar ese estado (fue preservado en el provider)
+    // 2. Si existe localmente y está completada, preservar ese estado
+    // 3. Si no existe o está pendiente, usar el estado de la entrega que viene
+    final estadoFinal = entrega.estaCompletada 
+        ? entrega.estado 
+        : (entregaExistente?.estaCompletada == true 
+            ? entregaExistente!.estado 
+            : entrega.estado);
+    
+    final fechaEntregaFinal = entrega.estaCompletada && entrega.fechaEntrega != null
+        ? entrega.fechaEntrega
+        : (entregaExistente?.estaCompletada == true && entregaExistente?.fechaEntrega != null
+            ? entregaExistente!.fechaEntrega
+            : entrega.fechaEntrega);
+    
+    final notasFinales = entrega.estaCompletada && entrega.notas != null
+        ? entrega.notas
+        : (entregaExistente?.estaCompletada == true && entregaExistente?.notas != null
+            ? entregaExistente!.notas
+            : entrega.notas);
+    
+    await db.insert(
+      _entregasTable,
+      {
+        'id': entrega.id,
+        'venta_id': entrega.ventaId,
+        'cliente_id': entrega.clienteId,
+        'cliente_nombre': entrega.cliente.nombre,
+        'cliente_direccion': entrega.cliente.direccion,
+        'latitud': entrega.latitud,
+        'longitud': entrega.longitud,
+        'estado': estadoFinal.toJson(),
+        'fecha_asignacion': entrega.fechaAsignacion.toIso8601String(),
+        'fecha_entrega': fechaEntregaFinal?.toIso8601String(),
+        'repartidor_id': entrega.repartidorId,
+        'orden': entrega.orden,
+        'notas': notasFinales,
+        'distancia_desde_ubicacion_actual': entrega.distanciaDesdeUbicacionActual,
+        'sync_status': entrega.estaCompletada && entregaExistente?.estaCompletada != true 
+            ? 'pending' 
+            : 'synced',
+        'pendiente_sincronizar': entrega.estaCompletada && entregaExistente?.estaCompletada != true 
+            ? 1 
+            : 0,
+        'created_at': entregaExistente != null ? now : now,
+        'updated_at': now,
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
   }
 
   /// Obtiene las entregas del día actual
+  /// Incluye entregas asignadas hoy Y entregas completadas hoy (por fecha de entrega)
   /// [repartidorId] Si se proporciona, filtra las entregas por repartidor
   Future<List<Entrega>> obtenerEntregasDelDia({int? repartidorId}) async {
     final db = await database;
@@ -664,12 +687,15 @@ class DatabaseHelper {
     final inicioDelDia = DateTime(hoy.year, hoy.month, hoy.day).toIso8601String();
     final finDelDia = DateTime(hoy.year, hoy.month, hoy.day, 23, 59, 59).toIso8601String();
 
-    String whereClause = 'fecha_asignacion >= ? AND fecha_asignacion <= ?';
-    List<dynamic> whereArgs = [inicioDelDia, finDelDia];
+    // Consulta que incluye:
+    // 1. Entregas asignadas hoy (sin importar si están completadas o no)
+    // 2. Entregas completadas hoy (por fecha de entrega)
+    String whereClause = '(fecha_asignacion >= ? AND fecha_asignacion <= ?) OR (fecha_entrega >= ? AND fecha_entrega <= ?)';
+    List<dynamic> whereArgs = [inicioDelDia, finDelDia, inicioDelDia, finDelDia];
     
     // Si se especifica un repartidor, filtrar por él
     if (repartidorId != null) {
-      whereClause += ' AND repartidor_id = ?';
+      whereClause = '($whereClause) AND repartidor_id = ?';
       whereArgs.add(repartidorId);
     }
 

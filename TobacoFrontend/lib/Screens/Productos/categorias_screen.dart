@@ -337,7 +337,7 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
                       backgroundColor: AppTheme.primaryColor,
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(15),
                       ),
                       padding: const EdgeInsets.symmetric(
                         horizontal: 24, 
@@ -454,3 +454,4 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
     }
   }
 }
+

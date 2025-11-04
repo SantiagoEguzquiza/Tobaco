@@ -23,6 +23,7 @@ class RecorridosProgramadosScreen extends StatefulWidget {
 class _RecorridosProgramadosScreenState extends State<RecorridosProgramadosScreen> {
   List<User> _vendedores = [];
   User? _vendedorSeleccionado;
+  bool _isLoading = true;
 
   @override
   void initState() {
@@ -35,12 +36,19 @@ class _RecorridosProgramadosScreenState extends State<RecorridosProgramadosScree
   Future<void> _cargarDatos() async {
     if (!mounted) return;
 
+    setState(() {
+      _isLoading = true;
+    });
+
     try {
       // Obtener usuario actual
       final usuarioActual = await AuthService.getCurrentUser();
       
       if (usuarioActual == null) {
         if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
           AppTheme.showSnackBar(
             context,
             AppTheme.errorSnackBar('No se pudo obtener el usuario actual'),
@@ -60,6 +68,7 @@ class _RecorridosProgramadosScreenState extends State<RecorridosProgramadosScree
           setState(() {
             // Incluir empleados y administradores activos
             _vendedores = userProvider.users.where((u) => (u.isEmployee || u.isAdmin) && u.isActive).toList();
+            _isLoading = false;
           });
           
           if (_vendedores.isNotEmpty) {
@@ -70,6 +79,9 @@ class _RecorridosProgramadosScreenState extends State<RecorridosProgramadosScree
           }
         } catch (e) {
           if (!mounted) return;
+          setState(() {
+            _isLoading = false;
+          });
           if (Apihandler.isConnectionError(e)) {
             await Apihandler.handleConnectionError(context, e);
           } else {
@@ -84,11 +96,15 @@ class _RecorridosProgramadosScreenState extends State<RecorridosProgramadosScree
         setState(() {
           _vendedores = [usuarioActual];
           _vendedorSeleccionado = usuarioActual;
+          _isLoading = false;
         });
         await _cargarRecorridos();
       }
     } catch (e) {
       if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+      });
       if (Apihandler.isConnectionError(e)) {
         await Apihandler.handleConnectionError(context, e);
       } else {
@@ -108,6 +124,7 @@ class _RecorridosProgramadosScreenState extends State<RecorridosProgramadosScree
       await provider.obtenerRecorridosPorVendedor(_vendedorSeleccionado!.id);
     } catch (e) {
       if (!mounted) return;
+      // Manejar errores de conexión con el diálogo
       if (Apihandler.isConnectionError(e)) {
         await Apihandler.handleConnectionError(context, e);
       } else {
@@ -170,7 +187,10 @@ class _RecorridosProgramadosScreenState extends State<RecorridosProgramadosScree
         );
       }
     } catch (e) {
-      if (mounted) {
+      if (!mounted) return;
+      if (Apihandler.isConnectionError(e)) {
+        await Apihandler.handleConnectionError(context, e);
+      } else {
         AppTheme.showSnackBar(
           context,
           AppTheme.errorSnackBar('Error al agregar recorrido: $e'),
@@ -200,7 +220,10 @@ class _RecorridosProgramadosScreenState extends State<RecorridosProgramadosScree
         );
       }
     } catch (e) {
-      if (mounted) {
+      if (!mounted) return;
+      if (Apihandler.isConnectionError(e)) {
+        await Apihandler.handleConnectionError(context, e);
+      } else {
         AppTheme.showSnackBar(
           context,
           AppTheme.errorSnackBar('Error al eliminar recorrido: $e'),
@@ -235,7 +258,10 @@ class _RecorridosProgramadosScreenState extends State<RecorridosProgramadosScree
         );
       }
     } catch (e) {
-      if (mounted) {
+      if (!mounted) return;
+      if (Apihandler.isConnectionError(e)) {
+        await Apihandler.handleConnectionError(context, e);
+      } else {
         AppTheme.showSnackBar(
           context,
           AppTheme.errorSnackBar('Error al cambiar día: $e'),
@@ -267,7 +293,10 @@ class _RecorridosProgramadosScreenState extends State<RecorridosProgramadosScree
       );
       await _cargarRecorridos();
     } catch (e) {
-      if (mounted) {
+      if (!mounted) return;
+      if (Apihandler.isConnectionError(e)) {
+        await Apihandler.handleConnectionError(context, e);
+      } else {
         AppTheme.showSnackBar(
           context,
           AppTheme.errorSnackBar('Error al reordenar: $e'),
@@ -305,17 +334,17 @@ class _RecorridosProgramadosScreenState extends State<RecorridosProgramadosScree
                 ),
             ],
           ),
-          body: provider.isLoading && provider.recorridos.isEmpty
+          body: _isLoading || provider.isLoading
               ? Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       CircularProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
+                        color: AppTheme.primaryColor,
                       ),
                       const SizedBox(height: 16),
                       Text(
-                        'Cargando recorridos...',
+                        _isLoading ? 'Cargando vendedores...' : 'Cargando recorridos...',
                         style: TextStyle(
                           color: Colors.grey.shade600,
                           fontSize: 16,

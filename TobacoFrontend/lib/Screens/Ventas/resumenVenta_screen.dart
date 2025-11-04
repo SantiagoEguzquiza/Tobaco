@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:tobaco/Models/Ventas.dart';
 import 'package:tobaco/Models/metodoPago.dart';
@@ -32,24 +33,52 @@ class _ResumenVentaScreenState extends State<ResumenVentaScreen> {
   void initState() {
     super.initState();
     
-    // Si se pasó una venta CON ID, intentar cargarla del servidor para obtener todos los datos
-    if (widget.venta != null && widget.venta!.id != null) {
-      _cargarVentaPorId(widget.venta!.id!);
-    } 
-    // Si se pasó una venta SIN ID (offline), usar esa venta directamente sin intentar cargar del servidor
-    else if (widget.venta != null) {
-      // Venta offline, no intentar cargar del servidor
+    // Si se pasó una venta como parámetro, usarla directamente (especialmente si es offline)
+    if (widget.venta != null) {
+      // Si la venta NO tiene ID, es una venta offline recién creada - usar directamente
+      if (widget.venta!.id == null) {
+        setState(() {
+          venta = widget.venta;
+          isLoading = false;
+        });
+        return; // No intentar cargar del servidor
+      }
+      
+      // Si tiene ID pero es un ID local (empieza con "servidor_"), también es offline
+      // Usar la venta directamente y opcionalmente intentar cargar del servidor en background
       setState(() {
         venta = widget.venta;
         isLoading = false;
       });
+      
+      // Intentar cargar del servidor en background solo si tiene ID numérico válido
+      // Pero no bloquear la UI
+      _cargarVentaPorIdEnBackground(widget.venta!.id!);
     } else {
-      // Si no, intentar obtener la última venta del servidor
+      // Si no hay venta pasada, intentar obtener la última venta del servidor
       _cargarUltimaVenta();
     }
-    // Asignar venta si viene por parámetro y cargar última venta del cliente
-    venta = widget.venta;
-    _cargarUltimaVenta();
+  }
+
+  /// Carga la venta del servidor en background sin bloquear la UI
+  Future<void> _cargarVentaPorIdEnBackground(int id) async {
+    try {
+      final ventaCargada = await _ventasService.obtenerVentaPorId(id)
+          .timeout(const Duration(seconds: 3));
+      
+      if (!mounted) return;
+      
+      setState(() {
+        venta = ventaCargada;
+        ventaCargadaBD = ventaCargada;
+      });
+    } on TimeoutException {
+      // Si timeout, mantener la venta local sin error visible
+      debugPrint('⚠️ Timeout al cargar venta del servidor en background, usando venta local');
+    } catch (e) {
+      // Silenciar error, mantener la venta local
+      debugPrint('⚠️ No se pudo cargar venta del servidor en background: $e');
+    }
   }
 
   Future<void> _cargarVentaPorId(int id) async {
