@@ -293,14 +293,7 @@ class _NuevoProductoScreenState extends State<NuevoProductoScreen> {
                   title: 'Precios por Cantidad (Packs)',
                   icon: Icons.local_offer_outlined,
                   children: [
-                    QuantityPriceWidget(
-                      quantityPrices: quantityPrices,
-                      onChanged: (prices) {
-                        setState(() {
-                          quantityPrices = prices;
-                        });
-                      },
-                    ),
+                    _buildQuantityPricesSection(isDark),
                   ],
                 ),
                 
@@ -490,6 +483,331 @@ class _NuevoProductoScreenState extends State<NuevoProductoScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Future<void> _removeQuantityPrice(int index) async {
+    if (index < 0 || index >= quantityPrices.length) return;
+    
+    final qp = quantityPrices[index];
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+          title: Text(
+            'Eliminar Pack',
+            style: TextStyle(
+              color: isDark ? Colors.white : Colors.black87,
+            ),
+          ),
+          content: Text(
+            '¿Estás seguro de que deseas eliminar el pack de ${qp.quantity} unidades?',
+            style: TextStyle(
+              color: isDark ? Colors.grey.shade300 : Colors.grey.shade700,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: Text(
+                'Cancelar',
+                style: TextStyle(
+                  color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.red,
+              ),
+              child: const Text('Eliminar'),
+            ),
+          ],
+        );
+      },
+    );
+    
+    if (confirmed == true && mounted) {
+      setState(() {
+        quantityPrices.removeAt(index);
+      });
+    }
+  }
+
+  Widget _buildQuantityPricesSection(bool isDark) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (quantityPrices.isEmpty)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: Text(
+              'No hay packs configurados. El producto se venderá solo por unidad.',
+              style: TextStyle(
+                fontSize: 13,
+                color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+              ),
+            ),
+          )
+        else
+          Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Packs configurados:',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: isDark ? Colors.white : Colors.black87,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                ...quantityPrices.asMap().entries.map((entry) {
+                  final index = entry.key;
+                  final qp = entry.value;
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF2A2A2A) : Colors.grey.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: isDark ? const Color(0xFF404040) : Colors.grey.shade300,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.primaryColor.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  '${qp.quantity} unidades',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppTheme.primaryColor,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Total: \$${qp.totalPrice.toStringAsFixed(2)}',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w500,
+                                        color: isDark ? Colors.white : Colors.black87,
+                                      ),
+                                    ),
+                                    Text(
+                                      'Unitario: \$${qp.unitPrice.toStringAsFixed(2)}',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        IconButton(
+                          icon: Icon(
+                            Icons.delete_outline,
+                            color: Colors.red.shade400,
+                            size: 22,
+                          ),
+                          onPressed: () => _removeQuantityPrice(index),
+                          tooltip: 'Eliminar pack',
+                          padding: const EdgeInsets.all(8),
+                          constraints: const BoxConstraints(),
+                        ),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              ],
+            ),
+          ),
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: () => _showQuantityPricesDialog(isDark),
+            icon: const Icon(Icons.edit_outlined, size: 20),
+            label: Text(
+              quantityPrices.isEmpty 
+                  ? 'Configurar Precios por Cantidad' 
+                  : 'Agregar Precios por Cantidad',
+            ),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppTheme.primaryColor,
+              side: BorderSide(color: AppTheme.primaryColor),
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _showQuantityPricesDialog(bool isDark) async {
+    final List<ProductQuantityPrice> tempPrices = List.from(quantityPrices);
+    
+    await showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return Dialog(
+              backgroundColor: Colors.transparent,
+              insetPadding: const EdgeInsets.all(16),
+              child: Container(
+                constraints: const BoxConstraints(maxHeight: 600),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.3),
+                      blurRadius: 20,
+                      offset: const Offset(0, 10),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Header
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primaryColor,
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(20),
+                          topRight: Radius.circular(20),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(
+                              Icons.local_offer_outlined,
+                              color: Colors.white,
+                              size: 24,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          const Expanded(
+                            child: Text(
+                              'Precios por Cantidad (Packs)',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close, color: Colors.white),
+                            onPressed: () => Navigator.of(dialogContext).pop(),
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Content
+                    Flexible(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.all(20),
+                        child: QuantityPriceWidget(
+                          quantityPrices: tempPrices,
+                          onChanged: (prices) {
+                            setDialogState(() {
+                              tempPrices.clear();
+                              tempPrices.addAll(prices);
+                            });
+                          },
+                        ),
+                      ),
+                    ),
+                    // Footer
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        border: Border(
+                          top: BorderSide(
+                            color: isDark ? const Color(0xFF404040) : Colors.grey.shade300,
+                          ),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          TextButton(
+                            onPressed: () => Navigator.of(dialogContext).pop(),
+                            child: Text(
+                              'Cancelar',
+                              style: TextStyle(
+                                color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          ElevatedButton(
+                            onPressed: () {
+                              setState(() {
+                                quantityPrices = List.from(tempPrices);
+                              });
+                              Navigator.of(dialogContext).pop();
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.primaryColor,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                                vertical: 12,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: const Text('Guardar'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 

@@ -10,10 +10,10 @@ import 'package:tobaco/Screens/Productos/editarProducto_screen.dart';
 import 'package:tobaco/Screens/Productos/nuevoProducto_screen.dart';
 import 'package:tobaco/Services/Categoria_Service/categoria_provider.dart';
 import 'package:tobaco/Services/Productos_Service/productos_provider.dart';
-import 'package:tobaco/Theme/app_theme.dart'; // Importa el tema
-import 'package:tobaco/Theme/dialogs.dart'; // Importa los diálogos centralizados
+import 'package:tobaco/Theme/app_theme.dart'; 
+import 'package:tobaco/Theme/dialogs.dart'; 
 import 'package:tobaco/Theme/headers.dart';
-import 'package:tobaco/Helpers/api_handler.dart'; // Importa el manejador de errores de API
+import 'package:tobaco/Helpers/api_handler.dart'; 
 
 class ProductosScreen extends StatefulWidget {
   const ProductosScreen({super.key});
