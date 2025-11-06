@@ -10,12 +10,10 @@ import 'package:tobaco/Screens/Productos/editarProducto_screen.dart';
 import 'package:tobaco/Screens/Productos/nuevoProducto_screen.dart';
 import 'package:tobaco/Services/Categoria_Service/categoria_provider.dart';
 import 'package:tobaco/Services/Productos_Service/productos_provider.dart';
-import 'package:tobaco/Services/Cache/datos_cache_service.dart';
 import 'package:tobaco/Theme/app_theme.dart'; // Importa el tema
 import 'package:tobaco/Theme/dialogs.dart'; // Importa los diálogos centralizados
 import 'package:tobaco/Theme/headers.dart';
 import 'package:tobaco/Helpers/api_handler.dart'; // Importa el manejador de errores de API
-import 'dart:developer';
 
 class ProductosScreen extends StatefulWidget {
   const ProductosScreen({super.key});
@@ -25,23 +23,14 @@ class ProductosScreen extends StatefulWidget {
 }
 
 class _ProductosScreenState extends State<ProductosScreen> {
-  bool isLoading = true;
-  String searchQuery = '';
-  String? selectedCategory; // Nombre de la categoría seleccionada
-  String? errorMessage;
-  List<Producto> productos = [];
-  List<Categoria> categorias = [];
   final TextEditingController _searchController = TextEditingController();
   bool _offlineMessageShown = false; // Para mostrar el mensaje solo la primera vez
 
-  // Variables para infinite scroll
-  bool _isLoadingMore = false;
-  bool _hasMoreData = true;
-  int _currentPage = 1;
-  final int _pageSize = 20;
-  
   // ScrollController para detectar cuando llegar al final
   final ScrollController _scrollController = ScrollController();
+  
+  // ScrollController para el ListView horizontal de categorías
+  final ScrollController _categoriesScrollController = ScrollController();
 
   // Helper method to safely parse color hex
   Color _parseColor(String colorHex) {
@@ -58,203 +47,117 @@ class _ProductosScreenState extends State<ProductosScreen> {
   @override
   void initState() {
     super.initState();
-    _loadProductos();
     _scrollController.addListener(_onScroll);
+    // Cargar productos iniciales usando el Provider
+    Future.microtask(() {
+      final productoProvider = context.read<ProductoProvider>();
+      final categoriasProvider = context.read<CategoriasProvider>();
+      productoProvider.cargarProductosInicial(categoriasProvider).then((_) {
+        // Verificar si hay que mostrar mensaje offline
+        if (productoProvider.isOffline && !_offlineMessageShown && mounted) {
+          _offlineMessageShown = true;
+          AppTheme.showSnackBar(
+            context,
+            AppTheme.warningSnackBar('Modo Offline Activado'),
+          );
+        }
+      }).catchError((e) {
+        // Manejar errores
+        if (mounted) {
+          if (Apihandler.isConnectionError(e)) {
+            AppTheme.showSnackBar(
+              context,
+              AppTheme.warningSnackBar('Sin conexión. Verifica tu conexión a internet.'),
+            );
+          } else {
+            AppDialogs.showErrorDialog(
+              context: context,
+              message: 'Error al cargar productos',
+            );
+          }
+        }
+      });
+    });
   }
 
   @override
   void dispose() {
     _scrollController.dispose();
+    _categoriesScrollController.dispose();
     _searchController.dispose();
     super.dispose();
   }
 
   void _onScroll() {
-    if (_scrollController.position.pixels >= 
+    if (_scrollController.position.pixels >=
         _scrollController.position.maxScrollExtent - 200) {
-      _cargarMasProductos();
-    }
-  }
-
-  
-  Future<void> _loadProductos() async {
-    if (!mounted) return;
-    
-    setState(() {
-      isLoading = true;
-      errorMessage = null;
-      _currentPage = 1;
-      productos.clear();
-      _hasMoreData = true;
-    });
-
-    try {
-      // Usar los providers del contexto en lugar de crear nuevas instancias
-      final productoProvider =
-          Provider.of<ProductoProvider>(context, listen: false);
-      final categoriasProvider =
-          Provider.of<CategoriasProvider>(context, listen: false);
-
-      // Obtener categorías y productos en paralelo
-      final futures = await Future.wait([
-        categoriasProvider.obtenerCategorias(silent: true),
-        productoProvider.obtenerProductosPaginados(_currentPage, _pageSize),
-      ]);
-
-      final categoriasData = futures[0] as List<Categoria>;
-      final productosData = futures[1] as Map<String, dynamic>;
-
-      if (!mounted) return;
-      
-      setState(() {
-        productos = List<Producto>.from(productosData['productos']);
-        categorias = categoriasData;
-        _hasMoreData = productosData['hasNextPage'] ?? false;
-        isLoading = false;
-        
-        // Seleccionar la primera categoría por defecto si no hay ninguna seleccionada
-        if (selectedCategory == null && categoriasData.isNotEmpty) {
-          selectedCategory = categoriasData.first.nombre;
-        }
-      });
-      
-      // Verificar si los datos vienen del caché (el provider ya los carga, solo verificamos)
-      // Si categorías vienen del caché, es probable que productos también
-      if (categoriasProvider.loadedFromCache && productos.isNotEmpty && !_offlineMessageShown) {
-        _offlineMessageShown = true;
-        Future.microtask(() {
+      final productoProvider = context.read<ProductoProvider>();
+      if (!productoProvider.isLoadingMore && productoProvider.hasMoreData) {
+        productoProvider.cargarMasProductos().catchError((e) {
           if (mounted) {
-            AppTheme.showSnackBar(
-              context,
-              AppTheme.warningSnackBar('Modo Offline Activado'),
-            );
+            if (Apihandler.isConnectionError(e)) {
+              Apihandler.handleConnectionError(context, e);
+            } else {
+              AppDialogs.showErrorDialog(
+                context: context,
+                message: 'Error al cargar más productos',
+              );
+            }
           }
         });
       }
-
-    } catch (e) {
-      if (!mounted) return;
-      
-      log('Error al cargar los Productos: $e', level: 1000);
-      
-      // Verificar si hay datos del caché disponibles
-      if (Apihandler.isConnectionError(e)) {
-        try {
-          // Intentar obtener del caché directamente
-          final cacheService = DatosCacheService();
-          final productosCache = await cacheService.obtenerProductosDelCache();
-          
-          if (productosCache.isNotEmpty) {
-            // Hay datos en caché, cargarlos manualmente
-            final start = (_currentPage - 1) * _pageSize;
-            final end = start + _pageSize;
-            final productosPag = productosCache.sublist(
-              start,
-              end > productosCache.length ? productosCache.length : end,
-            );
-            
-            setState(() {
-              productos = productosPag;
-              _hasMoreData = end < productosCache.length;
-              isLoading = false;
-            });
-            
-            // Mostrar mensaje de modo offline solo la primera vez
-            if (!_offlineMessageShown) {
-              _offlineMessageShown = true;
-              AppTheme.showSnackBar(
-                context,
-                AppTheme.warningSnackBar('Modo Offline Activado'),
-              );
-            }
-            return;
-          }
-        } catch (cacheError) {
-          // Si falla el caché, continuar con el error normal
-        }
-      }
-      
-      setState(() {
-        isLoading = false;
-      });
-      
-      // Si es error de conexión, intentar mostrar mensaje apropiado
-      if (Apihandler.isConnectionError(e)) {
-        // Intentar cargar del caché ya fue hecho por el provider
-        // Solo mostrar mensaje si realmente no hay datos
-        AppTheme.showSnackBar(
-          context,
-          AppTheme.warningSnackBar('Sin conexión. Verifica tu conexión a internet.'),
-        );
-      } else {
-        await AppDialogs.showErrorDialog(
-          context: context,
-          message: 'Error al cargar productos',
-        );
-      }
     }
   }
 
-  Future<void> _cargarMasProductos() async {
-    if (_isLoadingMore || !_hasMoreData || !mounted) return;
+  void _centerCategoryButton(int index, List<Categoria> categorias) {
+    if (!_categoriesScrollController.hasClients || !mounted) return;
     
-    setState(() {
-      _isLoadingMore = true;
-    });
-
-    try {
-      final productoProvider =
-          Provider.of<ProductoProvider>(context, listen: false);
+    // Esperar un frame para que el widget se construya
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_categoriesScrollController.hasClients || !mounted) return;
       
-      final data = await productoProvider.obtenerProductosPaginados(_currentPage + 1, _pageSize);
-      if (!mounted) return;
+      // Obtener el ancho de la pantalla
+      final screenWidth = MediaQuery.of(context).size.width;
       
-      setState(() {
-        productos.addAll(List<Producto>.from(data['productos']));
-        _currentPage++;
-        _hasMoreData = data['hasNextPage'];
-        _isLoadingMore = false;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      
-      setState(() {
-        _isLoadingMore = false;
-      });
-      log('Error al cargar más productos: $e', level: 1000);
-      
-      // Mostrar diálogo de error
-      if (Apihandler.isConnectionError(e)) {
-        await Apihandler.handleConnectionError(context, e);
-      } else {
-        await AppDialogs.showErrorDialog(
-          context: context,
-          message: 'Error al cargar más productos',
-        );
+      // Estimar el ancho de cada botón (padding + texto aproximado + padding)
+      // Vamos a calcular la posición sumando los anchos de los botones anteriores
+      double estimatedPosition = 0.0;
+      for (int i = 0; i < index; i++) {
+        // Ancho aproximado: padding horizontal (12*2) + padding right (10) + ancho del texto
+        final categoria = categorias[i];
+        final textWidth = categoria.nombre.length * 9.0; // Aproximación: 9px por carácter
+        estimatedPosition += 12 * 2 + 10 + textWidth;
       }
-    }
+      
+      // Calcular la posición del centro del botón actual
+      final currentCategoria = categorias[index];
+      final currentTextWidth = currentCategoria.nombre.length * 9.0;
+      final currentButtonWidth = 12 * 2 + currentTextWidth;
+      final currentButtonCenter = estimatedPosition + (currentButtonWidth / 2);
+      
+      // Calcular la posición de scroll para centrar el botón en la pantalla
+      final targetPosition = currentButtonCenter - (screenWidth / 2);
+      
+      // Hacer scroll animado
+      _categoriesScrollController.animateTo(
+        targetPosition.clamp(0.0, _categoriesScrollController.position.maxScrollExtent),
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    });
   }
+
 
   @override
   Widget build(BuildContext context) {
-
-    // Lógica de filtrado: búsqueda global vs filtro por categoría
-    List<Producto> filteredProductos;
-    
-    if (searchQuery.isNotEmpty) {
-      // Modo búsqueda global: buscar en todo el catálogo
-      filteredProductos = productos.where((producto) {
-        return producto.nombre.toLowerCase().contains(searchQuery.toLowerCase());
-      }).toList();
-    } else {
-      // Modo categoría: filtrar por categoría seleccionada
-      filteredProductos = productos.where((producto) {
-        return selectedCategory == null || producto.categoriaNombre == selectedCategory;
-      }).toList();
-    }
-    
-    // Ordenar alfabéticamente
-    filteredProductos.sort((a, b) => a.nombre.toLowerCase().compareTo(b.nombre.toLowerCase()));
+    // Observar el Provider para obtener el estado actual
+    final prov = context.watch<ProductoProvider>();
+    final filteredProductos = prov.productosFiltrados;
+    final categorias = prov.categorias;
+    final isLoading = prov.isLoading;
+    final isLoadingMore = prov.isLoadingMore;
+    final searchQuery = prov.searchQuery;
+    final selectedCategory = prov.selectedCategory;
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -275,7 +178,6 @@ class _ProductosScreenState extends State<ProductosScreen> {
                   : AppTheme.primaryColor.withOpacity(0.1),
               borderRadius: BorderRadius.circular(12),
             ),
-
           ),
           Container(
             margin: const EdgeInsets.only(right: 16),
@@ -307,15 +209,17 @@ class _ProductosScreenState extends State<ProductosScreen> {
                         children: [
                           Icon(
                             Icons.category_outlined,
-                            color: Theme.of(context).brightness == Brightness.dark
-                                ? Colors.white
-                                : AppTheme.primaryColor,
+                            color:
+                                Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.white
+                                    : AppTheme.primaryColor,
                           ),
                           const SizedBox(width: 12),
                           Text(
                             'Ver categorías',
                             style: TextStyle(
-                              color: Theme.of(context).brightness == Brightness.dark
+                              color: Theme.of(context).brightness ==
+                                      Brightness.dark
                                   ? Colors.white
                                   : Colors.black,
                             ),
@@ -328,7 +232,8 @@ class _ProductosScreenState extends State<ProductosScreen> {
                   if (value == '1') {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => const CategoriasScreen()),
+                      MaterialPageRoute(
+                          builder: (context) => const CategoriasScreen()),
                     );
                   }
                 });
@@ -357,463 +262,463 @@ class _ProductosScreenState extends State<ProductosScreen> {
                 ],
               ),
             )
-          : SingleChildScrollView(
-              controller: _scrollController,
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  HeaderConBuscador(
-                    leadingIcon: Icons.inventory_2,
-                    title: 'Gestión de Productos',
-                    subtitle: '${productos.length} productos • ${categorias.length} categorías',
-                    controller: _searchController,
-                    hintText: 'Buscar productos...',
-                    onChanged: (value) {
-                      setState(() {
-                        searchQuery = value;
-                      });
-                    },
-                    onClear: () {
-                      setState(() {
-                        searchQuery = '';
-                      });
-                      _searchController.clear();
-                    },
-                  ),
-                  
-                  const SizedBox(height: 16),
-                  
-                  // Botón de crear producto
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: () async {
-                        if (categorias.isEmpty) {
-                          AppTheme.showSnackBar(
-                            context,
-                            AppTheme.warningSnackBar('Primero debes crear una categoría'),
-                          );
-                          return;
-                        }
-                        final result = await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) =>
-                                const NuevoProductoScreen(),
-                          ),
-                        );
-                        if (result == true) {
-                          _loadProductos();
-                        }
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primaryColor,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(15),
-                        ),
-                        elevation: 2,
-                      ),
-                      icon:
-                          const Icon(Icons.add_circle_outline, size: 20),
-                      label: const Text(
-                        'Crear Nuevo Producto',
-                        style: TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.w600),
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  // Filtros de categoría (solo mostrar cuando NO hay búsqueda activa)
-                  if (categorias.isNotEmpty && searchQuery.isEmpty) ...[
-                    Text(
-                      'Categorías',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).brightness == Brightness.dark
-                            ? Colors.white
-                            : AppTheme.textColor,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      height: 50,
-                      child: ListView.builder(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: categorias.length,
-                        itemBuilder: (context, index) {
-                          final categoria = categorias[index];
-                          final isSelected =
-                              selectedCategory == categoria.nombre;
-                          return Padding(
-                            padding: const EdgeInsets.only(right: 12),
-                            child: FilterChip(
-                              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                              visualDensity: VisualDensity.compact,
-                              avatar: Container(
-                                width: 12,
-                                height: 12,
-                                decoration: const BoxDecoration(
-                                  color: Colors.white,
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
-                              label: Text(
-                                categoria.nombre[0].toUpperCase() +
-                                    categoria.nombre.substring(1),
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: isSelected
-                                      ? FontWeight.w600
-                                      : FontWeight.normal,
-                                ),
-                              ),
-                              selected: isSelected,
-                              onSelected: (selected) {
-                                setState(() {
-                                  selectedCategory = categoria.nombre;
-                                });
-                              },
-                              backgroundColor: Theme.of(context).cardTheme.color,
-                              selectedColor: _parseColor(categoria.colorHex),
-                              showCheckmark: false,
-                              side: BorderSide(
-                                color: isSelected
-                                    ? _parseColor(categoria.colorHex)
-                                    : Colors.grey.shade300,
-                                width: 1,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(25),
-                              ),
-                            ),
-                          );
+          : Column(
+              children: [
+                // Header con buscador y controles fijos
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      HeaderConBuscador(
+                        leadingIcon: Icons.inventory_2,
+                        title: 'Gestión de Productos',
+                        subtitle:
+                            '${prov.productos.length} productos • ${categorias.length} categorías',
+                        controller: _searchController,
+                        hintText: 'Buscar productos...',
+                        onChanged: (value) {
+                          prov.filtrarPorBusqueda(value);
+                        },
+                        onClear: () {
+                          prov.limpiarBusqueda();
+                          _searchController.clear();
                         },
                       ),
-                    ),
-                    const SizedBox(height: 24),
-                  ],
-                  // Lista de productos
-                  if (filteredProductos.isEmpty) ...[
-                    Container(
-                      padding: const EdgeInsets.all(40),
-                      child: Column(
-                        children: [
-                          Icon(
-                            Icons.inventory_2_outlined,
-                            size: 80,
-                            color: Colors.grey.shade400,
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            searchQuery.isNotEmpty
-                                ? 'Sin resultados'
-                                : 'No hay productos disponibles',
-                            style: TextStyle(
-                              fontSize: 18,
-                              color: Colors.grey.shade600,
-                              fontWeight: FontWeight.w500,
+
+                      const SizedBox(height: 15),
+
+                      // Botón de crear producto
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: () async {
+                            if (categorias.isEmpty) {
+                              AppTheme.showSnackBar(
+                                context,
+                                AppTheme.warningSnackBar(
+                                    'Primero debes crear una categoría'),
+                              );
+                              return;
+                            }
+                            final result = await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    const NuevoProductoScreen(),
+                              ),
+                            );
+                            if (result == true) {
+                              final categoriasProvider = context.read<CategoriasProvider>();
+                              prov.recargarProductos(categoriasProvider);
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.primaryColor,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(
+                                  AppTheme.borderRadiusMainButtons),
                             ),
+                            elevation: 2,
                           ),
-                          const SizedBox(height: 8),
-                          Text(
-                            searchQuery.isNotEmpty
-                                ? 'No se encontraron productos que coincidan con "$searchQuery"'
-                                : 'Crea tu primer producto para comenzar',
+                          icon: const Icon(Icons.add_circle_outline, size: 20),
+                          label: const Text(
+                            'Crear Nuevo Producto',
                             style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey.shade500,
-                            ),
-                            textAlign: TextAlign.center,
+                                fontSize: 16, fontWeight: FontWeight.w600),
                           ),
-                        ],
+                        ),
                       ),
-                    ),
-                  ] else ...[
-                    // Indicador de búsqueda global o título normal
-                    Row(
-                      children: [
-                        if (searchQuery.isNotEmpty) ...[
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: AppTheme.primaryColor.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
-                                color: AppTheme.primaryColor.withOpacity(0.3),
-                                width: 1,
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.search,
-                                  size: 16,
-                                  color: AppTheme.primaryColor,
-                                ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  'Búsqueda global',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                    color: AppTheme.primaryColor,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              '${filteredProductos.length} resultado${filteredProductos.length == 1 ? '' : 's'}',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w500,
-                                color: Colors.grey.shade600,
-                              ),
-                            ),
-                          ),
-                        ] else ...[
-                          Text(
-                            'Productos',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Theme.of(context).brightness == Brightness.dark
-                                  ? Colors.white
-                                  : AppTheme.textColor,
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    ListView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: filteredProductos.length + (_isLoadingMore ? 1 : 0),
-                      itemBuilder: (context, index) {
-                        if (index == filteredProductos.length) {
-                          return _buildLoadingIndicator();
-                        }
-                        final producto = filteredProductos[index];
-                        return Container(
-                          margin: const EdgeInsets.only(bottom: 12),
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).brightness == Brightness.dark
-                                ? const Color(0xFF1A1A1A)
-                                : Colors.white,
-                            borderRadius: BorderRadius.circular(16),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Theme.of(context).brightness == Brightness.dark
-                                    ? Colors.black.withOpacity(0.3)
-                                    : Colors.black.withOpacity(0.05),
-                                blurRadius: 10,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: Material(
-                            color: Colors.transparent,
-                            child: InkWell(
-                              borderRadius: BorderRadius.circular(16),
-                              onTap: () async {
-                                final result = await Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => DetalleProductoScreen(
-                                      producto: producto,
-                                    ),
-                                  ),
-                                );
-                                // If a product was deleted, refresh the list
-                                if (result == true) {
-                                  _loadProductos();
-                                }
-                              },
-                              child: Padding(
-                                padding: const EdgeInsets.all(16),
-                                child: Row(
-                                  children: [
-                                    // Indicador de categoría
-                                    Container(
-                                      width: 4,
-                                      height: 60,
-                                      decoration: BoxDecoration(
-                                        color: _parseColor(
-                                          categorias
-                                              .firstWhere(
-                                                (c) =>
-                                                    c.nombre ==
-                                                    producto.categoriaNombre,
-                                                orElse: () => Categoria(
-                                                    nombre: '',
-                                                    colorHex: '#9E9E9E'),
-                                              )
-                                              .colorHex,
-                                        ),
-                                        borderRadius: BorderRadius.circular(2),
+
+                      const SizedBox(height: 15),
+
+                      // Filtros de categoría (solo mostrar cuando NO hay búsqueda activa)
+                      if (categorias.isNotEmpty && searchQuery.isEmpty) ...[
+                        SizedBox(
+                          height: 45,
+                          child: ListView.builder(
+                            controller: _categoriesScrollController,
+                            scrollDirection: Axis.horizontal,
+                            itemCount: categorias.length,
+                            itemBuilder: (context, index) {
+                              final categoria = categorias[index];
+                              final isSelected =
+                                  selectedCategory == categoria.nombre;
+                              final categoriaColor = _parseColor(categoria.colorHex);
+                              return Padding(
+                                padding: const EdgeInsets.only(right: 10),
+                                child: GestureDetector(
+                                  onTap: () {
+                                    prov.seleccionarCategoria(categoria.nombre);
+                                    // Centrar el botón en la pantalla
+                                    _centerCategoryButton(index, categorias);
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 12, vertical: 12),
+                                    decoration: BoxDecoration(
+                                      color: isSelected
+                                          ? categoriaColor
+                                          : Theme.of(context).cardTheme.color,
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(
+                                        color: isSelected
+                                            ? categoriaColor
+                                            : Colors.grey.shade300,
+                                        width: 1,
                                       ),
                                     ),
-                                    const SizedBox(width: 16),
-
-                                    // Información del producto
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            producto.nombre,
-                                            style: TextStyle(
-                                              fontSize: 18,
-                                              fontWeight: FontWeight.bold,
-                                              color: Theme.of(context).brightness == Brightness.dark
-                                                  ? Colors.white
-                                                  : AppTheme.textColor,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 4),
-                                          Row(
-                                            children: [
-                                              Icon(
-                                                Icons.inventory_2_outlined,
-                                                size: 16,
-                                                color: Theme.of(context).brightness == Brightness.dark
-                                                    ? Colors.grey.shade400
-                                                    : Colors.grey.shade600,
-                                              ),
-                                              const SizedBox(width: 4),
-                                              Text(
-                                                'Stock: ${producto.stock}',
-                                                style: TextStyle(
-                                                  fontSize: 14,
-                                                  color: Theme.of(context).brightness == Brightness.dark
-                                                      ? Colors.grey.shade400
-                                                      : Colors.grey.shade600,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 2),
-                                          Row(
-                                            children: [
-                                              Icon(
-                                                Icons.attach_money,
-                                                size: 16,
-                                                color: Theme.of(context).brightness == Brightness.dark
-                                                    ? Colors.grey.shade400
-                                                    : Colors.grey.shade600,
-                                              ),
-                                              const SizedBox(width: 4),
-                                              Text(
-                                                'Precio: \$${producto.precio.toStringAsFixed(2)}',
-                                                style: TextStyle(
-                                                  fontSize: 14,
-                                                  color: Theme.of(context).brightness == Brightness.dark
-                                                      ? Colors.grey.shade400
-                                                      : Colors.grey.shade600,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 2),
-                                          Row(
-                                            children: [
-                                              Icon(
-                                                Icons.category_outlined,
-                                                size: 16,
-                                                color: Theme.of(context).brightness == Brightness.dark
-                                                    ? Colors.grey.shade400
-                                                    : Colors.grey.shade600,
-                                              ),
-                                              const SizedBox(width: 4),
-                                              Text(
-                                                producto.categoriaNombre ??
-                                                    'Sin categoría',
-                                                style: TextStyle(
-                                                  fontSize: 14,
-                                                  color: Theme.of(context).brightness == Brightness.dark
-                                                      ? Colors.grey.shade400
-                                                      : Colors.grey.shade600,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-
-                                    // Botones de acción
-                                    Row(
+                                    child: Row(
                                       mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Container(
-                                          decoration: BoxDecoration(
-                                            color: AppTheme.primaryColor
-                                                .withOpacity(0.1),
-                                            borderRadius:
-                                                BorderRadius.circular(15),
-                                          ),
-                                          child: IconButton(
-                                            icon: Icon(
-                                              Icons.edit_outlined,
-                                              color: AppTheme.primaryColor,
-                                              size: 20,
-                                            ),
-                                            onPressed: () async {
-                                              final result = await Navigator.push(
-                                                context,
-                                                MaterialPageRoute(
-                                                  builder: (context) =>
-                                                      EditarProductoScreen(
-                                                    producto: producto,
-                                                  ),
-                                                ),
-                                              );
-                                              if (result == true) {
-                                                _loadProductos();
-                                              }
-                                            },
-                                          ),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Container(
-                                          decoration: BoxDecoration(
-                                            color: Colors.red.withOpacity(0.1),
-                                            borderRadius:
-                                                BorderRadius.circular(15),
-                                          ),
-                                          child: IconButton(
-                                            icon: Icon(
-                                              Icons.delete_outline,
-                                              color: Colors.red,
-                                              size: 20,
-                                            ),
-                                            onPressed: () => _eliminarProducto(context, producto),
+                                      children: [                                      
+                                        Text(
+                                          categoria.nombre[0].toUpperCase() +
+                                              categoria.nombre.substring(1),
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: isSelected
+                                                ? FontWeight.w600
+                                                : FontWeight.normal,
+                                            color: isSelected
+                                                ? Colors.white
+                                                : Theme.of(context)
+                                                    .textTheme
+                                                    .bodyLarge
+                                                    ?.color,
                                           ),
                                         ),
                                       ],
                                     ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),                      
+                      ],
+
+                      // Indicador de búsqueda global o título normal (solo cuando hay productos)
+                      if (filteredProductos.isNotEmpty) ...[
+                        Row(
+                          children: [
+                            if (searchQuery.isNotEmpty) ...[
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.primaryColor.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(
+                                    color:
+                                        AppTheme.primaryColor.withOpacity(0.3),
+                                    width: 1,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.search,
+                                      size: 16,
+                                      color: AppTheme.primaryColor,
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      'Búsqueda global',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppTheme.primaryColor,
+                                      ),
+                                    ),
                                   ],
                                 ),
                               ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  '${filteredProductos.length} resultado${filteredProductos.length == 1 ? '' : 's'}',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w500,
+                                    color: Colors.grey.shade600,
+                                  ),
+                                ),
+                              ),
+                            ]
+                          ],
+                        ),                       
+                      ],
+                    ],
+                  ),
+                ),
+
+                // Lista scrolleable de productos
+                Expanded(
+                  child: filteredProductos.isEmpty
+                      ? Center(
+                          child: SingleChildScrollView(
+                            child: Padding(
+                              padding: const EdgeInsets.all(40),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.inventory_2_outlined,
+                                    size: 80,
+                                    color: Colors.grey.shade400,
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    searchQuery.isNotEmpty
+                                        ? 'Sin resultados'
+                                        : 'No hay productos disponibles',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      color: Colors.grey.shade600,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    searchQuery.isNotEmpty
+                                        ? 'No se encontraron productos que coincidan con "$searchQuery"'
+                                        : 'Crea tu primer producto para comenzar',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.grey.shade500,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
-                        );
-                      },
-                    ),
-                  ],
-                ],
-              ),
+                        )
+                      : ListView.builder(
+                          controller: _scrollController,
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          itemCount: filteredProductos.length +
+                              (isLoadingMore ? 1 : 0),
+                          itemBuilder: (context, index) {
+                            if (index == filteredProductos.length) {
+                              return _buildLoadingIndicator();
+                            }
+                            final producto = filteredProductos[index];
+                            return Container(
+                              margin: const EdgeInsets.only(bottom: 12),
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).brightness ==
+                                        Brightness.dark
+                                    ? const Color(0xFF1A1A1A)
+                                    : Colors.white,
+                                borderRadius: BorderRadius.circular(16),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Theme.of(context).brightness ==
+                                            Brightness.dark
+                                        ? Colors.black.withOpacity(0.3)
+                                        : Colors.black.withOpacity(0.05),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  borderRadius: BorderRadius.circular(16),
+                                  onTap: () async {
+                                    final result = await Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            DetalleProductoScreen(
+                                          producto: producto,
+                                        ),
+                                      ),
+                                    );
+                                    // If a product was deleted, refresh the list
+                                    if (result == true) {
+                                      final categoriasProvider = context.read<CategoriasProvider>();
+                                      prov.recargarProductos(categoriasProvider);
+                                    }
+                                  },
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 16, vertical: 16),
+                                    child: Row(
+                                      children: [
+                                        // Indicador de categoría
+                                        Container(
+                                          width: 4,
+                                          height: 60,
+                                          decoration: BoxDecoration(
+                                            color: _parseColor(
+                                              categorias
+                                                  .firstWhere(
+                                                    (c) =>
+                                                        c.nombre ==
+                                                        producto
+                                                            .categoriaNombre,
+                                                    orElse: () => Categoria(
+                                                        nombre: '',
+                                                        colorHex: '#9E9E9E'),
+                                                  )
+                                                  .colorHex,
+                                            ),
+                                            borderRadius:
+                                                BorderRadius.circular(2),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 16),
+
+                                        // Información del producto
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                producto.nombre,
+                                                style: TextStyle(
+                                                  fontSize: 18,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Theme.of(context)
+                                                              .brightness ==
+                                                          Brightness.dark
+                                                      ? Colors.white
+                                                      : AppTheme.textColor,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 4),
+                                              Row(
+                                                children: [
+                                                  Icon(
+                                                    Icons.inventory_2_outlined,
+                                                    size: 16,
+                                                    color: Theme.of(context)
+                                                                .brightness ==
+                                                            Brightness.dark
+                                                        ? Colors.grey.shade400
+                                                        : Colors.grey.shade600,
+                                                  ),
+                                                  const SizedBox(width: 4),
+                                                  Text(
+                                                    '${producto.stock?.toStringAsFixed(0)} unidades',
+                                                    style: TextStyle(
+                                                      fontSize: 14,
+                                                      color: Theme.of(context)
+                                                                  .brightness ==
+                                                              Brightness.dark
+                                                          ? Colors.grey.shade400
+                                                          : Colors
+                                                              .grey.shade600,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                              const SizedBox(height: 2),
+                                              Row(
+                                                children: [
+                                                  Icon(
+                                                    Icons.attach_money,
+                                                    size: 16,
+                                                    color: Theme.of(context)
+                                                                .brightness ==
+                                                            Brightness.dark
+                                                        ? Colors.grey.shade400
+                                                        : Colors.grey.shade600,
+                                                  ),
+                                                  const SizedBox(width: 4),
+                                                  Text(
+                                                    producto.precio
+                                                        .toStringAsFixed(2),
+                                                    style: TextStyle(
+                                                      fontSize: 14,
+                                                      color: Theme.of(context)
+                                                                  .brightness ==
+                                                              Brightness.dark
+                                                          ? Colors.grey.shade400
+                                                          : Colors
+                                                              .grey.shade600,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                              const SizedBox(height: 2),
+                                            ],
+                                          ),
+                                        ),
+
+                                        // Botones de acción
+                                        Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Container(
+                                              decoration: BoxDecoration(
+                                                color: AppTheme.primaryColor
+                                                    .withOpacity(0.1),
+                                                borderRadius:
+                                                    BorderRadius.circular(15),
+                                              ),
+                                              child: IconButton(
+                                                icon: Icon(
+                                                  Icons.edit_outlined,
+                                                  color: AppTheme.primaryColor,
+                                                  size: 20,
+                                                ),
+                                                onPressed: () async {
+                                                  final result =
+                                                      await Navigator.push(
+                                                    context,
+                                                    MaterialPageRoute(
+                                                      builder: (context) =>
+                                                          EditarProductoScreen(
+                                                        producto: producto,
+                                                      ),
+                                                    ),
+                                                  );
+                                                  if (result == true) {
+                                                    final categoriasProvider = context.read<CategoriasProvider>();
+                                                    prov.recargarProductos(categoriasProvider);
+                                                  }
+                                                },
+                                              ),
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Container(
+                                              decoration: BoxDecoration(
+                                                color:
+                                                    Colors.red.withOpacity(0.1),
+                                                borderRadius:
+                                                    BorderRadius.circular(15),
+                                              ),
+                                              child: IconButton(
+                                                icon: Icon(
+                                                  Icons.delete_outline,
+                                                  color: Colors.red,
+                                                  size: 20,
+                                                ),
+                                                onPressed: () =>
+                                                    _eliminarProducto(
+                                                        context, producto),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                ),
+              ],
             ),
     );
   }
@@ -829,7 +734,8 @@ class _ProductosScreenState extends State<ProductosScreen> {
     }
   }
 
-  Future<void> _deactivateProduct(BuildContext context, Producto producto) async {
+  Future<void> _deactivateProduct(
+      BuildContext context, Producto producto) async {
     if (producto.id != null) {
       // Mostrar loading básico
       showDialog(
@@ -841,24 +747,28 @@ class _ProductosScreenState extends State<ProductosScreen> {
           ),
         ),
       );
-      
-      final productoProvider = Provider.of<ProductoProvider>(context, listen: false);
-      final errorMessage = await productoProvider
-          .desactivarProductoConMensaje(producto.id!);
-      
+
+      final productoProvider =
+          Provider.of<ProductoProvider>(context, listen: false);
+      final errorMessage =
+          await productoProvider.desactivarProductoConMensaje(producto.id!);
+
       if (!context.mounted) return;
-      
+
       // Cerrar loading
       Navigator.pop(context);
-      
+
       if (errorMessage == null) {
         AppTheme.showSnackBar(
           context,
-          AppTheme.successSnackBar('Producto desactivado exitosamente. Ya no aparecerá en los catálogos.'),
+          AppTheme.successSnackBar(
+              'Producto desactivado exitosamente. Ya no aparecerá en los catálogos.'),
         );
-        
+
         // Recargar lista de productos
-        _loadProductos();
+        final categoriasProvider = context.read<CategoriasProvider>();
+        final productoProvider = context.read<ProductoProvider>();
+        productoProvider.recargarProductos(categoriasProvider);
       } else {
         AppTheme.showSnackBar(
           context,
@@ -880,7 +790,8 @@ class _ProductosScreenState extends State<ProductosScreen> {
   }
 
   /// Función para eliminar un producto usando el diálogo centralizado
-  Future<void> _eliminarProducto(BuildContext context, Producto producto) async {
+  Future<void> _eliminarProducto(
+      BuildContext context, Producto producto) async {
     final confirmado = await AppDialogs.showDeleteConfirmationDialog(
       context: context,
       title: 'Eliminar Producto',
@@ -888,8 +799,9 @@ class _ProductosScreenState extends State<ProductosScreen> {
     );
 
     if (confirmado) {
-      final productoProvider = Provider.of<ProductoProvider>(context, listen: false);
-      
+      final productoProvider =
+          Provider.of<ProductoProvider>(context, listen: false);
+
       if (producto.id != null) {
         // Mostrar loading básico
         showDialog(
@@ -901,33 +813,33 @@ class _ProductosScreenState extends State<ProductosScreen> {
             ),
           ),
         );
-        
+
         try {
           // Intentar eliminación física primero
           await productoProvider.eliminarProducto(producto.id!);
-          
+
           if (!context.mounted) return;
-          
+
           // Cerrar loading
           Navigator.pop(context);
-          
+
           // Si llegamos aquí, la eliminación fue exitosa (sin ventas vinculadas)
           AppTheme.showSnackBar(
             context,
             AppTheme.successSnackBar('Producto eliminado con éxito'),
           );
-          
+
           // Recargar lista de productos
-          _loadProductos();
-          
+          final categoriasProvider = context.read<CategoriasProvider>();
+          productoProvider.recargarProductos(categoriasProvider);
         } catch (e) {
           if (!context.mounted) return;
-          
+
           // Cerrar loading
           Navigator.pop(context);
-          
+
           // Si es un error 409 (Conflict) - producto con ventas vinculadas
-          if (e.toString().contains('ventas vinculadas') || 
+          if (e.toString().contains('ventas vinculadas') ||
               e.toString().contains('Conflict')) {
             _showDeactivateDialog(context, producto);
           } else if (Apihandler.isConnectionError(e)) {
@@ -936,7 +848,8 @@ class _ProductosScreenState extends State<ProductosScreen> {
             // Otros errores
             AppTheme.showSnackBar(
               context,
-              AppTheme.errorSnackBar(e.toString().replaceFirst('Exception: ', '')),
+              AppTheme.errorSnackBar(
+                  e.toString().replaceFirst('Exception: ', '')),
             );
           }
         }

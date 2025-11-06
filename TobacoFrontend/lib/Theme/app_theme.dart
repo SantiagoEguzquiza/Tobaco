@@ -10,6 +10,7 @@ class AppTheme {
   static const Color textColor = Colors.black;
   static const Color textGreyColor = Colors.grey;
   static const Color addGreenColor = Colors.green;
+  static const double borderRadiusMainButtons = 8;
 
   static const TextStyle inputLabelStyle = TextStyle(
     fontSize: 16,
