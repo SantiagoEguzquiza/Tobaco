@@ -1564,6 +1564,7 @@ class _PrinterSelectionDialogState extends State<_PrinterSelectionDialog> {
 
   Future<void> _scanForPrinters() async {
     try {
+      if (!mounted) return;
       setState(() {
         isLoading = true;
         errorMessage = null;
@@ -1572,11 +1573,13 @@ class _PrinterSelectionDialogState extends State<_PrinterSelectionDialog> {
       final printerService = BluetoothPrinterService.instance;
       final foundPrinters = await printerService.scanForPrinters();
 
+      if (!mounted) return;
       setState(() {
         printers = foundPrinters;
         isLoading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         errorMessage = 'Error al buscar impresoras: $e';
         isLoading = false;

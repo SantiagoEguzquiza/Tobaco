@@ -79,7 +79,7 @@ class BluetoothPrinterService {
   }
 
   bool _looksLikePrinter(ScanResult result) {
-    final name = result.device.name.toLowerCase();
+    final name = result.device.platformName.toLowerCase();
     const printerNameKeywords = [
       'printer',
       'print',
