@@ -194,20 +194,20 @@ class _ClientesScreenState extends State<ClientesScreen> {
                                 foregroundColor: Colors.white,
                                 padding: const EdgeInsets.symmetric(vertical: 16),
                                 shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(15),
+                                  borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
                                 ),
                                 elevation: 2,
                               ),
                               icon: const Icon(Icons.person_add, size: 20),
                               label: const Text(
-                                'Crear Nuevo Cliente',
+                                'Nuevo Cliente',
                                 style: TextStyle(
                                     fontSize: 16, fontWeight: FontWeight.w600),
                               ),
                             ),
                           ),
 
-                          const SizedBox(height: 20),
+                          
                         ],
                       ),
                     ),
@@ -283,12 +283,6 @@ class _ClientesScreenState extends State<ClientesScreen> {
 
 
   Widget _buildClienteCard(Cliente cliente) {
-    final tieneDeuda = cliente.deuda != null && 
-        cliente.deuda!.isNotEmpty && 
-        cliente.deuda != '0' && 
-        double.tryParse(cliente.deuda!) != null && 
-        double.parse(cliente.deuda!) > 0;
-    final tieneDescuento = cliente.descuentoGlobal > 0;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -296,7 +290,7 @@ class _ClientesScreenState extends State<ClientesScreen> {
         color: Theme.of(context).brightness == Brightness.dark
             ? const Color(0xFF1A1A1A)
             : Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppTheme.borderRadiusCards),
         boxShadow: [
           BoxShadow(
             color: Theme.of(context).brightness == Brightness.dark
@@ -331,11 +325,7 @@ class _ClientesScreenState extends State<ClientesScreen> {
                   width: 4,
                   height: 60,
                   decoration: BoxDecoration(
-                    color: tieneDeuda 
-                        ? Colors.red 
-                        : tieneDescuento 
-                            ? Colors.green 
-                            : AppTheme.primaryColor,
+                    color: Colors.green,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -379,96 +369,6 @@ class _ClientesScreenState extends State<ClientesScreen> {
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                        ],
-                      ),
-                      if (cliente.telefono != null) ...[
-                        const SizedBox(height: 2),
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.phone_outlined,
-                              size: 16,
-                              color: Theme.of(context).brightness == Brightness.dark
-                                  ? Colors.grey.shade400
-                                  : Colors.grey.shade600,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              cliente.telefono!.toString(),
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Theme.of(context).brightness == Brightness.dark
-                                    ? Colors.grey.shade400
-                                    : Colors.grey.shade600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                      const SizedBox(height: 2),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.people_outline,
-                            size: 16,
-                            color: Theme.of(context).brightness == Brightness.dark
-                                ? Colors.grey.shade400
-                                : Colors.grey.shade600,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            'Cliente',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Theme.of(context).brightness == Brightness.dark
-                                  ? Colors.grey.shade400
-                                  : Colors.grey.shade600,
-                            ),
-                          ),
-                          if (tieneDeuda) ...[
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 6,
-                                vertical: 2,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.red.shade50,
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: Colors.red.shade200),
-                              ),
-                              child: Text(
-                                'Con Deuda',
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  color: Colors.red.shade600,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ),
-                          ],
-                          if (tieneDescuento) ...[
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 6,
-                                vertical: 2,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.green.shade50,
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: Colors.green.shade200),
-                              ),
-                              child: Text(
-                                '${cliente.descuentoGlobal.toStringAsFixed(1)}% desc.',
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  color: Colors.green.shade600,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ),
-                          ],
                         ],
                       ),
                     ],

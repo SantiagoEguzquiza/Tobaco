@@ -13,7 +13,7 @@ class Apihandler {
   static final IOClient client = IOClient(httpClient);
 
   static final baseUrl =
-      Uri.parse('https://192.168.1.9:7148'); // HTTP para desarrollo
+      Uri.parse('https://192.168.1.10:7148'); // HTTP para desarrollo
 
   static Future<bool> checkTokenAndFetchData(BuildContext context) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();

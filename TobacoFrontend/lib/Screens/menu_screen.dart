@@ -93,7 +93,7 @@ class MenuScreen extends StatelessWidget {
                         margin: const EdgeInsets.only(bottom: 16),
                         decoration: BoxDecoration(
                           color: AppTheme.primaryColor.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(15),
+                          borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
                         ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -120,7 +120,7 @@ class MenuScreen extends StatelessWidget {
                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                 decoration: BoxDecoration(
                                   color: AppTheme.primaryColor,
-                                  borderRadius: BorderRadius.circular(12),
+                                  borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
                                 ),
                                 child: const Text(
                                   'ADMIN',
@@ -146,7 +146,7 @@ class MenuScreen extends StatelessWidget {
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
                             color: AppTheme.primaryColor.withOpacity(0.08),
-                            borderRadius: BorderRadius.circular(15),
+                            borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
                             border: Border.all(
                               color: AppTheme.primaryColor.withOpacity(0.2),
                               width: 1,
@@ -170,7 +170,7 @@ class MenuScreen extends StatelessWidget {
                                     backgroundColor: AppTheme.primaryColor,
                                     foregroundColor: Colors.white,
                                     shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(15),
+                                      borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
                                     ),
                                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                                   ),
@@ -193,7 +193,7 @@ class MenuScreen extends StatelessWidget {
                                     backgroundColor: AppTheme.primaryColor,
                                     foregroundColor: Colors.white,
                                     shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(15),
+                                      borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
                                     ),
                                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                                   ),
@@ -212,7 +212,7 @@ class MenuScreen extends StatelessWidget {
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
                             color: AppTheme.primaryColor.withOpacity(0.08),
-                            borderRadius: BorderRadius.circular(15),
+                            borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
                             border: Border.all(
                               color: AppTheme.primaryColor.withOpacity(0.2),
                               width: 1,
@@ -238,7 +238,7 @@ class MenuScreen extends StatelessWidget {
                                         backgroundColor: AppTheme.primaryColor,
                                         foregroundColor: Colors.white,
                                         shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(15),
+                                          borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
                                         ),
                                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                                       ),
@@ -261,7 +261,7 @@ class MenuScreen extends StatelessWidget {
                                         backgroundColor: AppTheme.primaryColor,
                                         foregroundColor: Colors.white,
                                         shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(15),
+                                          borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
                                         ),
                                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                                       ),
@@ -288,7 +288,7 @@ class MenuScreen extends StatelessWidget {
                                         backgroundColor: AppTheme.primaryColor,
                                         foregroundColor: Colors.white,
                                         shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(15),
+                                          borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
                                         ),
                                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                                       ),

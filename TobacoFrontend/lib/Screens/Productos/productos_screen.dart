@@ -24,7 +24,7 @@ class ProductosScreen extends StatefulWidget {
 
 class _ProductosScreenState extends State<ProductosScreen> {
   final TextEditingController _searchController = TextEditingController();
-  bool _offlineMessageShown = false; // Para mostrar el mensaje solo la primera vez
+  
 
   // ScrollController para detectar cuando llegar al final
   final ScrollController _scrollController = ScrollController();
@@ -53,14 +53,6 @@ class _ProductosScreenState extends State<ProductosScreen> {
       final productoProvider = context.read<ProductoProvider>();
       final categoriasProvider = context.read<CategoriasProvider>();
       productoProvider.cargarProductosInicial(categoriasProvider).then((_) {
-        // Verificar si hay que mostrar mensaje offline
-        if (productoProvider.isOffline && !_offlineMessageShown && mounted) {
-          _offlineMessageShown = true;
-          AppTheme.showSnackBar(
-            context,
-            AppTheme.warningSnackBar('Modo Offline Activado'),
-          );
-        }
       }).catchError((e) {
         // Manejar errores
         if (mounted) {
@@ -514,7 +506,7 @@ class _ProductosScreenState extends State<ProductosScreen> {
                                         Brightness.dark
                                     ? const Color(0xFF1A1A1A)
                                     : Colors.white,
-                                borderRadius: BorderRadius.circular(16),
+                                borderRadius: BorderRadius.circular(AppTheme.borderRadiusCards),
                                 boxShadow: [
                                   BoxShadow(
                                     color: Theme.of(context).brightness ==

@@ -9,7 +9,6 @@ import '../../Models/User.dart';
 import '../../Models/Ventas.dart';
 import '../../Models/EstadoEntrega.dart';
 import '../../Theme/app_theme.dart';
-import '../../Theme/dialogs.dart';
 import '../../Theme/headers.dart';
 import '../../Helpers/api_handler.dart';
 
@@ -61,6 +60,7 @@ class _AsignarVentasScreenState extends State<AsignarVentasScreen> {
         // Si es un error de conexión, mostrar el diálogo
         if (Apihandler.isConnectionError(e)) {
           await Apihandler.handleConnectionError(context, e);
+          if (!mounted) return;
           setState(() {
             _isLoading = false;
             _errorMessage = 'No se pudieron cargar los empleados. Verifica tu conexión.';
@@ -94,6 +94,7 @@ class _AsignarVentasScreenState extends State<AsignarVentasScreen> {
         debugPrint('Error al cargar ventas: $e');
         if (Apihandler.isConnectionError(e)) {
           await Apihandler.handleConnectionError(context, e);
+          if (!mounted) return;
           setState(() {
             _isLoading = false;
             _errorMessage = 'No se pudieron cargar las ventas. Verifica tu conexión.';
@@ -103,6 +104,7 @@ class _AsignarVentasScreenState extends State<AsignarVentasScreen> {
         throw e;
       }
 
+      if (!mounted) return;
       setState(() {
         _isLoading = false;
         // Si no hay empleados pero hay ventas, mostrar advertencia pero permitir ver las ventas
@@ -112,6 +114,7 @@ class _AsignarVentasScreenState extends State<AsignarVentasScreen> {
         }
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _isLoading = false;
         _errorMessage = 'Error al cargar datos: ${e.toString()}';

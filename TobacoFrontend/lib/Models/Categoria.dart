@@ -31,8 +31,23 @@ class Categoria {
   }
 
   Map<String, dynamic> toJson() => {
+        if (id != null) 'id': id,
         'nombre': nombre,
         'colorHex': colorHex,
         'sortOrder': sortOrder,
       };
+
+  Categoria copyWith({
+    int? id,
+    String? nombre,
+    String? colorHex,
+    int? sortOrder,
+  }) {
+    return Categoria(
+      id: id ?? this.id,
+      nombre: nombre ?? this.nombre,
+      colorHex: colorHex ?? this.colorHex,
+      sortOrder: sortOrder ?? this.sortOrder,
+    );
+  }
 }
