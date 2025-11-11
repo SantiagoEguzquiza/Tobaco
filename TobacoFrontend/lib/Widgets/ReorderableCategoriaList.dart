@@ -19,6 +19,7 @@ class ReorderableCategoriaList extends StatefulWidget {
 class _ReorderableCategoriaListState extends State<ReorderableCategoriaList> {
   List<Categoria> _categorias = [];
   bool _isReordering = false;
+  final Map<String, String> _offlineKeyCache = {};
 
   @override
   void initState() {
@@ -29,6 +30,7 @@ class _ReorderableCategoriaListState extends State<ReorderableCategoriaList> {
   void _loadCategorias() {
     final provider = Provider.of<CategoriasProvider>(context, listen: false);
     _categorias = List.from(provider.categorias);
+    _syncOfflineKeys();
   }
 
   Future<void> _onReorder(int oldIndex, int newIndex) async {
@@ -90,6 +92,7 @@ class _ReorderableCategoriaListState extends State<ReorderableCategoriaList> {
         // Actualizar la lista local cuando cambie el provider
         if (!_isReordering) {
           _categorias = List.from(provider.categorias);
+          _syncOfflineKeys();
         }
 
         if (provider.isLoading) {
@@ -148,9 +151,10 @@ class _ReorderableCategoriaListState extends State<ReorderableCategoriaList> {
 
   Widget _buildCategoriaItem(Categoria categoria, int index) {
     final categoriaColor = _parseColor(categoria.colorHex);
-    
+    final itemKey = _itemKeyForCategoria(categoria);
+
     return Container(
-      key: ValueKey(categoria.id),
+      key: itemKey,
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: Theme.of(context).brightness == Brightness.dark
@@ -273,5 +277,36 @@ class _ReorderableCategoriaListState extends State<ReorderableCategoriaList> {
     } catch (e) {
       return const Color(0xFF9E9E9E); // Default gray on error
     }
+  }
+
+  Key _itemKeyForCategoria(Categoria categoria) {
+    if (categoria.id != null) {
+      return ValueKey('categoria_${categoria.id}');
+    }
+
+    final cacheKey = _offlineCacheKeyFor(categoria);
+    final storedValue = _offlineKeyCache.putIfAbsent(
+      cacheKey,
+      () => 'offline_${cacheKey}_${_offlineKeyCache.length}',
+    );
+
+    return ValueKey(storedValue);
+  }
+
+  void _syncOfflineKeys() {
+    final activeKeys = <String>{};
+    for (final categoria in _categorias) {
+      if (categoria.id == null) {
+        activeKeys.add(_offlineCacheKeyFor(categoria));
+      }
+    }
+
+    _offlineKeyCache.removeWhere(
+      (cacheKey, _) => !activeKeys.contains(cacheKey),
+    );
+  }
+
+  String _offlineCacheKeyFor(Categoria categoria) {
+    return '${categoria.nombre}_${categoria.colorHex}_${categoria.sortOrder}';
   }
 }

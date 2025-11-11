@@ -1,21 +1,14 @@
-// ignore_for_file: library_private_types_in_public_api
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
-import 'package:http/io_client.dart';
 import 'package:provider/provider.dart';
 import 'package:tobaco/Models/Ventas.dart';
 import 'package:tobaco/Models/EstadoEntrega.dart';
 import 'package:tobaco/Screens/Ventas/nuevaVenta_screen.dart';
 import 'package:tobaco/Screens/Ventas/detalleVentas_screen.dart';
 import 'package:tobaco/Services/Ventas_Service/ventas_provider.dart';
-import 'package:tobaco/Services/Cache/ventas_cache_service.dart';
-import 'package:tobaco/Services/Cache/database_helper.dart';
 import 'package:tobaco/Theme/app_theme.dart';
 import 'package:tobaco/Theme/dialogs.dart';
 import 'package:tobaco/Theme/headers.dart';
-import 'package:tobaco/Helpers/api_handler.dart';
-import 'package:tobaco/Widgets/sync_status_widget.dart';
 
 class VentasScreen extends StatefulWidget {
   const VentasScreen({super.key});
@@ -25,314 +18,63 @@ class VentasScreen extends StatefulWidget {
 }
 
 class _VentasScreenState extends State<VentasScreen> {
-  bool isLoading = true;
-  String searchQuery = '';
-  String? errorMessage;
-  List<Ventas> ventas = [];
-  late ScaffoldMessengerState scaffoldMessenger;
-  bool _offlineMessageShown = false; // Para mostrar el mensaje solo la primera vez
-  bool _isSincronizando = false; // Flag para evitar sincronizaciones múltiples
-  final GlobalKey<_SincronizarButtonState> _syncButtonKey = GlobalKey<_SincronizarButtonState>();
-
-  // Variables para infinite scroll
-  bool _isLoadingMore = false;
-  bool _hasMoreData = true;
-  int _currentPage = 1;
-  final int _pageSize = 20;
-  
-  // ScrollController para detectar cuando llegar al final
   final ScrollController _scrollController = ScrollController();
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    scaffoldMessenger = ScaffoldMessenger.of(context);
-  }
+  final TextEditingController _searchController = TextEditingController();
+  final GlobalKey<_SincronizarButtonState> _syncButtonKey =
+      GlobalKey<_SincronizarButtonState>();
 
   @override
   void initState() {
     super.initState();
-    _loadVentas();
+    Future.microtask(
+      () => context.read<VentasProvider>().cargarVentas(),
+    );
     _scrollController.addListener(_onScroll);
   }
 
   @override
   void dispose() {
     _scrollController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
   void _onScroll() {
-    if (_scrollController.position.pixels >= 
+    if (!_scrollController.hasClients) return;
+    if (_scrollController.position.pixels >=
         _scrollController.position.maxScrollExtent - 200) {
-      _cargarMasVentas();
+      context.read<VentasProvider>().cargarMasVentas();
     }
-  }
-
-  Future<void> _loadVentas({bool usarTimeoutNormal = false}) async {
-    if (!mounted) return;
-    
-    setState(() {
-      isLoading = true;
-      errorMessage = null;
-      _currentPage = 1;
-      ventas.clear();
-      _hasMoreData = false; // Para offline no hay paginación
-    });
-
-    try {
-      
-      
-      final ventasProvider = Provider.of<VentasProvider>(context, listen: false);
-      
-      
-      final ventasList = await ventasProvider.obtenerVentas(usarTimeoutNormal: usarTimeoutNormal);
-      
-      if (!mounted) return;
-      
-      setState(() {
-        ventas = ventasList;
-        _hasMoreData = false; // Sin paginación en offline
-        isLoading = false;
-      });
-      
-      
-      
-      // Verificar si estamos en modo offline
-      // Si hay ventas y hay caché, verificar si el servidor está realmente disponible
-      if (ventas.isNotEmpty && !_offlineMessageShown) {
-        // Pequeño delay para asegurar que el provider terminó de cargar
-        Future.delayed(Duration(milliseconds: 100), () async {
-          try {
-            final cacheService = VentasCacheService();
-            final ventasCache = await cacheService.obtenerVentasDelCache();
-            
-            // Si hay caché disponible, verificar si el servidor está realmente disponible
-            if (ventasCache.isNotEmpty && mounted && !_offlineMessageShown) {
-              // Hacer una verificación rápida del servidor
-              try {
-                final testClient = IOClient(HttpClient()..badCertificateCallback = ((X509Certificate cert, String host, int port) => true));
-                await testClient
-                    .get(Uri.parse('${Apihandler.baseUrl}/Health'))
-                    .timeout(Duration(milliseconds: 300));
-                
-                // Si el servidor responde, no estamos en modo offline
-                // No mostrar mensaje
-              } catch (e) {
-                // Si falla la verificación del servidor, estamos en modo offline
-                // Mostrar mensaje solo la primera vez
-                if (mounted && !_offlineMessageShown) {
-                  _offlineMessageShown = true;
-                  AppTheme.showSnackBar(
-                    context,
-                    AppTheme.warningSnackBar('Modo Offline Activado'),
-                  );
-                }
-              }
-            }
-          } catch (e) {
-            // Ignorar error
-          }
-        });
-      }
-
-    } catch (e, stackTrace) {
-      if (!mounted) return;
-      
-      
-      print('Stack trace: $stackTrace');
-      
-      // Verificar si hay datos del caché disponibles
-      if (Apihandler.isConnectionError(e)) {
-        try {
-          // Intentar obtener del caché directamente
-          final cacheService = VentasCacheService();
-          final ventasCache = await cacheService.obtenerVentasDelCache();
-          
-          if (ventasCache.isNotEmpty) {
-            // Hay datos en caché, cargarlos
-            setState(() {
-              ventas = ventasCache;
-              _hasMoreData = false;
-              isLoading = false;
-            });
-            
-            // Mostrar mensaje de modo offline solo la primera vez
-            if (!_offlineMessageShown) {
-              _offlineMessageShown = true;
-              AppTheme.showSnackBar(
-                context,
-                AppTheme.warningSnackBar('Modo Offline Activado'),
-              );
-            }
-            return;
-          }
-        } catch (cacheError) {
-          // Si falla el caché, continuar con el error normal
-        }
-      }
-      
-      setState(() {
-        isLoading = false;
-        errorMessage = 'Error al cargar ventas: $e';
-      });
-      
-      // Mostrar error apropiado
-      if (Apihandler.isConnectionError(e)) {
-        AppTheme.showSnackBar(
-          context,
-          AppTheme.warningSnackBar('Sin conexión. Verifica tu conexión a internet.'),
-        );
-      } else {
-        AppTheme.showSnackBar(
-          context,
-          AppTheme.errorSnackBar('Error al cargar ventas: ${e.toString().replaceFirst('Exception: ', '')}'),
-        );
-      }
-    }
-  }
-
-  Future<void> _cargarMasVentas() async {
-    // En modo offline no hay paginación, todas las ventas se cargan de una vez
-    if (_isLoadingMore || !_hasMoreData || !mounted) return;
-    
-    
-    
-    // Por ahora, deshabilitamos la paginación ya que obtenerVentas() 
-    // trae todas las ventas offline de una vez
-    // En el futuro se puede implementar paginación con SQLite si es necesario
   }
 
   @override
   Widget build(BuildContext context) {
+    final provider = context.watch<VentasProvider>();
+
+    if (_searchController.text != provider.searchQuery) {
+      _searchController.text = provider.searchQuery;
+      _searchController.selection = TextSelection.fromPosition(
+        TextPosition(offset: _searchController.text.length),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         centerTitle: true,
         title: const Text('Ventas', style: AppTheme.appBarTitleStyle),
         actions: [
-          // Badge de sincronización en el AppBar
           _SincronizarButton(
             key: _syncButtonKey,
-            isSincronizando: _isSincronizando,
+            isSincronizando: provider.isSincronizando,
             onSincronizar: () async {
-              setState(() {
-                _isSincronizando = true;
+              final result =
+                  await context.read<VentasProvider>().sincronizarAhora();
+              if (!mounted) return;
+              _manejarResultadoSincronizacion(context, result);
+              // Asegurar que el contador se actualice.
+              Future.delayed(const Duration(milliseconds: 300), () {
+                _syncButtonKey.currentState?.recargarPendientes();
               });
-              
-              try {
-                final provider = Provider.of<VentasProvider>(context, listen: false);
-                
-                debugPrint('');
-                debugPrint('🔄 VentasScreen: Iniciando sincronización...');
-                final result = await provider.sincronizarAhora();
-                
-                debugPrint('');
-                debugPrint('═══════════════════════════════════════════════════════════');
-                debugPrint('📱 VentasScreen: RESULTADO DE SINCRONIZACIÓN RECIBIDO');
-                debugPrint('═══════════════════════════════════════════════════════════');
-                debugPrint('   Result completo: $result');
-                debugPrint('   Keys disponibles: ${result.keys.toList()}');
-                debugPrint('   Tipo de result: ${result.runtimeType}');
-                
-                if (context.mounted) {
-                  final sincronizadas = result['sincronizadas'] ?? 0;
-                  final fallidas = result['fallidas'] ?? 0;
-                  final success = result['success'] ?? false;
-                  
-                  debugPrint('   sincronizadas: $sincronizadas (tipo: ${sincronizadas.runtimeType})');
-                  debugPrint('   fallidas: $fallidas (tipo: ${fallidas.runtimeType})');
-                  debugPrint('   success: $success (tipo: ${success.runtimeType})');
-                  debugPrint('   message: ${result['message']}');
-                  debugPrint('═══════════════════════════════════════════════════════════');
-                  debugPrint('');
-                  
-                  // Mostrar mensaje según el resultado
-                  if (success) {
-                    if (sincronizadas > 0 && fallidas == 0) {
-                      // Todas sincronizadas correctamente
-                      AppTheme.showSnackBar(
-                        context,
-                        AppTheme.successSnackBar(
-                          sincronizadas == 1 
-                            ? '1 venta sincronizada correctamente'
-                            : '$sincronizadas ventas sincronizadas correctamente'
-                        ),
-                      );
-                      // Recargar ventas para mostrar las sincronizadas (con timeout normal)
-                      _loadVentas(usarTimeoutNormal: true);
-                    } else if (sincronizadas > 0 && fallidas > 0) {
-                      // Algunas sincronizadas, algunas fallaron
-                      AppTheme.showSnackBar(
-                        context,
-                        AppTheme.warningSnackBar(
-                          '$sincronizadas ventas sincronizadas. $fallidas fallaron.'
-                        ),
-                      );
-                      // Recargar ventas para mostrar las sincronizadas (con timeout normal)
-                      _loadVentas(usarTimeoutNormal: true);
-                    } else if (sincronizadas == 0 && fallidas == 0) {
-                      // No hay ventas pendientes (éxito silencioso)
-                      AppTheme.showSnackBar(
-                        context,
-                        AppTheme.successSnackBar('No hay ventas pendientes de sincronizar'),
-                      );
-                      // Recargar ventas para actualizar
-                      _loadVentas(usarTimeoutNormal: true);
-                    } else {
-                      // Caso raro: success pero con algún problema
-                      AppTheme.showSnackBar(
-                        context,
-                        AppTheme.warningSnackBar(result['message'] ?? 'Sincronización completada'),
-                      );
-                      // Recargar ventas
-                      _loadVentas(usarTimeoutNormal: true);
-                    }
-                  } else {
-                    // Error en la sincronización (sin conexión o error del servidor)
-                    // Si hay ventas fallidas (pendientes), mostrar mensaje en amarillo
-                    if (fallidas > 0) {
-                      final mensajeError = result['message'] ?? '';
-                      // Si el mensaje indica error de conexión, mostrar mensaje específico
-                      if (mensajeError.contains('conexión') || mensajeError.contains('backend')) {
-                        AppTheme.showSnackBar(
-                          context,
-                          AppTheme.warningSnackBar(
-                            '$sincronizadas ventas sincronizadas. $fallidas fallaron.'
-                          ),
-                        );
-                      } else {
-                        // Error del servidor (400, 500, etc.)
-                        AppTheme.showSnackBar(
-                          context,
-                          AppTheme.errorSnackBar(
-                            '$sincronizadas ventas sincronizadas. $fallidas fallaron. Revisa los datos de las ventas.'
-                          ),
-                        );
-                      }
-                    } else {
-                      // Error genérico sin ventas pendientes
-                      AppTheme.showSnackBar(
-                        context,
-                        AppTheme.errorSnackBar(result['message'] ?? 'Error al sincronizar ventas'),
-                      );
-                    }
-                    // No recargar ventas si falló - el botón debe permanecer visible
-                  }
-                }
-              } catch (e) {
-                if (context.mounted) {
-                  AppTheme.showSnackBar(
-                    context,
-                    AppTheme.errorSnackBar('Error al sincronizar: $e'),
-                  );
-                }
-              } finally {
-                if (context.mounted) {
-                  setState(() {
-                    _isSincronizando = false;
-                  });
-                }
-              }
             },
           ),
         ],
@@ -342,14 +84,13 @@ class _VentasScreenState extends State<VentasScreen> {
           padding: const EdgeInsets.all(16.0),
           child: Column(
             children: [
-              // Header principal con información y estadísticas
-              _buildHeaderSection(),
+              if (provider.isOffline) ...[
+                _buildOfflineBanner(),
+                const SizedBox(height: 12),
+              ],
+              _buildHeaderSection(provider),
               const SizedBox(height: 20),
-
-              // Lista de ventas
-              Expanded(
-                child: _buildVentasList(),
-              ),
+              Expanded(child: _buildVentasList(provider)),
             ],
           ),
         ),
@@ -357,60 +98,49 @@ class _VentasScreenState extends State<VentasScreen> {
     );
   }
 
-  // Header principal con información y estadísticas
-  Widget _buildHeaderSection() {
-    final TextEditingController _searchController = TextEditingController(text: searchQuery);
-    
+  Widget _buildHeaderSection(VentasProvider provider) {
     return Column(
       children: [
         HeaderConBuscador(
           leadingIcon: Icons.storefront,
           title: 'Gestión de Ventas',
-          subtitle: '${ventas.length} venta${ventas.length != 1 ? 's' : ''} registrada${ventas.length != 1 ? 's' : ''}',
+          subtitle:
+              '${provider.ventas.length} venta${provider.ventas.length != 1 ? 's' : ''} registrada${provider.ventas.length != 1 ? 's' : ''}',
           controller: _searchController,
           hintText: 'Buscar por cliente, fecha o total...',
-          onChanged: (value) {
-            setState(() {
-              searchQuery = value;
-            });
-          },
+          onChanged: (value) =>
+              context.read<VentasProvider>().actualizarBusqueda(value),
           onClear: () {
-            setState(() {
-              searchQuery = '';
-            });
             _searchController.clear();
+            context.read<VentasProvider>().actualizarBusqueda('');
           },
         ),
-        
         const SizedBox(height: 16),
-        
-        // Botón nueva venta mejorado
         SizedBox(
           width: double.infinity,
           child: ElevatedButton.icon(
             onPressed: () async {
-              await Navigator.push(
+              final result = await Navigator.push(
                 context,
                 MaterialPageRoute(
                   builder: (context) => const NuevaVentaScreen(),
                 ),
               );
-              // Recargar ventas y actualizar el botón de sincronización
-              _loadVentas();
-              // Actualizar el botón de sincronización después de un pequeño delay
-              // para asegurar que la venta se guardó en la BD
-              Future.delayed(const Duration(milliseconds: 500), () {
-                if (mounted && _syncButtonKey.currentState != null) {
-                  _syncButtonKey.currentState!.recargarPendientes();
-                }
-              });
+              if (!mounted) return;
+              if (result != null) {
+                await context.read<VentasProvider>().cargarVentas();
+                Future.delayed(const Duration(milliseconds: 500), () {
+                  _syncButtonKey.currentState?.recargarPendientes();
+                });
+              }
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.primaryColor,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(15),
+                borderRadius:
+                    BorderRadius.circular(AppTheme.borderRadiusMainButtons),
               ),
               elevation: 2,
             ),
@@ -425,289 +155,207 @@ class _VentasScreenState extends State<VentasScreen> {
     );
   }
 
-  // Sección de búsqueda mejorada
-  Widget _buildSearchSection() {
+  Widget _buildOfflineBanner() {
     return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Theme.of(context).brightness == Brightness.dark
-            ? const Color(0xFF2A2A2A)
-            : Colors.white,
-        borderRadius: BorderRadius.circular(15),
-        boxShadow: [
-          BoxShadow(
-            color: Theme.of(context).brightness == Brightness.dark
-                ? Colors.black.withOpacity(0.3)
-                : Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
+        color: const Color.fromARGB(255, 255, 216, 101),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: const Row(
+        children: [
+          Icon(Icons.wifi_off, color: Colors.black87),
+          SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'Modo offline',
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
+              ),
+            ),
           ),
         ],
-      ),
-      child: TextField(
-        cursorColor: AppTheme.primaryColor,
-        style: TextStyle(
-          fontSize: 16,
-          color: Theme.of(context).brightness == Brightness.dark
-              ? Colors.white
-              : Colors.black,
-        ),
-        decoration: InputDecoration(
-          hintText: 'Buscar por cliente, fecha o total...',
-          hintStyle: TextStyle(
-            color: Theme.of(context).brightness == Brightness.dark
-                ? Colors.grey.shade400
-                : Colors.grey.shade400,
-            fontSize: 16,
-          ),
-          prefixIcon: Icon(
-            Icons.search,
-            color: AppTheme.primaryColor,
-            size: 24,
-          ),
-          suffixIcon: searchQuery.isNotEmpty
-              ? IconButton(
-                  icon: Icon(
-                    Icons.clear,
-                    color: Theme.of(context).brightness == Brightness.dark
-                        ? Colors.grey.shade400
-                        : Colors.grey.shade400,
-                  ),
-                  onPressed: () {
-                    setState(() {
-                      searchQuery = '';
-                    });
-                  },
-                )
-              : null,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(15),
-            borderSide: BorderSide.none,
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(15),
-            borderSide: BorderSide.none,
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(15),
-            borderSide: BorderSide.none,
-          ),
-          filled: true,
-          fillColor: Theme.of(context).brightness == Brightness.dark
-              ? const Color(0xFF2A2A2A)
-              : Colors.white,
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 20,
-            vertical: 16,
-          ),
-        ),
-        onChanged: (value) {
-          setState(() {
-            searchQuery = value.toLowerCase();
-          });
-        },
       ),
     );
   }
 
-  // Lista de ventas con diseño moderno
-  Widget _buildVentasList() {
-    if (isLoading) {
+  Widget _buildVentasList(VentasProvider provider) {
+    if (provider.isLoading) {
       return _buildLoadingState();
     }
 
-    if (errorMessage != null) {
-      return _buildErrorState();
+    if (provider.errorMessage != null && provider.ventas.isEmpty) {
+      return _buildErrorState(provider.errorMessage!);
     }
 
-    final filteredVentas = ventas.where((venta) {
-      final clienteNombre = venta.cliente.nombre.toLowerCase();
-      final fecha = '${venta.fecha.day}/${venta.fecha.month}';
-      final total = venta.total.toString();
-      return clienteNombre.contains(searchQuery) ||
-          fecha.contains(searchQuery) ||
-          total.contains(searchQuery);
-    }).toList();
+    final filteredVentas = provider.ventasFiltradas;
 
     if (filteredVentas.isEmpty) {
-      return _buildEmptyState();
+      return _buildEmptyState(provider.searchQuery.isNotEmpty);
     }
 
     return ListView.builder(
       controller: _scrollController,
-      padding: const EdgeInsets.all(16),
-      itemCount: filteredVentas.length + (_isLoadingMore ? 1 : 0),
+      itemCount: filteredVentas.length + (provider.isLoadingMore ? 1 : 0),
       itemBuilder: (context, index) {
         if (index == filteredVentas.length) {
           return _buildLoadingIndicator();
         }
         final venta = filteredVentas[index];
-        return _buildVentaCard(venta, index);
+        return _buildVentaCard(venta);
       },
     );
   }
 
   // Card individual de venta
-  Widget _buildVentaCard(Ventas venta, int index) {
-    // Para ventas offline, usar el hash del cliente+fecha como key
-    final key = venta.id != null 
+  Widget _buildVentaCard(Ventas venta) {
+    final key = venta.id != null
         ? Key(venta.id.toString())
-        : Key('offline_${venta.clienteId}_${venta.fecha.millisecondsSinceEpoch}');
-    
-    return Slidable(
-      key: key,
-      endActionPane: ActionPane(
-        motion: const ScrollMotion(),
-        children: [
-          SlidableAction(
-            onPressed: (context) => _confirmDeleteVenta(venta),
-            backgroundColor: Colors.red,
-            foregroundColor: Colors.white,
-            icon: Icons.delete,
-            label: 'Eliminar',
-            borderRadius: const BorderRadius.only(
-              topRight: Radius.circular(16),
-              bottomRight: Radius.circular(16),
-            ),
-          ),
-        ],
-      ),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        decoration: BoxDecoration(
-          color: Theme.of(context).brightness == Brightness.dark
-              ? const Color(0xFF1A1A1A)
-              : Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Theme.of(context).brightness == Brightness.dark
-                  ? Colors.black.withOpacity(0.3)
-                  : Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 2),
+        : Key(
+            'offline_${venta.clienteId}_${venta.fecha.millisecondsSinceEpoch}');
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Slidable(
+        key: key,
+        endActionPane: ActionPane(
+          motion: const ScrollMotion(),
+          children: [
+            SlidableAction(
+              onPressed: (context) => _confirmDeleteVenta(venta),
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+              icon: Icons.delete,
+              label: 'Eliminar',
+              borderRadius: const BorderRadius.only(
+                topRight: Radius.circular(16),
+                bottomRight: Radius.circular(16),
+              ),
             ),
           ],
         ),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            borderRadius: BorderRadius.circular(16),
-            onTap: () async {
-              final result = await Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => DetalleVentaScreen(venta: venta),
-                ),
-              );
-              // Refresh the list if venta was deleted or updated
-              if (result == true || result == 'updated') {
-                _loadVentas();
-              }
-            },
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  // Indicador lateral
-                  Container(
-                    width: 4,
-                    height: 60,
-                    decoration: BoxDecoration(
-                      color: AppTheme.primaryColor,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Theme.of(context).brightness == Brightness.dark
+                ? const Color(0xFF1A1A1A)
+                : Colors.white,
+            borderRadius: BorderRadius.circular(AppTheme.borderRadiusCards),
+            boxShadow: [
+              BoxShadow(
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.black.withOpacity(0.3)
+                    : Colors.black.withOpacity(0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(16),
+              onTap: () async {
+                final result = await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => DetalleVentaScreen(venta: venta),
                   ),
-                  const SizedBox(width: 16),
-
-                  // Información de la venta
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          venta.cliente.nombre,
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Theme.of(context).brightness == Brightness.dark
-                                ? Colors.white
-                                : AppTheme.textColor,
+                );
+                if (result == true || result == 'updated') {
+                  if (!mounted) return;
+                  await context.read<VentasProvider>().cargarVentas();
+                  Future.delayed(const Duration(milliseconds: 300), () {
+                    _syncButtonKey.currentState?.recargarPendientes();
+                  });
+                }
+              },
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 4,
+                      height: 60,
+                      decoration: BoxDecoration(
+                        color: Colors.green,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            venta.cliente.nombre,
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color:
+                                  Theme.of(context).brightness == Brightness.dark
+                                      ? Colors.white
+                                      : AppTheme.textColor,
+                            ),
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.calendar_today_outlined,
-                              size: 16,
-                              color: Theme.of(context).brightness == Brightness.dark
-                                  ? Colors.grey.shade400
-                                  : Colors.grey.shade600,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              '${venta.fecha.day}/${venta.fecha.month}/${venta.fecha.year}',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Theme.of(context).brightness == Brightness.dark
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.calendar_today_outlined,
+                                size: 16,
+                                color: Theme.of(context).brightness ==
+                                        Brightness.dark
                                     ? Colors.grey.shade400
                                     : Colors.grey.shade600,
                               ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 2),
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.shopping_cart_outlined,
-                              size: 16,
-                              color: Theme.of(context).brightness == Brightness.dark
-                                  ? Colors.grey.shade400
-                                  : Colors.grey.shade600,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              '${venta.ventasProductos.length} producto${venta.ventasProductos.length != 1 ? 's' : ''}',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Theme.of(context).brightness == Brightness.dark
+                              const SizedBox(width: 4),
+                              Text(
+                                '${venta.fecha.day}/${venta.fecha.month}/${venta.fecha.year}',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Theme.of(context).brightness ==
+                                          Brightness.dark
+                                      ? Colors.grey.shade400
+                                      : Colors.grey.shade600,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 2),
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.attach_money,
+                                size: 16,
+                                color: Theme.of(context).brightness ==
+                                        Brightness.dark
                                     ? Colors.grey.shade400
                                     : Colors.grey.shade600,
                               ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 2),
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.attach_money,
-                              size: 16,
-                              color: Theme.of(context).brightness == Brightness.dark
-                                  ? Colors.grey.shade400
-                                  : Colors.grey.shade600,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              _formatearPrecioTexto(venta.total),
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: Theme.of(context).brightness == Brightness.dark
-                                    ? Colors.grey.shade400
-                                    : Colors.grey.shade600,
+                              const SizedBox(width: 4),
+                              Text(
+                                _formatearPrecioTexto(venta.total),
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: Theme.of(context).brightness ==
+                                          Brightness.dark
+                                      ? Colors.grey.shade400
+                                      : Colors.grey.shade600,
+                                ),
                               ),
-                            ),
-                            const SizedBox(width: 8),
-                            _buildEstadoEntregaBadge(venta.estadoEntrega),
-                          ],
-                        ),
-                      ],
+                              const SizedBox(width: 8),
+                              _buildEstadoEntregaBadge(venta.estadoEntrega),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -756,7 +404,7 @@ class _VentasScreenState extends State<VentasScreen> {
   }
 
   // Estado de error
-  Widget _buildErrorState() {
+  Widget _buildErrorState(String message) {
     return Container(
       decoration: BoxDecoration(
         color: Theme.of(context).brightness == Brightness.dark
@@ -800,7 +448,7 @@ class _VentasScreenState extends State<VentasScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              errorMessage ?? 'Error desconocido',
+              message,
               style: TextStyle(
                 fontSize: 14,
                 color: Colors.grey.shade600,
@@ -809,7 +457,7 @@ class _VentasScreenState extends State<VentasScreen> {
             ),
             const SizedBox(height: 20),
             ElevatedButton.icon(
-              onPressed: _loadVentas,
+              onPressed: () => context.read<VentasProvider>().cargarVentas(),
               style: AppTheme.elevatedButtonStyle(AppTheme.primaryColor),
               icon: const Icon(Icons.refresh, color: Colors.white),
               label: const Text(
@@ -824,7 +472,7 @@ class _VentasScreenState extends State<VentasScreen> {
   }
 
   // Estado vacío
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState(bool hasSearchQuery) {
     return Container(
       decoration: BoxDecoration(
         color: Theme.of(context).brightness == Brightness.dark
@@ -859,7 +507,9 @@ class _VentasScreenState extends State<VentasScreen> {
             ),
             const SizedBox(height: 16),
             Text(
-              searchQuery.isNotEmpty ? 'No se encontraron ventas' : 'No hay ventas registradas',
+              hasSearchQuery
+                  ? 'No se encontraron ventas'
+                  : 'No hay ventas registradas',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w500,
@@ -868,7 +518,7 @@ class _VentasScreenState extends State<VentasScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              searchQuery.isNotEmpty 
+              hasSearchQuery
                   ? 'Intenta con otro término de búsqueda'
                   : 'Comienza creando tu primera venta',
               style: TextStyle(
@@ -883,12 +533,6 @@ class _VentasScreenState extends State<VentasScreen> {
     );
   }
 
-  // Función para formatear precios
-  String _formatearPrecio(double precio) {
-    return precio.toStringAsFixed(2).replaceAllMapped(
-        RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (match) => '${match[1]}.');
-  }
-
   // Widget para formatear precios con decimales más pequeños y grises
   String _formatearPrecioTexto(double precio) {
     final precioStr = precio.toStringAsFixed(2);
@@ -899,59 +543,19 @@ class _VentasScreenState extends State<VentasScreen> {
     return '\$$parteEntera,$parteDecimal';
   }
 
-  Widget _formatearPrecioConDecimales(double precio, {Color? color}) {
-    final precioStr = precio.toStringAsFixed(2);
-    final partes = precioStr.split('.');
-    final parteEntera = partes[0].replaceAllMapped(
-        RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (match) => '${match[1]}.');
-    final parteDecimal = partes[1];
-    
-    return RichText(
-      text: TextSpan(
-        children: [
-          TextSpan(
-            text: '\$$parteEntera',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).brightness == Brightness.dark
-                  ? Colors.white
-                  : (color ?? AppTheme.primaryColor),
-            ),
-          ),
-          TextSpan(
-            text: ',$parteDecimal',
-            style: TextStyle(
-              fontSize: 12,
-              color: Theme.of(context).brightness == Brightness.dark
-                  ? Colors.grey.shade400
-                  : Colors.grey.shade400,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   // Función para confirmar eliminación de venta
   void _confirmDeleteVenta(Ventas venta) async {
     final confirm = await AppDialogs.showDeleteConfirmationDialog(
       context: context,
       title: 'Eliminar Venta',
-      message: '¿Está seguro de que desea eliminar esta venta? Esta acción no se puede deshacer.',
+      message:
+          '¿Está seguro de que desea eliminar esta venta? Esta acción no se puede deshacer.',
     );
 
     if (confirm == true) {
       try {
-        final ventasProvider = VentasProvider();
-        await ventasProvider.eliminarVenta(venta.id ?? 0);
-
+        await context.read<VentasProvider>().eliminarVentaDeLista(venta);
         if (!mounted) return;
-
-        setState(() {
-          ventas.remove(venta);
-        });
-
         AppTheme.showSnackBar(
           context,
           AppTheme.successSnackBar('Venta eliminada correctamente'),
@@ -962,6 +566,69 @@ class _VentasScreenState extends State<VentasScreen> {
         AppTheme.showSnackBar(
           context,
           AppTheme.errorSnackBar('Error al eliminar venta: $e'),
+        );
+      }
+    }
+  }
+
+  void _manejarResultadoSincronizacion(
+      BuildContext context, Map<String, dynamic> result) {
+    final sincronizadas = (result['sincronizadas'] is int)
+        ? result['sincronizadas'] as int
+        : int.tryParse('${result['sincronizadas']}') ?? 0;
+    final fallidas = (result['fallidas'] is int)
+        ? result['fallidas'] as int
+        : int.tryParse('${result['fallidas']}') ?? 0;
+    final success = result['success'] == true;
+    final message = (result['message'] ?? '').toString();
+
+    if (success) {
+      if (sincronizadas > 0 && fallidas == 0) {
+        AppTheme.showSnackBar(
+          context,
+          AppTheme.successSnackBar(
+            sincronizadas == 1
+                ? '1 venta sincronizada correctamente'
+                : '$sincronizadas ventas sincronizadas correctamente',
+          ),
+        );
+      } else if (sincronizadas > 0 && fallidas > 0) {
+        AppTheme.showSnackBar(
+          context,
+          AppTheme.warningSnackBar(
+            '$sincronizadas ventas sincronizadas. $fallidas fallaron.',
+          ),
+        );
+      } else if (sincronizadas == 0 && fallidas == 0) {
+        AppTheme.showSnackBar(
+          context,
+          AppTheme.successSnackBar('No hay ventas pendientes de sincronizar'),
+        );
+      } else {
+        AppTheme.showSnackBar(
+          context,
+          AppTheme.warningSnackBar(message.isNotEmpty
+              ? message
+              : 'Sincronización completada con advertencias'),
+        );
+      }
+    } else {
+      if (fallidas > 0) {
+        final warning = message.toLowerCase().contains('conexión') ||
+                message.toLowerCase().contains('backend')
+            ? AppTheme.warningSnackBar(
+                '$sincronizadas ventas sincronizadas. $fallidas fallaron.',
+              )
+            : AppTheme.errorSnackBar(
+                '$sincronizadas ventas sincronizadas. $fallidas fallaron. Revisa los datos de las ventas.',
+              );
+        AppTheme.showSnackBar(context, warning);
+      } else {
+        AppTheme.showSnackBar(
+          context,
+          AppTheme.errorSnackBar(
+            message.isNotEmpty ? message : 'Error al sincronizar ventas',
+          ),
         );
       }
     }
@@ -983,7 +650,7 @@ class _VentasScreenState extends State<VentasScreen> {
     Color bgColor;
     Color textColor;
     IconData icon;
-    
+
     switch (estado) {
       case EstadoEntrega.entregada:
         bgColor = Colors.green.shade100;
@@ -1059,15 +726,15 @@ class _SincronizarButtonState extends State<_SincronizarButton> {
 
   Future<void> _cargarPendientes() async {
     if (_isLoading) return; // Evitar cargas simultáneas
-    
+
     setState(() {
       _isLoading = true;
     });
-    
+
     try {
       final provider = Provider.of<VentasProvider>(context, listen: false);
       final count = await provider.contarVentasPendientes();
-      
+
       if (mounted) {
         setState(() {
           _pendientes = count;
@@ -1135,14 +802,14 @@ class _SincronizarButtonState extends State<_SincronizarButton> {
                   backgroundColor: Colors.red,
                   child: const Icon(Icons.cloud_upload),
                 ),
-          tooltip: widget.isSincronizando 
-              ? 'Sincronizando...' 
+          tooltip: widget.isSincronizando
+              ? 'Sincronizando...'
               : '$_pendientes ventas pendientes',
           onPressed: widget.isSincronizando ? null : widget.onSincronizar,
         ),
       );
     }
-    
+
     // Si está cargando, mostrar el botón aunque el contador aún no esté listo
     // Esto evita que el botón desaparezca temporalmente durante la recarga
     if (_isLoading) {
@@ -1163,12 +830,14 @@ class _SincronizarButtonState extends State<_SincronizarButton> {
                   backgroundColor: Colors.red,
                   child: const Icon(Icons.cloud_upload),
                 ),
-          tooltip: widget.isSincronizando ? 'Sincronizando...' : 'Verificando ventas pendientes...',
+          tooltip: widget.isSincronizando
+              ? 'Sincronizando...'
+              : 'Verificando ventas pendientes...',
           onPressed: widget.isSincronizando ? null : widget.onSincronizar,
         ),
       );
     }
-    
+
     return const SizedBox.shrink();
   }
 }

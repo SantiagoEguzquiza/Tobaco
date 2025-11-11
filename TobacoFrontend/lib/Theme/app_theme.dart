@@ -10,6 +10,8 @@ class AppTheme {
   static const Color textColor = Colors.black;
   static const Color textGreyColor = Colors.grey;
   static const Color addGreenColor = Colors.green;
+  static const double borderRadiusMainButtons = 8;
+  static const double borderRadiusCards = 8;
 
   static const TextStyle inputLabelStyle = TextStyle(
     fontSize: 16,
@@ -327,20 +329,20 @@ class AppTheme {
           color: Colors.grey,
         ),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.all(Radius.circular(30)),
+          borderRadius: BorderRadius.all(Radius.circular(10)),
         ),
         prefixIconColor: Colors.grey,
         filled: true,
         fillColor: Color.fromRGBO(255, 255, 255, 1),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.all(Radius.circular(30)),
+          borderRadius: BorderRadius.all(Radius.circular(10)),
           borderSide: BorderSide(
             color: Color.fromRGBO(200, 200, 200, 1),
             width: 1.0,
           ),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.all(Radius.circular(30)),
+          borderRadius: BorderRadius.all(Radius.circular(10)),
           borderSide: BorderSide(
             color: Color.fromRGBO(200, 200, 200, 1),
             width: 1.0,
@@ -455,23 +457,23 @@ class AppTheme {
           fontSize: 15,
         ),
         border: const OutlineInputBorder(
-          borderRadius: BorderRadius.all(Radius.circular(30)),
+          borderRadius: BorderRadius.all(Radius.circular(10)),
           borderSide: BorderSide(color: Color(0xFF404040)),
         ),
         enabledBorder: const OutlineInputBorder(
-          borderRadius: BorderRadius.all(Radius.circular(30)),
+          borderRadius: BorderRadius.all(Radius.circular(10)),
           borderSide: BorderSide(color: Color(0xFF404040)),
         ),
         focusedBorder: const OutlineInputBorder(
-          borderRadius: BorderRadius.all(Radius.circular(30)),
+          borderRadius: BorderRadius.all(Radius.circular(10)),
           borderSide: BorderSide(color: Color(0xFF4CAF50), width: 2.0),
         ),
         errorBorder: const OutlineInputBorder(
-          borderRadius: BorderRadius.all(Radius.circular(30)),
+          borderRadius: BorderRadius.all(Radius.circular(10)),
           borderSide: BorderSide(color: Color(0xFFCF6679)),
         ),
         focusedErrorBorder: const OutlineInputBorder(
-          borderRadius: BorderRadius.all(Radius.circular(30)),
+          borderRadius: BorderRadius.all(Radius.circular(10)),
           borderSide: BorderSide(color: Color(0xFFCF6679), width: 2.0),
         ),
         prefixIconColor: const Color(0xFF808080),

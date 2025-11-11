@@ -137,7 +137,7 @@ class CatalogoLocalService {
         await txn.insert('categorias', {
           'id': cat.id,
           'categoria_json': jsonEncode(cat.toJson()),
-          'sort_order': cat.sortOrder ?? 0,
+          'sort_order': cat.sortOrder,
           'updated_at': now,
         });
       }
@@ -147,7 +147,17 @@ class CatalogoLocalService {
   Future<List<Categoria>> obtenerCategorias() async {
     final db = await database;
     final rows = await db.query('categorias', orderBy: 'sort_order ASC');
-    return rows.map((r) => Categoria.fromJson(jsonDecode(r['categoria_json'] as String))).toList();
+    return rows.map((r) {
+      final Map<String, dynamic> data =
+          Map<String, dynamic>.from(jsonDecode(r['categoria_json'] as String));
+      if (!data.containsKey('id') || data['id'] == null) {
+        data['id'] = r['id'];
+      }
+      if (!data.containsKey('sortOrder') || data['sortOrder'] == null) {
+        data['sortOrder'] = r['sort_order'];
+      }
+      return Categoria.fromJson(data);
+    }).toList();
   }
 
   // ===== Precios Especiales =====

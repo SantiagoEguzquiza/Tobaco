@@ -125,11 +125,6 @@ class TicketBuilder {
     lines.add(_centerText('FORMAS DE PAGO'));
     lines.add(_createSeparator('-'));
     
-    if (venta.metodoPago != null) {
-      final metodoStr = _getMetodoPagoText(venta.metodoPago!);
-      lines.add(metodoStr);
-    }
-    
     if (venta.pagos != null && venta.pagos!.isNotEmpty) {
       for (var pago in venta.pagos!) {
         final metodoStr = _getMetodoPagoText(pago.metodo);

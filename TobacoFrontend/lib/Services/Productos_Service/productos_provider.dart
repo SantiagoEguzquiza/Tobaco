@@ -1,15 +1,182 @@
 import 'package:flutter/material.dart';
 import 'package:tobaco/Models/Producto.dart';
+import 'package:tobaco/Models/Categoria.dart';
 import 'package:tobaco/Services/Productos_Service/productos_service.dart';
 import 'package:tobaco/Services/Catalogo_Local/catalogo_local_service.dart';
+import 'package:tobaco/Services/Categoria_Service/categoria_provider.dart';
+import 'package:tobaco/Services/Cache/datos_cache_service.dart';
+import 'package:tobaco/Helpers/api_handler.dart';
+import 'dart:developer';
 
 class ProductoProvider with ChangeNotifier {
   final ProductoService _productoService = ProductoService();
   final CatalogoLocalService _catalogoLocal = CatalogoLocalService();
 
-  List<Producto> _productos = [];
+  // Estado de la pantalla de productos
 
+  // Variables de estado
+  bool _isLoading = false;
+  bool _isLoadingMore = false;
+  bool _hasMoreData = true;
+  bool _isOffline = false;
+  String? _errorMessage;
+  int _currentPage = 1;
+  final int _pageSize = 20;
+  List<Producto> _productos = [];
+  List<Categoria> _categorias = [];
+  String? _selectedCategory;
+  String _searchQuery = '';
+  bool _offlineMessageShown = false;
+
+  // Getters
+  bool get isLoading => _isLoading;
+  bool get isLoadingMore => _isLoadingMore;
+  bool get hasMoreData => _hasMoreData;
+  bool get isOffline => _isOffline;
+  String? get errorMessage => _errorMessage;
   List<Producto> get productos => _productos;
+  List<Categoria> get categorias => _categorias;
+  String? get selectedCategory => _selectedCategory;
+  String get searchQuery => _searchQuery;
+
+  List<Producto> get productosFiltrados {
+    List<Producto> filtered;
+    if (_searchQuery.isNotEmpty) {
+      filtered = _productos.where((p) =>
+          p.nombre.toLowerCase().contains(_searchQuery.toLowerCase())).toList();
+    } else if (_selectedCategory != null) {
+      filtered = _productos.where((p) => p.categoriaNombre == _selectedCategory).toList();
+    } else {
+      filtered = List.from(_productos);
+    }
+    // Ordenar alfabéticamente
+    filtered.sort((a, b) => a.nombre.toLowerCase().compareTo(b.nombre.toLowerCase()));
+    return filtered;
+  }
+
+  // Lista de productos original (para compatibilidad con métodos existentes)
+  List<Producto> get productosOriginal => _productos;
+
+  /// Carga productos y categorías iniciales (primera página)
+  Future<void> cargarProductosInicial(CategoriasProvider categoriasProvider) async {
+    _isLoading = true;
+    _errorMessage = null;
+    _currentPage = 1;
+    _productos.clear();
+    _hasMoreData = true;
+    _isOffline = false;
+    notifyListeners();
+
+    try {
+      // Obtener categorías y productos en paralelo
+      final futures = await Future.wait([
+        categoriasProvider.obtenerCategorias(silent: true),
+        obtenerProductosPaginados(_currentPage, _pageSize),
+      ]);
+
+      final categoriasData = futures[0] as List<Categoria>;
+      final productosData = futures[1] as Map<String, dynamic>;
+
+      _productos = List<Producto>.from(productosData['productos']);
+      _categorias = categoriasData;
+      _hasMoreData = productosData['hasNextPage'] ?? false;
+      _isOffline = categoriasProvider.loadedFromCache;
+
+      // Seleccionar la primera categoría por defecto si no hay ninguna seleccionada
+      if (_selectedCategory == null && categoriasData.isNotEmpty) {
+        _selectedCategory = categoriasData.first.nombre;
+      }
+
+      _isLoading = false;
+      notifyListeners();
+    } catch (e) {
+      log('Error al cargar los Productos: $e', level: 1000);
+
+      // Verificar si hay datos del caché disponibles
+      if (Apihandler.isConnectionError(e)) {
+        try {
+          // Intentar obtener del caché directamente
+          final cacheService = DatosCacheService();
+          final productosCache = await cacheService.obtenerProductosDelCache();
+
+          if (productosCache.isNotEmpty) {
+            // Hay datos en caché, cargarlos manualmente
+            final start = (_currentPage - 1) * _pageSize;
+            final end = start + _pageSize;
+            final productosPag = productosCache.sublist(
+              start,
+              end > productosCache.length ? productosCache.length : end,
+            );
+
+            _productos = productosPag;
+            _hasMoreData = end < productosCache.length;
+            _isOffline = true;
+            _isLoading = false;
+            notifyListeners();
+            return;
+          }
+        } catch (cacheError) {
+          // Si falla el caché, continuar con el error normal
+        }
+      }
+
+      _isLoading = false;
+      _errorMessage = e.toString();
+      notifyListeners();
+      rethrow;
+    }
+  }
+
+  /// Carga más productos con scroll infinito
+  Future<void> cargarMasProductos() async {
+    if (_isLoadingMore || !_hasMoreData) return;
+
+    _isLoadingMore = true;
+    notifyListeners();
+
+    try {
+      final data = await obtenerProductosPaginados(_currentPage + 1, _pageSize);
+      
+      _productos.addAll(List<Producto>.from(data['productos']));
+      _currentPage++;
+      _hasMoreData = data['hasNextPage'] ?? false;
+      _isLoadingMore = false;
+      notifyListeners();
+    } catch (e) {
+      _isLoadingMore = false;
+      _errorMessage = e.toString();
+      notifyListeners();
+      log('Error al cargar más productos: $e', level: 1000);
+      rethrow;
+    }
+  }
+
+  /// Cambia la categoría seleccionada
+  void seleccionarCategoria(String? nombre) {
+    _selectedCategory = nombre;
+    _searchQuery = ''; // Limpiar búsqueda al seleccionar categoría
+    notifyListeners();
+  }
+
+  /// Actualiza la búsqueda y filtra productos
+  void filtrarPorBusqueda(String query) {
+    _searchQuery = query;
+    if (query.isNotEmpty) {
+      _selectedCategory = null; // Limpiar categoría al buscar
+    }
+    notifyListeners();
+  }
+
+  /// Limpia la búsqueda
+  void limpiarBusqueda() {
+    _searchQuery = '';
+    notifyListeners();
+  }
+
+  /// Recarga los productos iniciales (usado después de crear/editar/eliminar)
+  Future<void> recargarProductos(CategoriasProvider categoriasProvider) async {
+    await cargarProductosInicial(categoriasProvider);
+  }
 
   /// Obtiene productos: intenta del servidor, si falla usa SQLite local
   Future<List<Producto>> obtenerProductos() async {
@@ -188,6 +355,7 @@ class ProductoProvider with ChangeNotifier {
         'page': page,
         'pageSize': pageSize,
         'totalPages': (productosCache.length / pageSize).ceil(),
+        'hasNextPage': end < productosCache.length,
       };
     }
   }

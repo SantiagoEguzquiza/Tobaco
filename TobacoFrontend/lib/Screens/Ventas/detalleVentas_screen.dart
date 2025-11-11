@@ -6,7 +6,7 @@ import 'package:tobaco/Models/EstadoEntrega.dart';
 import 'package:tobaco/Services/Ventas_Service/ventas_provider.dart';
 import 'package:tobaco/Theme/app_theme.dart';
 import 'package:printing/printing.dart';
-import 'package:tobaco/Utils/pdf/venta_pdf_builder.dart';
+import 'package:tobaco/Utils/pdf_generator/venta_pdf_builder.dart';
 import 'package:tobaco/Services/Printer_Service/bluetooth_printer_service.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
@@ -1564,6 +1564,7 @@ class _PrinterSelectionDialogState extends State<_PrinterSelectionDialog> {
 
   Future<void> _scanForPrinters() async {
     try {
+      if (!mounted) return;
       setState(() {
         isLoading = true;
         errorMessage = null;
@@ -1572,11 +1573,13 @@ class _PrinterSelectionDialogState extends State<_PrinterSelectionDialog> {
       final printerService = BluetoothPrinterService.instance;
       final foundPrinters = await printerService.scanForPrinters();
 
+      if (!mounted) return;
       setState(() {
         printers = foundPrinters;
         isLoading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         errorMessage = 'Error al buscar impresoras: $e';
         isLoading = false;
