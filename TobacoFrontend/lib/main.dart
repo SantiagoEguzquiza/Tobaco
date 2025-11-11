@@ -27,6 +27,9 @@ void main() async {
   await ConnectivityService().initialize();
   // Sincronización automática deshabilitada: solo manual desde listado de ventas
 
+  final themeProvider = ThemeProvider();
+  await themeProvider.loadThemeMode();
+
   runApp(
     MultiProvider(
       providers: [
@@ -37,7 +40,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => CategoriasProvider()),
         ChangeNotifierProvider(create: (_) => VentasProvider()),
         ChangeNotifierProvider(create: (_) => VentaBorradorProvider()),
-        ChangeNotifierProvider(create: (_) => ThemeProvider()),
+        ChangeNotifierProvider.value(value: themeProvider),
         // 1) Repo primero
         Provider(create: (_) => BcuRepository()),
         // 2) Provider que depende del repo

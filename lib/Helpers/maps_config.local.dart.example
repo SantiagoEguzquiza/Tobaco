@@ -1,0 +1,21 @@
+// Archivo de configuración local para Google Maps API Keys
+// 
+// INSTRUCCIONES:
+// 1. Copia este archivo y renómbralo a "maps_config.local.dart" (sin .example)
+// 2. Reemplaza las API keys con tus propias keys de Google Maps
+// 3. Para obtener tus API keys:
+//    - Ve a Google Cloud Console: https://console.cloud.google.com/
+//    - Crea un proyecto o selecciona uno existente
+//    - Habilita "Maps SDK for Android" y "Directions API"
+//    - Ve a "Credenciales" y crea una nueva API key
+//    - Configura las restricciones apropiadas (package name + SHA-1 para Android)
+//
+// IMPORTANTE: Este archivo (maps_config.local.dart) NO se sube al repositorio
+
+// Clave para Maps SDK (restringida por Android package + SHA1)
+const String googleMapsApiKey = 'TU_API_KEY_AQUI';
+
+// Clave separada para Directions Web Service (recomendado: SIN restricción de aplicación,
+// pero restringida por API solo a "Directions API")
+const String directionsApiKey = 'TU_DIRECTIONS_API_KEY_AQUI';
+
