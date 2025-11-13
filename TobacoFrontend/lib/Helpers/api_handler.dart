@@ -12,8 +12,9 @@ class Apihandler {
 
   static final IOClient client = IOClient(httpClient);
 
-  static final baseUrl =
-      Uri.parse('https://192.168.1.10:7148'); // URL si es en emulador android usar 10.0.2.2:7148 
+  static final baseUrl = Uri.parse(
+      'https://10.0.2.2:7148'); // URL si es en emulador android usar 10.0.2.2:7148 
+      //conexionSanti = https://192.168.1.10:7148
 
   static Future<bool> checkTokenAndFetchData(BuildContext context) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();

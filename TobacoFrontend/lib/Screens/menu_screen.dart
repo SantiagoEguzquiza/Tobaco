@@ -12,6 +12,7 @@ import 'package:tobaco/Screens/Admin/recorridos_programados_screen.dart';
 import 'package:tobaco/Screens/Auth/login_screen.dart';
 import 'package:tobaco/Screens/Config/config_screen.dart';
 import 'package:tobaco/Screens/Entregas/mapa_entregas_screen.dart';
+import 'package:tobaco/Screens/Entregas/entregas_screen.dart';
 import 'package:tobaco/Services/Auth_Service/auth_provider.dart';
 import 'package:tobaco/Theme/app_theme.dart';
 import 'package:tobaco/Theme/dialogs.dart';
@@ -473,10 +474,10 @@ class MenuScreen extends StatelessWidget {
                       SizedBox(
                         width: isTablet ? 400 : double.infinity,
                         height: buttonSize,
-                         child: ElevatedButton(
-                           style: ElevatedButton.styleFrom(
-                             backgroundColor: const Color(0xFF10B981), // Modern emerald
-                             foregroundColor: Colors.white,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF10B981), // Modern emerald
+                            foregroundColor: Colors.white,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(20),
                             ),
@@ -513,50 +514,94 @@ class MenuScreen extends StatelessWidget {
                         ),
                       ),
                       SizedBox(height: spacing),
-                      // 🗺️ Botón de Mapa de Entregas
-                      SizedBox(
-                        width: isTablet ? 400 : double.infinity,
-                        height: buttonSize,
-                         child: ElevatedButton(
-                           style: ElevatedButton.styleFrom(
-                             backgroundColor: const Color(0xFF2563EB), // Blue
-                             foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            elevation: 10,
-                            shadowColor: Colors.black,
-                          ),
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const MapaEntregasScreen(),
-                              ),
-                            );
-                          },
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.map,
-                                size: iconSize,
-                                color: Colors.white,
-                              ),
-                              const SizedBox(width: 10),
-                              Flexible(
-                                child: Text(
-                                  'Mapa de Entregas',
-                                  style: TextStyle(
-                                    fontSize: fontSize,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                  textAlign: TextAlign.center,
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Expanded(
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF2563EB), // Blue
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(20),
                                 ),
+                                minimumSize: Size(buttonSize, buttonSize),
+                                elevation: 10,
+                                shadowColor: Colors.black,
                               ),
-                            ],
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        const MapaEntregasScreen(),
+                                  ),
+                                );
+                              },
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.map,
+                                    size: iconSize,
+                                    color: Colors.white,
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Text(
+                                    'Mapa entregas',
+                                    style: TextStyle(
+                                      fontSize: fontSize,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
-                        ),
+                          SizedBox(width: spacing),
+                          Expanded(
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF34D399), // Teal
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                minimumSize: Size(buttonSize, buttonSize),
+                                elevation: 10,
+                                shadowColor: Colors.black,
+                              ),
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => const EntregasScreen(),
+                                  ),
+                                );
+                              },
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.local_shipping,
+                                    size: iconSize,
+                                    color: Colors.white,
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Text(
+                                    'Entregas',
+                                    style: TextStyle(
+                                      fontSize: fontSize,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                       SizedBox(height: spacing),
                       Row(
