@@ -14,6 +14,25 @@ class DetalleEntregasScreen extends StatefulWidget {
 
   @override
   State<DetalleEntregasScreen> createState() => _DetalleEntregasScreenState();
+
+}
+
+class _ProductoUnidad {
+  _ProductoUnidad({
+    required this.productoIndex,
+    required this.unidadNumero,
+    required this.totalUnidades,
+    required this.entregado,
+    this.motivo,
+    this.nota,
+  });
+
+  final int productoIndex;
+  final int unidadNumero;
+  final int totalUnidades;
+  bool entregado;
+  String? motivo;
+  String? nota;
 }
 
 class _DetalleEntregasScreenState extends State<DetalleEntregasScreen> {
@@ -27,6 +46,7 @@ class _DetalleEntregasScreenState extends State<DetalleEntregasScreen> {
   };
 
   late List<VentasProductos> _productosEditables;
+  late final List<_ProductoUnidad> _unidades;
   bool _hasChanges = false;
   bool _hasGuardadoCambios = false;
   bool _isSaving = false;
@@ -52,6 +72,52 @@ class _DetalleEntregasScreenState extends State<DetalleEntregasScreen> {
           ),
         )
         .toList();
+    _unidades = _generarUnidades();
+  }
+
+  List<_ProductoUnidad> _generarUnidades() {
+    final unidades = <_ProductoUnidad>[];
+
+    for (var i = 0; i < _productosEditables.length; i++) {
+      final producto = _productosEditables[i];
+      final totalUnidades = _cantidadUnidades(producto);
+
+      final motivosPorUnidad = _parseDetallePorUnidad(producto.motivo);
+      final notasPorUnidad = _parseDetallePorUnidad(producto.nota);
+
+      for (var unidad = 1; unidad <= totalUnidades; unidad++) {
+        final motivoUnidad = motivosPorUnidad[unidad];
+        final notaUnidad = notasPorUnidad[unidad];
+
+        bool entregado;
+        if (motivoUnidad != null) {
+          // Esta unidad quedó explícitamente marcada como no entregada.
+          entregado = false;
+        } else if (producto.entregado) {
+          // El backend indica que el producto completo está entregado.
+          entregado = true;
+        } else if (motivosPorUnidad.isNotEmpty) {
+          // Hay motivos por unidad, las restantes se consideran entregadas.
+          entregado = true;
+        } else {
+          // Sin información suficiente: asumir que ninguna unidad fue entregada.
+          entregado = false;
+        }
+
+        unidades.add(
+          _ProductoUnidad(
+            productoIndex: i,
+            unidadNumero: unidad,
+            totalUnidades: totalUnidades,
+            entregado: entregado,
+            motivo: motivoUnidad,
+            nota: notaUnidad,
+          ),
+        );
+      }
+    }
+
+    return unidades;
   }
 
   @override
@@ -61,12 +127,12 @@ class _DetalleEntregasScreenState extends State<DetalleEntregasScreen> {
     final estadoActual = _hasChanges
         ? _calcularEstadoEntrega(_productosEditables)
         : widget.venta.estadoEntrega;
-    final productosPendientes =
-        _productosEditables.where((p) => !p.entregado).toList();
-    final productosEntregados =
-        _productosEditables.where((p) => p.entregado).toList();
-    final productosSinMotivo = productosPendientes
-        .where((p) => (p.motivo == null || p.motivo!.isEmpty))
+    final unidadesPendientes =
+        _unidades.where((unidad) => !unidad.entregado).toList();
+    final unidadesEntregadas =
+        _unidades.where((unidad) => unidad.entregado).toList();
+    final unidadesSinMotivo = unidadesPendientes
+        .where((unidad) => unidad.motivo == null || unidad.motivo!.isEmpty)
         .toList();
 
     return WillPopScope(
@@ -101,8 +167,8 @@ class _DetalleEntregasScreenState extends State<DetalleEntregasScreen> {
                     context,
                     estadoActual: estadoActual,
                     fechaFormateada: fechaFormateada,
-                    pendientes: productosPendientes.length,
-                    entregados: productosEntregados.length,
+                    pendientes: unidadesPendientes.length,
+                    entregados: unidadesEntregadas.length,
                   ),
                   const SizedBox(height: 20),
                   _buildInfoSection(context),
@@ -110,7 +176,7 @@ class _DetalleEntregasScreenState extends State<DetalleEntregasScreen> {
                   _buildProductosCard(
                     context,
                     titulo: 'Productos Pendientes',
-                    productos: productosPendientes,
+                    unidades: unidadesPendientes,
                     emptyMessage: 'No hay productos pendientes de entrega.',
                     highlightColor: Colors.orange.shade50,
                     borderColor: Colors.orange.shade200,
@@ -119,7 +185,7 @@ class _DetalleEntregasScreenState extends State<DetalleEntregasScreen> {
                   _buildProductosCard(
                     context,
                     titulo: 'Productos Entregados',
-                    productos: productosEntregados,
+                    unidades: unidadesEntregadas,
                     emptyMessage:
                         'Todavía no se registraron productos como entregados.',
                     highlightColor: Colors.green.shade50,
@@ -132,10 +198,32 @@ class _DetalleEntregasScreenState extends State<DetalleEntregasScreen> {
           ),
         ),
         bottomNavigationBar: _buildBottomActions(
-          productosSinMotivo: productosSinMotivo,
+          unidadesSinMotivo: unidadesSinMotivo,
         ),
       ),
     );
+  }
+
+  Map<int, String> _parseDetallePorUnidad(String? texto) {
+    final resultado = <int, String>{};
+    if (texto == null || texto.trim().isEmpty) {
+      return resultado;
+    }
+
+    final lineas = texto.split('\n');
+    final regex = RegExp(r'^Unidad\s+(\d+):\s*(.*)$');
+
+    for (final linea in lineas) {
+      final match = regex.firstMatch(linea.trim());
+      if (match != null) {
+        final numero = int.tryParse(match.group(1) ?? '');
+        if (numero != null) {
+          resultado[numero] = match.group(2)?.trim() ?? '';
+        }
+      }
+    }
+
+    return resultado;
   }
 
   Widget _buildHeaderSection(
@@ -476,7 +564,7 @@ class _DetalleEntregasScreenState extends State<DetalleEntregasScreen> {
   Widget _buildProductosCard(
     BuildContext context, {
     required String titulo,
-    required List<VentasProductos> productos,
+    required List<_ProductoUnidad> unidades,
     required String emptyMessage,
     required Color highlightColor,
     required Color borderColor,
@@ -524,7 +612,7 @@ class _DetalleEntregasScreenState extends State<DetalleEntregasScreen> {
                 ),
                 const SizedBox(width: 10),
                 Text(
-                  '$titulo (${productos.length})',
+                  '$titulo (${unidades.length})',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -537,7 +625,7 @@ class _DetalleEntregasScreenState extends State<DetalleEntregasScreen> {
             ),
           ),
           const SizedBox(height: 12),
-          if (productos.isEmpty)
+          if (unidades.isEmpty)
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(16),
@@ -556,10 +644,10 @@ class _DetalleEntregasScreenState extends State<DetalleEntregasScreen> {
             )
           else
             Column(
-              children: productos
+              children: unidades
                   .map(
-                    (producto) => _buildProductoItem(
-                      producto,
+                    (unidad) => _buildUnidadItem(
+                      unidad,
                       highlightColor: highlightColor,
                       borderColor: borderColor,
                     ),
@@ -571,14 +659,15 @@ class _DetalleEntregasScreenState extends State<DetalleEntregasScreen> {
     );
   }
 
-  Widget _buildProductoItem(
-    VentasProductos producto, {
+  Widget _buildUnidadItem(
+    _ProductoUnidad unidad, {
     required Color highlightColor,
     required Color borderColor,
   }) {
-    final isEntregado = producto.entregado;
-    final motivo = producto.motivo ?? '';
-    final nota = producto.nota ?? '';
+    final productoBase = _productosEditables[unidad.productoIndex];
+    final isEntregado = unidad.entregado;
+    final motivo = unidad.motivo ?? '';
+    final nota = unidad.nota ?? '';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -605,7 +694,7 @@ class _DetalleEntregasScreenState extends State<DetalleEntregasScreen> {
                 value: isEntregado,
                 onChanged: (value) async {
                   if (value == null) return;
-                  await _onToggleProducto(producto, value);
+                  await _onToggleUnidad(unidad, value);
                 },
               ),
               const SizedBox(width: 8),
@@ -614,7 +703,9 @@ class _DetalleEntregasScreenState extends State<DetalleEntregasScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      producto.nombre,
+                      productoBase.cantidad > 1
+                          ? '${productoBase.nombre} · Unidad ${unidad.unidadNumero} de ${unidad.totalUnidades}'
+                          : productoBase.nombre,
                       style: const TextStyle(
                         fontWeight: FontWeight.w600,
                         fontSize: 15,
@@ -627,7 +718,7 @@ class _DetalleEntregasScreenState extends State<DetalleEntregasScreen> {
                             size: 14, color: Colors.grey.shade600),
                         const SizedBox(width: 4),
                         Text(
-                          'Cantidad: ${producto.cantidad}',
+                          'Producto #${unidad.unidadNumero}',
                           style: TextStyle(
                             fontSize: 12,
                             color: Colors.grey.shade600,
@@ -638,7 +729,10 @@ class _DetalleEntregasScreenState extends State<DetalleEntregasScreen> {
                             size: 14, color: Colors.grey.shade600),
                         const SizedBox(width: 4),
                         Text(
-                          _formatearPrecioTexto(producto.precioFinalCalculado),
+                          _formatearPrecioTexto(
+                            productoBase.precioFinalCalculado /
+                                unidad.totalUnidades,
+                          ),
                           style: TextStyle(
                             fontSize: 12,
                             color: Colors.grey.shade600,
@@ -654,7 +748,7 @@ class _DetalleEntregasScreenState extends State<DetalleEntregasScreen> {
                 IconButton(
                   tooltip: 'Editar motivo',
                   icon: Icon(Icons.edit_note, color: Colors.orange.shade700),
-                  onPressed: () => _mostrarDialogoMotivo(producto),
+                  onPressed: () => _mostrarDialogoMotivoUnidad(unidad),
                 ),
             ],
           ),
@@ -714,7 +808,7 @@ class _DetalleEntregasScreenState extends State<DetalleEntregasScreen> {
   }
 
   Widget _buildBottomActions({
-    required List<VentasProductos> productosSinMotivo,
+    required List<_ProductoUnidad> unidadesSinMotivo,
   }) {
     return Container(
       decoration: BoxDecoration(
@@ -735,7 +829,7 @@ class _DetalleEntregasScreenState extends State<DetalleEntregasScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (_hasChanges && productosSinMotivo.isNotEmpty)
+            if (_hasChanges && unidadesSinMotivo.isNotEmpty)
               Container(
                 width: double.infinity,
                 margin: const EdgeInsets.only(bottom: 12),
@@ -791,7 +885,7 @@ class _DetalleEntregasScreenState extends State<DetalleEntregasScreen> {
                     onPressed: !_hasChanges ||
                             _isSaving ||
                             widget.venta.id == null ||
-                            productosSinMotivo.isNotEmpty
+                            unidadesSinMotivo.isNotEmpty
                         ? null
                         : _guardarEstadoEntrega,
                     icon: _isSaving
@@ -827,32 +921,36 @@ class _DetalleEntregasScreenState extends State<DetalleEntregasScreen> {
     );
   }
 
-  Future<void> _onToggleProducto(
-    VentasProductos producto,
+  Future<void> _onToggleUnidad(
+    _ProductoUnidad unidad,
     bool marcarEntregado,
   ) async {
     if (marcarEntregado) {
       setState(() {
-        producto.entregado = true;
-        producto.motivo = null;
-        producto.nota = null;
+        unidad.entregado = true;
+        unidad.motivo = null;
+        unidad.nota = null;
         _hasChanges = true;
+        _sincronizarProductosDesdeUnidades();
       });
     } else {
-      final confirmado = await _mostrarDialogoMotivo(producto);
+      final confirmado = await _mostrarDialogoMotivoUnidad(unidad);
       if (!confirmado) {
-        setState(() {});
+        setState(() {
+          unidad.entregado = true;
+        });
       }
     }
   }
 
-  Future<bool> _mostrarDialogoMotivo(VentasProductos producto) async {
-    final motivoController = TextEditingController(text: producto.motivo);
-    final notaController = TextEditingController(text: producto.nota);
+  Future<bool> _mostrarDialogoMotivoUnidad(_ProductoUnidad unidad) async {
+    final motivoController = TextEditingController(text: unidad.motivo);
+    final notaController = TextEditingController(text: unidad.nota);
     String? motivoSeleccionado =
-        (producto.motivo != null && producto.motivo!.isNotEmpty)
-            ? producto.motivo
+        (unidad.motivo != null && unidad.motivo!.isNotEmpty)
+            ? unidad.motivo
             : null;
+    final productoBase = _productosEditables[unidad.productoIndex];
 
     final result = await showDialog<bool>(
       context: context,
@@ -919,7 +1017,7 @@ class _DetalleEntregasScreenState extends State<DetalleEntregasScreen> {
                                   const SizedBox(width: 8),
                                   Expanded(
                                     child: Text(
-                                      '${producto.nombre} (${producto.cantidad})',
+                                      '${productoBase.nombre} · Unidad ${unidad.unidadNumero} de ${unidad.totalUnidades}',
                                       style: TextStyle(
                                         fontWeight: FontWeight.w600,
                                         fontSize: 14,
@@ -1126,11 +1224,12 @@ class _DetalleEntregasScreenState extends State<DetalleEntregasScreen> {
 
     if (result == true) {
       setState(() {
-        producto.entregado = false;
-        producto.motivo = motivoController.text.trim();
-        producto.nota =
+        unidad.entregado = false;
+        unidad.motivo = motivoController.text.trim();
+        unidad.nota =
             notaController.text.trim().isNotEmpty ? notaController.text.trim() : null;
         _hasChanges = true;
+        _sincronizarProductosDesdeUnidades();
       });
       return true;
     }
@@ -1139,6 +1238,8 @@ class _DetalleEntregasScreenState extends State<DetalleEntregasScreen> {
   }
 
   Future<void> _guardarEstadoEntrega() async {
+    _sincronizarProductosDesdeUnidades();
+
     if (widget.venta.id == null) {
       AppTheme.showSnackBar(
         context,
@@ -1205,6 +1306,45 @@ class _DetalleEntregasScreenState extends State<DetalleEntregasScreen> {
         AppTheme.errorSnackBar('Error al actualizar estado de entrega: $e'),
       );
     }
+  }
+
+  void _sincronizarProductosDesdeUnidades() {
+    for (var i = 0; i < _productosEditables.length; i++) {
+      final producto = _productosEditables[i];
+      final unidadesProducto =
+          _unidades.where((unidad) => unidad.productoIndex == i).toList();
+      final todasEntregadas =
+          unidadesProducto.every((unidad) => unidad.entregado);
+
+      producto.entregado = todasEntregadas;
+
+      if (todasEntregadas) {
+        producto.motivo = null;
+        producto.nota = null;
+      } else {
+        final motivos = unidadesProducto
+            .where((unidad) => !unidad.entregado && unidad.motivo != null)
+            .map((unidad) =>
+                'Unidad ${unidad.unidadNumero}: ${unidad.motivo!.trim()}')
+            .toList();
+        final notas = unidadesProducto
+            .where((unidad) => !unidad.entregado && unidad.nota != null)
+            .map(
+              (unidad) =>
+                  'Unidad ${unidad.unidadNumero}: ${unidad.nota!.trim()}',
+            )
+            .toList();
+
+        producto.motivo = motivos.isNotEmpty ? motivos.join('\n') : null;
+        producto.nota = notas.isNotEmpty ? notas.join('\n') : null;
+      }
+    }
+  }
+
+  int _cantidadUnidades(VentasProductos producto) {
+    if (producto.cantidad <= 1) return 1;
+    if (producto.cantidad % 1 == 0) return producto.cantidad.toInt();
+    return producto.cantidad.ceil();
   }
 
   EstadoEntrega _calcularEstadoEntrega(List<VentasProductos> productos) {
