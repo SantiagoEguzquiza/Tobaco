@@ -173,24 +173,7 @@ class _DetalleEntregasScreenState extends State<DetalleEntregasScreen> {
                   const SizedBox(height: 20),
                   _buildInfoSection(context),
                   const SizedBox(height: 20),
-                  _buildProductosCard(
-                    context,
-                    titulo: 'Productos Pendientes',
-                    unidades: unidadesPendientes,
-                    emptyMessage: 'No hay productos pendientes de entrega.',
-                    highlightColor: Colors.orange.shade50,
-                    borderColor: Colors.orange.shade200,
-                  ),
-                  const SizedBox(height: 20),
-                  _buildProductosCard(
-                    context,
-                    titulo: 'Productos Entregados',
-                    unidades: unidadesEntregadas,
-                    emptyMessage:
-                        'Todavía no se registraron productos como entregados.',
-                    highlightColor: Colors.green.shade50,
-                    borderColor: Colors.green.shade200,
-                  ),
+                  _buildProductosSection(context),
                   const SizedBox(height: 120),
                 ],
               ),
@@ -558,6 +541,289 @@ class _DetalleEntregasScreenState extends State<DetalleEntregasScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildProductosSection(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).brightness == Brightness.dark
+            ? const Color(0xFF1F1F1F)
+            : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(
+              Theme.of(context).brightness == Brightness.dark ? 0.25 : 0.08,
+            ),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? const Color(0xFF2A2A2A)
+                  : Colors.grey.shade50,
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(16),
+                topRight: Radius.circular(16),
+              ),
+            ),
+            child: Row(
+              children: [
+                Text(
+                  'Productos (${_unidades.length})',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white
+                        : Colors.black87,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (_unidades.isEmpty)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              child: Text(
+                'No hay productos en esta entrega.',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Colors.grey.shade700,
+                ),
+              ),
+            )
+          else
+            ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: _unidades.length,
+              itemBuilder: (context, index) {
+                final unidad = _unidades[index];
+                final isEntregado = unidad.entregado;
+                return Container(
+                  decoration: BoxDecoration(
+                    color: Colors.transparent,
+                    border: Border(
+                      bottom: BorderSide(
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.grey.shade800
+                            : Colors.grey.shade200,
+                        width: 1,
+                      ),
+                    ),
+                  ),
+                  child: _buildUnidadItemInList(
+                    context,
+                    unidad,
+                    isEntregado: isEntregado,
+                  ),
+                );
+              },
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildUnidadItemInList(
+    BuildContext context,
+    _ProductoUnidad unidad, {
+    required bool isEntregado,
+  }) {
+    final productoBase = _productosEditables[unidad.productoIndex];
+    final motivo = unidad.motivo ?? '';
+    final nota = unidad.nota ?? '';
+
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 20,
+        vertical: 12,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Checkbox(
+                value: isEntregado,
+                onChanged: (value) async {
+                  if (value == null) return;
+                  await _onToggleUnidad(unidad, value);
+                },
+                activeColor: AppTheme.primaryColor,
+              ),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: isEntregado
+                      ? Colors.green.shade50
+                      : Colors.orange.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  isEntregado ? Icons.check_circle : Icons.inventory_2,
+                  color: isEntregado
+                      ? Colors.green.shade700
+                      : Colors.orange.shade700,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      productoBase.cantidad > 1
+                          ? '${productoBase.nombre} · Unidad ${unidad.unidadNumero} de ${unidad.totalUnidades}'
+                          : productoBase.nombre,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 16,
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.white
+                            : Colors.black,
+                        decoration:
+                            isEntregado ? TextDecoration.lineThrough : null,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      productoBase.cantidad > 1
+                          ? 'Cantidad: ${productoBase.cantidad} · Unidad ${unidad.unidadNumero}'
+                          : 'Cantidad: ${productoBase.cantidad}',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.grey.shade400
+                            : Colors.grey.shade600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    _formatearPrecioTexto(
+                      productoBase.precioFinalCalculado /
+                          unidad.totalUnidades,
+                    ),
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white
+                          : Colors.black87,
+                    ),
+                  ),
+                  if (!isEntregado) ...[
+                    const SizedBox(height: 4),
+                    InkWell(
+                      onTap: () => _mostrarDialogoMotivoUnidad(unidad),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: motivo.isEmpty
+                              ? Colors.red.shade100
+                              : Colors.orange.shade100,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              motivo.isEmpty ? Icons.warning : Icons.edit,
+                              size: 12,
+                              color: motivo.isEmpty
+                                  ? Colors.red.shade700
+                                  : Colors.orange.shade700,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              motivo.isEmpty
+                                  ? 'Agregar motivo'
+                                  : 'Editar motivo',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                                color: motivo.isEmpty
+                                    ? Colors.red.shade700
+                                    : Colors.orange.shade700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ],
+          ),
+          if (!isEntregado && motivo.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.orange.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: Colors.orange.shade200,
+                  width: 1,
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.info_outline,
+                        size: 16,
+                        color: Colors.orange.shade700,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Motivo: $motivo',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.orange.shade700,
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (nota.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      'Nota: $nota',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.grey.shade700,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 

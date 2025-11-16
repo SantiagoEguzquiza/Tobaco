@@ -164,6 +164,10 @@ class _EntregasScreenState extends State<EntregasScreen> {
     required Color color,
   }) {
     final selected = _estadoFilters.contains(estado);
+    final baseColor = estado == EstadoEntrega.noEntregada
+        ? Colors.red
+        : Colors.orange;
+    
     return FilterChip(
       label: Text(label),
       avatar: Icon(
@@ -171,16 +175,14 @@ class _EntregasScreenState extends State<EntregasScreen> {
             ? Icons.local_shipping_outlined
             : Icons.access_time,
         size: 18,
-        color: selected ? Colors.white : Colors.black54,
+        color: selected ? Colors.white : baseColor.shade700,
       ),
       selected: selected,
-      backgroundColor: color.withOpacity(0.4),
-      selectedColor: estado == EstadoEntrega.noEntregada
-          ? Colors.red.shade400
-          : Colors.orange.shade400,
-      checkmarkColor: Colors.white,
+      backgroundColor: baseColor.withOpacity(0.2),
+      selectedColor: baseColor.shade600,
+      showCheckmark: false,
       labelStyle: TextStyle(
-        color: selected ? Colors.white : Colors.black87,
+        color: selected ? Colors.white : baseColor.shade700,
         fontWeight: FontWeight.w600,
       ),
       onSelected: (value) {
