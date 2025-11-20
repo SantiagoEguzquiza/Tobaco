@@ -6,7 +6,6 @@ import 'package:tobaco/Screens/Deudas/deudas_screen.dart';
 import 'package:tobaco/Screens/Ventas/nuevaVenta_screen.dart';
 import 'package:tobaco/Screens/Ventas/ventas_screen.dart';
 import 'package:tobaco/Screens/Productos/productos_screen.dart';
-import 'package:tobaco/Screens/Admin/user_management_screen.dart';
 import 'package:tobaco/Screens/Admin/asignar_ventas_screen.dart';
 import 'package:tobaco/Screens/Admin/recorridos_programados_screen.dart';
 import 'package:tobaco/Screens/Auth/login_screen.dart';
@@ -16,7 +15,6 @@ import 'package:tobaco/Screens/Entregas/entregas_screen.dart';
 import 'package:tobaco/Services/Auth_Service/auth_provider.dart';
 import 'package:tobaco/Theme/app_theme.dart';
 import 'package:tobaco/Theme/dialogs.dart';
-import 'package:tobaco/Theme/theme_provider.dart';
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -48,8 +46,6 @@ class MenuScreen extends StatelessWidget {
     final fontSize = isTablet ? 22.0 : (screenWidth * 0.04).clamp(16.0, 20.0);
     final spacing = isTablet ? 30.0 : 20.0;
     final horizontalPadding = isTablet ? 40.0 : 20.0;
-
-    final themeProvider = context.watch<AuthProvider>();
     
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -57,42 +53,20 @@ class MenuScreen extends StatelessWidget {
         child: Consumer<AuthProvider>(
           builder: (context, authProvider, child) {
             return Center(
-              child: SingleChildScrollView(
+              
+              child: SingleChildScrollView(             
                 padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
                 child: ConstrainedBox(
                   constraints: BoxConstraints(
                     maxWidth: isDesktop ? 800 : double.infinity,
                   ),
-                  child: Column(
+                  child: Column(                    
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: <Widget>[
-                      // Toggle tema
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: Consumer<ThemeProvider>(
-                          builder: (context, theme, _) {
-                            final isDark = theme.themeMode == ThemeMode.dark;
-                            return Row(
-                              mainAxisAlignment: MainAxisAlignment.end,
-                              children: [
-                                Icon(isDark ? Icons.dark_mode : Icons.light_mode, color: AppTheme.primaryColor),
-                                const SizedBox(width: 8),
-                                Switch(
-                                  value: isDark,
-                                  activeColor: AppTheme.primaryColor,
-                                  onChanged: (val) {
-                                    theme.setThemeMode(val ? ThemeMode.dark : ThemeMode.light);
-                                  },
-                                ),
-                              ],
-                            );
-                          },
-                        ),
-                      ),
                       // Welcome message with user info
-                      Container(
+                      Container(                                              
                         padding: const EdgeInsets.all(16),
-                        margin: const EdgeInsets.only(bottom: 16),
+                        margin: const EdgeInsets.only(bottom: 16, top: 16),
                         decoration: BoxDecoration(
                           color: AppTheme.primaryColor.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
@@ -224,29 +198,6 @@ class MenuScreen extends StatelessWidget {
                             children: [
                               Row(
                                 children: [
-                                  Expanded(
-                                    child: ElevatedButton.icon(
-                                      onPressed: () {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (context) => const UserManagementScreen(),
-                                          ),
-                                        );
-                                      },
-                                      icon: const Icon(Icons.people, size: 18),
-                                      label: const Text('Usuarios'),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: AppTheme.primaryColor,
-                                        foregroundColor: Colors.white,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
-                                        ),
-                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
                                   Expanded(
                                     child: ElevatedButton.icon(
                                       onPressed: () {
@@ -719,5 +670,4 @@ class MenuScreen extends StatelessWidget {
       }
     }
   }
-
 }

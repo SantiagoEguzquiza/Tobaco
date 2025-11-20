@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import 'package:tobaco/Models/Asistencia.dart';
+import 'package:tobaco/Screens/Admin/user_management_screen.dart';
+import 'package:tobaco/Screens/Auth/login_screen.dart';
 import 'package:tobaco/Services/Asistencia_Service/asistencia_service.dart';
 import 'package:tobaco/Services/Auth_Service/auth_provider.dart';
-import 'package:tobaco/Screens/Auth/login_screen.dart';
 import 'package:tobaco/Theme/app_theme.dart';
 import 'package:tobaco/Theme/dialogs.dart';
+import 'package:tobaco/Theme/theme_provider.dart';
 
 class ConfigScreen extends StatefulWidget {
   const ConfigScreen({super.key});
@@ -16,160 +18,23 @@ class ConfigScreen extends StatefulWidget {
 }
 
 class _ConfigScreenState extends State<ConfigScreen> {
-  Asistencia? _asistenciaActiva;
-  List<Asistencia> _historialAsistencias = [];
-  bool _isLoading = false;
-  bool _isLoadingHistory = false;
+  bool _isProcessingAction = false;
 
-  @override
-  void initState() {
-    super.initState();
-    _cargarDatos();
-  }
+  TextTheme get _textTheme => Theme.of(context).textTheme;
 
-  Future<void> _cargarDatos() async {
-    final authProvider = context.read<AuthProvider>();
-    final userId = authProvider.currentUser?.id;
+  TextStyle get _sectionTitleStyle =>
+      _textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700) ??
+      const TextStyle(fontSize: 20, fontWeight: FontWeight.w700);
 
-    if (userId == null) return;
+  TextStyle get _cardTitleStyle =>
+      _textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700) ??
+      const TextStyle(fontSize: 16, fontWeight: FontWeight.w700);
 
-    setState(() {
-      _isLoading = true;
-      _isLoadingHistory = true;
-    });
+  TextStyle get _bodyTextStyle =>
+      _textTheme.bodyMedium ?? const TextStyle(fontSize: 14);
 
-    try {
-      // Cargar asistencia activa
-      final asistenciaActiva = await AsistenciaService.getAsistenciaActiva(userId);
-      
-      // Cargar historial (últimas 10 asistencias)
-      final historial = await AsistenciaService.getAsistenciasByUserId(userId);
-
-      if (!mounted) return;
-
-      setState(() {
-        _asistenciaActiva = asistenciaActiva;
-        _historialAsistencias = historial.take(10).toList();
-        _isLoading = false;
-        _isLoadingHistory = false;
-      });
-    } catch (e) {
-      if (!mounted) return;
-
-      setState(() {
-        _isLoading = false;
-        _isLoadingHistory = false;
-      });
-
-      if (mounted) {
-        AppDialogs.showErrorDialog(
-          context: context,
-          title: 'Error',
-          message: 'Error al cargar datos: ${e.toString()}',
-        );
-      }
-    }
-  }
-
-  Future<void> _registrarEntrada() async {
-    final authProvider = context.read<AuthProvider>();
-    final userId = authProvider.currentUser?.id;
-
-    if (userId == null) {
-      AppDialogs.showErrorDialog(
-        context: context,
-        title: 'Error',
-        message: 'Usuario no encontrado',
-      );
-      return;
-    }
-
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      final asistencia = await AsistenciaService.registrarEntrada(userId);
-      
-      if (!mounted) return;
-
-      setState(() {
-        _asistenciaActiva = asistencia;
-        _isLoading = false;
-      });
-
-      AppDialogs.showSuccessDialog(
-        context: context,
-        title: 'Entrada Registrada',
-        message: 'Tu entrada ha sido registrada exitosamente.\n\nUbicación: ${asistencia.ubicacionEntrada ?? "No disponible"}',
-      );
-
-      // Recargar historial
-      _cargarDatos();
-    } catch (e) {
-      if (!mounted) return;
-
-      setState(() {
-        _isLoading = false;
-      });
-
-      AppDialogs.showErrorDialog(
-        context: context,
-        title: 'Error',
-        message: e.toString().replaceFirst('Exception: ', ''),
-      );
-    }
-  }
-
-  Future<void> _registrarSalida() async {
-    if (_asistenciaActiva == null) return;
-
-    final confirmado = await AppDialogs.showConfirmationDialog(
-      context: context,
-      title: '¿Registrar Salida?',
-      message: '¿Estás seguro de que deseas registrar tu salida?',
-    );
-
-    if (!mounted) return;
-
-    if (!confirmado) return;
-
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      final asistencia = await AsistenciaService.registrarSalida(_asistenciaActiva!.id);
-      
-      if (!mounted) return;
-
-      setState(() {
-        _asistenciaActiva = null;
-        _isLoading = false;
-      });
-
-      AppDialogs.showSuccessDialog(
-        context: context,
-        title: 'Salida Registrada',
-        message: 'Tu salida ha sido registrada exitosamente.\n\nUbicación: ${asistencia.ubicacionSalida ?? "No disponible"}\n\nHoras trabajadas: ${asistencia.horasTrabajadasFormateadas}',
-      );
-
-      // Recargar historial
-      _cargarDatos();
-    } catch (e) {
-      if (!mounted) return;
-
-      setState(() {
-        _isLoading = false;
-      });
-
-      AppDialogs.showErrorDialog(
-        context: context,
-        title: 'Error',
-        message: e.toString().replaceFirst('Exception: ', ''),
-      );
-    }
-  }
+  TextStyle get _supportTextStyle =>
+      _bodyTextStyle.copyWith(color: Colors.grey[600]);
 
   @override
   Widget build(BuildContext context) {
@@ -185,137 +50,671 @@ class _ConfigScreenState extends State<ConfigScreen> {
         backgroundColor: AppTheme.primaryColor,
         foregroundColor: Colors.white,
       ),
-      body: RefreshIndicator(
-        onRefresh: _cargarDatos,
+      body: SafeArea(
         child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.all(16.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Información del usuario
-              Card(
-                elevation: 2,
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Row(
-                    children: [
-                      CircleAvatar(
-                        radius: 30,
-                        backgroundColor: AppTheme.primaryColor,
-                        child: Text(
-                          authProvider.currentUser?.userName.substring(0, 1).toUpperCase() ?? 'U',
-                          style: const TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              authProvider.currentUser?.userName ?? 'Usuario',
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              authProvider.currentUser?.role ?? 'Empleado',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.grey[600],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+              _buildProfileCard(authProvider),
+              if (_isProcessingAction) ...[
+                const SizedBox(height: 16),
+                const LinearProgressIndicator(minHeight: 3),
+              ],
               const SizedBox(height: 24),
-
-              // Sección de Registro de Asistencia
-              Text(
-                'Registro de Asistencia',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(context).textTheme.bodyLarge?.color,
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // Estado actual
-              if (_isLoading)
-                const Center(
-                  child: CircularProgressIndicator(
-                    color: Colors.green,
-                    strokeWidth: 3,
-                  ),
-                )
-              else
-                _buildEstadoAsistencia(),
-
-              const SizedBox(height: 32),
-
-              // Historial de Asistencias
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Historial',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).textTheme.bodyLarge?.color,
-                    ),
-                  ),
-                  if (_isLoadingHistory)
-                    const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.green,
+              _buildSectionTitle('Preferencias'),
+              const SizedBox(height: 12),
+              _buildThemeCard(),
+              const SizedBox(height: 24),
+              _buildSectionTitle('Asistencia'),
+              const SizedBox(height: 12),
+              _buildAssistanceCard(),
+              const SizedBox(height: 24),
+              if (authProvider.currentUser?.isAdmin == true) ...[
+                _buildSectionTitle('Administración'),
+                const SizedBox(height: 12),
+                _buildNavigationCard(
+                  icon: Icons.manage_accounts,
+                  iconColor: AppTheme.primaryColor,
+                  title: 'Gestión de usuarios',
+                  description: 'Administra permisos y cuentas del equipo.',
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const UserManagementScreen(),
                       ),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 16),
-
-              _buildHistorial(),
-
-              const SizedBox(height: 32),
-
-              // Botón de Cerrar Sesión
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: _cerrarSesion,
-                  icon: const Icon(Icons.logout, color: Colors.red),
-                  label: const Text(
-                    'Cerrar Sesión',
-                    style: TextStyle(color: Colors.red),
-                  ),
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Colors.red),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                  ),
+                    );
+                  },
                 ),
+                const SizedBox(height: 24),
+              ],
+              _buildSectionTitle('Sesión'),
+              const SizedBox(height: 12),
+              _buildNavigationCard(
+                icon: Icons.logout,
+                iconColor: Colors.red,
+                title: 'Cerrar sesión',
+                description: 'Finaliza la sesión actual en este dispositivo.',
+                onTap: _cerrarSesion,
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 32),
             ],
           ),
         ),
       ),
     );
+  }
+
+  Widget _buildProfileCard(AuthProvider authProvider) {
+    final user = authProvider.currentUser;
+    final initials = (user?.userName.isNotEmpty ?? false)
+        ? user!.userName.substring(0, 1).toUpperCase()
+        : 'U';
+
+    return Card(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 32,
+              backgroundColor: AppTheme.primaryColor.withOpacity(0.12),
+              child: Text(
+                initials,
+                style: _textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.primaryColor,
+                    ) ??
+                    const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.primaryColor,
+                    ),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    user?.userName ?? 'Usuario',
+                    style: _textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ) ??
+                        const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    user?.role ?? 'Empleado',
+                    style: _supportTextStyle,
+                  ),
+                  if (user?.isAdmin == true) ...[
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primaryColor,
+                        borderRadius: BorderRadius.circular(99),
+                      ),
+                      child: Text(
+                        'Perfil Administrador',
+                        style: _textTheme.labelSmall?.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                            ) ??
+                            const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSectionTitle(String title) {
+    return Text(
+      title,
+      style: _sectionTitleStyle,
+    );
+  }
+
+  Widget _buildThemeCard() {
+    return Card(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16.0),
+        child: Consumer<ThemeProvider>(
+          builder: (_, themeProvider, __) {
+            final isDark = themeProvider.themeMode == ThemeMode.dark;
+            return ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: CircleAvatar(
+                backgroundColor: AppTheme.primaryColor.withOpacity(0.15),
+                child: Icon(
+                  isDark ? Icons.dark_mode : Icons.light_mode,
+                  color: AppTheme.primaryColor,
+                ),
+              ),
+              title: Text(
+                'Modo oscuro',
+                style: _cardTitleStyle,
+              ),
+              subtitle: Text(
+                'Alterna entre el modo claro y oscuro de la aplicación.',
+                style: _supportTextStyle,
+              ),
+              trailing: Switch(
+                value: isDark,
+                activeColor: AppTheme.primaryColor,
+                onChanged: (value) {
+                  themeProvider.setThemeMode(
+                    value ? ThemeMode.dark : ThemeMode.light,
+                  );
+                },
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAssistanceCard() {
+    return _buildActionCard(
+      icon: Icons.schedule,
+      iconColor: AppTheme.primaryColor,
+      title: 'Gestión de asistencia',
+      description:
+          'Accede a las acciones rápidas de registro o consulta tu historial.',
+      primaryLabel: 'Acciones rápidas',
+      primaryTap: _openAsistenciaActionsSheet,
+      secondaryLabel: 'Ver historial',
+      secondaryTap: _openHistorialSheet,
+    );
+  }
+
+  Widget _buildActionCard({
+    required IconData icon,
+    required Color iconColor,
+    required String title,
+    required String description,
+    required String primaryLabel,
+    required VoidCallback primaryTap,
+    String? secondaryLabel,
+    VoidCallback? secondaryTap,
+  }) {
+    return Card(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                CircleAvatar(
+                  backgroundColor: iconColor.withOpacity(0.15),
+                  child: Icon(icon, color: iconColor),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: _cardTitleStyle,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              description,
+              style: _supportTextStyle,
+            ),
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 12,
+              runSpacing: 8,
+              children: [
+                ElevatedButton(
+                  onPressed: _isProcessingAction ? null : primaryTap,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryColor,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(
+                          AppTheme.borderRadiusMainButtons),
+                    ),
+                  ),
+                  child: Text(primaryLabel),
+                ),
+                if (secondaryLabel != null && secondaryTap != null)
+                  OutlinedButton(
+                    onPressed: _isProcessingAction ? null : secondaryTap,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppTheme.primaryColor,
+                      side: BorderSide(
+                          color: AppTheme.primaryColor.withOpacity(0.5)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(
+                          AppTheme.borderRadiusMainButtons,
+                        ),
+                      ),
+                    ),
+                    child: Text(secondaryLabel),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNavigationCard({
+    required IconData icon,
+    required Color iconColor,
+    required String title,
+    required String description,
+    required VoidCallback onTap,
+  }) {
+    return Card(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
+      ),
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: iconColor.withOpacity(0.15),
+          child: Icon(icon, color: iconColor),
+        ),
+        title: Text(
+          title,
+          style: _cardTitleStyle,
+        ),
+        subtitle: Text(
+          description,
+          style: _supportTextStyle,
+        ),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: _isProcessingAction ? null : onTap,
+      ),
+    );
+  }
+
+  Future<void> _openAsistenciaActionsSheet() async {
+    final userId = context.read<AuthProvider>().currentUser?.id;
+    if (userId == null) {
+      await AppDialogs.showErrorDialog(
+        context: context,
+        title: 'Usuario no encontrado',
+        message:
+            'No pudimos identificar tu usuario. Intenta iniciar sesión nuevamente.',
+      );
+      return;
+    }
+
+    final selectedAction = await showModalBottomSheet<_AsistenciaQuickAction>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[400],
+                      borderRadius: BorderRadius.circular(99),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Acciones rápidas',
+                  style: _sectionTitleStyle,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Selecciona una acción para continuar con tu registro de asistencia.',
+                  style: _supportTextStyle,
+                ),
+                const SizedBox(height: 20),
+                _buildSheetOption(
+                  icon: Icons.login,
+                  color: Colors.green,
+                  title: 'Registrar entrada',
+                  subtitle: 'Comienza una nueva jornada laboral.',
+                  value: _AsistenciaQuickAction.registrarEntrada,
+                  context: context,
+                ),
+                const SizedBox(height: 12),
+                _buildSheetOption(
+                  icon: Icons.logout,
+                  color: Colors.red,
+                  title: 'Registrar salida',
+                  subtitle: 'Finaliza tu jornada y calcula horas trabajadas.',
+                  value: _AsistenciaQuickAction.registrarSalida,
+                  context: context,
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    if (!mounted || selectedAction == null) return;
+
+    switch (selectedAction) {
+      case _AsistenciaQuickAction.registrarEntrada:
+        await _registrarEntrada(userId);
+        break;
+      case _AsistenciaQuickAction.registrarSalida:
+        await _registrarSalida(userId);
+        break;
+    }
+  }
+
+  Widget _buildSheetOption({
+    required IconData icon,
+    required Color color,
+    required String title,
+    required String subtitle,
+    required _AsistenciaQuickAction value,
+    required BuildContext context,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
+        onTap: () => Navigator.of(context).pop(value),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius:
+                BorderRadius.circular(AppTheme.borderRadiusMainButtons),
+            border: Border.all(color: color.withOpacity(0.3)),
+          ),
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              CircleAvatar(
+                backgroundColor: color.withOpacity(0.12),
+                child: Icon(icon, color: color),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: _cardTitleStyle,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      style: _supportTextStyle,
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openHistorialSheet() async {
+    final userId = context.read<AuthProvider>().currentUser?.id;
+    if (userId == null) {
+      await AppDialogs.showErrorDialog(
+        context: context,
+        title: 'Usuario no encontrado',
+        message:
+            'No pudimos identificar tu usuario. Intenta iniciar sesión nuevamente.',
+      );
+      return;
+    }
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: EdgeInsets.only(
+              left: 20,
+              right: 20,
+              top: 20,
+              bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+            ),
+            child: SizedBox(
+              height: MediaQuery.of(context).size.height * 0.65,
+              child: FutureBuilder<List<Asistencia>>(
+                future: AsistenciaService.getAsistenciasByUserId(userId),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+
+                  if (snapshot.hasError) {
+                    return Center(
+                      child: Text(
+                        'No pudimos cargar tu historial. Inténtalo nuevamente.\n${_cleanErrorMessage(snapshot.error)}',
+                        textAlign: TextAlign.center,
+                      ),
+                    );
+                  }
+
+                  final historial = snapshot.data ?? [];
+
+                  if (historial.isEmpty) {
+                    return Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.history, size: 48, color: Colors.grey[400]),
+                        const SizedBox(height: 12),
+                        const Text('Aún no tienes registros disponibles.'),
+                      ],
+                    );
+                  }
+
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Historial de asistencia',
+                        style: _sectionTitleStyle,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Mostrando los últimos ${historial.length.clamp(0, 10)} registros.',
+                        style: _supportTextStyle,
+                      ),
+                      const SizedBox(height: 16),
+                      Expanded(
+                        child: ListView.separated(
+                          itemCount: historial.take(10).length,
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(height: 12),
+                          itemBuilder: (context, index) {
+                            final asistencia = historial[index];
+                            final fecha = DateFormat('dd/MM/yyyy')
+                                .format(asistencia.fechaHoraEntrada);
+                            final horaEntrada = DateFormat('HH:mm')
+                                .format(asistencia.fechaHoraEntrada);
+                            final horaSalida =
+                                asistencia.fechaHoraSalida != null
+                                    ? DateFormat('HH:mm')
+                                        .format(asistencia.fechaHoraSalida!)
+                                    : '--';
+
+                            return Container(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: Colors.grey[300]!),
+                              ),
+                              padding: const EdgeInsets.all(16),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        fecha,
+                                        style: _cardTitleStyle,
+                                      ),
+                                      Chip(
+                                        label: Text(
+                                          asistencia.estaActiva
+                                              ? 'En progreso'
+                                              : 'Completado',
+                                        ),
+                                        backgroundColor: asistencia.estaActiva
+                                            ? Colors.orange[100]
+                                            : Colors.green[100],
+                                        labelStyle: TextStyle(
+                                          color: asistencia.estaActiva
+                                              ? Colors.orange[800]
+                                              : Colors.green[800],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text('Entrada: $horaEntrada'),
+                                  Text('Salida: $horaSalida'),
+                                  if (!asistencia.estaActiva)
+                                    Text(
+                                      'Horas trabajadas: ${asistencia.horasTrabajadasFormateadas}',
+                                      style: TextStyle(
+                                        color: Colors.green[700],
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _registrarEntrada(dynamic userId) async {
+    await _runAsyncAction(() async {
+      final asistencia = await AsistenciaService.registrarEntrada(userId);
+      if (!mounted) return;
+      await AppDialogs.showSuccessDialog(
+        context: context,
+        title: 'Entrada registrada',
+        message:
+            'Tu entrada ha sido registrada exitosamente.\n\nUbicación: ${asistencia.ubicacionEntrada ?? "No disponible"}',
+      );
+    });
+  }
+
+  Future<void> _registrarSalida(dynamic userId) async {
+    final asistenciaActiva =
+        await AsistenciaService.getAsistenciaActiva(userId);
+    if (asistenciaActiva == null) {
+      if (!mounted) return;
+      await AppDialogs.showErrorDialog(
+        context: context,
+        title: 'Sin registro activo',
+        message: 'No encontramos una entrada activa para cerrar.',
+      );
+      return;
+    }
+
+    final confirmado = await AppDialogs.showConfirmationDialog(
+      context: context,
+      title: '¿Registrar salida?',
+      message: '¿Deseas registrar la salida de tu jornada actual?',
+    );
+
+    if (!mounted || !confirmado) return;
+
+    await _runAsyncAction(() async {
+      final asistencia =
+          await AsistenciaService.registrarSalida(asistenciaActiva.id);
+      if (!mounted) return;
+      await AppDialogs.showSuccessDialog(
+        context: context,
+        title: 'Salida registrada',
+        message:
+            'Tu salida ha sido registrada exitosamente.\n\nUbicación: ${asistencia.ubicacionSalida ?? "No disponible"}\nHoras trabajadas: ${asistencia.horasTrabajadasFormateadas}',
+      );
+    });
+  }
+
+  Future<void> _runAsyncAction(Future<void> Function() action) async {
+    if (_isProcessingAction) return;
+    setState(() => _isProcessingAction = true);
+    try {
+      await action();
+    } catch (e) {
+      if (!mounted) return;
+      await AppDialogs.showErrorDialog(
+        context: context,
+        title: 'Error',
+        message: _cleanErrorMessage(e),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isProcessingAction = false);
+      }
+    }
+  }
+
+  String _cleanErrorMessage(Object? error) {
+    final raw = error?.toString() ?? 'Ocurrió un error desconocido.';
+    return raw.replaceFirst('Exception: ', '');
   }
 
   Future<void> _cerrarSesion() async {
@@ -327,222 +726,15 @@ class _ConfigScreenState extends State<ConfigScreen> {
       await context.read<AuthProvider>().logout();
       if (mounted) {
         Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (context) => const LoginScreen()),
+          MaterialPageRoute(builder: (_) => const LoginScreen()),
           (route) => false,
         );
       }
     }
   }
-
-  Widget _buildEstadoAsistencia() {
-    if (_asistenciaActiva != null) {
-      // Usuario tiene entrada registrada
-      return Card(
-        elevation: 2,
-        color: Colors.green[50],
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(Icons.login, color: Colors.green[700]),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Entrada Registrada',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.green[700],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              _buildInfoRow(
-                icon: Icons.access_time,
-                label: 'Hora de entrada:',
-                value: DateFormat('dd/MM/yyyy HH:mm').format(_asistenciaActiva!.fechaHoraEntrada),
-              ),
-              const SizedBox(height: 8),
-              _buildInfoRow(
-                icon: Icons.location_on,
-                label: 'Ubicación:',
-                value: _asistenciaActiva!.ubicacionEntrada ?? 'No disponible',
-              ),
-              const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: _isLoading ? null : _registrarSalida,
-                  icon: const Icon(Icons.logout),
-                  label: const Text('Registrar Salida'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red[600],
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    } else {
-      // Usuario no tiene entrada registrada
-      return Card(
-        elevation: 2,
-        color: Colors.blue[50],
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(Icons.timer_off, color: Colors.blue[700]),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Sin Registro Activo',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.blue[700],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'No tienes un registro de entrada activo. Marca tu entrada para comenzar tu jornada laboral.',
-                style: TextStyle(
-                  color: Colors.grey[700],
-                ),
-              ),
-              const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: _isLoading ? null : _registrarEntrada,
-                  icon: const Icon(Icons.login),
-                  label: const Text('Registrar Entrada'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green[600],
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-  }
-
-  Widget _buildInfoRow({
-    required IconData icon,
-    required String label,
-    required String value,
-  }) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(icon, size: 20, color: Colors.grey[700]),
-        const SizedBox(width: 8),
-        Expanded(
-          child: RichText(
-            text: TextSpan(
-              style: TextStyle(color: Colors.grey[800]),
-              children: [
-                TextSpan(
-                  text: '$label ',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-                TextSpan(text: value),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildHistorial() {
-    if (_historialAsistencias.isEmpty) {
-      return Card(
-        elevation: 1,
-        child: Padding(
-          padding: const EdgeInsets.all(32.0),
-          child: Center(
-            child: Column(
-              children: [
-                Icon(Icons.history, size: 48, color: Colors.grey[400]),
-                const SizedBox(height: 16),
-                Text(
-                  'No hay registros de asistencia',
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 16,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
-
-    return ListView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: _historialAsistencias.length,
-      itemBuilder: (context, index) {
-        final asistencia = _historialAsistencias[index];
-        return Card(
-          elevation: 1,
-          margin: const EdgeInsets.only(bottom: 8),
-          child: ListTile(
-            leading: CircleAvatar(
-              backgroundColor: asistencia.estaActiva ? Colors.green : Colors.grey,
-              child: Icon(
-                asistencia.estaActiva ? Icons.access_time : Icons.check,
-                color: Colors.white,
-              ),
-            ),
-            title: Text(
-              DateFormat('dd/MM/yyyy').format(asistencia.fechaHoraEntrada),
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-            subtitle: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Entrada: ${DateFormat('HH:mm').format(asistencia.fechaHoraEntrada)}',
-                ),
-                if (asistencia.fechaHoraSalida != null)
-                  Text(
-                    'Salida: ${DateFormat('HH:mm').format(asistencia.fechaHoraSalida!)}',
-                  ),
-                if (!asistencia.estaActiva)
-                  Text(
-                    'Horas: ${asistencia.horasTrabajadasFormateadas}',
-                    style: TextStyle(
-                      color: Colors.green[700],
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-              ],
-            ),
-            trailing: Icon(
-              asistencia.estaActiva ? Icons.pending : Icons.done_all,
-              color: asistencia.estaActiva ? Colors.orange : Colors.green,
-            ),
-          ),
-        );
-      },
-    );
-  }
 }
 
+enum _AsistenciaQuickAction {
+  registrarEntrada,
+  registrarSalida,
+}

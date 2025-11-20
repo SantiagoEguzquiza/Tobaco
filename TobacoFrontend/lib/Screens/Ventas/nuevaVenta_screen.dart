@@ -846,7 +846,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
     );
   }
 
-  // Sección de productos con diseño similar a detalleVentas_screen
+  // Sección de productos
   Widget _buildProductsSection() {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
@@ -887,7 +887,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
             child: Row(
               children: [
                 Text(
-                  'Productos',
+                  'Productos ( ${productosSeleccionados.length} )',
                   style: TextStyle(
                     color: Theme.of(context).brightness == Brightness.dark
                         ? Colors.white
@@ -979,7 +979,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 20,
-                        vertical: 12,
+                        vertical: 20,
                       ),
                       child: Row(
                         children: [
@@ -1441,6 +1441,36 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
       body: SafeArea(
         child: Column(
           children: [
+            // Header fijo cuando se está buscando
+            if (isSearching)
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: HeaderConBuscador(
+                  leadingIcon: Icons.people,
+                  title: 'Buscar Cliente',
+                  subtitle: 'Selecciona un cliente para la venta',
+                  controller: _searchController,
+                  hintText: 'Buscar por nombre...',
+                  onChanged: (value) {
+                    setState(() {
+                      if (value.trim().isEmpty) {
+                        clientesFiltrados = [];
+                        errorMessage = null;
+                      } else {
+                        _filtrarClientesIniciales(value);
+                        buscarClientes(value);
+                      }
+                    });
+                  },
+                  onClear: () {
+                    _searchController.clear();
+                    setState(() {
+                      clientesFiltrados = [];
+                      errorMessage = null;
+                    });
+                  },
+                ),
+              ),
             // Contenido principal
             Expanded(
               child: LayoutBuilder(
@@ -1448,35 +1478,6 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                   return isSearching && isLoadingClientesIniciales
                       ? Column(
                           children: [
-                            // Barra de búsqueda
-                            Padding(
-                              padding: const EdgeInsets.all(16.0),
-                              child: HeaderConBuscador(
-                                leadingIcon: Icons.people,
-                                title: 'Buscar Cliente',
-                                subtitle: 'Selecciona un cliente para la venta',
-                                controller: _searchController,
-                                hintText: 'Buscar por nombre...',
-                                onChanged: (value) {
-                                  setState(() {
-                                    if (value.trim().isEmpty) {
-                                      clientesFiltrados = [];
-                                      errorMessage = null;
-                                    } else {
-                                      _filtrarClientesIniciales(value);
-                                      buscarClientes(value);
-                                    }
-                                  });
-                                },
-                                onClear: () {
-                                  _searchController.clear();
-                                  setState(() {
-                                    clientesFiltrados = [];
-                                    errorMessage = null;
-                                  });
-                                },
-                              ),
-                            ),
                             Padding(
                               padding:
                                   const EdgeInsets.symmetric(horizontal: 16),
@@ -1592,36 +1593,6 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                           child: Column(
                             children: [
                               if (isSearching) ...[
-                                // Barra de búsqueda
-                                Padding(
-                                  padding: const EdgeInsets.all(16.0),
-                                  child: HeaderConBuscador(
-                                    leadingIcon: Icons.people,
-                                    title: 'Buscar Cliente',
-                                    subtitle:
-                                        'Selecciona un cliente para la venta',
-                                    controller: _searchController,
-                                    hintText: 'Buscar por nombre...',
-                                    onChanged: (value) {
-                                      setState(() {
-                                        if (value.trim().isEmpty) {
-                                          clientesFiltrados = [];
-                                          errorMessage = null;
-                                        } else {
-                                          _filtrarClientesIniciales(value);
-                                          buscarClientes(value);
-                                        }
-                                      });
-                                    },
-                                    onClear: () {
-                                      _searchController.clear();
-                                      setState(() {
-                                        clientesFiltrados = [];
-                                        errorMessage = null;
-                                      });
-                                    },
-                                  ),
-                                ),
                                 Padding(
                                   padding: const EdgeInsets.symmetric(
                                       horizontal: 16),
