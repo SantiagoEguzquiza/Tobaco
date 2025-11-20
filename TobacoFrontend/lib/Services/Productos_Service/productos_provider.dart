@@ -26,7 +26,7 @@ class ProductoProvider with ChangeNotifier {
   List<Categoria> _categorias = [];
   String? _selectedCategory;
   String _searchQuery = '';
-  bool _offlineMessageShown = false;
+
 
   // Getters
   bool get isLoading => _isLoading;

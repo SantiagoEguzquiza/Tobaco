@@ -1,5 +1,5 @@
 buildscript {
-    ext.kotlin_version = '1.9.22'
+    ext.kotlin_version = '1.9.0'
 
     repositories {
         google()
@@ -66,8 +66,19 @@ subprojects {
     afterEvaluate { project ->
         if (project.hasProperty("android")) {
             project.android {
-                if (namespace == null) {
+                if (namespace == null) {1
                     namespace project.group
+                }
+
+                compileOptions {
+                    sourceCompatibility JavaVersion.VERSION_11
+                    targetCompatibility JavaVersion.VERSION_11
+                }
+
+                if (this.hasProperty("kotlinOptions")) {
+                    kotlinOptions {
+                        jvmTarget = "11"
+                    }
                 }
                 
                 // Set compileSdk for plugins that need it

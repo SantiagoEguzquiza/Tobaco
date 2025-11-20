@@ -204,7 +204,7 @@ class AppTheme {
     return ElevatedButton.styleFrom(
       padding: const EdgeInsets.symmetric(vertical: 20),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(15),
+        borderRadius: BorderRadius.circular(borderRadiusMainButtons),
       ),
       backgroundColor: backgroundColor,
     );

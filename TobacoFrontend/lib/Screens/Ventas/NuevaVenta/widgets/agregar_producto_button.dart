@@ -34,7 +34,7 @@ class AgregarProductoButton extends StatelessWidget {
             disabledBackgroundColor: Colors.grey.shade400,
             disabledForegroundColor: Colors.grey.shade200,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(15),
+              borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
             ),
             padding: const EdgeInsets.symmetric(vertical: 16),
             elevation: enabled ? 2 : 0,

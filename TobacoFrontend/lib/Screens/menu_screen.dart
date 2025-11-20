@@ -50,6 +50,7 @@ class MenuScreen extends StatelessWidget {
     final horizontalPadding = isTablet ? 40.0 : 20.0;
 
     final themeProvider = context.watch<AuthProvider>();
+    
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(

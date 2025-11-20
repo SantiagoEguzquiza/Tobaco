@@ -12,10 +12,13 @@ import 'package:tobaco/Models/Ventas.dart';
 import 'package:tobaco/Models/VentasProductos.dart';
 import 'package:tobaco/Models/metodoPago.dart';
 import 'package:tobaco/Models/ventasPago.dart';
+import 'package:provider/provider.dart';
 import 'package:tobaco/Services/Cache/database_helper.dart';
 import 'package:tobaco/Services/Cache/ventas_cache_service.dart';
+import 'package:tobaco/Services/Clientes_Service/clientes_provider.dart';
 import 'package:tobaco/Services/Sync/simple_sync_service.dart';
 import 'package:tobaco/Services/Ventas_Service/ventas_service.dart';
+import 'package:tobaco/Theme/app_theme.dart';
 
 class VentasProvider with ChangeNotifier {
   final VentasService _ventasService = VentasService();
@@ -749,6 +752,91 @@ class VentasProvider with ChangeNotifier {
 
   String _limpiarMensajeError(String mensaje) {
     return mensaje.replaceFirst('Exception: ', '');
+  }
+
+  // Métodos estáticos para lógica de nueva venta
+  static Future<Cliente?> obtenerOCrearConsumidorFinal({
+    required BuildContext context,
+    required List<Cliente> clientesIniciales,
+    required List<Cliente> clientesFiltrados,
+    required Cliente? clienteSeleccionado,
+  }) async {
+    Cliente? clienteConsumidor = _buscarConsumidorFinalEnColecciones([
+      if (clienteSeleccionado != null) [clienteSeleccionado],
+      clientesFiltrados,
+      clientesIniciales,
+    ]);
+
+    if (clienteConsumidor != null) {
+      return clienteConsumidor;
+    }
+
+    final clienteProvider = Provider.of<ClienteProvider>(context, listen: false);
+
+    clienteConsumidor = _buscarConsumidorFinalEnColecciones([clienteProvider.clientes]);
+    if (clienteConsumidor != null) {
+      return clienteConsumidor;
+    }
+
+    try {
+      final clientesServidor = await clienteProvider.obtenerClientes();
+      clienteConsumidor = _buscarConsumidorFinalEnColecciones([clientesServidor]);
+      if (clienteConsumidor != null) {
+        return clienteConsumidor;
+      }
+    } catch (e) {
+      debugPrint('Error cargando clientes al buscar Consumidor Final: $e');
+    }
+
+    try {
+      final nuevoCliente = Cliente(
+        id: null,
+        nombre: 'Consumidor Final',
+        direccion: 'Sin dirección especificada',
+        telefono: 0,
+        deuda: '0',
+        descuentoGlobal: 0.0,
+        preciosEspeciales: const [],
+        latitud: null,
+        longitud: null,
+      );
+
+      final clienteCreado = await clienteProvider.crearCliente(nuevoCliente);
+
+      if (clienteCreado != null) {
+        await clienteProvider.obtenerClientes();
+        return clienteCreado;
+      }
+    } catch (e) {
+      debugPrint('Error al crear cliente Consumidor Final: $e');
+      AppTheme.showSnackBar(
+        context,
+        AppTheme.errorSnackBar('Error al crear cliente Consumidor Final: $e'),
+      );
+      return null;
+    }
+
+    AppTheme.showSnackBar(
+      context,
+      AppTheme.errorSnackBar(
+        'No se pudo asegurar el cliente "Consumidor Final". Intenta nuevamente.',
+      ),
+    );
+
+    return null;
+  }
+
+  static Cliente? _buscarConsumidorFinalEnColecciones(List<Iterable<Cliente>> colecciones) {
+    String normalizar(String nombre) => nombre.trim().toLowerCase();
+
+    for (final coleccion in colecciones) {
+      for (final cliente in coleccion) {
+        if (normalizar(cliente.nombre) == 'consumidor final') {
+          return cliente;
+        }
+      }
+    }
+    return null;
   }
 }
 

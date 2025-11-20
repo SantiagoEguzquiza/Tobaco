@@ -45,6 +45,8 @@ class _ConfigScreenState extends State<ConfigScreen> {
       // Cargar historial (últimas 10 asistencias)
       final historial = await AsistenciaService.getAsistenciasByUserId(userId);
 
+      if (!mounted) return;
+
       setState(() {
         _asistenciaActiva = asistenciaActiva;
         _historialAsistencias = historial.take(10).toList();
@@ -52,6 +54,8 @@ class _ConfigScreenState extends State<ConfigScreen> {
         _isLoadingHistory = false;
       });
     } catch (e) {
+      if (!mounted) return;
+
       setState(() {
         _isLoading = false;
         _isLoadingHistory = false;
@@ -87,33 +91,33 @@ class _ConfigScreenState extends State<ConfigScreen> {
     try {
       final asistencia = await AsistenciaService.registrarEntrada(userId);
       
+      if (!mounted) return;
+
       setState(() {
         _asistenciaActiva = asistencia;
         _isLoading = false;
       });
 
-      if (mounted) {
-        AppDialogs.showSuccessDialog(
-          context: context,
-          title: 'Entrada Registrada',
-          message: 'Tu entrada ha sido registrada exitosamente.\n\nUbicación: ${asistencia.ubicacionEntrada ?? "No disponible"}',
-        );
-      }
+      AppDialogs.showSuccessDialog(
+        context: context,
+        title: 'Entrada Registrada',
+        message: 'Tu entrada ha sido registrada exitosamente.\n\nUbicación: ${asistencia.ubicacionEntrada ?? "No disponible"}',
+      );
 
       // Recargar historial
       _cargarDatos();
     } catch (e) {
+      if (!mounted) return;
+
       setState(() {
         _isLoading = false;
       });
 
-      if (mounted) {
-        AppDialogs.showErrorDialog(
-          context: context,
-          title: 'Error',
-          message: e.toString().replaceFirst('Exception: ', ''),
-        );
-      }
+      AppDialogs.showErrorDialog(
+        context: context,
+        title: 'Error',
+        message: e.toString().replaceFirst('Exception: ', ''),
+      );
     }
   }
 
@@ -126,6 +130,8 @@ class _ConfigScreenState extends State<ConfigScreen> {
       message: '¿Estás seguro de que deseas registrar tu salida?',
     );
 
+    if (!mounted) return;
+
     if (!confirmado) return;
 
     setState(() {
@@ -135,33 +141,33 @@ class _ConfigScreenState extends State<ConfigScreen> {
     try {
       final asistencia = await AsistenciaService.registrarSalida(_asistenciaActiva!.id);
       
+      if (!mounted) return;
+
       setState(() {
         _asistenciaActiva = null;
         _isLoading = false;
       });
 
-      if (mounted) {
-        AppDialogs.showSuccessDialog(
-          context: context,
-          title: 'Salida Registrada',
-          message: 'Tu salida ha sido registrada exitosamente.\n\nUbicación: ${asistencia.ubicacionSalida ?? "No disponible"}\n\nHoras trabajadas: ${asistencia.horasTrabajadasFormateadas}',
-        );
-      }
+      AppDialogs.showSuccessDialog(
+        context: context,
+        title: 'Salida Registrada',
+        message: 'Tu salida ha sido registrada exitosamente.\n\nUbicación: ${asistencia.ubicacionSalida ?? "No disponible"}\n\nHoras trabajadas: ${asistencia.horasTrabajadasFormateadas}',
+      );
 
       // Recargar historial
       _cargarDatos();
     } catch (e) {
+      if (!mounted) return;
+
       setState(() {
         _isLoading = false;
       });
 
-      if (mounted) {
-        AppDialogs.showErrorDialog(
-          context: context,
-          title: 'Error',
-          message: e.toString().replaceFirst('Exception: ', ''),
-        );
-      }
+      AppDialogs.showErrorDialog(
+        context: context,
+        title: 'Error',
+        message: e.toString().replaceFirst('Exception: ', ''),
+      );
     }
   }
 

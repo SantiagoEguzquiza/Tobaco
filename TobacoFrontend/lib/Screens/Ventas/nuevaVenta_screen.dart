@@ -1,11 +1,11 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:provider/provider.dart';
 import 'package:tobaco/Models/Cliente.dart';
 import 'package:tobaco/Models/ProductoSeleccionado.dart';
 import 'package:tobaco/Models/VentasProductos.dart';
-import 'package:tobaco/Screens/Clientes/wizardNuevoCliente_screen.dart';
 import 'package:tobaco/Screens/Ventas/metodoPago_screen.dart';
 import 'package:tobaco/Screens/Ventas/seleccionarProducto_screen.dart';
 import 'package:tobaco/Services/Clientes_Service/clientes_provider.dart';
@@ -26,7 +26,7 @@ import 'NuevaVenta/widgets/widgets.dart';
 
 class NuevaVentaScreen extends StatefulWidget {
   final Cliente? clientePreSeleccionado;
-  
+
   const NuevaVentaScreen({super.key, this.clientePreSeleccionado});
 
   @override
@@ -69,7 +69,8 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     // Guardar referencia al provider de manera segura
-    _borradorProvider ??= Provider.of<VentaBorradorProvider>(context, listen: false);
+    _borradorProvider ??=
+        Provider.of<VentaBorradorProvider>(context, listen: false);
   }
 
   @override
@@ -85,7 +86,8 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
 
   /// Verifica si existe un borrador y muestra diálogo para recuperarlo
   Future<void> _verificarYCargarBorrador() async {
-    final borradorProvider = Provider.of<VentaBorradorProvider>(context, listen: false);
+    final borradorProvider =
+        Provider.of<VentaBorradorProvider>(context, listen: false);
     await borradorProvider.cargarBorradorInicial();
 
     if (!mounted) return;
@@ -102,7 +104,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
     VentaBorradorProvider borradorProvider,
   ) async {
     final tiempoTranscurrido = borradorProvider.getTiempoTranscurrido();
-    
+
     final resultado = await showDialog<String>(
       context: context,
       barrierDismissible: false,
@@ -163,7 +165,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                     ],
                   ),
                 ),
-                
+
                 // Contenido
                 Padding(
                   padding: const EdgeInsets.all(20),
@@ -181,7 +183,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                         ),
                       ),
                       const SizedBox(height: 20),
-                      
+
                       // Información del borrador con tarjetas
                       if (borrador.cliente != null) ...[
                         _buildInfoCard(
@@ -210,9 +212,9 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                         tiempoTranscurrido,
                         Colors.orange.shade600,
                       ),
-                      
+
                       const SizedBox(height: 24),
-                      
+
                       // Pregunta
                       Container(
                         padding: const EdgeInsets.all(16),
@@ -222,9 +224,10 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                               : Colors.grey.shade50,
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                            color: Theme.of(context).brightness == Brightness.dark
-                                ? Colors.grey.shade700
-                                : Colors.grey.shade200,
+                            color:
+                                Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.grey.shade700
+                                    : Colors.grey.shade200,
                           ),
                         ),
                         child: Text(
@@ -232,9 +235,10 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                           style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w600,
-                            color: Theme.of(context).brightness == Brightness.dark
-                                ? Colors.grey.shade300
-                                : Colors.grey.shade800,
+                            color:
+                                Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.grey.shade300
+                                    : Colors.grey.shade800,
                           ),
                           textAlign: TextAlign.center,
                         ),
@@ -242,7 +246,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                     ],
                   ),
                 ),
-                
+
                 // Botones
                 Padding(
                   padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
@@ -254,7 +258,8 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                           style: OutlinedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 14),
                             side: BorderSide(
-                              color: Theme.of(context).brightness == Brightness.dark
+                              color: Theme.of(context).brightness ==
+                                      Brightness.dark
                                   ? Colors.grey.shade600
                                   : Colors.grey.shade400,
                               width: 1.5,
@@ -266,16 +271,18 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                           icon: Icon(
                             Icons.add_circle_outline,
                             size: 20,
-                            color: Theme.of(context).brightness == Brightness.dark
-                                ? Colors.grey.shade400
-                                : Colors.grey.shade700,
+                            color:
+                                Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.grey.shade400
+                                    : Colors.grey.shade700,
                           ),
                           label: Text(
                             'Nueva Venta',
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
-                              color: Theme.of(context).brightness == Brightness.dark
+                              color: Theme.of(context).brightness ==
+                                      Brightness.dark
                                   ? Colors.grey.shade300
                                   : Colors.grey.shade700,
                             ),
@@ -285,7 +292,8 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                       const SizedBox(width: 12),
                       Expanded(
                         child: ElevatedButton.icon(
-                          onPressed: () => Navigator.of(context).pop('continuar'),
+                          onPressed: () =>
+                              Navigator.of(context).pop('continuar'),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppTheme.primaryColor,
                             padding: const EdgeInsets.symmetric(vertical: 14),
@@ -405,33 +413,6 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
     );
   }
 
-  /// Widget para mostrar información del borrador (método anterior - mantener por compatibilidad)
-  Widget _buildBorradorInfo(IconData icon, String label, String value) {
-    return Row(
-      children: [
-        Icon(icon, size: 18, color: Colors.grey.shade600),
-        const SizedBox(width: 8),
-        Text(
-          '$label: ',
-          style: TextStyle(
-            fontSize: 14,
-            color: Colors.grey.shade600,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        Expanded(
-          child: Text(
-            value,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
   /// Carga los datos desde el borrador al estado actual
   void _cargarDatosDesdeBorrador(dynamic borrador) {
     setState(() {
@@ -447,8 +428,8 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
   /// Guarda el estado actual al borrador al salir de la pantalla
   void _guardarBorradorAlSalir() {
     // Solo guardar si la venta no se completó y hay contenido
-    if (!_ventaCompletada && 
-        (clienteSeleccionado != null || productosSeleccionados.isNotEmpty) && 
+    if (!_ventaCompletada &&
+        (clienteSeleccionado != null || productosSeleccionados.isNotEmpty) &&
         _borradorProvider != null) {
       // Usar un microtask para evitar problemas con el tree lock
       Future.microtask(() async {
@@ -495,7 +476,8 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
     final confirmar = await AppDialogs.showConfirmationDialog(
       context: context,
       title: 'Cancelar Venta',
-      message: '¿Estás seguro de que deseas cancelar esta venta? Se perderán todos los datos ingresados.',
+      message:
+          '¿Estás seguro de que deseas cancelar esta venta? Se perderán todos los datos ingresados.',
       confirmText: 'Cancelar Venta',
       cancelText: 'Volver',
       icon: Icons.cancel,
@@ -504,7 +486,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
 
     if (confirmar == true) {
       _eliminarBorradorDeFormaSegura();
-      
+
       if (mounted) {
         Navigator.of(context).pop();
         AppTheme.showSnackBar(
@@ -568,8 +550,9 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
     int usuarioIdExcluir,
   ) async {
     try {
-      final resultado = await ventasProvider.asignarVentaAutomaticamente(ventaId, usuarioIdExcluir);
-      
+      final resultado = await ventasProvider.asignarVentaAutomaticamente(
+          ventaId, usuarioIdExcluir);
+
       if (mounted) {
         if (resultado['asignada'] == true) {
           final nombreAsignado = resultado['usuarioAsignadoNombre'];
@@ -584,7 +567,8 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
         } else {
           AppTheme.showSnackBar(
             context,
-            AppTheme.errorSnackBar(resultado['message'] ?? 'No se pudo asignar la venta'),
+            AppTheme.errorSnackBar(
+                resultado['message'] ?? 'No se pudo asignar la venta'),
           );
         }
       }
@@ -631,7 +615,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
 
   void _filtrarClientesIniciales(String query) {
     final trimmedQuery = query.trim();
-    
+
     if (trimmedQuery.isEmpty) {
       setState(() {
         clientesFiltrados = [];
@@ -656,11 +640,12 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
 
   Widget _buildClientesList(List<Cliente> clientes, String title) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final tieneDeuda = (String? deuda) {
+    bool tieneDeuda(String? deuda) {
       if (deuda == null) return false;
-      return double.tryParse(deuda.toString()) != null && double.parse(deuda.toString()) > 0;
-    };
-    
+      return double.tryParse(deuda.toString()) != null &&
+          double.parse(deuda.toString()) > 0;
+    }
+
     return ListView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -669,14 +654,14 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
       itemBuilder: (context, index) {
         final cliente = clientes[index];
         final tieneDeudaCliente = tieneDeuda(cliente.deuda);
-        
+
         return Container(
           margin: const EdgeInsets.only(bottom: 12),
           decoration: BoxDecoration(
             color: Theme.of(context).brightness == Brightness.dark
                 ? const Color(0xFF1A1A1A)
                 : Colors.white,
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(AppTheme.borderRadiusCards),
             boxShadow: [
               BoxShadow(
                 color: Theme.of(context).brightness == Brightness.dark
@@ -701,8 +686,8 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                       width: 4,
                       height: 60,
                       decoration: BoxDecoration(
-                        color: tieneDeudaCliente 
-                            ? Colors.red 
+                        color: tieneDeudaCliente
+                            ? Colors.red
                             : AppTheme.primaryColor,
                         borderRadius: BorderRadius.circular(2),
                       ),
@@ -719,19 +704,22 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
-                              color: Theme.of(context).brightness == Brightness.dark
+                              color: Theme.of(context).brightness ==
+                                      Brightness.dark
                                   ? Colors.white
                                   : AppTheme.textColor,
                             ),
                           ),
-                          if (cliente.direccion != null && cliente.direccion!.isNotEmpty) ...[
+                          if (cliente.direccion != null &&
+                              cliente.direccion!.isNotEmpty) ...[
                             const SizedBox(height: 4),
                             Row(
                               children: [
                                 Icon(
                                   Icons.location_on_outlined,
                                   size: 16,
-                                  color: Theme.of(context).brightness == Brightness.dark
+                                  color: Theme.of(context).brightness ==
+                                          Brightness.dark
                                       ? Colors.grey.shade400
                                       : Colors.grey.shade600,
                                 ),
@@ -741,7 +729,8 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                                     cliente.direccion!,
                                     style: TextStyle(
                                       fontSize: 14,
-                                      color: Theme.of(context).brightness == Brightness.dark
+                                      color: Theme.of(context).brightness ==
+                                              Brightness.dark
                                           ? Colors.grey.shade400
                                           : Colors.grey.shade600,
                                     ),
@@ -758,7 +747,8 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                                 Icon(
                                   Icons.attach_money,
                                   size: 16,
-                                  color: Theme.of(context).brightness == Brightness.dark
+                                  color: Theme.of(context).brightness ==
+                                          Brightness.dark
                                       ? Colors.grey.shade400
                                       : Colors.grey.shade600,
                                 ),
@@ -771,7 +761,8 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                                   decoration: BoxDecoration(
                                     color: Colors.red.shade50,
                                     borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(color: Colors.red.shade200),
+                                    border:
+                                        Border.all(color: Colors.red.shade200),
                                   ),
                                   child: Text(
                                     'Deuda: \$${cliente.deuda}',
@@ -800,7 +791,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
 
   Widget _buildEmptyState(String message) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     return Container(
       height: 200,
       decoration: BoxDecoration(
@@ -808,7 +799,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
         borderRadius: BorderRadius.circular(15),
         boxShadow: [
           BoxShadow(
-            color: isDark 
+            color: isDark
                 ? Colors.black.withOpacity(0.3)
                 : Colors.black.withOpacity(0.05),
             blurRadius: 10,
@@ -823,26 +814,20 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: isDark 
-                    ? Colors.grey.shade800 
-                    : Colors.grey.shade100,
+                color: isDark ? Colors.grey.shade800 : Colors.grey.shade100,
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 Icons.search_off,
                 size: 40,
-                color: isDark 
-                    ? Colors.grey.shade400 
-                    : Colors.grey.shade400,
+                color: isDark ? Colors.grey.shade400 : Colors.grey.shade400,
               ),
             ),
             const SizedBox(height: 16),
             Text(
               message,
               style: TextStyle(
-                color: isDark 
-                    ? Colors.grey.shade300 
-                    : Colors.grey.shade600,
+                color: isDark ? Colors.grey.shade300 : Colors.grey.shade600,
                 fontSize: 18,
                 fontWeight: FontWeight.w500,
               ),
@@ -851,9 +836,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
             Text(
               'Intenta con otro término de búsqueda',
               style: TextStyle(
-                color: isDark 
-                    ? Colors.grey.shade400 
-                    : Colors.grey.shade500,
+                color: isDark ? Colors.grey.shade400 : Colors.grey.shade500,
                 fontSize: 14,
               ),
             ),
@@ -861,6 +844,220 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
         ),
       ),
     );
+  }
+
+  // Sección de productos con diseño similar a detalleVentas_screen
+  Widget _buildProductsSection() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: Theme.of(context).brightness == Brightness.dark
+            ? const Color(0xFF1A1A1A)
+            : Colors.white,
+        borderRadius: BorderRadius.circular(AppTheme.borderRadiusCards),
+        boxShadow: [
+          BoxShadow(
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.black.withOpacity(0.3)
+                : Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+        border: Border.all(
+          color: Theme.of(context).brightness == Brightness.dark
+              ? Colors.grey.shade700
+              : Colors.grey.shade200,
+          width: 1,
+        ),
+      ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? const Color(0xFF2A2A2A)
+                  : Colors.grey.shade50,
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(AppTheme.borderRadiusCards),
+                topRight: Radius.circular(AppTheme.borderRadiusCards),
+              ),
+            ),
+            child: Row(
+              children: [
+                Text(
+                  'Productos',
+                  style: TextStyle(
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white
+                        : Colors.black87,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          ListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: productosSeleccionados.length,
+            itemBuilder: (context, index) {
+              final producto = productosSeleccionados[index];
+              final precioFinal = _calcularPrecioFinalProducto(producto);
+              return Slidable(
+                key: ValueKey(producto.id),
+                endActionPane: ActionPane(
+                  motion: const ScrollMotion(),
+                  extentRatio: 0.25,
+                  children: [
+                    SlidableAction(
+                      onPressed: (_) async {
+                        final confirm = await AppDialogs
+                            .showDeleteConfirmationDialog(
+                          context: context,
+                          title: 'Eliminar Producto',
+                          message:
+                              '¿Está seguro de que desea eliminar ${producto.nombre}?',
+                        );
+                        if (confirm == true) {
+                          setState(() {
+                            productosSeleccionados.removeAt(index);
+                          });
+                          _guardarBorrador();
+                        }
+                      },
+                      backgroundColor: Colors.red.shade600,
+                      foregroundColor: Colors.white,
+                      icon: Icons.delete_outline,                                           
+                      padding: const EdgeInsets.all(8),
+                    ),
+                  ],
+                ),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.transparent,
+                    border: Border(
+                      top: BorderSide(
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.grey.shade800
+                            : Colors.grey.shade200,
+                        width: 1,
+                      ),
+                    ),
+                  ),
+                  child: InkWell(
+                    onTap: () async {
+                      try {
+                        final productoId = producto.id;
+                        final resultado = await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => SeleccionarProductosScreen(
+                              productosYaSeleccionados: productosSeleccionados,
+                              cliente: clienteSeleccionado,
+                              scrollToProductId: productoId,
+                            ),
+                          ),
+                        );
+
+                        if (resultado != null &&
+                            resultado is List<ProductoSeleccionado>) {
+                          setState(() {
+                            productosSeleccionados = resultado;
+                          });
+                          _guardarBorrador();
+                        }
+                      } catch (e) {
+                        AppTheme.showSnackBar(
+                          context,
+                          AppTheme.errorSnackBar('Error al editar productos: $e'),
+                        );
+                      }
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 12,
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Row(
+                              children: [
+                                Text(
+                                  producto.nombre,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 16,
+                                    color: Theme.of(context).brightness ==
+                                            Brightness.dark
+                                        ? Colors.white
+                                        : Colors.black,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'x${producto.cantidad % 1 == 0 ? producto.cantidad.toInt() : producto.cantidad.toStringAsFixed(1)}',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: Theme.of(context).brightness ==
+                                            Brightness.dark
+                                        ? Colors.grey.shade400
+                                        : Colors.grey.shade600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Row(
+                            children: [
+                              Text(
+                                '\$ ${_formatearPrecio(precioFinal * producto.cantidad)}',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Theme.of(context).brightness ==
+                                          Brightness.dark
+                                      ? Colors.white
+                                      : Colors.black87,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Icon(
+                                Icons.more_vert,
+                                size: 18,
+                                color: Theme.of(context).brightness ==
+                                        Brightness.dark
+                                    ? Colors.grey.shade400
+                                    : Colors.grey.shade600,
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  double _calcularPrecioFinalProducto(ProductoSeleccionado producto) {
+    double precio = preciosEspeciales[producto.id] ?? producto.precio;
+
+    // Aplicar descuento global si existe
+    if (clienteSeleccionado?.descuentoGlobal != null &&
+        clienteSeleccionado!.descuentoGlobal > 0) {
+      precio = precio - (precio * (clienteSeleccionado!.descuentoGlobal / 100));
+    }
+
+    return precio;
   }
 
   void _seleccionarCliente(Cliente cliente) {
@@ -876,9 +1073,17 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
 
   Future<void> _cargarPreciosEspeciales() async {
     if (clienteSeleccionado == null) return;
+    final clienteId = clienteSeleccionado!.id;
+    if (clienteId == null || clienteId <= 0) {
+      setState(() {
+        preciosEspeciales.clear();
+      });
+      return;
+    }
 
     try {
-      final precios = await PrecioEspecialService.getPreciosEspecialesByCliente(clienteSeleccionado!.id!);
+      final precios =
+          await PrecioEspecialService.getPreciosEspecialesByCliente(clienteId);
       setState(() {
         preciosEspeciales.clear();
         for (var precio in precios) {
@@ -911,12 +1116,12 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
 
     try {
       await provider.buscarClientes(trimmedQuery);
-      
+
       if (!mounted) return;
-      
+
       // Obtener los resultados del provider después de la búsqueda
       final clientes = provider.clientes;
-      
+
       setState(() {
         clientesFiltrados = clientes;
         isLoadingClientes = false;
@@ -927,7 +1132,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
     } catch (e) {
       debugPrint('Error al buscar clientes: $e');
       if (!mounted) return;
-      
+
       setState(() {
         clientesFiltrados = [];
         isLoadingClientes = false;
@@ -959,7 +1164,6 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
     _searchController.clear();
   }
 
-
   double _calcularTotal() {
     return productosSeleccionados.fold(
         0.0, (sum, ps) => sum + (ps.precio * ps.cantidad));
@@ -967,7 +1171,8 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
 
   double _calcularTotalConDescuento() {
     final subtotal = _calcularTotal();
-    if (clienteSeleccionado != null && clienteSeleccionado!.descuentoGlobal > 0) {
+    if (clienteSeleccionado != null &&
+        clienteSeleccionado!.descuentoGlobal > 0) {
       final descuento = subtotal * (clienteSeleccionado!.descuentoGlobal / 100);
       return subtotal - descuento;
     }
@@ -975,7 +1180,8 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
   }
 
   double _calcularDescuento() {
-    if (clienteSeleccionado != null && clienteSeleccionado!.descuentoGlobal > 0) {
+    if (clienteSeleccionado != null &&
+        clienteSeleccionado!.descuentoGlobal > 0) {
       final subtotal = _calcularTotal();
       return subtotal * (clienteSeleccionado!.descuentoGlobal / 100);
     }
@@ -986,7 +1192,6 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
     return precio.toStringAsFixed(2).replaceAllMapped(
         RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (match) => '${match[1]}.');
   }
-
 
   bool _puedeConfirmarVenta() {
     return clienteSeleccionado != null &&
@@ -1000,7 +1205,8 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
     final confirmar = await AppDialogs.showConfirmationDialog(
       context: context,
       title: 'Confirmar Venta',
-      message: '¿Está seguro de que desea finalizar la venta por \$${_formatearPrecio(_calcularTotalConDescuento())}?',
+      message:
+          '¿Está seguro de que desea finalizar la venta por \$${_formatearPrecio(_calcularTotalConDescuento())}?',
       confirmText: 'Finalizar Venta',
       cancelText: 'Cancelar',
       icon: Icons.shopping_cart_checkout,
@@ -1027,7 +1233,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
           .toList();
 
       final venta = Ventas(
-        clienteId: clienteSeleccionado!.id!,
+        clienteId: clienteSeleccionado!.id ?? 0,
         cliente: clienteSeleccionado!,
         ventasProductos: productos,
         total: _calcularTotalConDescuento(),
@@ -1056,9 +1262,10 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
         ventaConPagos.usuarioIdCreador = usuario.id;
         ventaConPagos.usuarioCreador = usuario;
       }
-      
+
       // Crear la venta
-      final ventasProvider = Provider.of<VentasProvider>(context, listen: false);
+      final ventasProvider =
+          Provider.of<VentasProvider>(context, listen: false);
       final result = await ventasProvider.crearVenta(ventaConPagos);
 
       if (mounted) {
@@ -1074,7 +1281,8 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
               await AppDialogs.showWarningDialog(
                 context: context,
                 title: 'Venta guardada offline',
-                message: 'Venta guardada localmente. Se sincronizará cuando haya conexión.',
+                message:
+                    'Venta guardada localmente. Se sincronizará cuando haya conexión.',
                 buttonText: 'Entendido',
                 icon: Icons.cloud_off,
               );
@@ -1089,11 +1297,13 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
             // RepartidorVendedor se asigna automáticamente a sí mismo sin diálogo
             if (usuario.esRepartidorVendedor) {
               try {
-                await ventasProvider.asignarVenta(result['ventaId'], usuario.id);
+                await ventasProvider.asignarVenta(
+                    result['ventaId'], usuario.id);
                 if (mounted) {
                   AppTheme.showSnackBar(
                     context,
-                    AppTheme.successSnackBar('Venta asignada a ti exitosamente'),
+                    AppTheme.successSnackBar(
+                        'Venta asignada a ti exitosamente'),
                   );
                 }
               } catch (e) {
@@ -1110,29 +1320,34 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                 await AppDialogs.showWarningDialog(
                   context: context,
                   title: 'Venta Creada',
-                  message: 'Queda la venta pendiente de asignación para repartir o entregar',
+                  message:
+                      'Queda la venta pendiente de asignación para repartir o entregar',
                   buttonText: 'Entendido',
                   icon: Icons.info_outline,
                 );
               }
             } else {
               // Para otros tipos de empleados (Admin, Repartidor), mostrar el diálogo de asignación
-              final opcionAsignacion = await _mostrarDialogoAsignacionVenta(context);
-              
+              final opcionAsignacion =
+                  await _mostrarDialogoAsignacionVenta(context);
+
               if (mounted) {
                 try {
                   if (opcionAsignacion == 'a_mi') {
                     // Asignarse a sí mismo
-                    await ventasProvider.asignarVenta(result['ventaId'], usuario.id);
+                    await ventasProvider.asignarVenta(
+                        result['ventaId'], usuario.id);
                     if (mounted) {
                       AppTheme.showSnackBar(
                         context,
-                        AppTheme.successSnackBar('Venta asignada a ti exitosamente'),
+                        AppTheme.successSnackBar(
+                            'Venta asignada a ti exitosamente'),
                       );
                     }
                   } else if (opcionAsignacion == 'automatico') {
                     // Asignar automáticamente a otro repartidor
-                    await _asignarVentaAutomaticamente(ventasProvider, result['ventaId'], usuario.id);
+                    await _asignarVentaAutomaticamente(
+                        ventasProvider, result['ventaId'], usuario.id);
                   }
                   // Si es 'cancelar' o null, no hacer nada
                 } catch (e) {
@@ -1150,7 +1365,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
 
         // Marcar que la venta se completó exitosamente
         _ventaCompletada = true;
-        
+
         // Eliminar borrador después de confirmar la venta (de forma segura) en background
         _eliminarBorradorDeFormaSegura();
 
@@ -1206,7 +1421,6 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
     }
   }
 
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -1229,347 +1443,325 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
           children: [
             // Contenido principal
             Expanded(
-              child: SingleChildScrollView(
-                child: Column(
-                  children: [
-                    if (isSearching) ...[
-                      // Barra de búsqueda
-                      Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: HeaderConBuscador(
-                          leadingIcon: Icons.people,
-                          title: 'Buscar Cliente',
-                          subtitle: 'Selecciona un cliente para la venta',
-                          controller: _searchController,
-                          hintText: 'Buscar por nombre...',
-                          onChanged: (value) {
-                            setState(() {
-                              if (value.trim().isEmpty) {
-                                clientesFiltrados = [];
-                                errorMessage = null;
-                              } else {
-                                _filtrarClientesIniciales(value);
-                                buscarClientes(value);
-                              }
-                            });
-                          },
-                          onClear: () {
-                            _searchController.clear();
-                            setState(() {
-                              clientesFiltrados = [];
-                              errorMessage = null;
-                            });
-                          },
-                        ),
-                      ),
-
-                      const SizedBox(height: 20),
-
-                      // Lista de clientes
-                      if (isLoadingClientesIniciales)
-                        Container(
-                          height: 200,
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).brightness == Brightness.dark
-                                ? const Color(0xFF2A2A2A)
-                                : Colors.white,
-                            borderRadius: BorderRadius.circular(15),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(
-                                    Theme.of(context).brightness == Brightness.dark ? 0.3 : 0.05),
-                                blurRadius: 10,
-                                offset: const Offset(0, 2),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  return isSearching && isLoadingClientesIniciales
+                      ? Column(
+                          children: [
+                            // Barra de búsqueda
+                            Padding(
+                              padding: const EdgeInsets.all(16.0),
+                              child: HeaderConBuscador(
+                                leadingIcon: Icons.people,
+                                title: 'Buscar Cliente',
+                                subtitle: 'Selecciona un cliente para la venta',
+                                controller: _searchController,
+                                hintText: 'Buscar por nombre...',
+                                onChanged: (value) {
+                                  setState(() {
+                                    if (value.trim().isEmpty) {
+                                      clientesFiltrados = [];
+                                      errorMessage = null;
+                                    } else {
+                                      _filtrarClientesIniciales(value);
+                                      buscarClientes(value);
+                                    }
+                                  });
+                                },
+                                onClear: () {
+                                  _searchController.clear();
+                                  setState(() {
+                                    clientesFiltrados = [];
+                                    errorMessage = null;
+                                  });
+                                },
                               ),
-                            ],
-                          ),
-                          child: const Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                CircularProgressIndicator(
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                      AppTheme.primaryColor),
-                                ),
-                                SizedBox(height: 16),
-                                Text(
-                                  'Cargando clientes...',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    color: Colors.grey,
-                                  ),
-                                ),
-                              ],
                             ),
-                          ),
-                        )
-                      else if (clientesFiltrados.isNotEmpty)
-                        _buildClientesList(clientesFiltrados, 'Clientes encontrados')
-                      else if (clientesIniciales.isNotEmpty && _searchController.text.trim().isEmpty)
-                        _buildClientesList(clientesIniciales, 'Clientes disponibles')
-                      else if (_searchController.text.trim().isNotEmpty)
-                        _buildEmptyState('No se encontraron clientes con ese nombre')
-                      else
-                        _buildEmptyState('No hay clientes disponibles'),
-                    ] else ...[
-                      // Cliente seleccionado
-                      ClienteSection(
-                        cliente: clienteSeleccionado!,
-                        onCambiarCliente: cambiarCliente,
-                      ),
-
-                      const SizedBox(height: 16),
-
-                      // Botón agregar productos
-                      AgregarProductoButton(
-                        onPressed: () async {
-                          try {
-                            final resultado = await Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => SeleccionarProductosScreen(
-                                  productosYaSeleccionados: productosSeleccionados,
-                                  cliente: clienteSeleccionado,
-                                ),
-                              ),
-                            );
-
-                            if (resultado != null && resultado is List<ProductoSeleccionado>) {
-                              setState(() {
-                                productosSeleccionados = resultado;
-                              });
-                              _guardarBorrador(); // Guardar borrador con productos actualizados
-                            }
-                          } catch (e) {
-                            AppTheme.showSnackBar(
-                              context,
-                              AppTheme.errorSnackBar('Error al seleccionar productos: $e'),
-                            );
-                          }
-                        },
-                      ),
-
-                      // Lista de productos o estado vacío
-                      const SizedBox(height: 16),
-                      if (productosSeleccionados.isNotEmpty) ...[
-                        LineItemsList(
-                          productos: productosSeleccionados,
-                          onEliminar: (index) {
-                            setState(() {
-                              productosSeleccionados.removeAt(index);
-                            });
-                            _guardarBorrador(); // Guardar borrador al eliminar producto
-                          },
-                          onTap: (index) async {
-                            // Navegar a seleccionar productos con scroll al producto específico
-                            try {
-                              final productoId = productosSeleccionados[index].id;
-                              final resultado = await Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => SeleccionarProductosScreen(
-                                    productosYaSeleccionados: productosSeleccionados,
-                                    cliente: clienteSeleccionado,
-                                    scrollToProductId: productoId,
-                                  ),
-                                ),
-                              );
-
-                              if (resultado != null && resultado is List<ProductoSeleccionado>) {
-                                setState(() {
-                                  productosSeleccionados = resultado;
-                                });
-                                _guardarBorrador(); // Guardar borrador con productos actualizados
-                              }
-                            } catch (e) {
-                              AppTheme.showSnackBar(
-                                context,
-                                AppTheme.errorSnackBar('Error al editar productos: $e'),
-                              );
-                            }
-                          },
-                          preciosEspeciales: preciosEspeciales,
-                          descuentoGlobal: clienteSeleccionado?.descuentoGlobal,
-                        ),
-                      ] else ...[
-                        const EmptyStateVenta(),
-                      ],
-                    ],
-                  ],
-                ),
-              ),
-            ),
-
-            // Botones de acción rápida (solo cuando se está buscando)
-            if (isSearching)
-              Container(
-                decoration: BoxDecoration(
-                  color: Theme.of(context).brightness == Brightness.dark
-                      ? const Color(0xFF2A2A2A)
-                      : Colors.white,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(
-                          Theme.of(context).brightness == Brightness.dark ? 0.3 : 0.1),
-                      blurRadius: 10,
-                      offset: const Offset(0, -2),
-                    ),
-                  ],
-                ),
-                padding: const EdgeInsets.all(16.0),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: InkWell(
-                        onTap: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: const Row(
+                            Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 16),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
-                                  Icon(Icons.info_outline, color: Colors.white),
-                                  SizedBox(width: 12),
-                                  Expanded(
-                                    child: Text(
-                                      'Función próximamente disponible',
-                                      style: TextStyle(fontSize: 16),
+                                  ElevatedButton.icon(
+                                    onPressed: () async {
+                                      final cliente = await VentasProvider
+                                          .obtenerOCrearConsumidorFinal(
+                                        context: context,
+                                        clientesIniciales: clientesIniciales,
+                                        clientesFiltrados: clientesFiltrados,
+                                        clienteSeleccionado:
+                                            clienteSeleccionado,
+                                      );
+
+                                      if (cliente != null) {
+                                        final clienteProvider =
+                                            Provider.of<ClienteProvider>(
+                                                context,
+                                                listen: false);
+                                        final clientesActualizados =
+                                            clienteProvider.clientes;
+
+                                        _seleccionarCliente(cliente);
+
+                                        if (!mounted) return;
+                                        setState(() {
+                                          clientesFiltrados = [];
+                                          errorMessage = null;
+
+                                          if (clientesActualizados.isNotEmpty) {
+                                            clientesIniciales =
+                                                List.from(clientesActualizados);
+                                          } else if (!clientesIniciales
+                                              .any((c) => c.id == cliente.id)) {
+                                            clientesIniciales = [
+                                              cliente,
+                                              ...clientesIniciales
+                                            ];
+                                          }
+                                        });
+                                      }
+                                    },
+                                    style: AppTheme.elevatedButtonStyle(
+                                        AppTheme.primaryColor),
+                                    icon: const Icon(
+                                      Icons.person_outline,
+                                      color: Colors.white,
+                                    ),
+                                    label: const Text(
+                                      'Consumidor Final',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                      ),
                                     ),
                                   ),
                                 ],
                               ),
-                              backgroundColor: AppTheme.primaryColor,
-                              duration: const Duration(seconds: 2),
-                              behavior: SnackBarBehavior.floating,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
+                            ),
+                            // Estado de carga que ocupa el espacio restante
+                            Expanded(
+                              child: Padding(
+                                padding: const EdgeInsets.all(16.0),
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: Theme.of(context).brightness ==
+                                            Brightness.dark
+                                        ? const Color(0xFF1A1A1A)
+                                        : Colors.white,
+                                    borderRadius: BorderRadius.circular(15),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Theme.of(context).brightness ==
+                                                Brightness.dark
+                                            ? Colors.black.withOpacity(0.3)
+                                            : Colors.black.withOpacity(0.05),
+                                        blurRadius: 10,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: const Center(
+                                    child: Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        CircularProgressIndicator(
+                                          valueColor:
+                                              AlwaysStoppedAnimation<Color>(
+                                                  AppTheme.primaryColor),
+                                        ),
+                                        SizedBox(height: 16),
+                                        Text(
+                                          'Cargando clientes...',
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                            color: Colors.grey,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
                               ),
                             ),
-                          );
-                        },
-                        borderRadius: BorderRadius.circular(12),
-                        child: Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).brightness == Brightness.dark
-                                ? const Color(0xFF2A2A2A)
-                                : Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: AppTheme.primaryColor.withOpacity(0.3),
-                              width: 1.5,
-                            ),
-                          ),
+                          ],
+                        )
+                      : SingleChildScrollView(
                           child: Column(
                             children: [
-                              Container(
-                                width: 50,
-                                height: 50,
-                                decoration: BoxDecoration(
-                                  color: AppTheme.primaryColor.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(8),
+                              if (isSearching) ...[
+                                // Barra de búsqueda
+                                Padding(
+                                  padding: const EdgeInsets.all(16.0),
+                                  child: HeaderConBuscador(
+                                    leadingIcon: Icons.people,
+                                    title: 'Buscar Cliente',
+                                    subtitle:
+                                        'Selecciona un cliente para la venta',
+                                    controller: _searchController,
+                                    hintText: 'Buscar por nombre...',
+                                    onChanged: (value) {
+                                      setState(() {
+                                        if (value.trim().isEmpty) {
+                                          clientesFiltrados = [];
+                                          errorMessage = null;
+                                        } else {
+                                          _filtrarClientesIniciales(value);
+                                          buscarClientes(value);
+                                        }
+                                      });
+                                    },
+                                    onClear: () {
+                                      _searchController.clear();
+                                      setState(() {
+                                        clientesFiltrados = [];
+                                        errorMessage = null;
+                                      });
+                                    },
+                                  ),
                                 ),
-                                child: Icon(
-                                  Icons.qr_code_scanner,
-                                  color: AppTheme.primaryColor,
-                                  size: 24,
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 16),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.stretch,
+                                    children: [
+                                      ElevatedButton.icon(
+                                        onPressed: () async {
+                                          final cliente =
+                                              await VentasProvider
+                                                  .obtenerOCrearConsumidorFinal(
+                                            context: context,
+                                            clientesIniciales:
+                                                clientesIniciales,
+                                            clientesFiltrados:
+                                                clientesFiltrados,
+                                            clienteSeleccionado:
+                                                clienteSeleccionado,
+                                          );
+
+                                          if (cliente != null) {
+                                            final clienteProvider =
+                                                Provider.of<ClienteProvider>(
+                                                    context,
+                                                    listen: false);
+                                            final clientesActualizados =
+                                                clienteProvider.clientes;
+
+                                            _seleccionarCliente(cliente);
+
+                                            if (!mounted) return;
+                                            setState(() {
+                                              clientesFiltrados = [];
+                                              errorMessage = null;
+
+                                              if (clientesActualizados
+                                                  .isNotEmpty) {
+                                                clientesIniciales = List.from(
+                                                    clientesActualizados);
+                                              } else if (!clientesIniciales.any(
+                                                  (c) => c.id == cliente.id)) {
+                                                clientesIniciales = [
+                                                  cliente,
+                                                  ...clientesIniciales
+                                                ];
+                                              }
+                                            });
+                                          }
+                                        },
+                                        style: AppTheme.elevatedButtonStyle(
+                                            AppTheme.primaryColor),
+                                        icon: const Icon(
+                                          Icons.person_outline,
+                                          color: Colors.white,
+                                        ),
+                                        label: const Text(
+                                          'Consumidor Final',
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                'Escanear QR',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppTheme.primaryColor,
+
+                                // Lista de clientes
+                                if (clientesFiltrados.isNotEmpty)
+                                  _buildClientesList(
+                                      clientesFiltrados, 'Clientes encontrados')
+                                else if (clientesIniciales.isNotEmpty &&
+                                    _searchController.text.trim().isEmpty)
+                                  _buildClientesList(
+                                      clientesIniciales, 'Clientes disponibles')
+                                else if (_searchController.text
+                                    .trim()
+                                    .isNotEmpty)
+                                  _buildEmptyState(
+                                      'No se encontraron clientes con ese nombre')
+                                else
+                                  _buildEmptyState(
+                                      'No hay clientes disponibles'),
+                              ] else ...[
+                                // Cliente seleccionado
+                                ClienteSection(
+                                  cliente: clienteSeleccionado!,
+                                  onCambiarCliente: cambiarCliente,
                                 ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Cliente frecuente',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Theme.of(context).brightness == Brightness.dark
-                                      ? Colors.grey.shade400
-                                      : Colors.grey.shade600,
+
+                                // Botón agregar productos
+                                AgregarProductoButton(
+                                  onPressed: () async {
+                                    try {
+                                      final resultado = await Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) =>
+                                              SeleccionarProductosScreen(
+                                            productosYaSeleccionados:
+                                                productosSeleccionados,
+                                            cliente: clienteSeleccionado,
+                                          ),
+                                        ),
+                                      );
+
+                                      if (resultado != null &&
+                                          resultado
+                                              is List<ProductoSeleccionado>) {
+                                        setState(() {
+                                          productosSeleccionados = resultado;
+                                        });
+                                        _guardarBorrador(); // Guardar borrador con productos actualizados
+                                      }
+                                    } catch (e) {
+                                      AppTheme.showSnackBar(
+                                        context,
+                                        AppTheme.errorSnackBar(
+                                            'Error al seleccionar productos: $e'),
+                                      );
+                                    }
+                                  },
                                 ),
-                              ),
+                                const SizedBox(height: 16),
+                                // Lista de productos o estado vacío
+
+                                if (productosSeleccionados.isNotEmpty) ...[
+                                  _buildProductsSection(),
+                                ] else ...[
+                                  const EmptyStateVenta(),
+                                ],
+                              ],
                             ],
                           ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: InkWell(
-                        onTap: () async {
-                          final nuevoCliente = await Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const WizardNuevoClienteScreen(),
-                            ),
-                          );
-                          
-                          if (nuevoCliente != null && nuevoCliente is Cliente) {
-                            setState(() {
-                              clientesIniciales.insert(0, nuevoCliente);
-                            });
-                            _seleccionarCliente(nuevoCliente);
-                          }
-                        },
-                        borderRadius: BorderRadius.circular(12),
-                        child: Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).brightness == Brightness.dark
-                                ? const Color(0xFF2A2A2A)
-                                : Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: AppTheme.primaryColor.withOpacity(0.3),
-                              width: 1.5,
-                            ),
-                          ),
-                          child: Column(
-                            children: [
-                              Container(
-                                width: 50,
-                                height: 50,
-                                decoration: BoxDecoration(
-                                  color: AppTheme.primaryColor.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Icon(
-                                  Icons.person_add,
-                                  color: AppTheme.primaryColor,
-                                  size: 24,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                'Nuevo Cliente',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppTheme.primaryColor,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Registrar',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Theme.of(context).brightness == Brightness.dark
-                                      ? Colors.grey.shade400
-                                      : Colors.grey.shade600,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+                        );
+                },
               ),
+            ),
           ],
         ),
       ),
