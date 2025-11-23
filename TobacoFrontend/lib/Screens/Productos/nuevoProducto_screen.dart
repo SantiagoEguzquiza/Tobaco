@@ -18,6 +18,7 @@ class NuevoProductoScreen extends StatefulWidget {
 
 class _NuevoProductoScreenState extends State<NuevoProductoScreen> {
   final nombreController = TextEditingController();
+  final marcaController = TextEditingController();
   final stockController = TextEditingController();
   final precioController = TextEditingController();
   final categoriaController = TextEditingController();
@@ -102,6 +103,14 @@ class _NuevoProductoScreenState extends State<NuevoProductoScreen> {
                       label: 'Nombre del producto',
                       hint: 'Ej: Marlboro Rojo',
                       icon: Icons.inventory_2_outlined,
+                      isDark: isDark,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildTextField(
+                      controller: marcaController,
+                      label: 'Marca',
+                      hint: 'Ej: Marlboro',
+                      icon: Icons.branding_watermark_outlined,
                       isDark: isDark,
                     ),
                     const SizedBox(height: 16),
@@ -906,6 +915,7 @@ class _NuevoProductoScreenState extends State<NuevoProductoScreen> {
       final producto = Producto(
         id: null,
         nombre: nombreController.text.trim(),
+        marca: marcaController.text.trim().isEmpty ? null : marcaController.text.trim(),
         stock: double.tryParse(stockController.text) ?? 0.0,
         precio: double.tryParse(precioController.text) ?? 0.0,
         categoriaId: selectedCategoria.id ?? 0,

@@ -168,6 +168,26 @@ class ProductoService {
     }
   }
 
+  Future<Producto> obtenerProductoPorId(int id) async {
+    try {
+      final headers = await AuthService.getAuthHeaders();
+      final response = await Apihandler.client.get(
+        Uri.parse('$baseUrl/Productos/$id'),
+        headers: headers,
+      ).timeout(_timeoutDuration);
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> productoJson = jsonDecode(response.body);
+        return Producto.fromJson(productoJson);
+      } else {
+        throw Exception(
+            'Error al obtener el producto. Código de estado: ${response.statusCode}');
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   Future<Map<String, dynamic>> obtenerProductosPaginados(int page, int pageSize) async {
     try {
       final headers = await AuthService.getAuthHeaders();

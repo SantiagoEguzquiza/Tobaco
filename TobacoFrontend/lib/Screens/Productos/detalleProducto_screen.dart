@@ -1,15 +1,64 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:tobaco/Models/Producto.dart';
 import 'package:tobaco/Screens/Productos/editarProducto_screen.dart';
 import 'package:tobaco/Services/Productos_Service/productos_provider.dart';
+import 'package:tobaco/Services/Productos_Service/productos_service.dart';
 import 'package:tobaco/Theme/app_theme.dart'; // Importa el tema
 import 'package:tobaco/Theme/dialogs.dart'; // Importa los diálogos
 import 'package:tobaco/Helpers/api_handler.dart';
 
-class DetalleProductoScreen extends StatelessWidget {
+class DetalleProductoScreen extends StatefulWidget {
   final Producto producto;
 
   const DetalleProductoScreen({super.key, required this.producto});
+
+  @override
+  State<DetalleProductoScreen> createState() => _DetalleProductoScreenState();
+}
+
+class _DetalleProductoScreenState extends State<DetalleProductoScreen> {
+  late Producto _producto;
+
+  @override
+  void initState() {
+    super.initState();
+    _producto = widget.producto;
+  }
+
+  Future<void> _actualizarProducto() async {
+    if (_producto.id == null) return;
+    
+    try {
+      // Primero intentar buscar en el provider
+      final provider = Provider.of<ProductoProvider>(context, listen: false);
+      final productoEnProvider = provider.productos.firstWhere(
+        (p) => p.id == _producto.id,
+        orElse: () => _producto,
+      );
+      
+      // Si se encontró en el provider y es diferente, actualizar
+      if (productoEnProvider.id == _producto.id && productoEnProvider != _producto) {
+        setState(() {
+          _producto = productoEnProvider;
+        });
+        return;
+      }
+      
+      // Si no está en el provider, obtenerlo desde el servidor
+      final productoService = ProductoService();
+      final productoActualizado = await productoService.obtenerProductoPorId(_producto.id!);
+      
+      if (mounted) {
+        setState(() {
+          _producto = productoActualizado;
+        });
+      }
+    } catch (e) {
+      // Si falla, no hacer nada (el producto actual se mantiene)
+      debugPrint('Error al actualizar producto: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -30,7 +79,7 @@ class DetalleProductoScreen extends StatelessWidget {
         appBar: AppBar(
           centerTitle: true,
           title: Text(
-            producto.nombre,
+            _producto.nombre,
             style: AppTheme.appBarTitleStyle,
           ),
           backgroundColor: Theme.of(context).brightness == Brightness.dark
@@ -88,7 +137,7 @@ class DetalleProductoScreen extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                producto.nombre,
+                                _producto.nombre,
                                 style: TextStyle(
                                   fontSize: 24,
                                   fontWeight: FontWeight.bold,
@@ -99,7 +148,7 @@ class DetalleProductoScreen extends StatelessWidget {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                producto.categoriaNombre ?? 'Sin categoría',
+                                _producto.categoriaNombre ?? 'Sin categoría',
                                 style: TextStyle(
                                   fontSize: 16,
                                   color: Theme.of(context).brightness == Brightness.dark
@@ -155,7 +204,7 @@ class DetalleProductoScreen extends StatelessWidget {
                     _buildInfoRow(
                       context,
                       'Precio',
-                      '\$${producto.precio.toStringAsFixed(2)}',
+                      '\$${_producto.precio.toStringAsFixed(2)}',
                       Icons.attach_money,
                     ),
                     const SizedBox(height: 20),
@@ -164,16 +213,27 @@ class DetalleProductoScreen extends StatelessWidget {
                     _buildInfoRow(
                       context,
                       'Stock disponible',
-                      producto.stock?.toString() ?? 'No disponible',
+                      _producto.stock?.toString() ?? 'No disponible',
                       Icons.inventory,
                     ),
                     const SizedBox(height: 20),
+                    
+                    // Marca
+                    if (_producto.marca != null && _producto.marca!.isNotEmpty)
+                      _buildInfoRow(
+                        context,
+                        'Marca',
+                        _producto.marca!,
+                        Icons.branding_watermark,
+                      ),
+                    if (_producto.marca != null && _producto.marca!.isNotEmpty)
+                      const SizedBox(height: 20),
                     
                     // Se puede vender medio
                     _buildInfoRow(
                       context,
                       '¿Se puede vender medio?',
-                      producto.half ? 'Sí' : 'No',
+                      _producto.half ? 'Sí' : 'No',
                       Icons.hourglass_empty,
                     ),
                   ],
@@ -218,15 +278,20 @@ class DetalleProductoScreen extends StatelessWidget {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton.icon(
-                        onPressed: () {
-                          Navigator.push(
+                        onPressed: () async {
+                          final result = await Navigator.push(
                             context,
                             MaterialPageRoute(
                               builder: (context) => EditarProductoScreen(
-                                producto: producto,
+                                producto: _producto,
                               ),
                             ),
                           );
+                          
+                          // Si se guardó exitosamente, actualizar el producto
+                          if (result == true) {
+                            _actualizarProducto();
+                          }
                         },
                         icon: const Icon(Icons.edit_outlined, color: Colors.white),
                         label: const Text(
@@ -257,15 +322,15 @@ class DetalleProductoScreen extends StatelessWidget {
                           final confirm = await AppDialogs.showDeleteConfirmationDialog(
                             context: context,
                             title: 'Eliminar Producto',
-                            itemName: producto.nombre,
+                            itemName: _producto.nombre,
                             confirmText: 'Eliminar',
                             cancelText: 'Cancelar',
                           );
 
                           if (confirm == true) {
-                            if (producto.id != null) {
+                            if (_producto.id != null) {
                               try {
-                                await ProductoProvider().eliminarProducto(producto.id!);
+                                await ProductoProvider().eliminarProducto(_producto.id!);
                                 AppTheme.showSnackBar(
                                   context,
                                   AppTheme.successSnackBar('Producto eliminado con éxito'),
@@ -274,7 +339,7 @@ class DetalleProductoScreen extends StatelessWidget {
                               } catch (e) {
                                 if (e.toString().contains('ventas vinculadas') || 
                                     e.toString().contains('Conflict')) {
-                                  _showDeactivateDialog(context, producto);
+                                  _showDeactivateDialog(context, _producto);
                                 } else if (Apihandler.isConnectionError(e)) {
                                   await Apihandler.handleConnectionError(context, e);
                                 } else {
@@ -439,7 +504,7 @@ class DetalleProductoScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'El producto "${producto.nombre}" no se puede eliminar porque tiene ventas vinculadas.',
+                'El producto "${_producto.nombre}" no se puede eliminar porque tiene ventas vinculadas.',
                 style: const TextStyle(fontSize: 16),
               ),
               const SizedBox(height: 16),
@@ -498,7 +563,9 @@ class DetalleProductoScreen extends StatelessWidget {
         context,
         AppTheme.successSnackBar('Producto desactivado con éxito'),
       );
-      Navigator.of(context).pop(true);
+      if (mounted) {
+        Navigator.of(context).pop(true);
+      }
     } catch (e) {
       if (Apihandler.isConnectionError(e)) {
         await Apihandler.handleConnectionError(context, e);

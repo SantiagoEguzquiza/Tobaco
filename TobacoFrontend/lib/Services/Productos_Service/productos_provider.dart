@@ -42,8 +42,16 @@ class ProductoProvider with ChangeNotifier {
   List<Producto> get productosFiltrados {
     List<Producto> filtered;
     if (_searchQuery.isNotEmpty) {
-      filtered = _productos.where((p) =>
-          p.nombre.toLowerCase().contains(_searchQuery.toLowerCase())).toList();
+      final queryLower = _searchQuery.toLowerCase();
+      filtered = _productos.where((p) {
+        // Buscar en el nombre
+        final nombreMatch = p.nombre.toLowerCase().contains(queryLower);
+        // Buscar en la marca (si existe)
+        final marcaMatch = p.marca != null && 
+                          p.marca!.isNotEmpty && 
+                          p.marca!.toLowerCase().contains(queryLower);
+        return nombreMatch || marcaMatch;
+      }).toList();
     } else if (_selectedCategory != null) {
       filtered = _productos.where((p) => p.categoriaNombre == _selectedCategory).toList();
     } else {

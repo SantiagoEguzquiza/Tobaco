@@ -20,6 +20,7 @@ class EditarProductoScreen extends StatefulWidget {
 
 class EditarProductoScreenState extends State<EditarProductoScreen> {
   late TextEditingController nombreController;
+  late TextEditingController marcaController;
   late TextEditingController stockController;
   late TextEditingController precioController;
   late TextEditingController halfController;
@@ -45,6 +46,7 @@ class EditarProductoScreenState extends State<EditarProductoScreen> {
     super.initState();
 
     nombreController = TextEditingController(text: widget.producto.nombre);
+    marcaController = TextEditingController(text: widget.producto.marca ?? '');
     stockController =
         TextEditingController(text: widget.producto.stock.toString());
     precioController =
@@ -67,6 +69,7 @@ class EditarProductoScreenState extends State<EditarProductoScreen> {
   @override
   void dispose() {
     nombreController.dispose();
+    marcaController.dispose();
     stockController.dispose();
     precioController.dispose();
     super.dispose();
@@ -132,6 +135,14 @@ class EditarProductoScreenState extends State<EditarProductoScreen> {
                       label: 'Nombre del producto',
                       hint: 'Ej: Marlboro Rojo',
                       icon: Icons.inventory_2_outlined,
+                      isDark: isDark,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildTextField(
+                      controller: marcaController,
+                      label: 'Marca',
+                      hint: 'Ej: Marlboro',
+                      icon: Icons.branding_watermark_outlined,
                       isDark: isDark,
                     ),
                     const SizedBox(height: 16),
@@ -493,6 +504,8 @@ class EditarProductoScreenState extends State<EditarProductoScreen> {
             setState(() {
               if (controller == nombreController) {
                 widget.producto.nombre = value;
+              } else if (controller == marcaController) {
+                widget.producto.marca = value.isEmpty ? null : value;
               } else if (controller == stockController) {
                 widget.producto.stock = double.tryParse(value) ?? 0.0;
               } else if (controller == precioController) {

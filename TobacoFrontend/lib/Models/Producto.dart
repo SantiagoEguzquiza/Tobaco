@@ -3,6 +3,7 @@ import 'ProductQuantityPrice.dart';
 class Producto {
   int? id;
   String nombre;
+  String? marca;
   double? stock;
   double precio;
   int categoriaId;
@@ -14,6 +15,7 @@ class Producto {
   Producto({
     required this.id,
     required this.nombre,
+    this.marca,
     this.stock,
     required this.precio,
     required this.categoriaId,
@@ -27,6 +29,7 @@ class Producto {
     return Producto(
       id: json['id'] as int?, 
       nombre: json['nombre'] as String,
+      marca: json['marca'] as String?,
       stock: json['stock'] != null
           ? double.tryParse(json['stock'].toString())
           : null,
@@ -47,6 +50,7 @@ class Producto {
   Map<String, dynamic> toJson() {
     final Map<String, dynamic> json = {
       'nombre': nombre,
+      'marca': marca,
       'stock': stock ?? 0.0, // Asegurar que no sea null
       'precio': precio,
       'categoriaId': categoriaId,
@@ -68,6 +72,7 @@ class Producto {
     return {
       'id': id,
       'nombre': nombre,
+      'marca': marca,
       'stock': stock,
       'precio': precio,
       'categoriaId': categoriaId,
