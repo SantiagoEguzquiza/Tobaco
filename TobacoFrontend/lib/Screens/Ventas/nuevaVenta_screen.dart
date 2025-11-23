@@ -1049,7 +1049,12 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
   }
 
   double _calcularPrecioFinalProducto(ProductoSeleccionado producto) {
-    double precio = preciosEspeciales[producto.id] ?? producto.precio;
+    // El precio en ProductoSeleccionado ya incluye:
+    // - Precio especial (si existe)
+    // - Packs (si aplica)
+    // - Descuento del producto (si está activo)
+    // Solo falta aplicar el descuento global del cliente
+    double precio = producto.precio;
 
     // Aplicar descuento global si existe
     if (clienteSeleccionado?.descuentoGlobal != null &&
@@ -1165,6 +1170,8 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
   }
 
   double _calcularTotal() {
+    // El precio en ProductoSeleccionado ya incluye el descuento del producto
+    // (se aplica en seleccionarProducto_screen cuando se crea el ProductoSeleccionado)
     return productosSeleccionados.fold(
         0.0, (sum, ps) => sum + (ps.precio * ps.cantidad));
   }

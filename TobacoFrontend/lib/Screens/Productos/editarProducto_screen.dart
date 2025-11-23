@@ -9,6 +9,7 @@ import 'package:tobaco/Theme/app_theme.dart';
 import 'package:tobaco/Theme/dialogs.dart';
 import 'package:tobaco/Models/Categoria.dart';
 import 'package:tobaco/Widgets/QuantityPriceWidget.dart';
+import 'package:intl/intl.dart';
 
 class EditarProductoScreen extends StatefulWidget {
   final Producto producto;
@@ -24,10 +25,13 @@ class EditarProductoScreenState extends State<EditarProductoScreen> {
   late TextEditingController stockController;
   late TextEditingController precioController;
   late TextEditingController halfController;
+  late TextEditingController descuentoController;
 
   int? categoriaSeleccionadaId;
   List<ProductQuantityPrice> quantityPrices = [];
   bool _isLoading = false;
+  bool _descuentoIndefinido = false;
+  DateTime? _fechaExpiracionDescuento;
 
   // Helper method to safely parse color hex
   Color _parseColor(String colorHex) {
@@ -53,12 +57,18 @@ class EditarProductoScreenState extends State<EditarProductoScreen> {
         TextEditingController(text: widget.producto.precio.toString());
     halfController =
         TextEditingController(text: widget.producto.half.toString());
+    descuentoController = TextEditingController(
+        text: widget.producto.descuento.toStringAsFixed(2));
 
     // Initialize quantity prices
     quantityPrices = List.from(widget.producto.quantityPrices);
     
     // Inicializar con el ID de la categoría del producto
     categoriaSeleccionadaId = widget.producto.categoriaId;
+    
+    // Inicializar campos de descuento
+    _descuentoIndefinido = widget.producto.descuentoIndefinido;
+    _fechaExpiracionDescuento = widget.producto.fechaExpiracionDescuento;
     
     Future.microtask(() {
       if (!mounted) return;
@@ -72,6 +82,7 @@ class EditarProductoScreenState extends State<EditarProductoScreen> {
     marcaController.dispose();
     stockController.dispose();
     precioController.dispose();
+    descuentoController.dispose();
     super.dispose();
   }
 
@@ -257,6 +268,148 @@ class EditarProductoScreenState extends State<EditarProductoScreen> {
                         });
                       },
                     ),
+                  ],
+                ),
+                
+                const SizedBox(height: 16),
+                
+                // Descuento
+                _buildSectionCard(
+                  isDark: isDark,
+                  title: 'Descuento',
+                  icon: Icons.percent_outlined,
+                  children: [
+                    _buildTextField(
+                      controller: descuentoController,
+                      label: 'Porcentaje de descuento (%)',
+                      hint: '0',
+                      icon: Icons.percent,
+                      isDark: isDark,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF2A2A2A) : Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: isDark ? const Color(0xFF404040) : Colors.grey.shade300,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: AppTheme.primaryColor.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(
+                              Icons.schedule_outlined,
+                              color: AppTheme.primaryColor,
+                              size: 20,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Descuento indefinido',
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w500,
+                                    color: isDark ? Colors.white : Colors.black87,
+                                  ),
+                                ),
+                                Text(
+                                  'El descuento no expirará',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Switch(
+                            value: _descuentoIndefinido,
+                            onChanged: (bool value) {
+                              setState(() {
+                                _descuentoIndefinido = value;
+                                if (value) {
+                                  _fechaExpiracionDescuento = null;
+                                  widget.producto.fechaExpiracionDescuento = null;
+                                }
+                                widget.producto.descuentoIndefinido = value;
+                              });
+                            },
+                            activeColor: AppTheme.primaryColor,
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (!_descuentoIndefinido) ...[
+                      const SizedBox(height: 16),
+                      GestureDetector(
+                        onTap: () => _selectFechaExpiracion(context, isDark),
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: isDark ? const Color(0xFF2A2A2A) : Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: isDark ? const Color(0xFF404040) : Colors.grey.shade300,
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.calendar_today_outlined,
+                                color: AppTheme.primaryColor,
+                                size: 20,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Fecha de expiración',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w500,
+                                        color: isDark ? Colors.grey.shade300 : Colors.grey.shade700,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      _fechaExpiracionDescuento != null
+                                          ? DateFormat('dd/MM/yyyy').format(_fechaExpiracionDescuento!)
+                                          : 'Seleccionar fecha',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        color: isDark ? Colors.white : Colors.black87,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Icon(
+                                Icons.arrow_forward_ios,
+                                size: 16,
+                                color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
                 
@@ -510,6 +663,8 @@ class EditarProductoScreenState extends State<EditarProductoScreen> {
                 widget.producto.stock = double.tryParse(value) ?? 0.0;
               } else if (controller == precioController) {
                 widget.producto.precio = double.tryParse(value) ?? 0.0;
+              } else if (controller == descuentoController) {
+                widget.producto.descuento = double.tryParse(value) ?? 0.0;
               }
             });
           },
@@ -551,6 +706,33 @@ class EditarProductoScreenState extends State<EditarProductoScreen> {
     );
   }
 
+  Future<void> _selectFechaExpiracion(BuildContext context, bool isDark) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _fechaExpiracionDescuento ?? DateTime.now().add(const Duration(days: 30)),
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 365 * 2)),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.light(
+              primary: AppTheme.primaryColor,
+              onPrimary: Colors.white,
+              onSurface: isDark ? Colors.white : Colors.black87,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null && picked != _fechaExpiracionDescuento) {
+      setState(() {
+        _fechaExpiracionDescuento = picked;
+        widget.producto.fechaExpiracionDescuento = picked;
+      });
+    }
+  }
+
   Future<void> _guardarCambios() async {
     // Validaciones
     if (nombreController.text.trim().isEmpty) {
@@ -575,6 +757,24 @@ class EditarProductoScreenState extends State<EditarProductoScreen> {
       AppTheme.showSnackBar(
         context,
         AppTheme.warningSnackBar('El precio debe ser un número válido mayor a 0'),
+      );
+      return;
+    }
+
+    // Validar descuento
+    final descuentoValue = double.tryParse(descuentoController.text.trim()) ?? 0.0;
+    if (descuentoValue < 0 || descuentoValue > 100) {
+      AppTheme.showSnackBar(
+        context,
+        AppTheme.warningSnackBar('El descuento debe estar entre 0 y 100'),
+      );
+      return;
+    }
+
+    if (!_descuentoIndefinido && descuentoValue > 0 && _fechaExpiracionDescuento == null) {
+      AppTheme.showSnackBar(
+        context,
+        AppTheme.warningSnackBar('Debe seleccionar una fecha de expiración si el descuento no es indefinido'),
       );
       return;
     }
@@ -611,6 +811,9 @@ class EditarProductoScreenState extends State<EditarProductoScreen> {
 
     try {
       widget.producto.quantityPrices = quantityPrices;
+      widget.producto.descuento = descuentoValue;
+      widget.producto.fechaExpiracionDescuento = _descuentoIndefinido ? null : _fechaExpiracionDescuento;
+      widget.producto.descuentoIndefinido = _descuentoIndefinido;
 
       await Provider.of<ProductoProvider>(context, listen: false)
           .editarProducto(widget.producto);
