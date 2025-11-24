@@ -12,6 +12,7 @@ class Cliente {
   List<PrecioEspecial> preciosEspeciales;
   double? latitud;
   double? longitud;
+  bool visible;
 
 
   Cliente(
@@ -24,6 +25,7 @@ class Cliente {
       this.preciosEspeciales = const [],
       this.latitud,
       this.longitud,
+      this.visible = true,
       });
 
   factory Cliente.fromJson(Map<String, dynamic> json) {
@@ -46,6 +48,7 @@ class Cliente {
       preciosEspeciales: precios,
       latitud: (json['latitud'] as num?)?.toDouble(),
       longitud: (json['longitud'] as num?)?.toDouble(),
+      visible: json['visible'] as bool? ?? true,
     );
   }
 
@@ -58,6 +61,7 @@ class Cliente {
       'descuentoGlobal': descuentoGlobal,
       'latitud': latitud,
       'longitud': longitud,
+      'visible': visible,
     };
     
     // Solo incluir el id si no es null (para actualizaciones)
@@ -78,6 +82,7 @@ class Cliente {
       'descuentoGlobal': descuentoGlobal,
       'latitud': latitud,
       'longitud': longitud,
+      'visible': visible,
     };
   }
 }
