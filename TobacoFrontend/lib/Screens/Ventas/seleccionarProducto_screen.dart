@@ -14,6 +14,172 @@ import 'package:tobaco/Theme/app_theme.dart';
 import 'package:tobaco/Theme/headers.dart';
 import 'package:tobaco/Helpers/api_handler.dart';
 
+// Widget para texto animado cuando hay overflow
+class AnimatedTextMarquee extends StatefulWidget {
+  final String text;
+  final TextStyle style;
+  final Duration scrollDuration;
+  final Duration pauseDuration;
+
+  const AnimatedTextMarquee({
+    super.key,
+    required this.text,
+    required this.style,
+    this.scrollDuration = const Duration(seconds: 10),
+    this.pauseDuration = const Duration(seconds: 2),
+  });
+
+  @override
+  State<AnimatedTextMarquee> createState() => _AnimatedTextMarqueeState();
+}
+
+class _AnimatedTextMarqueeState extends State<AnimatedTextMarquee>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    // Duración total: pause inicial (más largo) + scroll + pause final (breve)
+    final pauseInicial = widget.pauseDuration * 3; // Pausa inicial más larga (3x)
+    final pauseFinal = widget.pauseDuration; // Pausa final breve
+    final totalDuration = pauseInicial + widget.scrollDuration + pauseFinal;
+    
+    _controller = AnimationController(
+      vsync: this,
+      duration: totalDuration,
+    );
+    
+    // Crear una animación con pausas al inicio y al final
+    // La animación va de 0.0 a 1.0 (sin reverse)
+    _animation = TweenSequence<double>([
+      // Pausa inicial - mostrar principio más tiempo
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 0.0, end: 0.0)
+            .chain(CurveTween(curve: Curves.linear)),
+        weight: pauseInicial.inMilliseconds / totalDuration.inMilliseconds,
+      ),
+      // Scroll del texto de inicio a fin
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 0.0, end: 1.0)
+            .chain(CurveTween(curve: Curves.linear)),
+        weight: widget.scrollDuration.inMilliseconds / totalDuration.inMilliseconds,
+      ),
+      // Pausa final - mostrar final brevemente antes de reiniciar
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 1.0, end: 1.0)
+            .chain(CurveTween(curve: Curves.linear)),
+        weight: pauseFinal.inMilliseconds / totalDuration.inMilliseconds,
+      ),
+    ]).animate(_controller);
+    
+    // Reiniciar automáticamente cuando termine (loop continuo)
+    _controller.addStatusListener((status) {
+      if (status == AnimationStatus.completed) {
+        // Reiniciar desde cero (no hacer reverse)
+        _controller.reset();
+        _controller.forward();
+      }
+    });
+  }
+
+  @override
+  void didUpdateWidget(AnimatedTextMarquee oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.text != widget.text || 
+        oldWidget.scrollDuration != widget.scrollDuration ||
+        oldWidget.pauseDuration != widget.pauseDuration) {
+      // Reiniciar la animación si cambia el texto o duración
+      _controller.stop();
+      _controller.reset();
+      if (mounted) {
+        _controller.forward();
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final textPainter = TextPainter(
+          text: TextSpan(text: widget.text, style: widget.style),
+          maxLines: 1,
+          textDirection: TextDirection.ltr,
+        );
+        textPainter.layout(maxWidth: double.infinity);
+        final textWidth = textPainter.size.width;
+        final availableWidth = constraints.maxWidth;
+        final needsAnimation = textWidth > availableWidth;
+
+        if (!needsAnimation) {
+          if (_controller.isAnimating) {
+            _controller.stop();
+            _controller.reset();
+          }
+          return Text(
+            widget.text,
+            style: widget.style,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          );
+        }
+
+        // Calcular el desplazamiento máximo necesario para mostrar todos los caracteres
+        // El desplazamiento debe ser suficiente para que el final del texto quede alineado con el final del contenedor
+        // Cuando animation.value = 0: offset = 0 (inicio visible)
+        // Cuando animation.value = 1: offset = -maxScroll (final visible)
+        // maxScroll = textWidth - availableWidth asegura que el último carácter sea visible
+        final maxScroll = (textWidth - availableWidth).clamp(0.0, double.infinity);
+        
+        // Iniciar animación si no está corriendo (solo forward, nunca reverse)
+        if (_controller.status == AnimationStatus.dismissed || 
+            _controller.status == AnimationStatus.completed) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted && 
+                (_controller.status == AnimationStatus.dismissed || 
+                 _controller.status == AnimationStatus.completed)) {
+              _controller.forward();
+            }
+          });
+        }
+
+        return ClipRect(
+          clipBehavior: Clip.hardEdge,
+          child: AnimatedBuilder(
+            animation: _animation,
+            builder: (context, child) {
+              // Calcular el desplazamiento: cuando animation.value = 0, mostramos el inicio
+              // Cuando animation.value = 1, desplazamos para mostrar el final completo
+              final offset = -_animation.value * maxScroll;
+              return Transform.translate(
+                offset: Offset(offset, 0),
+                child: SizedBox(
+                  width: textWidth, // Asegurar que el texto tenga su ancho completo
+                  child: Text(
+                    widget.text,
+                    style: widget.style,
+                    maxLines: 1,
+                    overflow: TextOverflow.visible, // Permitir que el texto se muestre completamente
+                    softWrap: false, // Evitar que el texto se ajuste
+                  ),
+                ),
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+}
+
 class SeleccionarProductosScreen extends StatefulWidget {
   final List<ProductoSeleccionado> productosYaSeleccionados;
   final Cliente? cliente;
@@ -203,22 +369,6 @@ class _SeleccionarProductosScreenState
     }
   }
 
-  void _centerProductInView(int productId) {
-    try {
-      final productKey = _productKeys[productId];
-      if (productKey != null && productKey.currentContext != null) {
-        // Centrar el producto en la pantalla
-        Scrollable.ensureVisible(
-          productKey.currentContext!,
-          duration: const Duration(milliseconds: 400),
-          curve: Curves.easeInOut,
-          alignment: 0.5, // Centrar el producto en la pantalla
-        );
-      }
-    } catch (e) {
-      debugPrint('Error al centrar el producto en la vista: $e');
-    }
-  }
 
   Future<void> _loadPreciosEspeciales() async {
     if (widget.cliente == null) return;
@@ -933,11 +1083,12 @@ class _SeleccionarProductosScreenState
                                   padding: const EdgeInsets.symmetric(
                                       horizontal: 12, vertical: 6),
                                   decoration: BoxDecoration(
-                                    color: AppTheme.primaryColor.withOpacity(0.1),
+                                    color:
+                                        AppTheme.primaryColor.withOpacity(0.1),
                                     borderRadius: BorderRadius.circular(20),
                                     border: Border.all(
-                                      color:
-                                          AppTheme.primaryColor.withOpacity(0.3),
+                                      color: AppTheme.primaryColor
+                                          .withOpacity(0.3),
                                       width: 1,
                                     ),
                                   ),
@@ -1066,83 +1217,72 @@ class _SeleccionarProductosScreenState
                               controller: _scrollController,
                               itemCount: filteredProductos.length,
                               itemBuilder: (context, index) {
-                            final producto = filteredProductos[index];
-                            final cantidad = cantidades[producto.id] ?? 0;
-                            final isExpanded =
-                                _expandedProducts.contains(producto.id);
+                                final producto = filteredProductos[index];
+                                final cantidad = cantidades[producto.id] ?? 0;
+                                final isExpanded =
+                                    _expandedProducts.contains(producto.id);
 
-                            // Crear o reutilizar GlobalKey para este producto
-                            if (!_productKeys.containsKey(producto.id)) {
-                              _productKeys[producto.id!] = GlobalKey();
-                            }
+                                // Crear o reutilizar GlobalKey para este producto
+                                if (!_productKeys.containsKey(producto.id)) {
+                                  _productKeys[producto.id!] = GlobalKey();
+                                }
 
-                            if (!cantidadControllers.containsKey(producto.id)) {
-                              cantidadControllers[producto.id!] =
-                                  TextEditingController(
-                                text: cantidad % 1 == 0
-                                    ? cantidad.toInt().toString()
-                                    : cantidad.toStringAsFixed(1),
-                              );
-                            } else {
-                              cantidadControllers[producto.id!]!.text =
-                                  cantidad % 1 == 0
-                                      ? cantidad.toInt().toString()
-                                      : cantidad.toStringAsFixed(1);
-                            }
+                                if (!cantidadControllers
+                                    .containsKey(producto.id)) {
+                                  cantidadControllers[producto.id!] =
+                                      TextEditingController(
+                                    text: cantidad % 1 == 0
+                                        ? cantidad.toInt().toString()
+                                        : cantidad.toStringAsFixed(1),
+                                  );
+                                } else {
+                                  cantidadControllers[producto.id!]!.text =
+                                      cantidad % 1 == 0
+                                          ? cantidad.toInt().toString()
+                                          : cantidad.toStringAsFixed(1);
+                                }
 
-                            return Container(
-                              key: _productKeys[producto.id],
-                              margin: const EdgeInsets.only(bottom: 8),
-                              child: Stack(children: [
-                                Container(
-                                  decoration: BoxDecoration(
-                                    color: Theme.of(context).brightness ==
-                                            Brightness.dark
-                                        ? (index % 2 == 0
-                                            ? const Color(0xFF1A1A1A)
-                                            : const Color(0xFF1A1A1A))
-                                        : (index % 2 == 0
-                                            ? AppTheme.primaryColor
-                                                .withOpacity(0.1)
-                                            : Colors.white),
-                                    borderRadius: BorderRadius.circular(AppTheme.borderRadiusCards),
-                                    border: Border.all(
-                                      color: Theme.of(context).brightness ==
-                                              Brightness.dark
-                                          ? const Color(0xFF404040)
-                                          : AppTheme.primaryColor
-                                              .withOpacity(0.2),
-                                      width: 1,
-                                    ),
-                                  ),
-                                  child: Column(
-                                    children: [
-                                      // Parte superior: Información del producto y botón expandir
-                                      InkWell(
-                                        onTap: () {
-                                          setState(() {
-                                            if (isExpanded) {
-                                              _expandedProducts
-                                                  .remove(producto.id);
-                                            } else {
-                                              _expandedProducts
-                                                  .add(producto.id!);
-                                              // Centrar el producto en la pantalla después de expandir
-                                              // Esperar a que el widget se construya y luego un pequeño delay
-                                              // para asegurar que el contenido expandido esté renderizado
-                                              WidgetsBinding.instance.addPostFrameCallback((_) {
-                                                Future.delayed(const Duration(milliseconds: 100), () {
-                                                  if (producto.id != null && mounted) {
-                                                    _centerProductInView(producto.id!);
-                                                  }
-                                                });
-                                              });
-                                            }
-                                          });
-                                        },
-                                        borderRadius: BorderRadius.only(
-                                          topLeft: Radius.circular(12),
-                                          topRight: Radius.circular(12),
+                                return Container(
+                                  key: _productKeys[producto.id],
+                                  margin: const EdgeInsets.only(bottom: 8),
+                                  height: 80, // Altura fija para todos los items
+                                  child: Stack(children: [
+                                    // Contenedor principal clickeable
+                                    InkWell(
+                                      onTap: () {
+                                        setState(() {
+                                          if (isExpanded) {
+                                            _expandedProducts
+                                                .remove(producto.id);
+                                          } else {
+                                            _expandedProducts
+                                                .add(producto.id!);
+                                          }
+                                        });
+                                      },
+                                      borderRadius: BorderRadius.circular(
+                                          AppTheme.borderRadiusCards),
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          color: Theme.of(context).brightness ==
+                                                  Brightness.dark
+                                              ? (index % 2 == 0
+                                                  ? const Color(0xFF1A1A1A)
+                                                  : const Color(0xFF1A1A1A))
+                                              : (index % 2 == 0
+                                                  ? AppTheme.primaryColor
+                                                      .withOpacity(0.1)
+                                                  : Colors.white),
+                                          borderRadius: BorderRadius.circular(
+                                              AppTheme.borderRadiusCards),
+                                          border: Border.all(
+                                            color: Theme.of(context).brightness ==
+                                                    Brightness.dark
+                                                ? const Color(0xFF404040)
+                                                : AppTheme.primaryColor
+                                                    .withOpacity(0.2),
+                                            width: 1,
+                                          ),
                                         ),
                                         child: Padding(
                                           padding: const EdgeInsets.symmetric(
@@ -1151,14 +1291,17 @@ class _SeleccionarProductosScreenState
                                           ),
                                           child: Row(
                                             children: [
-                                              // Información del producto
+                                              // Información del producto (siempre visible)
                                               Expanded(
                                                 child: Column(
+                                                  mainAxisAlignment:
+                                                      MainAxisAlignment.center,
                                                   crossAxisAlignment:
                                                       CrossAxisAlignment.start,
                                                   children: [
-                                                    Text(
-                                                      producto.nombre,
+                                                    // Nombre del producto con animación si hay overflow
+                                                    AnimatedTextMarquee(
+                                                      text: producto.nombre,
                                                       style: TextStyle(
                                                         fontSize: 16,
                                                         fontWeight:
@@ -1170,11 +1313,6 @@ class _SeleccionarProductosScreenState
                                                             : AppTheme
                                                                 .primaryColor,
                                                       ),
-                                                      maxLines:
-                                                          isExpanded ? null : 2,
-                                                      overflow: isExpanded
-                                                          ? TextOverflow.visible
-                                                          : TextOverflow.ellipsis,
                                                     ),
                                                     const SizedBox(height: 4),
                                                     Row(
@@ -1191,8 +1329,8 @@ class _SeleccionarProductosScreenState
                                                                         .brightness ==
                                                                     Brightness
                                                                         .dark
-                                                                ? Colors
-                                                                    .grey.shade400
+                                                                ? Colors.grey
+                                                                    .shade400
                                                                 : Colors.grey
                                                                     .shade600,
                                                             fontWeight:
@@ -1206,9 +1344,7 @@ class _SeleccionarProductosScreenState
                                               ),
                                               // Ícono indicador de expansión
                                               Icon(
-                                                isExpanded
-                                                    ? Icons.expand_less
-                                                    : Icons.expand_more,
+                                                Icons.more_vert,
                                                 color: AppTheme.primaryColor,
                                                 size: 24,
                                               ),
@@ -1216,34 +1352,146 @@ class _SeleccionarProductosScreenState
                                           ),
                                         ),
                                       ),
-                                      // Controles de cantidad (solo cuando está expandido)
-                                      if (isExpanded)
-                                        Padding(
-                                          padding: const EdgeInsets.only(
-                                            left: 12,
-                                            right: 12,
-                                            bottom: 10,
-                                          ),
-                                          child: Column(
-                                            children: [
-                                              const Divider(),
-                                              const SizedBox(height: 8),
-                                              // Controles principales: 0.5 (si half), -1, cantidad, +1
-                                              Row(
-                                                mainAxisAlignment:
-                                                    MainAxisAlignment.center,
-                                                children: [
-                                                  // Botón 0.5 (solo si el producto permite mitades)
-                                                  if (producto.half)
+                                    ),
+                                    // Controles de cantidad superpuestos (derecha) con animación
+                                    Positioned(
+                                      right: 0,
+                                      top: 0,
+                                      bottom: 0,
+                                      child: AnimatedSize(
+                                        duration: const Duration(
+                                            milliseconds: 300),
+                                        curve: Curves.easeInOut,
+                                        child: isExpanded
+                                            ? Container(
+                                                decoration: BoxDecoration(
+                                                  gradient: LinearGradient(
+                                                    begin: Alignment.centerLeft,
+                                                    end: Alignment.centerRight,
+                                                    colors: [
+                                                      Theme.of(context)
+                                                                  .brightness ==
+                                                              Brightness.dark
+                                                          ? const Color(
+                                                              0xFF1A1A1A)
+                                                              .withOpacity(0.95)
+                                                          : Colors.white
+                                                              .withOpacity(0.95),
+                                                      Theme.of(context)
+                                                                  .brightness ==
+                                                              Brightness.dark
+                                                          ? const Color(
+                                                              0xFF1A1A1A)
+                                                          : Colors.white,
+                                                    ],
+                                                  ),
+                                                  borderRadius:
+                                                      BorderRadius.circular(
+                                                          AppTheme
+                                                              .borderRadiusCards),
+                                                ),
+                                                padding: const EdgeInsets.only(
+                                                  left: 8,
+                                                  right: 12,
+                                                ),
+                                                child: Row(
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
+                                                  children: [
+                                                    // Botón para precios especiales/packs (solo si tiene)
+                                                    if (producto.quantityPrices
+                                                            .isNotEmpty ||
+                                                        _tienePrecioEspecial(
+                                                            producto))
+                                                      Padding(
+                                                        padding:
+                                                            const EdgeInsets
+                                                                .only(
+                                                          right: 4,
+                                                        ),
+                                                        child: IconButton(
+                                                          icon: Icon(
+                                                            Icons.local_offer,
+                                                            color: producto
+                                                                    .quantityPrices
+                                                                    .isNotEmpty
+                                                                ? Colors.orange
+                                                                : Colors.grey,
+                                                            size: 22,
+                                                          ),
+                                                          onPressed: producto
+                                                                  .quantityPrices
+                                                                  .isNotEmpty
+                                                              ? () {
+                                                                  _mostrarPacksDisponibles(
+                                                                      producto);
+                                                                }
+                                                              : null,
+                                                          tooltip: producto
+                                                                  .quantityPrices
+                                                                  .isNotEmpty
+                                                              ? 'Ver Packs Disponibles'
+                                                              : 'Sin packs',
+                                                        ),
+                                                      ),
+                                                    // Botón 0.5 (solo si el producto permite mitades)
+                                                    if (producto.half)
+                                                      IconButton(
+                                                        icon: Icon(
+                                                          (cantidad % 1 == 0)
+                                                              ? Icons
+                                                                  .hide_source_outlined
+                                                              : Icons
+                                                                  .remove_circle_outline,
+                                                          color: Colors.orange,
+                                                          size: 26,
+                                                        ),
+                                                        onPressed: () {
+                                                          setState(() {
+                                                            double current =
+                                                                cantidades[producto
+                                                                        .id!] ??
+                                                                    0;
+                                                            if (current % 1 ==
+                                                                0) {
+                                                              // Si no tiene decimales, sumar 0.5
+                                                              if (current <
+                                                                  999) {
+                                                                current += 0.5;
+                                                              }
+                                                            } else {
+                                                              // Si tiene decimales, restar 0.5
+                                                              if (current >=
+                                                                  0.5) {
+                                                                current -= 0.5;
+                                                              }
+                                                            }
+                                                            cantidades[producto
+                                                                    .id!] =
+                                                                current;
+                                                            cantidadControllers[
+                                                                    producto
+                                                                        .id!]!
+                                                                .text = current %
+                                                                        1 ==
+                                                                    0
+                                                                ? current
+                                                                    .toInt()
+                                                                    .toString()
+                                                                : current
+                                                                    .toStringAsFixed(
+                                                                        1);
+                                                            _clearPricingCache();
+                                                          });
+                                                        },
+                                                      ),
+                                                    // Botón -1
                                                     IconButton(
-                                                      icon: Icon(
-                                                        (cantidad % 1 == 0)
-                                                            ? Icons
-                                                                .hide_source_outlined
-                                                            : Icons
-                                                                .remove_circle_outline,
-                                                        color: Colors.orange,
-                                                        size: 28,
+                                                      icon: const Icon(
+                                                        Icons
+                                                            .remove_circle_outline,
+                                                        color: Colors.red,
+                                                        size: 26,
                                                       ),
                                                       onPressed: () {
                                                         setState(() {
@@ -1251,333 +1499,227 @@ class _SeleccionarProductosScreenState
                                                               cantidades[producto
                                                                       .id!] ??
                                                                   0;
-                                                          if (current % 1 ==
-                                                              0) {
-                                                            // Si no tiene decimales, sumar 0.5
-                                                            if (current < 999) {
-                                                              current += 0.5;
-                                                            }
-                                                          } else {
-                                                            // Si tiene decimales, restar 0.5
-                                                            if (current >=
-                                                                0.5) {
-                                                              current -= 0.5;
-                                                            }
+                                                          if (current > 0) {
+                                                            current -= 1;
+                                                            cantidades[producto
+                                                                    .id!] =
+                                                                current;
+                                                            cantidadControllers[
+                                                                    producto
+                                                                        .id!]!
+                                                                .text = current %
+                                                                        1 ==
+                                                                    0
+                                                                ? current
+                                                                    .toInt()
+                                                                    .toString()
+                                                                : current
+                                                                    .toStringAsFixed(
+                                                                        1);
+                                                            _clearPricingCache();
                                                           }
-                                                          cantidades[producto
-                                                              .id!] = current;
-                                                          cantidadControllers[
-                                                                  producto.id!]!
-                                                              .text = current %
-                                                                      1 ==
-                                                                  0
-                                                              ? current
-                                                                  .toInt()
-                                                                  .toString()
-                                                              : current
-                                                                  .toStringAsFixed(
-                                                                      1);
-                                                          _clearPricingCache();
                                                         });
                                                       },
                                                     ),
-
-                                                  // Botón -1
-                                                  IconButton(
-                                                    icon: const Icon(
-                                                      Icons
-                                                          .remove_circle_outline,
-                                                      color: Colors.red,
-                                                      size: 28,
-                                                    ),
-                                                    onPressed: () {
-                                                      setState(() {
-                                                        double current =
-                                                            cantidades[producto
-                                                                    .id!] ??
-                                                                0;
-                                                        if (current > 0) {
-                                                          current -= 1;
-                                                          cantidades[producto
-                                                              .id!] = current;
-                                                          cantidadControllers[
-                                                                  producto.id!]!
-                                                              .text = current %
-                                                                      1 ==
-                                                                  0
-                                                              ? current
-                                                                  .toInt()
-                                                                  .toString()
-                                                              : current
-                                                                  .toStringAsFixed(
-                                                                      1);
-                                                          _clearPricingCache();
-                                                        }
-                                                      });
-                                                    },
-                                                  ),
-
-                                                  // Campo cantidad
-                                                  Container(
-                                                    width: 80,
-                                                    height: 40,
-                                                    decoration: BoxDecoration(
-                                                      border: Border.all(
+                                                    // Campo cantidad
+                                                    Container(
+                                                      width: 55,
+                                                      height: 36,
+                                                      decoration:
+                                                          BoxDecoration(
+                                                        border: Border.all(
+                                                            color: Theme.of(context)
+                                                                        .brightness ==
+                                                                    Brightness
+                                                                        .dark
+                                                                ? Colors.grey
+                                                                    .shade600
+                                                                : Colors.grey
+                                                                    .shade300),
+                                                        borderRadius:
+                                                            BorderRadius
+                                                                .circular(8),
+                                                        color: Theme.of(context)
+                                                                .brightness ==
+                                                            Brightness.dark
+                                                            ? const Color(
+                                                                0xFF2A2A2A)
+                                                            : Colors.white,
+                                                      ),
+                                                      child: TextField(
+                                                        controller:
+                                                            cantidadControllers[
+                                                                producto.id!],
+                                                        keyboardType:
+                                                            TextInputType
+                                                                .number,
+                                                        textAlign:
+                                                            TextAlign.center,
+                                                        style: TextStyle(
+                                                          fontSize: 15,
+                                                          fontWeight:
+                                                              FontWeight.bold,
                                                           color: Theme.of(context)
                                                                       .brightness ==
                                                                   Brightness
                                                                       .dark
-                                                              ? Colors
-                                                                  .grey.shade600
-                                                              : Colors.grey
-                                                                  .shade300),
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                              8),
-                                                      color: Theme.of(context)
-                                                                  .brightness ==
-                                                              Brightness.dark
-                                                          ? const Color(
-                                                              0xFF2A2A2A)
-                                                          : Colors.white,
+                                                              ? Colors.white
+                                                              : Colors.black,
+                                                        ),
+                                                        decoration:
+                                                            InputDecoration(
+                                                          border:
+                                                              OutlineInputBorder(
+                                                            borderRadius:
+                                                                BorderRadius
+                                                                    .circular(
+                                                                        8),
+                                                            borderSide:
+                                                                BorderSide.none,
+                                                          ),
+                                                          enabledBorder:
+                                                              OutlineInputBorder(
+                                                            borderRadius:
+                                                                BorderRadius
+                                                                    .circular(
+                                                                        8),
+                                                            borderSide:
+                                                                BorderSide.none,
+                                                          ),
+                                                          focusedBorder:
+                                                              OutlineInputBorder(
+                                                            borderRadius:
+                                                                BorderRadius
+                                                                    .circular(
+                                                                        8),
+                                                            borderSide:
+                                                                BorderSide.none,
+                                                          ),
+                                                          errorBorder:
+                                                              OutlineInputBorder(
+                                                            borderRadius:
+                                                                BorderRadius
+                                                                    .circular(
+                                                                        8),
+                                                            borderSide:
+                                                                BorderSide.none,
+                                                          ),
+                                                          focusedErrorBorder:
+                                                              OutlineInputBorder(
+                                                            borderRadius:
+                                                                BorderRadius
+                                                                    .circular(
+                                                                        8),
+                                                            borderSide:
+                                                                BorderSide.none,
+                                                          ),
+                                                          contentPadding:
+                                                              const EdgeInsets
+                                                                  .symmetric(
+                                                                  vertical: 6),
+                                                        ),
+                                                        inputFormatters: [
+                                                          FilteringTextInputFormatter
+                                                              .allow(RegExp(
+                                                                  r'^\d{0,3}(\.\d{0,1})?$')),
+                                                        ],
+                                                        onChanged: (value) {
+                                                          double newCantidad =
+                                                              double.tryParse(
+                                                                      value) ??
+                                                                  0;
+                                                          if (newCantidad >
+                                                              999) {
+                                                            newCantidad = 999;
+                                                          }
+                                                          setState(() {
+                                                            cantidades[producto
+                                                                    .id!] =
+                                                                newCantidad < 0
+                                                                    ? 0.0
+                                                                    : newCantidad;
+                                                            _clearPricingCache();
+                                                          });
+                                                        },
+                                                      ),
                                                     ),
-                                                    child: TextField(
-                                                      controller:
-                                                          cantidadControllers[
-                                                              producto.id!],
-                                                      keyboardType:
-                                                          TextInputType.number,
-                                                      textAlign:
-                                                          TextAlign.center,
-                                                      style: TextStyle(
-                                                        fontSize: 16,
-                                                        fontWeight:
-                                                            FontWeight.bold,
-                                                        color: Theme.of(context)
-                                                                    .brightness ==
-                                                                Brightness.dark
-                                                            ? Colors.white
-                                                            : Colors.black,
+                                                    // Botón +1
+                                                    IconButton(
+                                                      icon: const Icon(
+                                                        Icons
+                                                            .add_circle_outline,
+                                                        color: Colors.green,
+                                                        size: 26,
                                                       ),
-                                                      decoration:
-                                                          InputDecoration(
-                                                        border:
-                                                            OutlineInputBorder(
-                                                          borderRadius:
-                                                              BorderRadius
-                                                                  .circular(8),
-                                                          borderSide:
-                                                              BorderSide.none,
-                                                        ),
-                                                        enabledBorder:
-                                                            OutlineInputBorder(
-                                                          borderRadius:
-                                                              BorderRadius
-                                                                  .circular(8),
-                                                          borderSide:
-                                                              BorderSide.none,
-                                                        ),
-                                                        focusedBorder:
-                                                            OutlineInputBorder(
-                                                          borderRadius:
-                                                              BorderRadius
-                                                                  .circular(8),
-                                                          borderSide:
-                                                              BorderSide.none,
-                                                        ),
-                                                        errorBorder:
-                                                            OutlineInputBorder(
-                                                          borderRadius:
-                                                              BorderRadius
-                                                                  .circular(8),
-                                                          borderSide:
-                                                              BorderSide.none,
-                                                        ),
-                                                        focusedErrorBorder:
-                                                            OutlineInputBorder(
-                                                          borderRadius:
-                                                              BorderRadius
-                                                                  .circular(8),
-                                                          borderSide:
-                                                              BorderSide.none,
-                                                        ),
-                                                        contentPadding:
-                                                            const EdgeInsets
-                                                                .symmetric(
-                                                                vertical: 8),
-                                                      ),
-                                                      inputFormatters: [
-                                                        FilteringTextInputFormatter
-                                                            .allow(RegExp(
-                                                                r'^\d{0,3}(\.\d{0,1})?$')),
-                                                      ],
-                                                      onChanged: (value) {
-                                                        double newCantidad =
-                                                            double.tryParse(
-                                                                    value) ??
-                                                                0;
-                                                        if (newCantidad > 999) {
-                                                          newCantidad = 999;
-                                                        }
+                                                      onPressed: () {
                                                         setState(() {
-                                                          cantidades[producto
-                                                                  .id!] =
-                                                              newCantidad < 0
-                                                                  ? 0.0
-                                                                  : newCantidad;
-                                                          _clearPricingCache();
+                                                          double current =
+                                                              cantidades[producto
+                                                                      .id!] ??
+                                                                  0;
+                                                          if (current < 999) {
+                                                            current += 1;
+                                                            cantidades[producto
+                                                                    .id!] =
+                                                                current;
+                                                            cantidadControllers[
+                                                                    producto
+                                                                        .id!]!
+                                                                .text = current %
+                                                                        1 ==
+                                                                    0
+                                                                ? current
+                                                                    .toInt()
+                                                                    .toString()
+                                                                : current
+                                                                    .toStringAsFixed(
+                                                                        1);
+                                                            _clearPricingCache();
+                                                          }
                                                         });
                                                       },
                                                     ),
-                                                  ),
-
-                                                  // Botón +1
-                                                  IconButton(
-                                                    icon: const Icon(
-                                                      Icons.add_circle_outline,
-                                                      color: Colors.green,
-                                                      size: 28,
-                                                    ),
-                                                    onPressed: () {
-                                                      setState(() {
-                                                        double current =
-                                                            cantidades[producto
-                                                                    .id!] ??
-                                                                0;
-                                                        if (current < 999) {
-                                                          current += 1;
-                                                          cantidades[producto
-                                                              .id!] = current;
-                                                          cantidadControllers[
-                                                                  producto.id!]!
-                                                              .text = current %
-                                                                      1 ==
-                                                                  0
-                                                              ? current
-                                                                  .toInt()
-                                                                  .toString()
-                                                              : current
-                                                                  .toStringAsFixed(
-                                                                      1);
-                                                          _clearPricingCache();
-                                                        }
-                                                      });
-                                                    },
-                                                  ),
-
-                                                  // Icono invisible para mantener centrado (solo si half == true)
-                                                  if (producto.half)
-                                                    SizedBox(
-                                                      width: 48,
-                                                      height: 48,
-                                                    ),
-                                                ],
-                                              ),
-                                              // Botón para precios especiales/packs (solo si tiene)
-                                              if (producto.quantityPrices
-                                                      .isNotEmpty ||
-                                                  _tienePrecioEspecial(
-                                                      producto))
-                                                Padding(
-                                                  padding:
-                                                      const EdgeInsets.only(
-                                                    top: 12,
-                                                  ),
-                                                  child: SizedBox(
-                                                    width: double.infinity,
-                                                    child: ElevatedButton.icon(
-                                                      onPressed: producto
-                                                              .quantityPrices
-                                                              .isNotEmpty
-                                                          ? () =>
-                                                              _mostrarPacksDisponibles(
-                                                                  producto)
-                                                          : null,
-                                                      icon: Icon(
-                                                        Icons.local_offer,
-                                                        color: producto
-                                                                .quantityPrices
-                                                                .isNotEmpty
-                                                            ? Colors.white
-                                                            : Colors.grey,
-                                                      ),
-                                                      label: Text(
-                                                        producto.quantityPrices
-                                                                .isNotEmpty
-                                                            ? 'Ver Packs Disponibles'
-                                                            : 'Sin packs',
-                                                        style: TextStyle(
-                                                          color: producto
-                                                                  .quantityPrices
-                                                                  .isNotEmpty
-                                                              ? Colors.white
-                                                              : Colors.grey,
-                                                          fontWeight:
-                                                              FontWeight.w600,
-                                                        ),
-                                                      ),
-                                                      style: ElevatedButton
-                                                          .styleFrom(
-                                                        backgroundColor: producto
-                                                                .quantityPrices
-                                                                .isNotEmpty
-                                                            ? Colors.orange
-                                                            : Colors
-                                                                .grey.shade300,
-                                                        padding:
-                                                            const EdgeInsets
-                                                                .symmetric(
-                                                                vertical: 12),
-                                                        shape:
-                                                            RoundedRectangleBorder(
-                                                          borderRadius:
-                                                              BorderRadius
-                                                                  .circular(8),
-                                                        ),
-                                                      ),
-                                                    ),
-                                                  ),
+                                                  ],
                                                 ),
-                                            ],
+                                              )
+                                            : const SizedBox.shrink(),
+                                      ),
+                                    ),
+                                    // Ribbon "ESPECIAL" en la esquina superior derecha
+                                    if (_tienePrecioEspecial(producto))
+                                      Positioned(
+                                        top: 0,
+                                        right: 0,
+                                        child: Container(
+                                          padding:
+                                              const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 4,
                                           ),
-                                        ),
-                                      // Ribbon "ESPECIAL" en la esquina superior derecha
-                                      if (_tienePrecioEspecial(producto))
-                                        Positioned(
-                                          top: 0,
-                                          right: 0,
-                                          child: Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 8,
-                                              vertical: 4,
-                                            ),
-                                            decoration: const BoxDecoration(
-                                              color: Colors.purple,
-                                              borderRadius: BorderRadius.only(
-                                                topRight: Radius.circular(12),
-                                                bottomLeft: Radius.circular(12),
-                                              ),
-                                            ),
-                                            child: const Text(
-                                              'ESPECIAL',
-                                              style: TextStyle(
-                                                color: Colors.white,
-                                                fontSize: 9,
-                                                fontWeight: FontWeight.bold,
-                                                letterSpacing: 0.5,
-                                              ),
+                                          decoration: const BoxDecoration(
+                                            color: Colors.purple,
+                                            borderRadius: BorderRadius.only(
+                                              topRight: Radius.circular(12),
+                                              bottomLeft: Radius.circular(12),
                                             ),
                                           ),
+                                          child: const Text(
+                                            'ESPECIAL',
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 9,
+                                              fontWeight: FontWeight.bold,
+                                              letterSpacing: 0.5,
+                                            ),
+                                          ),
                                         ),
-                                    ],
-                                  ),
-                                ),
-                              ]),
-                            );
-                          },
-                        ),
-                      ),
+                                      ),
+                                  ]),
+                                );
+                              },
+                            ),
                     ),
+                  ),
                 ],
               ),
             ),
