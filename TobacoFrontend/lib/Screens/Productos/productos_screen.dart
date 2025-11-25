@@ -184,8 +184,8 @@ class _ProductosScreenState extends State<ProductosScreen> {
                 Icons.menu,
                 color: Colors.white,
               ),
-              onPressed: () {
-                showMenu(
+              onPressed: () async {
+                final value = await showMenu<String>(
                   context: context,
                   position: const RelativeRect.fromLTRB(1000, 80, 0, 0),
                   color: Theme.of(context).brightness == Brightness.dark
@@ -220,15 +220,29 @@ class _ProductosScreenState extends State<ProductosScreen> {
                       ),
                     ),
                   ],
-                ).then((value) {
-                  if (value == '1') {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => const CategoriasScreen()),
-                    );
+                );
+
+                if (value == '1') {
+                  await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const CategoriasScreen(),
+                    ),
+                  );
+
+                  if (!mounted) return;
+                  final categoriasProvider =
+                      context.read<CategoriasProvider>();
+                  try {
+                    await categoriasProvider.cargarCategorias(silent: true);
+                  } catch (_) {
+                    // Si falla la recarga silenciosa, usamos el estado actual
                   }
-                });
+                  if (!mounted) return;
+                  context
+                      .read<ProductoProvider>()
+                      .sincronizarCategoriasDesde(categoriasProvider);
+                }
               },
             ),
           )

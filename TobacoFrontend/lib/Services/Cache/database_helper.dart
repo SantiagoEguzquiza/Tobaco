@@ -20,7 +20,7 @@ class DatabaseHelper {
 
   static Database? _database;
   static const String _databaseName = 'tobaco_offline.db';
-  static const int _databaseVersion = 3;
+  static const int _databaseVersion = 4;
 
   // Nombres de tablas
   static const String _ventasTable = 'ventas_offline';
@@ -82,6 +82,7 @@ class DatabaseHelper {
         venta_local_id TEXT NOT NULL,
         producto_id INTEGER NOT NULL,
         nombre TEXT NOT NULL,
+        marca TEXT,
         precio REAL NOT NULL,
         cantidad REAL NOT NULL,
         categoria TEXT NOT NULL,
@@ -202,6 +203,10 @@ class DatabaseHelper {
       // en la v3 nueva, esto solo afecta a usuarios que ya tenían v2
       // Las nuevas instalaciones usarán el esquema correcto de v3 desde el inicio
     }
+
+    if (oldVersion < 4) {
+      await db.execute('ALTER TABLE $_productosTable ADD COLUMN marca TEXT');
+    }
   }
 
   /// Guarda una venta offline
@@ -239,6 +244,7 @@ class DatabaseHelper {
             'venta_local_id': localId,
             'producto_id': producto.productoId,
             'nombre': producto.nombre,
+            'marca': producto.marca,
             'precio': producto.precio,
             'cantidad': producto.cantidad,
             'categoria': producto.categoria,
@@ -347,6 +353,7 @@ class DatabaseHelper {
     List<VentasProductos> productos = productosRows.map((p) => VentasProductos(
       productoId: p['producto_id'] as int,
       nombre: p['nombre'] as String,
+      marca: p['marca'] as String?,
       precio: p['precio'] as double,
       cantidad: p['cantidad'] as double,
       categoria: p['categoria'] as String,

@@ -197,25 +197,25 @@ class DetalleClienteScreen extends StatelessWidget {
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 8),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            color: _parsearDeuda(cliente.deuda) > 0
+                ? Colors.orange.withOpacity(0.1)
+                : Colors.green.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Text(
+            _parsearDeuda(cliente.deuda) > 0 ? 'Saldo pendiente' : 'Sin saldo pendiente',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
               color: _parsearDeuda(cliente.deuda) > 0
-                  ? Colors.red.withOpacity(0.1)
-                  : Colors.green.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              _parsearDeuda(cliente.deuda) > 0 ? 'Tiene deuda' : 'Sin deuda',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: _parsearDeuda(cliente.deuda) > 0
-                    ? Colors.red.shade700
-                    : Colors.green.shade700,
-              ),
+                  ? Colors.orange.shade700
+                  : Colors.green.shade700,
             ),
           ),
+        ),
         ],
       ),
     );
@@ -258,13 +258,13 @@ class DetalleClienteScreen extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         
-        // Deuda
+        // Cuenta corriente
         _buildInfoCard(
           context: context,
           icon: Icons.account_balance_wallet,
-          title: 'Deuda',
+          title: 'Cuenta Corriente',
           content: '\$${_parsearDeuda(cliente.deuda).toStringAsFixed(2)}',
-          iconColor: _parsearDeuda(cliente.deuda) > 0 ? Colors.red : Colors.grey,
+          iconColor: _parsearDeuda(cliente.deuda) > 0 ? Colors.orange : Colors.grey,
         ),
       ],
     );

@@ -1,6 +1,7 @@
 class VentasProductos {
   int productoId;
   String nombre;
+  String? marca;
   double precio;
   double cantidad;
   String categoria;
@@ -15,6 +16,7 @@ class VentasProductos {
   VentasProductos({
     required this.productoId,
     required this.nombre,
+    this.marca,
     required this.precio,
     required this.cantidad,
     required this.categoria,
@@ -35,6 +37,7 @@ class VentasProductos {
     return VentasProductos(
       productoId: json['productoId'] ?? producto['id'] ?? 0,
       nombre: producto['nombre'] ?? '',
+      marca: producto['marca'],
       precio: (producto['precio'] as num?)?.toDouble() ?? 0.0,
       cantidad: (json['cantidad'] as num?)?.toDouble() ?? 0.0,
       categoria: producto['categoriaNombre'] ?? '',
@@ -53,6 +56,7 @@ class VentasProductos {
         'producto': {
           'id': productoId,
           'nombre': nombre,
+          'marca': marca,
           'precio': precio,
           'stock': 0, // Este campo es para el stock del producto, no la cantidad vendida
           'categoriaId': categoriaId, // Usar el ID de la categoría

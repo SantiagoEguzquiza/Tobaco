@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 
@@ -15,16 +16,20 @@ import 'package:tobaco/Models/ventasPago.dart';
 import 'package:provider/provider.dart';
 import 'package:tobaco/Services/Cache/database_helper.dart';
 import 'package:tobaco/Services/Cache/ventas_cache_service.dart';
+import 'package:tobaco/Services/Cache/cuenta_corriente_cache_service.dart';
 import 'package:tobaco/Services/Clientes_Service/clientes_provider.dart';
 import 'package:tobaco/Services/Sync/simple_sync_service.dart';
 import 'package:tobaco/Services/Ventas_Service/ventas_service.dart';
 import 'package:tobaco/Theme/app_theme.dart';
+import 'package:tobaco/Services/Connectivity/connectivity_service.dart';
 
 class VentasProvider with ChangeNotifier {
   final VentasService _ventasService = VentasService();
   final DatabaseHelper _db = DatabaseHelper();
   final SimpleSyncService _syncService = SimpleSyncService();
   final VentasCacheService _cacheService = VentasCacheService();
+  final CuentaCorrienteCacheService _ccCacheService = CuentaCorrienteCacheService();
+  final ConnectivityService _connectivityService = ConnectivityService();
 
   final Map<Ventas, String> _ventaLocalIds = {};
 
@@ -81,8 +86,10 @@ class VentasProvider with ChangeNotifier {
 
       await _sincronizarSQLiteConServidor(ventasDelServidor);
 
-      final combinadas =
-          await _combinarConVentasOfflinePendientes(ventasDelServidor);
+      final combinadas = await _combinarConVentasOfflinePendientes(
+        ventasDelServidor,
+        incluirPendientesOffline: false,
+      );
 
       _ventas = combinadas..sort((a, b) => b.fecha.compareTo(a.fecha));
       _isOffline = false;
@@ -207,11 +214,15 @@ class VentasProvider with ChangeNotifier {
   }
 
   Future<void> eliminarVentaDeLista(Ventas venta) async {
-    if (venta.id != null) {
+    final localId = _ventaLocalIds[venta];
+    final esVentaLocal = localId != null && localId.startsWith('local_');
+
+    if (venta.id != null && !esVentaLocal) {
       await eliminarVenta(venta.id!);
-    } else {
-      await eliminarVentaLocal(venta);
+      return;
     }
+
+    await eliminarVentaLocal(venta);
   }
 
   Future<List<Ventas>> obtenerVentas({bool usarTimeoutNormal = false}) async {
@@ -223,7 +234,7 @@ class VentasProvider with ChangeNotifier {
     try {
       final response = await _ventasService.crearVenta(
         venta,
-        customTimeout: const Duration(seconds: 1),
+        customTimeout: const Duration(seconds: 10),
       );
 
       if (response['ventaId'] != null) {
@@ -253,10 +264,23 @@ class VentasProvider with ChangeNotifier {
         'usuarioAsignadoNombre': response['usuarioAsignadoNombre'],
       };
     } catch (e) {
+      if (!_esErrorDeConexion(e)) {
+        rethrow;
+      }
       final localId = await _db.saveVentaOffline(venta);
       _ventas.insert(0, venta);
       _ventaLocalIds[venta] = localId;
       _isOffline = true;
+      final deudaGenerada = _calcularMontoCuentaCorriente(venta);
+      if (deudaGenerada > 0) {
+        await _ccCacheService.registrarVentaOffline(
+          clienteId: venta.clienteId,
+          clienteNombre: venta.cliente.nombre,
+          ventaLocalId: localId,
+          deudaGenerada: deudaGenerada,
+          venta: venta,
+        );
+      }
       await _actualizarCacheDesdeVentasActuales();
       notifyListeners();
 
@@ -267,6 +291,19 @@ class VentasProvider with ChangeNotifier {
             'Venta guardada localmente. Se sincronizará cuando haya conexión.',
       };
     }
+  }
+
+  double _calcularMontoCuentaCorriente(Ventas venta) {
+    if (venta.pagos != null && venta.pagos!.isNotEmpty) {
+      return venta.pagos!
+          .where((pago) => pago.metodo == MetodoPago.cuentaCorriente)
+          .fold(0.0, (sum, pago) => sum + pago.monto);
+    }
+    return venta.metodoPago == MetodoPago.cuentaCorriente ? venta.total : 0;
+  }
+
+  bool _esErrorDeConexion(dynamic error) {
+    return Apihandler.isConnectionError(error) || error is TimeoutException;
   }
 
   Future<void> asignarVenta(int ventaId, int usuarioId) async {
@@ -361,14 +398,43 @@ class VentasProvider with ChangeNotifier {
 
   Future<Map<String, dynamic>> obtenerVentasCuentaCorrientePorClienteId(
       int clienteId, int page, int pageSize) async {
+    final tieneConexion = await _connectivityService.checkFullConnectivity();
+    if (!tieneConexion) {
+      final offlineVentas = await _ccCacheService.obtenerVentasOffline(clienteId);
+      return {
+        'ventas': offlineVentas,
+        'hasNextPage': false,
+        'page': 1,
+        'pageSize': offlineVentas.length,
+        'totalItems': offlineVentas.length,
+      };
+    }
     try {
-      return await _ventasService.obtenerVentasCuentaCorrientePorClienteId(
+      final data = await _ventasService.obtenerVentasCuentaCorrientePorClienteId(
         clienteId,
         page,
         pageSize,
       );
+      if (data['ventas'] != null) {
+        await _ccCacheService.cacheVentasCuentaCorriente(
+          clienteId,
+          List<Ventas>.from(data['ventas']),
+        );
+      }
+      return data;
     } catch (e) {
       debugPrint('Error al obtener ventas con cuenta corriente: $e');
+      final esTimeout = e is TimeoutException;
+      if (Apihandler.isConnectionError(e) || esTimeout) {
+        final offlineVentas = await _ccCacheService.obtenerVentasOffline(clienteId);
+        return {
+          'ventas': offlineVentas,
+          'hasNextPage': false,
+          'page': 1,
+          'pageSize': offlineVentas.length,
+          'totalItems': offlineVentas.length,
+        };
+      }
       rethrow;
     }
   }
@@ -422,8 +488,9 @@ class VentasProvider with ChangeNotifier {
   }
 
   Future<List<Ventas>> _combinarConVentasOfflinePendientes(
-    List<Ventas> ventasDelServidor,
-  ) async {
+    List<Ventas> ventasDelServidor, {
+    bool incluirPendientesOffline = true,
+  }) async {
     final resultado = <Ventas>[];
     final idsServidor = <int>{};
 
@@ -435,6 +502,10 @@ class VentasProvider with ChangeNotifier {
         idsServidor.add(venta.id!);
         _ventaLocalIds[venta] = 'servidor_${venta.id}';
       }
+    }
+
+    if (!incluirPendientesOffline) {
+      return resultado;
     }
 
     final ventasOffline = await _db.getPendingVentas();
@@ -452,6 +523,7 @@ class VentasProvider with ChangeNotifier {
           return VentasProductos(
             productoId: p['producto_id'] as int,
             nombre: p['nombre'] as String,
+            marca: p['marca'] as String?,
             precio: p['precio'] as double,
             cantidad: p['cantidad'] as double,
             categoria: p['categoria'] as String,
@@ -570,14 +642,10 @@ class VentasProvider with ChangeNotifier {
       debugPrint('⚠️ VentasProvider: Error obteniendo ventas offline: $e');
     }
 
-    if (resultado.isEmpty) {
-      _errorMessage =
-          'No hay ventas disponibles offline. Conecta para sincronizar.';
-    }
-
     _ventas = resultado..sort((a, b) => b.fecha.compareTo(a.fecha));
     _isOffline = true;
     _hasMoreData = false;
+    _errorMessage = null;
   }
 
   Future<void> _actualizarCacheDesdeVentasActuales() async {
@@ -600,6 +668,7 @@ class VentasProvider with ChangeNotifier {
       return VentasProductos(
         productoId: p['producto_id'] as int,
         nombre: p['nombre'] as String,
+        marca: p['marca'] as String?,
         precio: p['precio'] as double,
         cantidad: p['cantidad'] as double,
         categoria: p['categoria'] as String,
