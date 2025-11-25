@@ -12,6 +12,10 @@ class VentasProductos {
   String? nota; // Nota opcional sobre la entrega
   DateTime? fechaChequeo; // Fecha de chequeo
   int? usuarioChequeoId; // ID del usuario que hizo el chequeo
+  // Campos de descuento del producto (en el momento de la venta)
+  double descuento; // Porcentaje de descuento del producto
+  DateTime? fechaExpiracionDescuento; // Fecha de expiración del descuento
+  bool descuentoIndefinido; // Si el descuento es indefinido
 
   VentasProductos({
     required this.productoId,
@@ -27,12 +31,25 @@ class VentasProductos {
     this.nota,
     this.fechaChequeo,
     this.usuarioChequeoId,
+    this.descuento = 0.0,
+    this.fechaExpiracionDescuento,
+    this.descuentoIndefinido = false,
   });
 
   factory VentasProductos.fromJson(Map<String, dynamic> json) {
     // El backend envía la estructura del modelo PedidoProducto
     // que tiene ProductoId, Producto (objeto completo), y Cantidad
     final producto = json['producto'] as Map<String, dynamic>? ?? {};
+    
+    // Parsear fecha de expiración de descuento si existe
+    DateTime? parseFechaExpiracion;
+    if (producto['fechaExpiracionDescuento'] != null) {
+      try {
+        parseFechaExpiracion = DateTime.parse(producto['fechaExpiracionDescuento'] as String);
+      } catch (e) {
+        parseFechaExpiracion = null;
+      }
+    }
     
     return VentasProductos(
       productoId: json['productoId'] ?? producto['id'] ?? 0,
@@ -48,6 +65,11 @@ class VentasProductos {
       nota: json['nota'],
       fechaChequeo: json['fechaChequeo'] != null ? DateTime.parse(json['fechaChequeo']) : null,
       usuarioChequeoId: json['usuarioChequeoId'],
+      descuento: producto['descuento'] != null
+          ? double.tryParse(producto['descuento'].toString()) ?? 0.0
+          : 0.0,
+      fechaExpiracionDescuento: parseFechaExpiracion,
+      descuentoIndefinido: producto['descuentoIndefinido'] ?? false,
     );
   }
 

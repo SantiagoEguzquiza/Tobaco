@@ -11,6 +11,9 @@ class Producto {
   bool half;
   bool isActive;
   List<ProductQuantityPrice> quantityPrices;
+  double descuento;
+  DateTime? fechaExpiracionDescuento;
+  bool descuentoIndefinido;
 
   Producto({
     required this.id,
@@ -23,9 +26,21 @@ class Producto {
     required this.half,
     this.isActive = true,
     this.quantityPrices = const [],
+    this.descuento = 0.0,
+    this.fechaExpiracionDescuento,
+    this.descuentoIndefinido = false,
   });
 
   factory Producto.fromJson(Map<String, dynamic> json) {
+    DateTime? parseFechaExpiracion;
+    if (json['fechaExpiracionDescuento'] != null) {
+      try {
+        parseFechaExpiracion = DateTime.parse(json['fechaExpiracionDescuento'] as String);
+      } catch (e) {
+        parseFechaExpiracion = null;
+      }
+    }
+
     return Producto(
       id: json['id'] as int?, 
       nombre: json['nombre'] as String,
@@ -45,12 +60,17 @@ class Producto {
               .map((e) => ProductQuantityPrice.fromJson(e))
               .toList()
           : [],
+      descuento: json['descuento'] != null
+          ? double.tryParse(json['descuento'].toString()) ?? 0.0
+          : 0.0,
+      fechaExpiracionDescuento: parseFechaExpiracion,
+      descuentoIndefinido: json['descuentoIndefinido'] ?? false,
     );
   }
   Map<String, dynamic> toJson() {
     final Map<String, dynamic> json = {
       'nombre': nombre,
-      'marca': marca,
+      'marca': marca?.trim().isEmpty == true ? null : marca,
       'stock': stock ?? 0.0, // Asegurar que no sea null
       'precio': precio,
       'categoriaId': categoriaId,
@@ -58,6 +78,9 @@ class Producto {
       'half': half,
       'isActive': isActive,
       'quantityPrices': quantityPrices.map((qp) => qp.toJson()).toList(),
+      'descuento': descuento,
+      'fechaExpiracionDescuento': fechaExpiracionDescuento?.toIso8601String(),
+      'descuentoIndefinido': descuentoIndefinido,
     };
     
     // Solo incluir id si no es null (para productos existentes)
@@ -72,7 +95,7 @@ class Producto {
     return {
       'id': id,
       'nombre': nombre,
-      'marca': marca,
+      'marca': marca?.trim().isEmpty == true ? null : marca,
       'stock': stock,
       'precio': precio,
       'categoriaId': categoriaId,
@@ -80,6 +103,9 @@ class Producto {
       'half': half,
       'isActive': isActive,
       'quantityPrices': quantityPrices.map((qp) => qp.toJson()).toList(),
+      'descuento': descuento,
+      'fechaExpiracionDescuento': fechaExpiracionDescuento?.toIso8601String(),
+      'descuentoIndefinido': descuentoIndefinido,
     };
   }
 }

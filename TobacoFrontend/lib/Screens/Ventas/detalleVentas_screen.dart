@@ -738,19 +738,127 @@ class _DetalleVentaScreenState extends State<DetalleVentaScreen> {
 
 
 
-  // Widget para mostrar precio simple
-  Widget _buildPrecioConDescuento(VentasProductos producto, BuildContext context) {
-    // Usar directamente el precio final calculado del backend
-    return Text(
-      '\$${_formatearPrecio(producto.precioFinalCalculado)}',
-      style: TextStyle(
-        fontSize: 16,
-        fontWeight: FontWeight.bold,
-        color: Theme.of(context).brightness == Brightness.dark
-            ? Colors.white
-            : Colors.black87,
-      ),
-    );
+  // Verifica si un producto de la venta tenía descuento activo
+  bool _tieneDescuentoActivoProducto(VentasProductos ventaProducto) {
+    // Si no hay descuento, retornar false
+    if (ventaProducto.descuento <= 0) {
+      return false;
+    }
+
+    // Si el descuento es indefinido, está activo
+    if (ventaProducto.descuentoIndefinido) {
+      return true;
+    }
+
+    // Si tiene fecha de expiración, verificar si no venció
+    if (ventaProducto.fechaExpiracionDescuento != null) {
+      final ahora = DateTime.now();
+      final fechaExpiracion = ventaProducto.fechaExpiracionDescuento!;
+      return fechaExpiracion.isAfter(ahora);
+    }
+
+    // Si tiene descuento pero no es indefinido y no tiene fecha, considerar activo
+    return true;
+  }
+
+  // Widget para mostrar precio con descuento si aplica
+  Widget _buildPrecioConDescuento(VentasProductos ventaProducto, BuildContext context) {
+    // Verificar si este producto específico tenía descuento activo en el momento de la venta
+    final tieneDescuentoProducto = _tieneDescuentoActivoProducto(ventaProducto);
+    
+    if (tieneDescuentoProducto) {
+      final porcentajeDescuento = ventaProducto.descuento;
+      final precioOriginal = ventaProducto.precio * ventaProducto.cantidad;
+      
+      // Mostrar precio original tachado al lado del badge de descuento
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          // Precio original tachado + badge de descuento en la misma línea
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '\$${_formatearPrecio(precioOriginal)}',
+                style: TextStyle(
+                  fontSize: 14,
+                  decoration: TextDecoration.lineThrough,
+                  color: Colors.grey.shade600,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.green.shade100,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  '-${porcentajeDescuento.toStringAsFixed(0)}%',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.green.shade700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          // Precio final (solo una vez)
+          Text(
+            '\$${_formatearPrecio(ventaProducto.precioFinalCalculado)}',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Colors.green.shade700,
+            ),
+          ),
+        ],
+      );
+    } else {
+      // Verificar si hay descuento global del cliente comparando precios
+      final precioBaseEsperado = ventaProducto.precio * ventaProducto.cantidad;
+      final tieneDescuentoGlobal = ventaProducto.precioFinalCalculado < precioBaseEsperado;
+      
+      if (tieneDescuentoGlobal) {
+        // Solo descuento global del cliente (no descuento del producto)
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Text(
+              '\$${_formatearPrecio(precioBaseEsperado)}',
+              style: TextStyle(
+                fontSize: 14,
+                decoration: TextDecoration.lineThrough,
+                color: Colors.grey.shade600,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              '\$${_formatearPrecio(ventaProducto.precioFinalCalculado)}',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Colors.blue.shade700,
+              ),
+            ),
+          ],
+        );
+      } else {
+        // Sin descuentos
+        return Text(
+          '\$${_formatearPrecio(ventaProducto.precioFinalCalculado)}',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.white
+                : Colors.black87,
+          ),
+        );
+      }
+    }
   }
 
 
