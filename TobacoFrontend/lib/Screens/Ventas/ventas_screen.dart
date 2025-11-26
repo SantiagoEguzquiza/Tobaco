@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tobaco/Models/Ventas.dart';
 import 'package:tobaco/Models/EstadoEntrega.dart';
 import 'package:tobaco/Screens/Ventas/nuevaVenta_screen.dart';
@@ -26,9 +28,24 @@ class _VentasScreenState extends State<VentasScreen> {
   @override
   void initState() {
     super.initState();
-    Future.microtask(
-      () => context.read<VentasProvider>().cargarVentas(),
-    );
+    Future.microtask(() async {
+      // Limpiar ventas pendientes bugeadas (solo una vez)
+      final prefs = await SharedPreferences.getInstance();
+      final yaLimpiado = prefs.getBool('ventas_pendientes_limpiadas') ?? false;
+      if (!yaLimpiado) {
+        try {
+          final borradas = await context.read<VentasProvider>().borrarTodasLasVentasPendientes();
+          if (borradas > 0) {
+            await prefs.setBool('ventas_pendientes_limpiadas', true);
+            debugPrint('✅ VentasScreen: $borradas ventas pendientes bugeadas eliminadas');
+          }
+        } catch (e) {
+          debugPrint('⚠️ VentasScreen: Error al limpiar ventas pendientes: $e');
+        }
+      }
+      // Cargar ventas normalmente
+      await context.read<VentasProvider>().cargarVentas();
+    });
     _scrollController.addListener(_onScroll);
   }
 

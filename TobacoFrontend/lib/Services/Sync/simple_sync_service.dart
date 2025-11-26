@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import '../Cache/database_helper.dart';
+import '../Cache/cuenta_corriente_cache_service.dart';
 import '../Ventas_Service/ventas_service.dart';
 import '../../Models/Ventas.dart';
 import '../../Models/VentasProductos.dart';
@@ -21,6 +22,7 @@ class SimpleSyncService {
   final DatabaseHelper _dbHelper = DatabaseHelper();
   final VentasService _ventasService = VentasService();
   final ConnectivityService _connectivityService = ConnectivityService();
+  final CuentaCorrienteCacheService _ccCacheService = CuentaCorrienteCacheService();
 
   Timer? _syncTimer;
   bool _isSyncing = false;
@@ -294,6 +296,11 @@ class SimpleSyncService {
             debugPrint('💾 SimpleSyncService: Marcando venta como sincronizada (se encontró en el servidor)...');
             try {
               await _dbHelper.markVentaAsSynced(localId, serverIdEncontrado);
+              // Actualizar también el movimiento de cuenta corriente
+              await _ccCacheService.marcarMovimientosDeVentaComoSincronizados(
+                ventaLocalId: localId,
+                ventaServerId: serverIdEncontrado,
+              );
               venta.id = serverIdEncontrado;
               ventasSincronizadas.add(venta);
               sincronizadas++;
@@ -325,6 +332,13 @@ class SimpleSyncService {
           debugPrint('💾 SimpleSyncService: Marcando venta $localId como sincronizada...');
           try {
             await _dbHelper.markVentaAsSynced(localId, serverIdObtenido);
+            // Actualizar también el movimiento de cuenta corriente
+            if (serverIdObtenido != null) {
+              await _ccCacheService.marcarMovimientosDeVentaComoSincronizados(
+                ventaLocalId: localId,
+                ventaServerId: serverIdObtenido,
+              );
+            }
             debugPrint('✅ SimpleSyncService: Venta $localId sincronizada exitosamente (ID servidor: $serverIdObtenido)');
             
             // Agregar a lista de ventas sincronizadas
@@ -408,6 +422,7 @@ class SimpleSyncService {
       return VentasProductos(
         productoId: p['producto_id'] as int,
         nombre: p['nombre'] as String,
+        marca: p['marca'] as String?,
         precio: p['precio'] as double,
         cantidad: p['cantidad'] as double,
         categoria: p['categoria'] as String,

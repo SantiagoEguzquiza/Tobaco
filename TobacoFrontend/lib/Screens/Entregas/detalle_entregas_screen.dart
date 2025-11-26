@@ -59,6 +59,7 @@ class _DetalleEntregasScreenState extends State<DetalleEntregasScreen> {
           (p) => VentasProductos(
             productoId: p.productoId,
             nombre: p.nombre,
+            marca: p.marca,
             precio: p.precio,
             cantidad: p.cantidad,
             categoria: p.categoria,

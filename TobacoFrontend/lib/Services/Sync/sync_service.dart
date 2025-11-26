@@ -257,6 +257,7 @@ class SyncService {
       return VentasProductos(
         productoId: productMap['producto_id'] as int,
         nombre: productMap['nombre'] as String,
+        marca: productMap['marca'] as String?,
         precio: productMap['precio'] as double,
         cantidad: productMap['cantidad'] as double,
         categoria: productMap['categoria'] as String,

@@ -1231,6 +1231,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
           .map((ps) => VentasProductos(
                 productoId: ps.id,
                 nombre: ps.nombre,
+                marca: ps.marca,
                 precio: ps.precio,
                 cantidad: ps.cantidad,
                 categoria: ps.categoria,
@@ -1244,7 +1245,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
         cliente: clienteSeleccionado!,
         ventasProductos: productos,
         total: _calcularTotalConDescuento(),
-        fecha: DateTime.now(),
+        fecha: DateTime.now().toLocal(), // Asegurar que sea hora local
       );
 
       final Ventas? ventaConPagos = await Navigator.push(
@@ -1280,21 +1281,18 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
           throw Exception(result['message']);
         }
 
-        // Mostrar mensaje offline INMEDIATAMENTE si aplica, antes de cualquier otra operación
+        // Mostrar mensaje offline INMEDIATAMENTE (sin Future.microtask que añade delay)
         if (result['isOffline']) {
-          // Usar un microtask para asegurar que el diálogo aparezca en el siguiente frame
-          await Future.microtask(() async {
-            if (mounted) {
-              await AppDialogs.showWarningDialog(
-                context: context,
-                title: 'Venta guardada offline',
-                message:
-                    'Venta guardada localmente. Se sincronizará cuando haya conexión.',
-                buttonText: 'Entendido',
-                icon: Icons.cloud_off,
-              );
-            }
-          });
+          if (mounted) {
+            await AppDialogs.showWarningDialog(
+              context: context,
+              title: 'Venta guardada offline',
+              message:
+                  'Venta guardada localmente. Se sincronizará cuando haya conexión.',
+              buttonText: 'Entendido',
+              icon: Icons.cloud_off,
+            );
+          }
         }
 
         // Manejar asignación según el tipo de empleado (en background si es offline)

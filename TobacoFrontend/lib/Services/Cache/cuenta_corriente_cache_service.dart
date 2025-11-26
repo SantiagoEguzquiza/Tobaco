@@ -11,6 +11,7 @@ import 'package:tobaco/Models/VentasProductos.dart';
 import 'package:tobaco/Models/cuenta_corriente_movimiento.dart';
 import 'package:tobaco/Models/metodoPago.dart';
 import 'package:tobaco/Models/EstadoEntrega.dart';
+import 'package:tobaco/Services/Cache/database_helper.dart';
 
 /// Servicio de caché para la cuenta corriente (deudas, abonos, notas de crédito y productos a favor)
 /// Permite operar en modo offline con datos persistentes en SQLite
@@ -37,6 +38,7 @@ class CuentaCorrienteCacheService {
     );
     return _database!;
   }
+
 
   Future<void> _onCreate(Database db, int version) async {
     await db.execute('''
@@ -190,7 +192,37 @@ class CuentaCorrienteCacheService {
   }
 
   Future<void> cacheVentasCuentaCorriente(int clienteId, List<Ventas> ventas) async {
-    final movimientos = ventas.map((venta) {
+    final db = await database;
+    final tipoDb = tipoMovimientoToDb(TipoMovimientoCuentaCorriente.venta);
+    
+    // Filtrar ventas que ya tienen un movimiento sincronizado (para evitar duplicados)
+    final ventasParaCachear = <Ventas>[];
+    for (final venta in ventas) {
+      if (venta.id != null) {
+        // Verificar si ya existe un movimiento sincronizado con este venta_id
+        final existente = await db.query(
+          _movimientosTable,
+          where: 'cliente_id = ? AND tipo = ? AND venta_id = ? AND sync_status = ?',
+          whereArgs: [clienteId, tipoDb, venta.id, 'synced'],
+          limit: 1,
+        );
+        
+        // Solo cachear si no existe ya un movimiento sincronizado
+        if (existente.isEmpty) {
+          ventasParaCachear.add(venta);
+        }
+      } else {
+        // Si no tiene ID, siempre cachear
+        ventasParaCachear.add(venta);
+      }
+    }
+    
+    if (ventasParaCachear.isEmpty) {
+      debugPrint('📦 CuentaCorrienteCacheService: Todas las ventas ya están cacheadas, no hay duplicados');
+      return;
+    }
+    
+    final movimientos = ventasParaCachear.map((venta) {
       final deuda = _calcularDeudaDesdeVenta(venta);
       return CuentaCorrienteMovimiento(
         movimientoId: venta.id,
@@ -292,6 +324,95 @@ class CuentaCorrienteCacheService {
         estadoEntrega: EstadoEntrega.noEntregada,
       );
     }).toList();
+  }
+
+  /// Obtiene solo las ventas pendientes de sincronizar (offline) de un cliente
+  /// Solo devuelve ventas que realmente existen en la tabla de ventas offline
+  Future<List<Ventas>> obtenerVentasPendientesOffline(int clienteId) async {
+    final rows = await _queryMovimientos(
+      clienteId: clienteId,
+      tipo: TipoMovimientoCuentaCorriente.venta,
+      syncStatus: 'pending',
+    );
+
+    if (rows.isEmpty) return [];
+
+    // Verificar que las ventas pendientes realmente existan en la tabla de ventas offline
+    final db = await database;
+    final ventasValidas = <Ventas>[];
+
+    for (final mov in rows) {
+      final ventaLocalId = mov.ventaLocalId;
+      
+      // Si tiene venta_local_id, verificar que exista en ventas_offline
+      if (ventaLocalId != null && ventaLocalId.isNotEmpty) {
+        try {
+          // Verificar en la tabla de ventas offline usando una query directa
+          // Necesitamos importar DatabaseHelper o hacer una query directa
+          final ventaExiste = await _verificarVentaExisteEnOffline(ventaLocalId);
+          
+          if (!ventaExiste) {
+            // Si la venta no existe en ventas_offline, eliminar el movimiento de cuenta corriente
+            await db.delete(
+              _movimientosTable,
+              where: 'local_id = ?',
+              whereArgs: [mov.localId],
+            );
+            debugPrint('🗑️ CuentaCorrienteCacheService: Eliminado movimiento huérfano (venta_local_id: $ventaLocalId)');
+            continue;
+          }
+        } catch (e) {
+          debugPrint('⚠️ CuentaCorrienteCacheService: Error verificando venta offline: $e');
+          // Si hay error, no incluir la venta
+          continue;
+        }
+      }
+
+      // Si llegamos aquí, la venta es válida
+      final metadata = mov.metadataJson;
+      if (metadata != null) {
+        try {
+          ventasValidas.add(Ventas.fromJson(jsonDecode(metadata) as Map<String, dynamic>));
+        } catch (e) {
+          debugPrint('⚠️ CuentaCorrienteCacheService: Error parseando venta pendiente: $e');
+        }
+      } else {
+        ventasValidas.add(Ventas(
+          id: mov.movimientoId,
+          clienteId: mov.clienteId,
+          cliente: Cliente(id: mov.clienteId, nombre: mov.clienteNombre ?? 'Cliente', direccion: null),
+          ventasProductos: <VentasProductos>[],
+          total: mov.montoTotal,
+          fecha: mov.fecha,
+          estadoEntrega: EstadoEntrega.noEntregada,
+        ));
+      }
+    }
+
+    return ventasValidas;
+  }
+
+  /// Verifica si una venta existe en la tabla de ventas offline
+  /// Usa DatabaseHelper para evitar problemas de concurrencia
+  Future<bool> _verificarVentaExisteEnOffline(String ventaLocalId) async {
+    try {
+      final dbHelper = DatabaseHelper();
+      final ventasDb = await dbHelper.database;
+      
+      // Verificar si existe la venta
+      final result = await ventasDb.query(
+        'ventas_offline',
+        where: 'local_id = ?',
+        whereArgs: [ventaLocalId],
+        limit: 1,
+      );
+      
+      return result.isNotEmpty;
+    } catch (e) {
+      debugPrint('⚠️ CuentaCorrienteCacheService: Error verificando venta en offline: $e');
+      // Si hay error, asumir que no existe para evitar mostrar ventas huérfanas
+      return false;
+    }
   }
 
   Future<List<Abono>> obtenerAbonosOffline(int clienteId) async {
@@ -513,19 +634,34 @@ class CuentaCorrienteCacheService {
     required String ventaLocalId,
     required int? ventaServerId,
   }) async {
+    if (ventaServerId == null) return;
+    
     final db = await database;
+    
+    // Primero, eliminar cualquier movimiento duplicado que pueda existir con el mismo venta_id
+    // (esto puede pasar si se cargaron las ventas del servidor antes de sincronizar)
+    await db.delete(
+      _movimientosTable,
+      where: 'venta_id = ? AND venta_local_id != ?',
+      whereArgs: [ventaServerId, ventaLocalId],
+    );
+    
+    // Actualizar el movimiento pendiente a sincronizado
     await db.update(
       _movimientosTable,
       {
         'venta_id': ventaServerId,
+        'movimiento_id': ventaServerId,
         'sync_status': 'synced',
         'last_error': null,
         'updated_at': DateTime.now().toIso8601String(),
-        'local_id': 'venta_${ventaServerId ?? ventaLocalId}',
+        'local_id': 'venta_$ventaServerId',
       },
       where: 'venta_local_id = ?',
       whereArgs: [ventaLocalId],
     );
+    
+    debugPrint('✅ CuentaCorrienteCacheService: Movimiento de venta sincronizado (localId: $ventaLocalId, serverId: $ventaServerId)');
   }
 
   Future<void> _ajustarSaldoCliente(
@@ -607,6 +743,139 @@ class CuentaCorrienteCacheService {
       'deudaFormateada': resumen.saldoActual.toStringAsFixed(2),
       'fechaConsulta': DateTime.now().toIso8601String(),
     };
+  }
+
+  /// Elimina TODAS las ventas de cuenta corriente de un cliente
+  /// Se usa cuando se cargan las ventas del servidor en modo online
+  /// para reemplazar completamente el caché y evitar ventas pendientes bugeadas
+  Future<void> eliminarTodasLasVentasDelCliente(int clienteId) async {
+    final db = await database;
+    
+    // Obtener los movimientos antes de eliminarlos para ajustar el saldo del cliente
+    final movimientos = await db.query(
+      _movimientosTable,
+      where: 'cliente_id = ? AND tipo = ?',
+      whereArgs: [clienteId, tipoMovimientoToDb(TipoMovimientoCuentaCorriente.venta)],
+    );
+
+    if (movimientos.isEmpty) return;
+
+    // Calcular el ajuste total del saldo
+    double ajusteTotal = 0.0;
+    for (final mov in movimientos) {
+      final saldoDelta = (mov['saldo_delta'] as num?)?.toDouble() ?? 0.0;
+      ajusteTotal -= saldoDelta;
+    }
+
+    // Eliminar todos los movimientos de ventas del cliente
+    await db.delete(
+      _movimientosTable,
+      where: 'cliente_id = ? AND tipo = ?',
+      whereArgs: [clienteId, tipoMovimientoToDb(TipoMovimientoCuentaCorriente.venta)],
+    );
+
+    // Ajustar el saldo del cliente
+    if (ajusteTotal != 0.0) {
+      await _ajustarSaldoCliente(clienteId, ajusteTotal);
+    }
+
+    debugPrint('🗑️ CuentaCorrienteCacheService: Eliminadas ${movimientos.length} venta(s) de cuenta corriente del cliente $clienteId');
+  }
+
+  /// Elimina solo las ventas SINCRONIZADAS de cuenta corriente de un cliente
+  /// Preserva las ventas pendientes de sincronizar (sync_status = 'pending')
+  Future<void> eliminarVentasSincronizadasDelCliente(int clienteId) async {
+    final db = await database;
+    
+    // Obtener solo los movimientos sincronizados antes de eliminarlos para ajustar el saldo
+    final movimientos = await db.query(
+      _movimientosTable,
+      where: 'cliente_id = ? AND tipo = ? AND sync_status = ?',
+      whereArgs: [clienteId, tipoMovimientoToDb(TipoMovimientoCuentaCorriente.venta), 'synced'],
+    );
+
+    if (movimientos.isEmpty) return;
+
+    // Calcular el ajuste total del saldo
+    double ajusteTotal = 0.0;
+    for (final mov in movimientos) {
+      final saldoDelta = (mov['saldo_delta'] as num?)?.toDouble() ?? 0.0;
+      ajusteTotal -= saldoDelta;
+    }
+
+    // Eliminar solo los movimientos sincronizados
+    await db.delete(
+      _movimientosTable,
+      where: 'cliente_id = ? AND tipo = ? AND sync_status = ?',
+      whereArgs: [clienteId, tipoMovimientoToDb(TipoMovimientoCuentaCorriente.venta), 'synced'],
+    );
+
+    // Ajustar el saldo del cliente
+    if (ajusteTotal != 0.0) {
+      await _ajustarSaldoCliente(clienteId, ajusteTotal);
+    }
+
+    debugPrint('🗑️ CuentaCorrienteCacheService: Eliminadas ${movimientos.length} venta(s) sincronizada(s) del cliente $clienteId (pendientes preservadas)');
+  }
+
+  /// Elimina los movimientos de cuenta corriente asociados a una venta
+  /// cuando la venta es eliminada
+  Future<void> eliminarMovimientosPorVenta({
+    int? ventaId,
+    String? ventaLocalId,
+  }) async {
+    if (ventaId == null && ventaLocalId == null) return;
+
+    final db = await database;
+    
+    // Construir la condición WHERE correctamente
+    String whereClause;
+    List<dynamic> whereArgs;
+    
+    if (ventaId != null && ventaLocalId != null) {
+      // Buscar por venta_id, movimiento_id, venta_local_id, o local_id con formato 'venta_local_...'
+      whereClause = '(venta_id = ? OR movimiento_id = ? OR venta_local_id = ? OR local_id = ?)';
+      whereArgs = [ventaId, ventaId, ventaLocalId, 'venta_local_$ventaLocalId'];
+    } else if (ventaId != null) {
+      // Buscar solo por venta_id o movimiento_id
+      whereClause = '(venta_id = ? OR movimiento_id = ?)';
+      whereArgs = [ventaId, ventaId];
+    } else {
+      // Buscar por venta_local_id o local_id con formato 'venta_local_...'
+      whereClause = '(venta_local_id = ? OR local_id = ?)';
+      whereArgs = [ventaLocalId!, 'venta_local_$ventaLocalId'];
+    }
+
+    // Obtener los movimientos antes de eliminarlos para ajustar el saldo del cliente
+    final movimientos = await db.query(
+      _movimientosTable,
+      where: whereClause,
+      whereArgs: whereArgs,
+    );
+
+    if (movimientos.isEmpty) return;
+
+    // Ajustar el saldo de los clientes afectados antes de eliminar
+    final clientesAfectados = <int, double>{};
+    for (final mov in movimientos) {
+      final clienteId = mov['cliente_id'] as int;
+      final saldoDelta = (mov['saldo_delta'] as num?)?.toDouble() ?? 0.0;
+      clientesAfectados[clienteId] = (clientesAfectados[clienteId] ?? 0.0) - saldoDelta;
+    }
+
+    // Eliminar los movimientos
+    await db.delete(
+      _movimientosTable,
+      where: whereClause,
+      whereArgs: whereArgs,
+    );
+
+    // Actualizar el saldo de cada cliente afectado
+    for (final entry in clientesAfectados.entries) {
+      await _ajustarSaldoCliente(entry.key, entry.value);
+    }
+
+    debugPrint('🗑️ CuentaCorrienteCacheService: Eliminados ${movimientos.length} movimiento(s) de cuenta corriente para venta (id: $ventaId, localId: $ventaLocalId)');
   }
 }
 

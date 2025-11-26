@@ -79,16 +79,42 @@ class VentasProvider with ChangeNotifier {
     notifyListeners();
 
     try {
+      // Primero verificamos conectividad completa (internet + backend).
+      // Si no hay, evitamos hacer la llamada HTTP (que demoraría por timeout)
+      // y vamos directo al modo offline usando SQLite/caché.
+      final tieneConexion = await _connectivityService.checkFullConnectivity();
+      if (!tieneConexion) {
+        await _cargarVentasOffline();
+        _isOffline = true;
+        _isLoading = false;
+        _errorMessage = null;
+        notifyListeners();
+        return;
+      }
+
       final ventasDelServidor = await _ventasService.obtenerVentas(
-        timeoutRapido: !usarTimeoutNormal,
-        timeoutNormal: usarTimeoutNormal,
+        // Usamos siempre el timeout "normal" para evitar falsos positivos de modo offline
+        // cuando el backend tarda un poco más en responder.
+        timeoutRapido: false,
+        timeoutNormal: true,
       );
 
-      await _sincronizarSQLiteConServidor(ventasDelServidor);
+      // En modo online: borrar solo las ventas SINCRONIZADAS de SQLite (preservar las pendientes)
+      // y reemplazarlas con las del servidor
+      await _db.borrarVentasSincronizadas();
+      
+      // Guardar las ventas del servidor en SQLite
+      for (final venta in ventasDelServidor) {
+        if (venta.id != null) {
+          await _guardarVentaDelServidor(venta);
+          _ventaLocalIds[venta] = 'servidor_${venta.id}';
+        }
+      }
 
+      // Combinar ventas del servidor con las pendientes de sincronizar
       final combinadas = await _combinarConVentasOfflinePendientes(
         ventasDelServidor,
-        incluirPendientesOffline: false,
+        incluirPendientesOffline: true, // Incluir pendientes para que aparezcan
       );
 
       _ventas = combinadas..sort((a, b) => b.fecha.compareTo(a.fecha));
@@ -100,8 +126,16 @@ class VentasProvider with ChangeNotifier {
         ventasDelServidor.where((venta) => venta.id != null).toList(),
       );
     } catch (e) {
-      if (Apihandler.isConnectionError(e)) {
+      if (Apihandler.isConnectionError(e) ||
+          e is TimeoutException ||
+          _esErrorServidor(e)) {
         await _cargarVentasOffline();
+        // Siempre indicamos modo offline si hubo problema de conexión o servidor,
+        // aunque tengamos datos en caché/SQLite.
+        _isOffline = true;
+        if (_ventas.isEmpty) {
+          _errorMessage = _limpiarMensajeError(e.toString());
+        }
       } else {
         _ventas = [];
         _errorMessage = _limpiarMensajeError(e.toString());
@@ -185,6 +219,11 @@ class VentasProvider with ChangeNotifier {
       _ventas.remove(venta);
       _ventaLocalIds.remove(venta);
       await _db.deleteVentaOffline(localId);
+      // Eliminar también de la caché de cuenta corriente
+      await _ccCacheService.eliminarMovimientosPorVenta(
+        ventaId: id,
+        ventaLocalId: localId.startsWith('local_') ? localId : null,
+      );
       await _actualizarCacheDesdeVentasActuales();
       notifyListeners();
     } catch (e) {
@@ -193,6 +232,11 @@ class VentasProvider with ChangeNotifier {
         _ventaLocalIds.remove(venta);
         _isOffline = true;
         await _db.deleteVentaOffline(localId);
+        // Eliminar también de la caché de cuenta corriente
+        await _ccCacheService.eliminarMovimientosPorVenta(
+          ventaId: id,
+          ventaLocalId: localId.startsWith('local_') ? localId : null,
+        );
         await _actualizarCacheDesdeVentasActuales();
         notifyListeners();
       } else {
@@ -208,6 +252,11 @@ class VentasProvider with ChangeNotifier {
     _ventaLocalIds.remove(venta);
     if (localId != null) {
       await _db.deleteVentaOffline(localId);
+      // Eliminar también de la caché de cuenta corriente
+      await _ccCacheService.eliminarMovimientosPorVenta(
+        ventaId: venta.id,
+        ventaLocalId: localId.startsWith('local_') ? localId : null,
+      );
     }
     await _actualizarCacheDesdeVentasActuales();
     notifyListeners();
@@ -232,6 +281,46 @@ class VentasProvider with ChangeNotifier {
 
   Future<Map<String, dynamic>> crearVenta(Ventas venta) async {
     try {
+      // Verificación rápida de conectividad (timeout corto para respuesta instantánea)
+      final tieneConexion = await _connectivityService.checkFullConnectivity()
+          .timeout(const Duration(milliseconds: 300), onTimeout: () => false);
+      
+      if (!tieneConexion) {
+        // Retornar INMEDIATAMENTE y guardar en background para que el popup aparezca al instante
+        _ventas.insert(0, venta);
+        _isOffline = true;
+        notifyListeners();
+
+        // Guardar en SQLite en background sin bloquear
+        Future.microtask(() async {
+          try {
+            final localId = await _db.saveVentaOffline(venta);
+            _ventaLocalIds[venta] = localId;
+            final deudaGenerada = _calcularMontoCuentaCorriente(venta);
+            if (deudaGenerada > 0) {
+              await _ccCacheService.registrarVentaOffline(
+                clienteId: venta.clienteId,
+                clienteNombre: venta.cliente.nombre,
+                ventaLocalId: localId,
+                deudaGenerada: deudaGenerada,
+                venta: venta,
+              );
+            }
+            await _actualizarCacheDesdeVentasActuales();
+            notifyListeners();
+          } catch (e) {
+            debugPrint('Error guardando venta offline en background: $e');
+          }
+        });
+
+        return {
+          'success': true,
+          'isOffline': true,
+          'message':
+              'Venta guardada localmente. Se sincronizará cuando haya conexión.',
+        };
+      }
+
       final response = await _ventasService.crearVenta(
         venta,
         customTimeout: const Duration(seconds: 10),
@@ -347,6 +436,65 @@ class VentasProvider with ChangeNotifier {
     return stats['pending'] ?? 0;
   }
 
+  /// Borra todas las ventas pendientes de sincronizar (útil para limpiar ventas bugeadas)
+  Future<int> borrarTodasLasVentasPendientes() async {
+    try {
+      // Obtener las ventas pendientes antes de borrarlas para eliminar también de cuenta corriente
+      final db = await _db.database;
+      List<Map<String, dynamic>> ventasPendientes = [];
+      
+      try {
+        ventasPendientes = await db.query(
+          'ventas_offline',
+          where: 'sync_status = ?',
+          whereArgs: ['pending'],
+          columns: ['local_id', 'id', 'cliente_id'],
+        );
+      } catch (e) {
+        debugPrint('⚠️ VentasProvider: Error obteniendo ventas pendientes: $e');
+        // Si hay error, continuar sin eliminar movimientos de cuenta corriente
+      }
+
+      // Eliminar movimientos de cuenta corriente asociados
+      for (final ventaRow in ventasPendientes) {
+        try {
+          final localId = ventaRow['local_id'] as String;
+          final ventaId = ventaRow['id'] as int?;
+          final clienteId = ventaRow['cliente_id'] as int?;
+          
+          if (clienteId != null) {
+            await _ccCacheService.eliminarMovimientosPorVenta(
+              ventaId: ventaId,
+              ventaLocalId: localId.startsWith('local_') ? localId : null,
+            );
+          }
+        } catch (e) {
+          debugPrint('⚠️ VentasProvider: Error eliminando movimiento de cuenta corriente: $e');
+          // Continuar con la siguiente venta
+        }
+      }
+
+      // Borrar todas las ventas pendientes de SQLite
+      final ventasBorradas = await _db.borrarTodasLasVentasPendientes();
+      
+      // Actualizar la lista de ventas si hay alguna pendiente en memoria
+      _ventas.removeWhere((venta) {
+        final localId = _ventaLocalIds[venta];
+        return localId != null && localId.startsWith('local_');
+      });
+      _ventaLocalIds.removeWhere((venta, localId) => localId.startsWith('local_'));
+      
+      notifyListeners();
+      
+      debugPrint('✅ VentasProvider: $ventasBorradas ventas pendientes borradas');
+      return ventasBorradas;
+    } catch (e) {
+      debugPrint('❌ VentasProvider: Error al borrar ventas pendientes: $e');
+      // No rethrow, retornar 0 para no romper el flujo
+      return 0;
+    }
+  }
+
   Future<Map<String, dynamic>> obtenerVentasPaginadas(
       int page, int pageSize) async {
     try {
@@ -415,13 +563,38 @@ class VentasProvider with ChangeNotifier {
         page,
         pageSize,
       );
+      
+      // En modo online: borrar solo las ventas SINCRONIZADAS de cuenta corriente de este cliente
+      // (preservar las pendientes) y reemplazarlas con las del servidor
       if (data['ventas'] != null) {
+        await _ccCacheService.eliminarVentasSincronizadasDelCliente(clienteId);
         await _ccCacheService.cacheVentasCuentaCorriente(
           clienteId,
           List<Ventas>.from(data['ventas']),
         );
       }
-      return data;
+      
+      // Combinar ventas del servidor con las pendientes de sincronizar
+      final ventasPendientes = await _ccCacheService.obtenerVentasPendientesOffline(clienteId);
+      final ventasDelServidor = List<Ventas>.from(data['ventas'] ?? []);
+      
+      // Combinar ambas listas, evitando duplicados
+      final idsServidor = ventasDelServidor.where((v) => v.id != null).map((v) => v.id!).toSet();
+      final ventasCombinadas = <Ventas>[
+        ...ventasDelServidor,
+        ...ventasPendientes.where((v) => v.id == null || !idsServidor.contains(v.id)),
+      ];
+      
+      // Ordenar por fecha descendente
+      ventasCombinadas.sort((a, b) => b.fecha.compareTo(a.fecha));
+      
+      return {
+        'ventas': ventasCombinadas,
+        'hasNextPage': data['hasNextPage'] ?? false,
+        'page': data['page'] ?? page,
+        'pageSize': data['pageSize'] ?? pageSize,
+        'totalItems': ventasCombinadas.length,
+      };
     } catch (e) {
       debugPrint('Error al obtener ventas con cuenta corriente: $e');
       final esTimeout = e is TimeoutException;
@@ -469,6 +642,13 @@ class VentasProvider with ChangeNotifier {
       }
 
       final db = await _db.database;
+      
+      // Verificar que la base de datos esté abierta
+      if (!db.isOpen) {
+        debugPrint('⚠️ VentasProvider: Base de datos cerrada al sincronizar SQLite con servidor');
+        return;
+      }
+      
       final ventasSincronizadasSQLite = await db.query(
         'ventas_offline',
         where: 'sync_status = ? AND id IS NOT NULL',
@@ -476,14 +656,20 @@ class VentasProvider with ChangeNotifier {
       );
 
       for (var ventaRow in ventasSincronizadasSQLite) {
-        final ventaId = ventaRow['id'] as int?;
-        if (ventaId != null && !idsDelServidor.contains(ventaId)) {
-          final localId = ventaRow['local_id'] as String;
-          await _db.deleteVentaOffline(localId);
+        try {
+          final ventaId = ventaRow['id'] as int?;
+          if (ventaId != null && !idsDelServidor.contains(ventaId)) {
+            final localId = ventaRow['local_id'] as String;
+            await _db.deleteVentaOffline(localId);
+          }
+        } catch (e) {
+          debugPrint('⚠️ VentasProvider: Error eliminando venta sincronizada: $e');
+          // Continuar con la siguiente venta
         }
       }
     } catch (e) {
       debugPrint('⚠️ VentasProvider: Error sincronizando SQLite con servidor: $e');
+      // No rethrow, solo loguear el error
     }
   }
 
@@ -508,7 +694,15 @@ class VentasProvider with ChangeNotifier {
       return resultado;
     }
 
-    final ventasOffline = await _db.getPendingVentas();
+    List<Map<String, dynamic>> ventasOffline = [];
+    try {
+      ventasOffline = await _db.getPendingVentas();
+    } catch (e) {
+      debugPrint('⚠️ VentasProvider: Error obteniendo ventas pendientes offline: $e');
+      // Si hay error, retornar solo las ventas del servidor
+      return resultado;
+    }
+    
     for (var ventaData in ventasOffline) {
       final ventaRow = ventaData['venta'] as Map<String, dynamic>;
       final localId = ventaRow['local_id'] as String;
@@ -567,13 +761,17 @@ class VentasProvider with ChangeNotifier {
               jsonDecode(ventaRow['usuario_asignado_json'] as String));
         }
 
+        // Parsear fecha preservando la hora local usando el método helper
+        final fechaStr = ventaRow['fecha'] as String;
+        final fecha = DatabaseHelper.parseDateTimeLocal(fechaStr);
+
         final ventaOffline = Ventas(
           id: ventaRow['id'] as int?,
           clienteId: ventaRow['cliente_id'] as int,
           cliente: cliente,
           ventasProductos: productos,
           total: ventaRow['total'] as double,
-          fecha: DateTime.parse(ventaRow['fecha'] as String),
+          fecha: fecha,
           metodoPago: ventaRow['metodo_pago'] != null
               ? MetodoPago.values[ventaRow['metodo_pago'] as int]
               : null,
@@ -618,28 +816,45 @@ class VentasProvider with ChangeNotifier {
 
     try {
       final db = await _db.database;
+      
+      // Verificar que la base de datos esté abierta
+      if (!db.isOpen) {
+        debugPrint('⚠️ VentasProvider: Base de datos cerrada al cargar ventas offline');
+        _ventas = resultado..sort((a, b) => b.fecha.compareTo(a.fecha));
+        _isOffline = true;
+        _hasMoreData = false;
+        _errorMessage = null;
+        return;
+      }
+      
       final ventasRows = await db.query(
         'ventas_offline',
         orderBy: 'created_at DESC',
       );
 
       for (final ventaRow in ventasRows) {
-        final localId = ventaRow['local_id'] as String;
-        final ventaId = ventaRow['id'] as int?;
+        try {
+          final localId = ventaRow['local_id'] as String;
+          final ventaId = ventaRow['id'] as int?;
 
-        if (ventaId != null && idsAgregados.contains(ventaId)) {
-          continue;
-        }
+          if (ventaId != null && idsAgregados.contains(ventaId)) {
+            continue;
+          }
 
-        final venta = await _buildVentaFromRow(ventaRow);
-        resultado.add(venta);
-        _ventaLocalIds[venta] = localId;
-        if (ventaId != null) {
-          idsAgregados.add(ventaId);
+          final venta = await _buildVentaFromRow(ventaRow);
+          resultado.add(venta);
+          _ventaLocalIds[venta] = localId;
+          if (ventaId != null) {
+            idsAgregados.add(ventaId);
+          }
+        } catch (e) {
+          debugPrint('⚠️ VentasProvider: Error procesando venta offline: $e');
+          // Continuar con la siguiente venta
         }
       }
     } catch (e) {
       debugPrint('⚠️ VentasProvider: Error obteniendo ventas offline: $e');
+      // Si hay error, usar solo las ventas del caché
     }
 
     _ventas = resultado..sort((a, b) => b.fecha.compareTo(a.fecha));
@@ -655,14 +870,20 @@ class VentasProvider with ChangeNotifier {
   }
 
   Future<Ventas> _buildVentaFromRow(Map<String, dynamic> ventaRow) async {
-    final db = await _db.database;
-    final localId = ventaRow['local_id'] as String;
+    try {
+      final db = await _db.database;
+      final localId = ventaRow['local_id'] as String;
 
-    final productosRows = await db.query(
-      'ventas_productos_offline',
-      where: 'venta_local_id = ?',
-      whereArgs: [localId],
-    );
+      // Verificar que la base de datos esté abierta
+      if (!db.isOpen) {
+        throw Exception('Base de datos cerrada');
+      }
+
+      final productosRows = await db.query(
+        'ventas_productos_offline',
+        where: 'venta_local_id = ?',
+        whereArgs: [localId],
+      );
 
     final productos = productosRows.map((p) {
       return VentasProductos(
@@ -717,34 +938,64 @@ class VentasProvider with ChangeNotifier {
           jsonDecode(ventaRow['usuario_asignado_json'] as String));
     }
 
+    // Parsear fecha preservando la hora local usando el método helper
+    final fechaStr = ventaRow['fecha'] as String;
+    final fecha = DatabaseHelper.parseDateTimeLocal(fechaStr);
+
     return Ventas(
       id: ventaRow['id'] as int?,
       clienteId: ventaRow['cliente_id'] as int,
       cliente: cliente,
       ventasProductos: productos,
       total: ventaRow['total'] as double,
-      fecha: DateTime.parse(ventaRow['fecha'] as String),
-      metodoPago: ventaRow['metodo_pago'] != null
-          ? MetodoPago.values[ventaRow['metodo_pago'] as int]
-          : null,
-      pagos: pagos,
-      usuarioIdCreador: ventaRow['usuario_id_creador'] as int?,
-      usuarioCreador: usuarioCreador,
-      usuarioIdAsignado: ventaRow['usuario_id_asignado'] as int?,
-      usuarioAsignado: usuarioAsignado,
-      estadoEntrega:
-          EstadoEntregaExtension.fromJson(ventaRow['estado_entrega'] as int),
-    );
+      fecha: fecha,
+        metodoPago: ventaRow['metodo_pago'] != null
+            ? MetodoPago.values[ventaRow['metodo_pago'] as int]
+            : null,
+        pagos: pagos,
+        usuarioIdCreador: ventaRow['usuario_id_creador'] as int?,
+        usuarioCreador: usuarioCreador,
+        usuarioIdAsignado: ventaRow['usuario_id_asignado'] as int?,
+        usuarioAsignado: usuarioAsignado,
+        estadoEntrega:
+            EstadoEntregaExtension.fromJson(ventaRow['estado_entrega'] as int),
+      );
+    } catch (e) {
+      debugPrint('⚠️ VentasProvider: Error construyendo venta desde row: $e');
+      // Retornar una venta básica con los datos mínimos disponibles
+      final clienteJson = jsonDecode(ventaRow['cliente_json'] as String);
+      final cliente = Cliente.fromJson(clienteJson);
+      // Parsear fecha preservando la hora local usando el método helper
+      final fechaStr = ventaRow['fecha'] as String;
+      final fecha = DatabaseHelper.parseDateTimeLocal(fechaStr);
+      
+      return Ventas(
+        id: ventaRow['id'] as int?,
+        clienteId: ventaRow['cliente_id'] as int,
+        cliente: cliente,
+        ventasProductos: <VentasProductos>[],
+        total: ventaRow['total'] as double,
+        fecha: fecha,
+        estadoEntrega: EstadoEntregaExtension.fromJson(ventaRow['estado_entrega'] as int),
+      );
+    }
   }
 
   Future<void> _guardarVentaDelServidor(Ventas venta) async {
     if (venta.id == null) return;
 
-    final db = await _db.database;
-    final now = DateTime.now().toIso8601String();
-    final localId = 'servidor_${venta.id}';
-
     try {
+      final db = await _db.database;
+      
+      // Verificar que la base de datos esté abierta
+      if (!db.isOpen) {
+        debugPrint('⚠️ VentasProvider: Base de datos cerrada al guardar venta del servidor');
+        return;
+      }
+      
+      final now = DateTime.now().toIso8601String();
+      final localId = 'servidor_${venta.id}';
+
       await db.transaction((txn) async {
         await txn.insert(
           'ventas_offline',
@@ -754,7 +1005,8 @@ class VentasProvider with ChangeNotifier {
             'cliente_id': venta.clienteId,
             'cliente_json': jsonEncode(venta.cliente.toJson()),
             'total': venta.total,
-            'fecha': venta.fecha.toIso8601String(),
+            // Guardar fecha en hora local (formato ISO sin zona horaria para preservar hora exacta)
+            'fecha': DatabaseHelper.formatDateTimeLocal(venta.fecha),
             'metodo_pago': venta.metodoPago?.index,
             'usuario_id_creador': venta.usuarioIdCreador,
             'usuario_creador_json': venta.usuarioCreador != null
@@ -815,12 +1067,24 @@ class VentasProvider with ChangeNotifier {
       });
     } catch (e) {
       debugPrint('⚠️ Error guardando venta del servidor en SQLite: $e');
-      rethrow;
+      // Si la BD está cerrada, no rethrow para no romper el flujo
+      if (e.toString().contains('database_closed')) {
+        debugPrint('⚠️ VentasProvider: Base de datos cerrada, no se pudo guardar venta del servidor');
+        return;
+      }
+      // Para otros errores, no rethrow para no romper el flujo
     }
   }
 
   String _limpiarMensajeError(String mensaje) {
     return mensaje.replaceFirst('Exception: ', '');
+  }
+
+  bool _esErrorServidor(dynamic error) {
+    final mensaje = error.toString().toLowerCase();
+    return mensaje.contains('código de estado: 500') ||
+        mensaje.contains('status: 500') ||
+        mensaje.contains('internal server error');
   }
 
   // Métodos estáticos para lógica de nueva venta
