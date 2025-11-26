@@ -5,17 +5,17 @@ import 'package:tobaco/Theme/app_theme.dart';
 import 'package:tobaco/Theme/dialogs.dart';
 import 'package:tobaco/Theme/headers.dart';
 import 'package:tobaco/Helpers/api_handler.dart';
-import 'package:tobaco/Screens/Deudas/detalleDeudas_screen.dart';
+import 'package:tobaco/Screens/CuentaCorriente/cuenta_corriente_detalle_screen.dart';
 import 'dart:developer';
 
-class DeudasScreen extends StatefulWidget {
-  const DeudasScreen({super.key});
+class CuentaCorrienteScreen extends StatefulWidget {
+  const CuentaCorrienteScreen({super.key});
 
   @override
-  _DeudasScreenState createState() => _DeudasScreenState();
+  _CuentaCorrienteScreenState createState() => _CuentaCorrienteScreenState();
 }
 
-class _DeudasScreenState extends State<DeudasScreen> {
+class _CuentaCorrienteScreenState extends State<CuentaCorrienteScreen> {
   bool isLoading = true;
   String searchQuery = '';
   String? errorMessage;
@@ -132,7 +132,7 @@ class _DeudasScreenState extends State<DeudasScreen> {
         });
         await AppDialogs.showErrorDialog(
           context: context,
-          message: 'Error al cargar clientes con deuda',
+          message: 'Error al cargar clientes con cuenta corriente',
         );
       }
     }
@@ -195,7 +195,7 @@ class _DeudasScreenState extends State<DeudasScreen> {
         elevation: 0,
         backgroundColor: null, // Usar el tema
         title: const Text(
-          'Deudas',
+          'Cuenta Corriente',
           style: AppTheme.appBarTitleStyle,
         ),
       ),
@@ -210,7 +210,7 @@ class _DeudasScreenState extends State<DeudasScreen> {
                   ),
                   SizedBox(height: 16),
                   Text(
-                    'Cargando deudas...',
+                    'Cargando cuenta corriente...',
                     style: TextStyle(
                       color: Colors.grey,
                       fontSize: 16,
@@ -228,10 +228,10 @@ class _DeudasScreenState extends State<DeudasScreen> {
                   // Header con buscador
                   HeaderConBuscador(
                     leadingIcon: Icons.account_balance_wallet,
-                    title: 'Gestión de Deudas',
-                    subtitle: '${clientes.length} cliente${clientes.length != 1 ? 's' : ''} con deuda',
+                    title: 'Cuenta Corriente',
+                    subtitle: '${clientes.length} cliente${clientes.length != 1 ? 's' : ''} con saldo pendiente',
                     controller: _searchController,
-                    hintText: 'Buscar clientes con deuda...',
+                    hintText: 'Buscar clientes con saldo...',
                     onChanged: (value) {
                       setState(() {
                         _searchText = value;
@@ -246,7 +246,7 @@ class _DeudasScreenState extends State<DeudasScreen> {
                   ),
                   const SizedBox(height: 20),
 
-                  // Lista de clientes con deuda
+                  // Lista de clientes con cuenta corriente
                   if (filteredClientes.isEmpty && !isLoading)
                     _buildEmptyState()
                   else
@@ -273,7 +273,7 @@ class _DeudasScreenState extends State<DeudasScreen> {
           const SizedBox(height: 16),
           Text(
             _searchText.isEmpty
-                ? 'No hay clientes con deuda'
+                ? 'No hay clientes con cuenta corriente'
                 : 'No se encontraron clientes',
             style: TextStyle(
               fontSize: 18,
@@ -302,17 +302,6 @@ class _DeudasScreenState extends State<DeudasScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Clientes con Deuda',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Theme.of(context).brightness == Brightness.dark
-                ? Colors.white
-                : Colors.grey.shade700,
-          ),
-        ),
-        const SizedBox(height: 12),
         ListView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
@@ -356,11 +345,11 @@ class _DeudasScreenState extends State<DeudasScreen> {
             final result = await Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => DetalleDeudaScreen(cliente: cliente),
+                builder: (context) => CuentaCorrienteDetalleScreen(cliente: cliente),
               ),
             );
             
-            // Si regresamos con true, significa que se saldó una deuda y debemos refrescar
+            // Si regresamos con true, significa que se actualizó el saldo y debemos refrescar
             if (result == true) {
               _loadClientes();
             }
@@ -407,7 +396,7 @@ class _DeudasScreenState extends State<DeudasScreen> {
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            'Deuda: \$${_formatearPrecio(_parsearDeuda(cliente.deuda))}',
+                            'Saldo CC: \$${_formatearPrecio(_parsearDeuda(cliente.deuda))}',
                             style: TextStyle(
                               fontSize: 14,
                               color: Theme.of(context).brightness == Brightness.dark
@@ -463,7 +452,7 @@ class _DeudasScreenState extends State<DeudasScreen> {
                               border: Border.all(color: Colors.red.shade200),
                             ),
                             child: Text(
-                              'Con Deuda',
+                              'Cuenta Corriente',
                               style: TextStyle(
                                 fontSize: 10,
                                 color: Colors.red.shade600,

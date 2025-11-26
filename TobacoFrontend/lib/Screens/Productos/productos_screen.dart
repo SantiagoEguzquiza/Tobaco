@@ -13,7 +13,8 @@ import 'package:tobaco/Services/Productos_Service/productos_provider.dart';
 import 'package:tobaco/Theme/app_theme.dart'; 
 import 'package:tobaco/Theme/dialogs.dart'; 
 import 'package:tobaco/Theme/headers.dart';
-import 'package:tobaco/Helpers/api_handler.dart'; 
+import 'package:tobaco/Helpers/api_handler.dart';
+import 'package:tobaco/Helpers/producto_descuento_helper.dart'; 
 
 class ProductosScreen extends StatefulWidget {
   const ProductosScreen({super.key});
@@ -184,8 +185,8 @@ class _ProductosScreenState extends State<ProductosScreen> {
                 Icons.menu,
                 color: Colors.white,
               ),
-              onPressed: () {
-                showMenu(
+              onPressed: () async {
+                final value = await showMenu<String>(
                   context: context,
                   position: const RelativeRect.fromLTRB(1000, 80, 0, 0),
                   color: Theme.of(context).brightness == Brightness.dark
@@ -220,15 +221,29 @@ class _ProductosScreenState extends State<ProductosScreen> {
                       ),
                     ),
                   ],
-                ).then((value) {
-                  if (value == '1') {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => const CategoriasScreen()),
-                    );
+                );
+
+                if (value == '1') {
+                  await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const CategoriasScreen(),
+                    ),
+                  );
+
+                  if (!mounted) return;
+                  final categoriasProvider =
+                      context.read<CategoriasProvider>();
+                  try {
+                    await categoriasProvider.cargarCategorias(silent: true);
+                  } catch (_) {
+                    // Si falla la recarga silenciosa, usamos el estado actual
                   }
-                });
+                  if (!mounted) return;
+                  context
+                      .read<ProductoProvider>()
+                      .sincronizarCategoriasDesde(categoriasProvider);
+                }
               },
             ),
           )
@@ -613,33 +628,7 @@ class _ProductosScreenState extends State<ProductosScreen> {
                                                 ],
                                               ),
                                               const SizedBox(height: 2),
-                                              Row(
-                                                children: [
-                                                  Icon(
-                                                    Icons.attach_money,
-                                                    size: 16,
-                                                    color: Theme.of(context)
-                                                                .brightness ==
-                                                            Brightness.dark
-                                                        ? Colors.grey.shade400
-                                                        : Colors.grey.shade600,
-                                                  ),
-                                                  const SizedBox(width: 4),
-                                                  Text(
-                                                    producto.precio
-                                                        .toStringAsFixed(2),
-                                                    style: TextStyle(
-                                                      fontSize: 14,
-                                                      color: Theme.of(context)
-                                                                  .brightness ==
-                                                              Brightness.dark
-                                                          ? Colors.grey.shade400
-                                                          : Colors
-                                                              .grey.shade600,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
+                                              _buildPrecioConDescuento(context, producto),
                                               const SizedBox(height: 2),
                                             ],
                                           ),
@@ -779,6 +768,109 @@ class _ProductosScreenState extends State<ProductosScreen> {
         ),
       ),
     );
+  }
+
+  /// Widget para mostrar precio con descuento
+  Widget _buildPrecioConDescuento(BuildContext context, Producto producto) {
+    final tieneDescuentoActivo = ProductoDescuentoHelper.tieneDescuentoActivo(producto);
+    final precioConDescuento = ProductoDescuentoHelper.calcularPrecioConDescuento(producto);
+    final fechaExpiracion = ProductoDescuentoHelper.obtenerFechaExpiracionFormateada(producto);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    if (tieneDescuentoActivo) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.attach_money,
+                size: 16,
+                color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+              ),
+              const SizedBox(width: 4),
+              // Precio original tachado
+              Text(
+                producto.precio.toStringAsFixed(2),
+                style: TextStyle(
+                  fontSize: 14,
+                  decoration: TextDecoration.lineThrough,
+                  color: isDark ? Colors.grey.shade500 : Colors.grey.shade400,
+                ),
+              ),
+              const SizedBox(width: 8),
+              // Precio con descuento
+              Text(
+                precioConDescuento.toStringAsFixed(2),
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.primaryColor,
+                ),
+              ),
+              const SizedBox(width: 4),
+              // Badge de descuento
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.green.shade100,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  '-${producto.descuento.toStringAsFixed(0)}%',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.green.shade700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          // Fecha de expiración si existe
+          if (fechaExpiracion != null) ...[
+            const SizedBox(height: 2),
+            Row(
+              children: [
+                Icon(
+                  Icons.calendar_today_outlined,
+                  size: 12,
+                  color: isDark ? Colors.grey.shade500 : Colors.grey.shade500,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  'Vence: $fechaExpiracion',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: isDark ? Colors.grey.shade500 : Colors.grey.shade500,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      );
+    } else {
+      // Precio normal sin descuento
+      return Row(
+        children: [
+          Icon(
+            Icons.attach_money,
+            size: 16,
+            color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            producto.precio.toStringAsFixed(2),
+            style: TextStyle(
+              fontSize: 14,
+              color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+            ),
+          ),
+        ],
+      );
+    }
   }
 
   /// Función para eliminar un producto usando el diálogo centralizado

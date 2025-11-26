@@ -3,7 +3,9 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../Connectivity/connectivity_service.dart';
 import '../Cache/database_helper.dart';
+import '../Cache/cuenta_corriente_cache_service.dart';
 import '../Ventas_Service/ventas_service.dart';
+import '../Abonos_Service/abonos_service.dart';
 import '../../Models/Ventas.dart';
 import '../../Models/VentasProductos.dart';
 import '../../Models/Cliente.dart';
@@ -11,6 +13,7 @@ import '../../Models/ventasPago.dart';
 import '../../Models/metodoPago.dart';
 import '../../Models/EstadoEntrega.dart';
 import '../../Models/User.dart';
+import '../../Models/cuenta_corriente_movimiento.dart';
 
 /// Servicio de sincronización de ventas offline
 /// Se encarga de enviar al backend las ventas creadas sin conexión
@@ -22,6 +25,8 @@ class SyncService {
   final ConnectivityService _connectivityService = ConnectivityService();
   final DatabaseHelper _dbHelper = DatabaseHelper();
   final VentasService _ventasService = VentasService();
+  final CuentaCorrienteCacheService _ccCacheService = CuentaCorrienteCacheService();
+  final AbonosService _abonosService = AbonosService();
 
   StreamController<SyncStatus>? _syncStatusController;
   StreamSubscription<bool>? _connectivitySubscription;
@@ -153,10 +158,18 @@ class SyncService {
           print('📤 SyncService: Enviando venta $localId al servidor...');
           
           // Enviar al backend
-          await _ventasService.crearVenta(venta);
+          final response = await _ventasService.crearVenta(venta);
+          final serverId = response['ventaId'] as int?;
+          if (serverId != null) {
+            venta.id = serverId;
+          }
           
           // Marcar como sincronizada
-          await _dbHelper.markVentaAsSynced(localId, null);
+          await _dbHelper.markVentaAsSynced(localId, serverId);
+          await _ccCacheService.marcarMovimientosDeVentaComoSincronizados(
+            ventaLocalId: localId,
+            ventaServerId: serverId,
+          );
           syncedCount++;
           
           print('✅ SyncService: Venta $localId sincronizada correctamente');
@@ -199,6 +212,7 @@ class SyncService {
     } finally {
       _isSyncing = false;
       await _updateStats();
+      await _syncCuentaCorrienteMovimientosPendientes();
     }
   }
 
@@ -243,6 +257,7 @@ class SyncService {
       return VentasProductos(
         productoId: productMap['producto_id'] as int,
         nombre: productMap['nombre'] as String,
+        marca: productMap['marca'] as String?,
         precio: productMap['precio'] as double,
         cantidad: productMap['cantidad'] as double,
         categoria: productMap['categoria'] as String,
@@ -312,6 +327,39 @@ class SyncService {
   void _notifySyncStatus(SyncStatus status) {
     if (_syncStatusController != null && !_syncStatusController!.isClosed) {
       _syncStatusController!.add(status);
+    }
+  }
+
+  Future<void> _syncCuentaCorrienteMovimientosPendientes() async {
+    if (!_connectivityService.isFullyConnected) return;
+    try {
+      final pendientes = await _ccCacheService.obtenerMovimientosPendientes();
+      if (pendientes.isEmpty) return;
+      for (final movimiento in pendientes) {
+        if (movimiento.tipo != TipoMovimientoCuentaCorriente.abono) {
+          continue;
+        }
+        try {
+          final abono = await _abonosService.saldarDeuda(
+            movimiento.clienteId,
+            movimiento.montoTotal,
+            movimiento.fecha,
+            movimiento.observacion,
+          );
+          await _ccCacheService.marcarMovimientoSincronizado(
+            movimiento.localId,
+            movimientoId: abono.id,
+          );
+        } catch (e) {
+          await _ccCacheService.marcarMovimientoError(
+            movimiento.localId,
+            e.toString(),
+          );
+        }
+        await Future.delayed(Duration(milliseconds: 250));
+      }
+    } catch (e) {
+      debugPrint('⚠️ SyncService: Error sincronizando cuenta corriente: $e');
     }
   }
 

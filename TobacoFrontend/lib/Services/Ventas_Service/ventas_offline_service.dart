@@ -5,6 +5,8 @@ import '../Cache/cache_manager.dart';
 import '../Sync/sync_service.dart';
 import './ventas_service.dart';
 import '../../Models/Ventas.dart';
+import '../Cache/cuenta_corriente_cache_service.dart';
+import '../../Models/metodoPago.dart';
 
 /// Servicio offline-first para ventas
 /// Gestiona la creación de ventas tanto online como offline
@@ -19,6 +21,7 @@ class VentasOfflineService {
   final CacheManager _cacheManager = CacheManager();
   final SyncService _syncService = SyncService();
   final VentasService _ventasService = VentasService();
+  final CuentaCorrienteCacheService _ccCacheService = CuentaCorrienteCacheService();
 
   bool _isInitialized = false;
 
@@ -124,6 +127,16 @@ class VentasOfflineService {
   Future<VentaCreationResult> _saveVentaOffline(Ventas venta, String reason) async {
     try {
       final localId = await _dbHelper.saveVentaOffline(venta);
+      final deudaGenerada = _calcularMontoCuentaCorriente(venta);
+      if (deudaGenerada > 0) {
+        await _ccCacheService.registrarVentaOffline(
+          clienteId: venta.clienteId,
+          clienteNombre: venta.cliente.nombre,
+          ventaLocalId: localId,
+          deudaGenerada: deudaGenerada,
+          venta: venta,
+        );
+      }
       
       
       
@@ -257,6 +270,15 @@ class VentasOfflineService {
   /// Obtiene estadísticas de sincronización
   Future<Map<String, int>> obtenerEstadisticas() async {
     return await _dbHelper.getStats();
+  }
+
+  double _calcularMontoCuentaCorriente(Ventas venta) {
+    if (venta.pagos != null && venta.pagos!.isNotEmpty) {
+      return venta.pagos!
+          .where((pago) => pago.metodo == MetodoPago.cuentaCorriente)
+          .fold(0.0, (sum, pago) => sum + pago.monto);
+    }
+    return venta.metodoPago == MetodoPago.cuentaCorriente ? venta.total : 0;
   }
 
   /// Obtiene el estado de conectividad actual

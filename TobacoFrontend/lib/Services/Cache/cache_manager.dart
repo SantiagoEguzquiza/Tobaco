@@ -19,7 +19,7 @@ class CacheManager {
 
   static Database? _database;
   static const String _databaseName = 'tobaco_cache.db';
-  static const int _databaseVersion = 2;
+  static const int _databaseVersion = 3;
 
   // Nombres de tablas
   static const String _clientesTable = 'clientes_cache';
@@ -120,6 +120,7 @@ class CacheManager {
         venta_id INTEGER NOT NULL,
         producto_id INTEGER NOT NULL,
         nombre TEXT NOT NULL,
+        marca TEXT,
         precio REAL NOT NULL,
         cantidad REAL NOT NULL,
         categoria TEXT NOT NULL,
@@ -156,6 +157,10 @@ class CacheManager {
         SET usuario_id_creador = usuario_id
         WHERE usuario_id IS NOT NULL
       ''');
+    }
+
+    if (oldVersion < 3) {
+      await db.execute('ALTER TABLE ventas_cache_productos ADD COLUMN marca TEXT');
     }
   }
 
@@ -566,6 +571,7 @@ class CacheManager {
               'venta_id': venta.id,
               'producto_id': producto.productoId,
               'nombre': producto.nombre,
+            'marca': producto.marca,
               'precio': producto.precio,
               'cantidad': producto.cantidad,
               'categoria': producto.categoria,
@@ -628,6 +634,7 @@ class CacheManager {
           return VentasProductos(
             productoId: p['producto_id'] as int,
             nombre: p['nombre'] as String,
+            marca: p['marca'] as String?,
             precio: p['precio'] as double,
             cantidad: p['cantidad'] as double,
             categoria: p['categoria'] as String,

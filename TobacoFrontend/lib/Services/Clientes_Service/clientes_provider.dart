@@ -1,12 +1,17 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:tobaco/Models/Cliente.dart';
 import 'package:tobaco/Services/Clientes_Service/clientes_service.dart';
 import 'package:tobaco/Services/Cache/datos_cache_service.dart';
+import 'package:tobaco/Services/Cache/cuenta_corriente_cache_service.dart';
 import 'package:tobaco/Helpers/api_handler.dart';
+import 'package:tobaco/Services/Connectivity/connectivity_service.dart';
 
 class ClienteProvider with ChangeNotifier {
   final ClienteService _clienteService = ClienteService();
   final DatosCacheService _cacheService = DatosCacheService();
+  final CuentaCorrienteCacheService _cuentaCorrienteCache = CuentaCorrienteCacheService();
+  final ConnectivityService _connectivityService = ConnectivityService();
 
   // Estados para la lista principal de clientes (paginada)
   List<Cliente> _clientes = [];
@@ -324,10 +329,16 @@ class ClienteProvider with ChangeNotifier {
   Future<List<Cliente>> obtenerClientesConDeuda() async {
     try {
       _clientesConDeuda = await _clienteService.obtenerClientesConDeuda();
+      await _cuentaCorrienteCache.cacheClientesResumen(_clientesConDeuda);
       notifyListeners();
     } catch (e) {
       debugPrint('Error: $e');
-      // Relanzar la excepción para que la UI la pueda manejar
+      if (Apihandler.isConnectionError(e)) {
+        final offline = await _cuentaCorrienteCache.obtenerClientesConSaldoPaginados(page: 1, pageSize: 100);
+        _clientesConDeuda = List<Cliente>.from(offline['clientes'] ?? []);
+        notifyListeners();
+        return _clientesConDeuda;
+      }
       rethrow;
     }
     return _clientesConDeuda;
@@ -336,19 +347,55 @@ class ClienteProvider with ChangeNotifier {
   Future<Map<String, dynamic>> obtenerClientesConDeudaPaginados(
       int page, int pageSize) async {
     try {
-      return await _clienteService.obtenerClientesConDeudaPaginados(
+      final data = await _clienteService.obtenerClientesConDeudaPaginados(
           page, pageSize);
+      if (data['clientes'] != null) {
+        await _cuentaCorrienteCache.cacheClientesResumen(
+            List<Cliente>.from(data['clientes']));
+      }
+      return data;
     } catch (e) {
       debugPrint('Error al obtener clientes con deuda paginados: $e');
+      if (Apihandler.isConnectionError(e)) {
+        return await _cuentaCorrienteCache.obtenerClientesConSaldoPaginados(
+            page: page, pageSize: pageSize);
+      }
       rethrow;
     }
   }
 
   Future<Map<String, dynamic>> obtenerDetalleDeuda(int clienteId) async {
+    final tieneConexion = await _connectivityService.checkFullConnectivity();
+    if (!tieneConexion) {
+      final detalleOffline =
+          await _cuentaCorrienteCache.obtenerDetalleDeudaOffline(clienteId);
+      if (detalleOffline != null) {
+        return detalleOffline;
+      }
+    }
     try {
-      return await _clienteService.obtenerDetalleDeuda(clienteId);
+      final detalle = await _clienteService.obtenerDetalleDeuda(clienteId);
+      final resumen = await _cuentaCorrienteCache.obtenerResumenCliente(clienteId);
+      if (resumen != null) {
+        await _cuentaCorrienteCache.cacheClientesResumen([
+          Cliente(
+            id: resumen.clienteId,
+            nombre: resumen.clienteNombre,
+            direccion: resumen.cliente?.direccion,
+            deuda: detalle['deudaFormateada']?.toString(),
+          )
+        ]);
+      }
+      return detalle;
     } catch (e) {
       debugPrint('Error al obtener detalle de deuda: $e');
+      final esTimeout = e is TimeoutException;
+      if (Apihandler.isConnectionError(e) || esTimeout) {
+        final detalleOffline = await _cuentaCorrienteCache.obtenerDetalleDeudaOffline(clienteId);
+        if (detalleOffline != null) {
+          return detalleOffline;
+        }
+      }
       rethrow;
     }
   }

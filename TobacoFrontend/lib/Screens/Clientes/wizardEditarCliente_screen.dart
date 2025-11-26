@@ -96,6 +96,7 @@ class _WizardEditarClienteScreenState extends State<WizardEditarClienteScreen> {
         preciosEspeciales: widget.cliente.preciosEspeciales,
         latitud: _latitud,
         longitud: _longitud,
+        visible: widget.cliente.visible,
       );
 
       await _clienteProvider.editarCliente(clienteActualizado);

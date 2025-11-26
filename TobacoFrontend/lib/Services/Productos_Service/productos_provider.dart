@@ -186,6 +186,21 @@ class ProductoProvider with ChangeNotifier {
     await cargarProductosInicial(categoriasProvider);
   }
 
+  void sincronizarCategoriasDesde(CategoriasProvider categoriasProvider) {
+    final nuevasCategorias = List<Categoria>.from(categoriasProvider.categorias);
+    _categorias = nuevasCategorias;
+
+    final categoriaSeleccionadaExiste = _selectedCategory != null &&
+        _categorias.any((cat) => cat.nombre == _selectedCategory);
+
+    if (!categoriaSeleccionadaExiste) {
+      _selectedCategory =
+          _categorias.isNotEmpty ? _categorias.first.nombre : null;
+    }
+
+    notifyListeners();
+  }
+
   /// Obtiene productos: intenta del servidor, si falla usa SQLite local
   Future<List<Producto>> obtenerProductos() async {
     print('📡 ProductoProvider: Intentando obtener productos del servidor...');

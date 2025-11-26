@@ -1,27 +1,33 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:tobaco/Models/Cliente.dart';
 import 'package:tobaco/Models/Ventas.dart';
 import 'package:tobaco/Models/Abono.dart';
+import 'package:tobaco/Models/ProductoAFavor.dart';
 import 'package:tobaco/Models/metodoPago.dart';
 import 'package:tobaco/Services/Clientes_Service/clientes_provider.dart';
 import 'package:tobaco/Services/Ventas_Service/ventas_provider.dart';
 import 'package:tobaco/Services/Abonos_Service/abonos_provider.dart';
+import 'package:tobaco/Services/ProductosAFavor_Service/producto_a_favor_service.dart';
+import 'package:tobaco/Services/Cache/cuenta_corriente_cache_service.dart';
+import 'package:tobaco/Models/cuenta_corriente_movimiento.dart';
 import 'package:tobaco/Theme/app_theme.dart';
 import 'package:tobaco/Screens/Ventas/detalleVentas_screen.dart';
 import 'package:tobaco/Theme/dialogs.dart';
+import 'package:tobaco/Helpers/api_handler.dart';
 import 'dart:developer';
 
-class DetalleDeudaScreen extends StatefulWidget {
+class CuentaCorrienteDetalleScreen extends StatefulWidget {
   final Cliente cliente;
 
-  const DetalleDeudaScreen({super.key, required this.cliente});
+  const CuentaCorrienteDetalleScreen({super.key, required this.cliente});
 
   @override
-  State<DetalleDeudaScreen> createState() => _DetalleDeudaScreenState();
+  State<CuentaCorrienteDetalleScreen> createState() => _CuentaCorrienteDetalleScreenState();
 }
 
-class _DetalleDeudaScreenState extends State<DetalleDeudaScreen> 
+class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScreen> 
     with SingleTickerProviderStateMixin {
   
   late TabController _tabController;
@@ -31,7 +37,13 @@ class _DetalleDeudaScreenState extends State<DetalleDeudaScreen>
   
   List<Ventas> ventasCC = [];
   List<Abono> abonos = [];
+  List<ProductoAFavor> productosAFavor = [];
+  List<CuentaCorrienteMovimiento> notasCredito = [];
+  bool isLoadingProductos = true;
+  bool isLoadingNotasCredito = true;
   Map<String, dynamic>? detalleDeuda;
+  double? _saldoDetalle;
+  final CuentaCorrienteCacheService _ccCacheService = CuentaCorrienteCacheService();
   
   String? errorMessage;
   
@@ -47,7 +59,7 @@ class _DetalleDeudaScreenState extends State<DetalleDeudaScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
     _loadData();
   }
 
@@ -62,24 +74,69 @@ class _DetalleDeudaScreenState extends State<DetalleDeudaScreen>
       _loadDetalleDeuda(),
       _loadVentasCC(),
       _loadAbonos(),
+      _loadProductosAFavor(),
+      _loadNotasCredito(),
     ]);
+  }
+
+  void _safeSetState(VoidCallback fn) {
+    if (!mounted) return;
+    setState(fn);
   }
 
   Future<void> _loadDetalleDeuda() async {
     try {
       final clienteProvider = ClienteProvider();
       final detalle = await clienteProvider.obtenerDetalleDeuda(widget.cliente.id!);
-      setState(() {
+      _safeSetState(() {
         detalleDeuda = detalle;
+        _saldoDetalle = _obtenerSaldoDesdeDetalle(detalle);
+        if (_saldoDetalle != null) {
+          widget.cliente.deuda = _saldoDetalle!.toStringAsFixed(2);
+        }
         isLoadingDetalle = false;
       });
     } catch (e) {
-      setState(() {
-        errorMessage = 'Error al cargar detalle de deuda: $e';
+      log('Error al cargar cuenta corriente: $e', level: 1000);
+      if (Apihandler.isConnectionError(e)) {
+        try {
+          final offlineDetalle =
+              await _ccCacheService.obtenerDetalleDeudaOffline(widget.cliente.id!);
+          if (offlineDetalle != null) {
+            _safeSetState(() {
+              detalleDeuda = offlineDetalle;
+              _saldoDetalle = _obtenerSaldoDesdeDetalle(offlineDetalle);
+              if (_saldoDetalle != null) {
+                widget.cliente.deuda = _saldoDetalle!.toStringAsFixed(2);
+              }
+              isLoadingDetalle = false;
+            });
+            return;
+          }
+        } catch (cacheError) {
+          log('Error leyendo detalle de CC offline: $cacheError', level: 1000);
+        }
+      }
+      _safeSetState(() {
+        errorMessage = 'Error al cargar cuenta corriente: $e';
         isLoadingDetalle = false;
       });
-      log('Error al cargar detalle de deuda: $e', level: 1000);
     }
+  }
+
+  double? _obtenerSaldoDesdeDetalle(Map<String, dynamic>? detalle) {
+    if (detalle == null) return null;
+    final raw = detalle['deudaActual'] ?? detalle['saldoActual'];
+    if (raw is num) return raw.toDouble();
+    if (raw is String) {
+      final sanitized = raw.replaceAll(',', '.');
+      return double.tryParse(sanitized) ?? _parsearDeuda(raw);
+    }
+    final formateada = detalle['deudaFormateada'];
+    if (formateada is String) {
+      return _parsearDeuda(formateada);
+    }
+    return null;
   }
 
   Future<void> _loadVentasCC() async {
@@ -91,17 +148,26 @@ class _DetalleDeudaScreenState extends State<DetalleDeudaScreen>
         _pageSizeVentas
       );
       
-      setState(() {
+      _safeSetState(() {
         ventasCC = List<Ventas>.from(data['ventas']);
         _hasMoreVentas = data['hasNextPage'];
         isLoadingVentas = false;
       });
     } catch (e) {
-      setState(() {
+      log('Error al cargar ventas: $e', level: 1000);
+      if (Apihandler.isConnectionError(e)) {
+        final offlineVentas = await _ccCacheService.obtenerVentasOffline(widget.cliente.id!);
+        _safeSetState(() {
+          ventasCC = offlineVentas;
+          _hasMoreVentas = false;
+          isLoadingVentas = false;
+        });
+        return;
+      }
+      _safeSetState(() {
         errorMessage = 'Error al cargar ventas: $e';
         isLoadingVentas = false;
       });
-      log('Error al cargar ventas: $e', level: 1000);
     }
   }
 
@@ -109,22 +175,83 @@ class _DetalleDeudaScreenState extends State<DetalleDeudaScreen>
     try {
       final abonosProvider = AbonosProvider();
       abonos = await abonosProvider.obtenerAbonosPorClienteId(widget.cliente.id!);
-      setState(() {
+      _safeSetState(() {
         isLoadingAbonos = false;
       });
     } catch (e) {
-      setState(() {
+      log('Error al cargar abonos: $e', level: 1000);
+      if (Apihandler.isConnectionError(e)) {
+        final offlineAbonos =
+            await _ccCacheService.obtenerAbonosOffline(widget.cliente.id!);
+        _safeSetState(() {
+          abonos = offlineAbonos;
+          isLoadingAbonos = false;
+        });
+        return;
+      }
+      _safeSetState(() {
         errorMessage = 'Error al cargar abonos: $e';
         isLoadingAbonos = false;
       });
-      log('Error al cargar abonos: $e', level: 1000);
+    }
+  }
+
+  Future<void> _loadProductosAFavor() async {
+    try {
+      final productoService = ProductoAFavorService();
+      final productos = await productoService.obtenerProductosAFavorByClienteId(
+        widget.cliente.id!,
+        soloNoEntregados: false,
+      );
+      await _ccCacheService.cacheProductosAFavor(widget.cliente.id!, productos);
+      if (!mounted) return;
+      _safeSetState(() {
+        productosAFavor = productos;
+        isLoadingProductos = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      final esTimeout = e is TimeoutException;
+      if (Apihandler.isConnectionError(e) || esTimeout) {
+        final productos = await _ccCacheService.obtenerProductosAFavorOffline(widget.cliente.id!);
+        _safeSetState(() {
+          productosAFavor = productos;
+          isLoadingProductos = false;
+        });
+      } else {
+        _safeSetState(() {
+          errorMessage = 'Error al cargar productos a favor: $e';
+          isLoadingProductos = false;
+        });
+      }
+      log('Error al cargar productos a favor: $e', level: 1000);
+    }
+  }
+
+  Future<void> _loadNotasCredito() async {
+    try {
+      final movimientos = await _ccCacheService.obtenerMovimientosPorTipo(
+        clienteId: widget.cliente.id!,
+        tipo: TipoMovimientoCuentaCorriente.notaCredito,
+      );
+      if (!mounted) return;
+      _safeSetState(() {
+        notasCredito = movimientos;
+        isLoadingNotasCredito = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      _safeSetState(() {
+        isLoadingNotasCredito = false;
+      });
+      log('Error al cargar notas de crédito: $e', level: 1000);
     }
   }
 
   Future<void> _cargarMasVentas() async {
     if (_isLoadingMoreVentas || !_hasMoreVentas) return;
     
-    setState(() {
+    _safeSetState(() {
       _isLoadingMoreVentas = true;
     });
 
@@ -136,14 +263,14 @@ class _DetalleDeudaScreenState extends State<DetalleDeudaScreen>
         _pageSizeVentas
       );
       
-      setState(() {
+      _safeSetState(() {
         ventasCC.addAll(List<Ventas>.from(data['ventas']));
         _currentPageVentas++;
         _hasMoreVentas = data['hasNextPage'];
         _isLoadingMoreVentas = false;
       });
     } catch (e) {
-      setState(() {
+      _safeSetState(() {
         _isLoadingMoreVentas = false;
       });
       log('Error al cargar más ventas: $e', level: 1000);
@@ -204,7 +331,7 @@ class _DetalleDeudaScreenState extends State<DetalleDeudaScreen>
         return StatefulBuilder(
           builder: (context, setState) {
             return AppTheme.minimalAlertDialog(
-              title: 'Saldar Deuda',
+              title: 'Registrar abono',
               content: TextSelectionTheme(
                 data: TextSelectionThemeData(
                   cursorColor: AppTheme.primaryColor,
@@ -216,7 +343,7 @@ class _DetalleDeudaScreenState extends State<DetalleDeudaScreen>
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                // Información del cliente y deuda actual
+                // Información del cliente y saldo actual
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
@@ -244,7 +371,7 @@ class _DetalleDeudaScreenState extends State<DetalleDeudaScreen>
                               ),
                             ),
                             Text(
-                              'Deuda actual: \$${_formatearPrecio(_parsearDeuda(widget.cliente.deuda))}',
+                              'Saldo actual: \$${_formatearPrecio(_parsearDeuda(widget.cliente.deuda))}',
                               style: TextStyle(
                                 fontSize: 14,
                                 color: Colors.red.shade600,
@@ -410,7 +537,7 @@ class _DetalleDeudaScreenState extends State<DetalleDeudaScreen>
                           
                           if (monto > deudaActual) {
                             setState(() {
-                              errorMessage = 'El monto no puede ser mayor a la deuda actual';
+                              errorMessage = 'El monto no puede ser mayor al saldo actual';
                             });
                             return;
                           }
@@ -427,7 +554,7 @@ class _DetalleDeudaScreenState extends State<DetalleDeudaScreen>
                           elevation: 2,
                         ),
                         child: const Text(
-                          'Abonar',
+                          'Guardar',
                           style: TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.w600,
@@ -456,7 +583,8 @@ class _DetalleDeudaScreenState extends State<DetalleDeudaScreen>
         widget.cliente.id!, 
         monto, 
         DateTime.now(), 
-        nota.isEmpty ? null : nota
+        nota.isEmpty ? null : nota,
+        clienteNombre: widget.cliente.nombre,
       );
       
       if (abonoCreado != null) {
@@ -476,20 +604,20 @@ class _DetalleDeudaScreenState extends State<DetalleDeudaScreen>
           AppTheme.successSnackBar('Abono registrado exitosamente'),
         );
         
-        // Si la deuda quedó en 0 o menos, navegar de vuelta a la pantalla principal
+        // Si el saldo quedó en 0 o menos, navegar de vuelta a la pantalla principal
         if (nuevaDeuda <= 0) {
           // Esperar un poco para que el usuario vea el mensaje de éxito
           await Future.delayed(const Duration(milliseconds: 1500));
           
-          // Navegar de vuelta a la pantalla de deudas con indicación de refrescar
+          // Navegar de vuelta a la pantalla de cuenta corriente con indicación de refrescar
           if (mounted) {
             Navigator.of(context).pop(true); // true indica que debe refrescar
             
-            // Mostrar mensaje de deuda saldada
-            AppTheme.showSnackBar(
-              context,
-              AppTheme.successSnackBar('¡Deuda completamente saldada!'),
-            );
+            // Mostrar mensaje de saldo saldado
+        AppTheme.showSnackBar(
+          context,
+          AppTheme.successSnackBar('¡Cuenta corriente al día!'),
+        );
           }
         }
       }
@@ -515,9 +643,9 @@ class _DetalleDeudaScreenState extends State<DetalleDeudaScreen>
         appBar: AppBar(
           centerTitle: true,
           elevation: 0,
-          backgroundColor: null, // Usar el tema
-          title: const Text(
-            'Detalle de Deuda',
+        backgroundColor: null, // Usar el tema
+        title: const Text(
+          'Cuenta Corriente',
             style: AppTheme.appBarTitleStyle,
           ),
         ),
@@ -546,49 +674,88 @@ class _DetalleDeudaScreenState extends State<DetalleDeudaScreen>
                 _buildHeaderSection(isDarkMode),
                 
                 // Tabs
-                Container(
-                  margin: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
-                    borderRadius: BorderRadius.circular(15),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(isDarkMode ? 0.3 : 0.05),
-                        blurRadius: 10,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: TabBar(
-                    controller: _tabController,
-                    indicator: BoxDecoration(
-                      color: AppTheme.primaryColor,
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
                       borderRadius: BorderRadius.circular(15),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(isDarkMode ? 0.3 : 0.05),
+                          blurRadius: 10,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
                     ),
-                    labelColor: Colors.white,
-                    unselectedLabelColor: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
-                    tabs: [
-                      Tab(
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.receipt_long, size: 18),
-                            const SizedBox(width: 8),
-                            Text('Ventas CC (${ventasCC.length})'),
-                          ],
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                      child: TabBar(
+                        controller: _tabController,
+                        isScrollable: true,
+                        indicator: BoxDecoration(
+                          color: AppTheme.primaryColor,
+                          borderRadius: BorderRadius.circular(15),
                         ),
+                        labelColor: Colors.white,
+                        unselectedLabelColor: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
+                        tabs: [
+                          Tab(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 6),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(Icons.receipt_long, size: 18),
+                                  const SizedBox(width: 10),
+                                  Text('Ventas CC (${ventasCC.length})'),
+                                ],
+                              ),
+                            ),
+                          ),
+                          Tab(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 6),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(Icons.payment, size: 18),
+                                  const SizedBox(width: 10),
+                                  Text('Abonos (${abonos.length})'),
+                                ],
+                              ),
+                            ),
+                          ),
+                          Tab(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 6),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(Icons.receipt, size: 18),
+                                  const SizedBox(width: 10),
+                                  Text('Notas (${notasCredito.length})'),
+                                ],
+                              ),
+                            ),
+                          ),
+                          Tab(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 6),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(Icons.inventory_2, size: 18),
+                                  const SizedBox(width: 10),
+                                  Text('Prod. a favor (${productosAFavor.length})'),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                      Tab(
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.payment, size: 18),
-                            const SizedBox(width: 8),
-                            Text('Abonos (${abonos.length})'),
-                          ],
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                 ),
                 
@@ -599,6 +766,8 @@ class _DetalleDeudaScreenState extends State<DetalleDeudaScreen>
                     children: [
                       _buildVentasTab(isDarkMode),
                       _buildAbonosTab(isDarkMode),
+                      _buildNotasCreditoTab(isDarkMode),
+                      _buildProductosAFavorTab(isDarkMode),
                     ],
                   ),
                 ),
@@ -609,7 +778,7 @@ class _DetalleDeudaScreenState extends State<DetalleDeudaScreen>
         backgroundColor: AppTheme.primaryColor,
         icon: const Icon(Icons.payment, color: Colors.white),
         label: const Text(
-          'Saldar Deuda',
+          'Registrar abono',
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
       ),
@@ -618,6 +787,7 @@ class _DetalleDeudaScreenState extends State<DetalleDeudaScreen>
   }
 
   Widget _buildHeaderSection(bool isDarkMode) {
+    final saldoActual = _saldoDetalle ?? _parsearDeuda(widget.cliente.deuda);
     return Container(
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.all(20),
@@ -678,7 +848,7 @@ class _DetalleDeudaScreenState extends State<DetalleDeudaScreen>
                       ),
                     ),
                     Text(
-                      'Deuda actual: \$${_formatearPrecio(_parsearDeuda(widget.cliente.deuda))}',
+                      'Saldo actual: \$${_formatearPrecio(saldoActual)}',
                       style: TextStyle(
                         fontSize: 16,
                         color: Colors.red.shade600,
@@ -705,7 +875,7 @@ class _DetalleDeudaScreenState extends State<DetalleDeudaScreen>
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
-                  'Deuda',
+                  'Cuenta Corriente',
                   style: TextStyle(
                     fontSize: 12,
                     color: Colors.red.shade700,
@@ -776,6 +946,62 @@ class _DetalleDeudaScreenState extends State<DetalleDeudaScreen>
       itemBuilder: (context, index) {
         final abono = abonos[index];
         return _buildAbonoCard(abono, isDarkMode);
+      },
+    );
+  }
+
+  Widget _buildNotasCreditoTab(bool isDarkMode) {
+    if (isLoadingNotasCredito) {
+      return const Center(
+        child: CircularProgressIndicator(
+          valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
+        ),
+      );
+    }
+
+    if (notasCredito.isEmpty) {
+      return _buildEmptyState(
+        isDarkMode: isDarkMode,
+        icon: Icons.receipt,
+        title: 'No hay notas de crédito',
+        subtitle: 'Aún no se registraron notas de crédito para este cliente',
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: notasCredito.length,
+      itemBuilder: (context, index) {
+        final movimiento = notasCredito[index];
+        return _buildNotaCreditoCard(movimiento, isDarkMode);
+      },
+    );
+  }
+
+  Widget _buildProductosAFavorTab(bool isDarkMode) {
+    if (isLoadingProductos) {
+      return const Center(
+        child: CircularProgressIndicator(
+          valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
+        ),
+      );
+    }
+
+    if (productosAFavor.isEmpty) {
+      return _buildEmptyState(
+        isDarkMode: isDarkMode,
+        icon: Icons.inventory_2_outlined,
+        title: 'Sin productos a favor',
+        subtitle: 'No hay entregas pendientes para este cliente',
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: productosAFavor.length,
+      itemBuilder: (context, index) {
+        final producto = productosAFavor[index];
+        return _buildProductoAFavorCard(producto, isDarkMode);
       },
     );
   }
@@ -1328,6 +1554,201 @@ class _DetalleDeudaScreenState extends State<DetalleDeudaScreen>
     );
   }
 
+  Widget _buildNotaCreditoCard(CuentaCorrienteMovimiento movimiento, bool isDarkMode) {
+    final monto = movimiento.montoTotal != 0
+        ? movimiento.montoTotal
+        : movimiento.saldoDelta.abs();
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+        borderRadius: BorderRadius.circular(15),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isDarkMode ? 0.3 : 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.orange.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                Icons.receipt_long,
+                color: Colors.orange.shade700,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    movimiento.detalle ?? 'Nota de crédito',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: isDarkMode ? Colors.white : AppTheme.textColor,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    _formatearFecha(movimiento.fecha),
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
+                    ),
+                  ),
+                  if (movimiento.observacion?.isNotEmpty == true) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      movimiento.observacion ?? '',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade500,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.orange.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                '\$${_formatearPrecio(monto)}',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.orange.shade800,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProductoAFavorCard(ProductoAFavor producto, bool isDarkMode) {
+    final entregado = producto.entregado;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+        borderRadius: BorderRadius.circular(15),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isDarkMode ? 0.3 : 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    Icons.inventory_2,
+                    color: Colors.blue.shade700,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        producto.producto?.nombre ?? 'Producto a favor',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: isDarkMode ? Colors.white : AppTheme.textColor,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Cantidad: ${producto.cantidad}',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: (entregado ? Colors.green : Colors.amber).withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    entregado ? 'Entregado' : 'Pendiente',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: entregado ? Colors.green.shade700 : Colors.amber.shade800,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Icon(
+                  Icons.calendar_today,
+                  size: 16,
+                  color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  _formatearFecha(producto.fechaRegistro),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
+                  ),
+                ),
+              ],
+            ),
+            if (producto.nota != null && producto.nota!.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(
+                producto.nota!,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: isDarkMode ? Colors.grey.shade300 : Colors.grey.shade700,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildEmptyState({
     required bool isDarkMode, 
     required IconData icon, 
@@ -1385,10 +1806,19 @@ class _DetalleDeudaScreenState extends State<DetalleDeudaScreen>
   }
 
   void _mostrarConfirmacionEliminarAbono(Abono abono) async {
+    if (abono.id == null) {
+      AppTheme.showSnackBar(
+        context,
+        AppTheme.warningSnackBar(
+          'Este abono aún no se sincroniza. Conéctate para poder eliminarlo.',
+        ),
+      );
+      return;
+    }
     final confirmar = await AppDialogs.showDeleteConfirmationDialog(
       context: context,
       title: 'Eliminar Abono',
-      message: '¿Está seguro de que desea eliminar este abono de \$${_formatearPrecio(_parsearDeuda(abono.monto))}?\n\nEsto restaurará la deuda del cliente.',
+      message: '¿Está seguro de que desea eliminar este abono de \$${_formatearPrecio(_parsearDeuda(abono.monto))}?\n\nEsto actualizará el saldo del cliente.',
       confirmText: 'Eliminar',
       cancelText: 'Cancelar',
     );

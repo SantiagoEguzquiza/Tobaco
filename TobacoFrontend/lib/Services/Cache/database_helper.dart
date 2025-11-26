@@ -20,7 +20,7 @@ class DatabaseHelper {
 
   static Database? _database;
   static const String _databaseName = 'tobaco_offline.db';
-  static const int _databaseVersion = 3;
+  static const int _databaseVersion = 4;
 
   // Nombres de tablas
   static const String _ventasTable = 'ventas_offline';
@@ -29,9 +29,76 @@ class DatabaseHelper {
   static const String _entregasTable = 'entregas_offline';
 
   Future<Database> get database async {
-    if (_database != null) return _database!;
+    // Verificar si la base de datos está abierta y es válida
+    if (_database != null) {
+      try {
+        // Intentar una operación simple para verificar que la BD esté abierta
+        await _database!.rawQuery('SELECT 1');
+        return _database!;
+      } catch (e) {
+        // Si la BD está cerrada, reinicializarla
+        debugPrint('⚠️ DatabaseHelper: Base de datos cerrada, reinicializando...');
+        _database = null;
+      }
+    }
     _database = await _initDatabase();
     return _database!;
+  }
+
+  /// Formatea una fecha en hora local sin conversión a UTC
+  /// Preserva la hora exacta de la fecha local
+  static String formatDateTimeLocal(DateTime dateTime) {
+    final local = dateTime.toLocal();
+    final year = local.year.toString().padLeft(4, '0');
+    final month = local.month.toString().padLeft(2, '0');
+    final day = local.day.toString().padLeft(2, '0');
+    final hour = local.hour.toString().padLeft(2, '0');
+    final minute = local.minute.toString().padLeft(2, '0');
+    final second = local.second.toString().padLeft(2, '0');
+    final millisecond = local.millisecond.toString().padLeft(3, '0');
+    return '$year-$month-$day $hour:$minute:$second.$millisecond';
+  }
+
+  /// Parsea una fecha desde string, interpretándola siempre como hora local
+  static DateTime parseDateTimeLocal(String dateTimeStr) {
+    try {
+      // Si tiene zona horaria (UTC), convertirla a local
+      if (dateTimeStr.endsWith('Z') || dateTimeStr.contains('+') || 
+          (dateTimeStr.contains('-') && dateTimeStr.length > 19 && 
+           dateTimeStr.substring(19).contains('-'))) {
+        return DateTime.parse(dateTimeStr).toLocal();
+      }
+      
+      // Si es formato ISO sin zona horaria (YYYY-MM-DD HH:mm:ss.mmm), parsear como local
+      if (dateTimeStr.contains(' ')) {
+        // Formato: YYYY-MM-DD HH:mm:ss.mmm
+        final parts = dateTimeStr.split(' ');
+        if (parts.length == 2) {
+          final dateParts = parts[0].split('-');
+          final timeParts = parts[1].split(':');
+          if (dateParts.length == 3 && timeParts.length >= 2) {
+            final year = int.parse(dateParts[0]);
+            final month = int.parse(dateParts[1]);
+            final day = int.parse(dateParts[2]);
+            final hour = int.parse(timeParts[0]);
+            final minute = int.parse(timeParts[1]);
+            final second = timeParts.length > 2 ? int.parse(timeParts[2].split('.')[0]) : 0;
+            final millisecond = timeParts.length > 2 && timeParts[2].contains('.')
+                ? int.parse(timeParts[2].split('.')[1].padRight(3, '0').substring(0, 3))
+                : 0;
+            return DateTime(year, month, day, hour, minute, second, millisecond);
+          }
+        }
+      }
+      
+      // Fallback: usar DateTime.parse (puede interpretar como UTC si no tiene zona horaria)
+      final parsed = DateTime.parse(dateTimeStr);
+      // Si no tiene zona horaria, asumir que es local
+      return parsed.isUtc ? parsed.toLocal() : parsed;
+    } catch (e) {
+      debugPrint('⚠️ DatabaseHelper: Error parseando fecha: $dateTimeStr, usando DateTime.now()');
+      return DateTime.now();
+    }
   }
 
   Future<Database> _initDatabase() async {
@@ -82,6 +149,7 @@ class DatabaseHelper {
         venta_local_id TEXT NOT NULL,
         producto_id INTEGER NOT NULL,
         nombre TEXT NOT NULL,
+        marca TEXT,
         precio REAL NOT NULL,
         cantidad REAL NOT NULL,
         categoria TEXT NOT NULL,
@@ -202,6 +270,10 @@ class DatabaseHelper {
       // en la v3 nueva, esto solo afecta a usuarios que ya tenían v2
       // Las nuevas instalaciones usarán el esquema correcto de v3 desde el inicio
     }
+
+    if (oldVersion < 4) {
+      await db.execute('ALTER TABLE $_productosTable ADD COLUMN marca TEXT');
+    }
   }
 
   /// Guarda una venta offline
@@ -220,7 +292,8 @@ class DatabaseHelper {
           'cliente_id': venta.clienteId,
           'cliente_json': jsonEncode(venta.cliente.toJson()),
           'total': venta.total,
-          'fecha': venta.fecha.toIso8601String(),
+          // Guardar fecha en hora local (formato ISO sin zona horaria para preservar hora exacta)
+          'fecha': formatDateTimeLocal(venta.fecha),
           'metodo_pago': venta.metodoPago?.index,
           'usuario_id_creador': venta.usuarioIdCreador,
           'usuario_creador_json': venta.usuarioCreador != null ? jsonEncode(venta.usuarioCreador!.toJson()) : null,
@@ -239,6 +312,7 @@ class DatabaseHelper {
             'venta_local_id': localId,
             'producto_id': producto.productoId,
             'nombre': producto.nombre,
+            'marca': producto.marca,
             'precio': producto.precio,
             'cantidad': producto.cantidad,
             'categoria': producto.categoria,
@@ -274,43 +348,58 @@ class DatabaseHelper {
 
   /// Obtiene todas las ventas offline pendientes de sincronización
   Future<List<Map<String, dynamic>>> getPendingVentas() async {
-    final db = await database;
-    
-    final ventas = await db.query(
-      _ventasTable,
-      where: 'sync_status = ?',
-      whereArgs: ['pending'],
-      orderBy: 'created_at ASC',
-    );
-
-    List<Map<String, dynamic>> result = [];
-
-    for (var ventaRow in ventas) {
-      final localId = ventaRow['local_id'] as String;
+    try {
+      final db = await database;
       
-      // Obtener productos
-      final productos = await db.query(
-        _productosTable,
-        where: 'venta_local_id = ?',
-        whereArgs: [localId],
+      // Verificar que la base de datos esté abierta
+      if (!db.isOpen) {
+        debugPrint('⚠️ DatabaseHelper: Base de datos cerrada al obtener ventas pendientes');
+        return [];
+      }
+      
+      final ventas = await db.query(
+        _ventasTable,
+        where: 'sync_status = ?',
+        whereArgs: ['pending'],
+        orderBy: 'created_at ASC',
       );
 
-      // Obtener pagos
-      final pagos = await db.query(
-        _pagosTable,
-        where: 'venta_local_id = ?',
-        whereArgs: [localId],
-      );
+      List<Map<String, dynamic>> result = [];
 
-      result.add({
-        'venta': ventaRow,
-        'productos': productos,
-        'pagos': pagos,
-      });
+      for (var ventaRow in ventas) {
+        try {
+          final localId = ventaRow['local_id'] as String;
+          
+          // Obtener productos
+          final productos = await db.query(
+            _productosTable,
+            where: 'venta_local_id = ?',
+            whereArgs: [localId],
+          );
+
+          // Obtener pagos
+          final pagos = await db.query(
+            _pagosTable,
+            where: 'venta_local_id = ?',
+            whereArgs: [localId],
+          );
+
+          result.add({
+            'venta': ventaRow,
+            'productos': productos,
+            'pagos': pagos,
+          });
+        } catch (e) {
+          debugPrint('⚠️ DatabaseHelper: Error procesando venta pendiente: $e');
+          // Continuar con la siguiente venta
+        }
+      }
+
+      return result;
+    } catch (e) {
+      debugPrint('❌ DatabaseHelper: Error al obtener ventas pendientes: $e');
+      return [];
     }
-
-    
-    return result;
   }
 
   /// Obtiene todas las ventas offline (incluidas las sincronizadas)
@@ -347,6 +436,7 @@ class DatabaseHelper {
     List<VentasProductos> productos = productosRows.map((p) => VentasProductos(
       productoId: p['producto_id'] as int,
       nombre: p['nombre'] as String,
+      marca: p['marca'] as String?,
       precio: p['precio'] as double,
       cantidad: p['cantidad'] as double,
       categoria: p['categoria'] as String,
@@ -534,28 +624,186 @@ class DatabaseHelper {
     }
   }
 
+  /// Borra solo las ventas sincronizadas (sync_status = 'synced'), preservando las pendientes
+  Future<void> borrarVentasSincronizadas() async {
+    try {
+      final db = await database;
+      
+      await db.transaction((txn) async {
+        // Obtener las ventas sincronizadas que vamos a borrar
+        final ventasSincronizadas = await txn.query(
+          _ventasTable,
+          where: 'sync_status = ?',
+          whereArgs: ['synced'],
+          columns: ['local_id'],
+        );
+
+        if (ventasSincronizadas.isEmpty) {
+          debugPrint('📦 DatabaseHelper: No hay ventas sincronizadas para borrar');
+          return;
+        }
+
+        final localIds = ventasSincronizadas.map((v) => v['local_id'] as String).toList();
+
+        // Borrar productos de las ventas sincronizadas
+        for (final localId in localIds) {
+          await txn.delete(
+            _productosTable,
+            where: 'venta_local_id = ?',
+            whereArgs: [localId],
+          );
+        }
+
+        // Borrar pagos de las ventas sincronizadas
+        for (final localId in localIds) {
+          await txn.delete(
+            _pagosTable,
+            where: 'venta_local_id = ?',
+            whereArgs: [localId],
+          );
+        }
+
+        // Borrar las ventas sincronizadas
+        final ventasBorradas = await txn.delete(
+          _ventasTable,
+          where: 'sync_status = ?',
+          whereArgs: ['synced'],
+        );
+        
+        debugPrint('🗑️ DatabaseHelper: $ventasBorradas ventas sincronizadas borradas (pendientes preservadas)');
+      });
+      
+      debugPrint('✅ DatabaseHelper: Ventas sincronizadas borradas, pendientes preservadas');
+    } catch (e) {
+      debugPrint('❌ DatabaseHelper: Error al borrar ventas sincronizadas: $e');
+      // Si la BD está cerrada, intentar reinicializar y continuar
+      if (e.toString().contains('database_closed')) {
+        try {
+          _database = null;
+          final db = await database;
+          debugPrint('✅ DatabaseHelper: Base de datos reinicializada después del error');
+        } catch (e2) {
+          debugPrint('❌ DatabaseHelper: Error al reinicializar base de datos: $e2');
+        }
+      }
+      // No rethrow, solo loguear el error para no romper el flujo
+    }
+  }
+
+  /// Borra todas las ventas pendientes (sync_status = 'pending')
+  /// Útil para limpiar ventas bugeadas que no se pueden sincronizar
+  Future<int> borrarTodasLasVentasPendientes() async {
+    try {
+      final db = await database;
+      int ventasBorradas = 0;
+      
+      await db.transaction((txn) async {
+        // Obtener las ventas pendientes que vamos a borrar
+        final ventasPendientes = await txn.query(
+          _ventasTable,
+          where: 'sync_status = ?',
+          whereArgs: ['pending'],
+          columns: ['local_id'],
+        );
+
+        if (ventasPendientes.isEmpty) {
+          debugPrint('📦 DatabaseHelper: No hay ventas pendientes para borrar');
+          return;
+        }
+
+        final localIds = ventasPendientes.map((v) => v['local_id'] as String).toList();
+        debugPrint('🗑️ DatabaseHelper: Borrando ${localIds.length} ventas pendientes...');
+
+        // Borrar productos de las ventas pendientes
+        for (final localId in localIds) {
+          await txn.delete(
+            _productosTable,
+            where: 'venta_local_id = ?',
+            whereArgs: [localId],
+          );
+        }
+
+        // Borrar pagos de las ventas pendientes
+        for (final localId in localIds) {
+          await txn.delete(
+            _pagosTable,
+            where: 'venta_local_id = ?',
+            whereArgs: [localId],
+          );
+        }
+
+        // Borrar las ventas pendientes
+        ventasBorradas = await txn.delete(
+          _ventasTable,
+          where: 'sync_status = ?',
+          whereArgs: ['pending'],
+        );
+        
+        debugPrint('🗑️ DatabaseHelper: $ventasBorradas ventas pendientes borradas');
+      });
+      
+      debugPrint('✅ DatabaseHelper: Todas las ventas pendientes borradas exitosamente');
+      return ventasBorradas;
+    } catch (e) {
+      debugPrint('❌ DatabaseHelper: Error al borrar ventas pendientes: $e');
+      // Si la BD está cerrada, intentar reinicializar y retornar 0
+      if (e.toString().contains('database_closed')) {
+        try {
+          _database = null;
+          await database;
+          debugPrint('✅ DatabaseHelper: Base de datos reinicializada después del error');
+        } catch (e2) {
+          debugPrint('❌ DatabaseHelper: Error al reinicializar base de datos: $e2');
+        }
+        return 0;
+      }
+      rethrow;
+    }
+  }
+
   /// Obtiene estadísticas de la base de datos offline
   Future<Map<String, int>> getStats() async {
-    final db = await database;
-    
-    final pending = Sqflite.firstIntValue(
-      await db.rawQuery('SELECT COUNT(*) FROM $_ventasTable WHERE sync_status = ?', ['pending'])
-    ) ?? 0;
-    
-    final failed = Sqflite.firstIntValue(
-      await db.rawQuery('SELECT COUNT(*) FROM $_ventasTable WHERE sync_status = ?', ['failed'])
-    ) ?? 0;
-    
-    final synced = Sqflite.firstIntValue(
-      await db.rawQuery('SELECT COUNT(*) FROM $_ventasTable WHERE sync_status = ?', ['synced'])
-    ) ?? 0;
+    try {
+      final db = await database;
+      
+      // Verificar que la base de datos esté abierta
+      if (!db.isOpen) {
+        debugPrint('⚠️ DatabaseHelper: Base de datos cerrada al obtener stats');
+        return {
+          'pending': 0,
+          'failed': 0,
+          'synced': 0,
+          'total': 0,
+        };
+      }
+      
+      final pending = Sqflite.firstIntValue(
+        await db.rawQuery('SELECT COUNT(*) FROM $_ventasTable WHERE sync_status = ?', ['pending'])
+      ) ?? 0;
+      
+      final failed = Sqflite.firstIntValue(
+        await db.rawQuery('SELECT COUNT(*) FROM $_ventasTable WHERE sync_status = ?', ['failed'])
+      ) ?? 0;
+      
+      final synced = Sqflite.firstIntValue(
+        await db.rawQuery('SELECT COUNT(*) FROM $_ventasTable WHERE sync_status = ?', ['synced'])
+      ) ?? 0;
 
-    return {
-      'pending': pending,
-      'failed': failed,
-      'synced': synced,
-      'total': pending + failed + synced,
-    };
+      return {
+        'pending': pending,
+        'failed': failed,
+        'synced': synced,
+        'total': pending + failed + synced,
+      };
+    } catch (e) {
+      debugPrint('❌ DatabaseHelper: Error al obtener stats: $e');
+      return {
+        'pending': 0,
+        'failed': 0,
+        'synced': 0,
+        'total': 0,
+      };
+    }
   }
 
   /// Cierra la base de datos

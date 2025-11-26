@@ -13,6 +13,7 @@ import 'package:tobaco/Services/PricingService.dart';
 import 'package:tobaco/Theme/app_theme.dart';
 import 'package:tobaco/Theme/headers.dart';
 import 'package:tobaco/Helpers/api_handler.dart';
+import 'package:tobaco/Helpers/producto_descuento_helper.dart';
 
 class SeleccionarProductosScreen extends StatefulWidget {
   final List<ProductoSeleccionado> productosYaSeleccionados;
@@ -280,12 +281,25 @@ class _SeleccionarProductosScreenState
   }
 
   double _getPrecioUnitarioReal(Producto producto) {
-    // Este método devuelve el precio unitario base, considerando solo precios especiales
+    // Este método devuelve el precio unitario base, considerando precios especiales y descuentos
     // El descuento global se aplica en el backend al confirmar la venta
+    
+    // Primero verificar si hay precio especial para el cliente
+    double precioBase;
     if (widget.cliente != null && preciosEspeciales.containsKey(producto.id)) {
-      return preciosEspeciales[producto.id]!;
+      precioBase = preciosEspeciales[producto.id]!;
+    } else {
+      precioBase = producto.precio;
     }
-    return producto.precio;
+    
+    // Aplicar descuento del producto si está activo
+    if (ProductoDescuentoHelper.tieneDescuentoActivo(producto)) {
+      // Si hay precio especial, aplicar descuento sobre ese precio
+      final descuento = producto.descuento;
+      return precioBase * (1 - descuento / 100);
+    }
+    
+    return precioBase;
   }
 
   double _getPrecioUnitarioPromedio(Producto producto) {
@@ -308,7 +322,15 @@ class _SeleccionarProductosScreenState
     // Check cache first
     if (pricingResults.containsKey(cacheKey)) {
       final precioTotalEntera = pricingResults[cacheKey]!.finalPrice;
-      return precioTotalEntera / cantidadEntera;
+      double precioUnitarioPromedio = precioTotalEntera / cantidadEntera;
+      
+      // Aplicar descuento del producto si está activo (sobre el precio ya calculado con packs)
+      if (ProductoDescuentoHelper.tieneDescuentoActivo(producto)) {
+        final descuento = producto.descuento;
+        precioUnitarioPromedio = precioUnitarioPromedio * (1 - descuento / 100);
+      }
+      
+      return precioUnitarioPromedio;
     }
 
     // Calculate pricing using the new service (solo con la parte entera)
@@ -329,8 +351,16 @@ class _SeleccionarProductosScreenState
       // Cache the result
       pricingResults[cacheKey] = pricingResult;
 
-      // Devolver el precio unitario promedio (precio total / cantidad entera)
-      return pricingResult.finalPrice / cantidadEntera;
+      // Calcular el precio unitario promedio (precio total / cantidad entera)
+      double precioUnitarioPromedio = pricingResult.finalPrice / cantidadEntera;
+      
+      // Aplicar descuento del producto si está activo (sobre el precio ya calculado con packs)
+      if (ProductoDescuentoHelper.tieneDescuentoActivo(producto)) {
+        final descuento = producto.descuento;
+        precioUnitarioPromedio = precioUnitarioPromedio * (1 - descuento / 100);
+      }
+      
+      return precioUnitarioPromedio;
     } catch (e) {
       // Fallback to old logic if there's an error
       if (widget.cliente != null &&
@@ -338,6 +368,178 @@ class _SeleccionarProductosScreenState
         return preciosEspeciales[producto.id]!;
       }
       return producto.precio;
+    }
+  }
+
+  /// Widget para mostrar precio con descuento en ventas
+  Widget _buildPrecioConDescuentoEnVentas(BuildContext context, Producto producto) {
+    final tieneDescuentoActivo = ProductoDescuentoHelper.tieneDescuentoActivo(producto);
+    final precioBase = widget.cliente != null && preciosEspeciales.containsKey(producto.id)
+        ? preciosEspeciales[producto.id]!
+        : producto.precio;
+    final precioConDescuento = tieneDescuentoActivo
+        ? precioBase * (1 - producto.descuento / 100)
+        : precioBase;
+    final precioUnitarioPromedio = _getPrecioUnitarioPromedio(producto);
+    final fechaExpiracion = ProductoDescuentoHelper.obtenerFechaExpiracionFormateada(producto);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // Si hay descuento activo y el precio promedio es diferente al precio base
+    if (tieneDescuentoActivo && precioUnitarioPromedio < precioBase) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              _formatearPrecioConDecimales(precioUnitarioPromedio),
+              const SizedBox(width: 4),
+              Text(
+                'c/u',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(width: 8),
+              // Precio original tachado
+              Text(
+                '\$${precioBase.toStringAsFixed(2)}',
+                style: TextStyle(
+                  fontSize: 12,
+                  decoration: TextDecoration.lineThrough,
+                  color: isDark ? Colors.grey.shade500 : Colors.grey.shade400,
+                ),
+              ),
+              const SizedBox(width: 4),
+              // Badge de descuento
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.green.shade100,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  '-${producto.descuento.toStringAsFixed(0)}%',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.green.shade700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          // Fecha de expiración si existe
+          if (fechaExpiracion != null) ...[
+            const SizedBox(height: 2),
+            Row(
+              children: [
+                Icon(
+                  Icons.calendar_today_outlined,
+                  size: 11,
+                  color: isDark ? Colors.grey.shade500 : Colors.grey.shade500,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  'Vence: $fechaExpiracion',
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: isDark ? Colors.grey.shade500 : Colors.grey.shade500,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      );
+    } else if (tieneDescuentoActivo) {
+      // Si hay descuento pero el precio promedio es igual al base (sin packs)
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              _formatearPrecioConDecimales(precioConDescuento),
+              const SizedBox(width: 4),
+              Text(
+                'c/u',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(width: 8),
+              // Precio original tachado
+              Text(
+                '\$${precioBase.toStringAsFixed(2)}',
+                style: TextStyle(
+                  fontSize: 12,
+                  decoration: TextDecoration.lineThrough,
+                  color: isDark ? Colors.grey.shade500 : Colors.grey.shade400,
+                ),
+              ),
+              const SizedBox(width: 4),
+              // Badge de descuento
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.green.shade100,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  '-${producto.descuento.toStringAsFixed(0)}%',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.green.shade700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          // Fecha de expiración si existe
+          if (fechaExpiracion != null) ...[
+            const SizedBox(height: 2),
+            Row(
+              children: [
+                Icon(
+                  Icons.calendar_today_outlined,
+                  size: 11,
+                  color: isDark ? Colors.grey.shade500 : Colors.grey.shade500,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  'Vence: $fechaExpiracion',
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: isDark ? Colors.grey.shade500 : Colors.grey.shade500,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      );
+    } else {
+      // Precio normal sin descuento
+      return Row(
+        children: [
+          _formatearPrecioConDecimales(precioUnitarioPromedio),
+          const SizedBox(width: 4),
+          Text(
+            'c/u',
+            style: TextStyle(
+              fontSize: 14,
+              color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      );
     }
   }
 
@@ -1177,30 +1379,7 @@ class _SeleccionarProductosScreenState
                                                           : TextOverflow.ellipsis,
                                                     ),
                                                     const SizedBox(height: 4),
-                                                    Row(
-                                                      children: [
-                                                        _formatearPrecioConDecimales(
-                                                            _getPrecioUnitarioPromedio(
-                                                                producto)),
-                                                        const SizedBox(width: 4),
-                                                        Text(
-                                                          'c/u',
-                                                          style: TextStyle(
-                                                            fontSize: 14,
-                                                            color: Theme.of(context)
-                                                                        .brightness ==
-                                                                    Brightness
-                                                                        .dark
-                                                                ? Colors
-                                                                    .grey.shade400
-                                                                : Colors.grey
-                                                                    .shade600,
-                                                            fontWeight:
-                                                                FontWeight.w500,
-                                                          ),
-                                                        ),
-                                                      ],
-                                                    ),
+                                                    _buildPrecioConDescuentoEnVentas(context, producto),
                                                   ],
                                                 ),
                                               ),

@@ -1,6 +1,7 @@
 class VentasProductos {
   int productoId;
   String nombre;
+  String? marca;
   double precio;
   double cantidad;
   String categoria;
@@ -11,10 +12,15 @@ class VentasProductos {
   String? nota; // Nota opcional sobre la entrega
   DateTime? fechaChequeo; // Fecha de chequeo
   int? usuarioChequeoId; // ID del usuario que hizo el chequeo
+  // Campos de descuento del producto (en el momento de la venta)
+  double descuento; // Porcentaje de descuento del producto
+  DateTime? fechaExpiracionDescuento; // Fecha de expiración del descuento
+  bool descuentoIndefinido; // Si el descuento es indefinido
 
   VentasProductos({
     required this.productoId,
     required this.nombre,
+    this.marca,
     required this.precio,
     required this.cantidad,
     required this.categoria,
@@ -25,6 +31,9 @@ class VentasProductos {
     this.nota,
     this.fechaChequeo,
     this.usuarioChequeoId,
+    this.descuento = 0.0,
+    this.fechaExpiracionDescuento,
+    this.descuentoIndefinido = false,
   });
 
   factory VentasProductos.fromJson(Map<String, dynamic> json) {
@@ -32,9 +41,20 @@ class VentasProductos {
     // que tiene ProductoId, Producto (objeto completo), y Cantidad
     final producto = json['producto'] as Map<String, dynamic>? ?? {};
     
+    // Parsear fecha de expiración de descuento si existe
+    DateTime? parseFechaExpiracion;
+    if (producto['fechaExpiracionDescuento'] != null) {
+      try {
+        parseFechaExpiracion = DateTime.parse(producto['fechaExpiracionDescuento'] as String);
+      } catch (e) {
+        parseFechaExpiracion = null;
+      }
+    }
+    
     return VentasProductos(
       productoId: json['productoId'] ?? producto['id'] ?? 0,
       nombre: producto['nombre'] ?? '',
+      marca: producto['marca'],
       precio: (producto['precio'] as num?)?.toDouble() ?? 0.0,
       cantidad: (json['cantidad'] as num?)?.toDouble() ?? 0.0,
       categoria: producto['categoriaNombre'] ?? '',
@@ -45,6 +65,11 @@ class VentasProductos {
       nota: json['nota'],
       fechaChequeo: json['fechaChequeo'] != null ? DateTime.parse(json['fechaChequeo']) : null,
       usuarioChequeoId: json['usuarioChequeoId'],
+      descuento: producto['descuento'] != null
+          ? double.tryParse(producto['descuento'].toString()) ?? 0.0
+          : 0.0,
+      fechaExpiracionDescuento: parseFechaExpiracion,
+      descuentoIndefinido: producto['descuentoIndefinido'] ?? false,
     );
   }
 
@@ -53,6 +78,7 @@ class VentasProductos {
         'producto': {
           'id': productoId,
           'nombre': nombre,
+          'marca': marca,
           'precio': precio,
           'stock': 0, // Este campo es para el stock del producto, no la cantidad vendida
           'categoriaId': categoriaId, // Usar el ID de la categoría

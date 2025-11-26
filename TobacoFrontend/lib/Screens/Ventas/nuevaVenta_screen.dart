@@ -1049,7 +1049,12 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
   }
 
   double _calcularPrecioFinalProducto(ProductoSeleccionado producto) {
-    double precio = preciosEspeciales[producto.id] ?? producto.precio;
+    // El precio en ProductoSeleccionado ya incluye:
+    // - Precio especial (si existe)
+    // - Packs (si aplica)
+    // - Descuento del producto (si está activo)
+    // Solo falta aplicar el descuento global del cliente
+    double precio = producto.precio;
 
     // Aplicar descuento global si existe
     if (clienteSeleccionado?.descuentoGlobal != null &&
@@ -1165,6 +1170,8 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
   }
 
   double _calcularTotal() {
+    // El precio en ProductoSeleccionado ya incluye el descuento del producto
+    // (se aplica en seleccionarProducto_screen cuando se crea el ProductoSeleccionado)
     return productosSeleccionados.fold(
         0.0, (sum, ps) => sum + (ps.precio * ps.cantidad));
   }
@@ -1224,6 +1231,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
           .map((ps) => VentasProductos(
                 productoId: ps.id,
                 nombre: ps.nombre,
+                marca: ps.marca,
                 precio: ps.precio,
                 cantidad: ps.cantidad,
                 categoria: ps.categoria,
@@ -1237,7 +1245,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
         cliente: clienteSeleccionado!,
         ventasProductos: productos,
         total: _calcularTotalConDescuento(),
-        fecha: DateTime.now(),
+        fecha: DateTime.now().toLocal(), // Asegurar que sea hora local
       );
 
       final Ventas? ventaConPagos = await Navigator.push(
@@ -1273,21 +1281,18 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
           throw Exception(result['message']);
         }
 
-        // Mostrar mensaje offline INMEDIATAMENTE si aplica, antes de cualquier otra operación
+        // Mostrar mensaje offline INMEDIATAMENTE (sin Future.microtask que añade delay)
         if (result['isOffline']) {
-          // Usar un microtask para asegurar que el diálogo aparezca en el siguiente frame
-          await Future.microtask(() async {
-            if (mounted) {
-              await AppDialogs.showWarningDialog(
-                context: context,
-                title: 'Venta guardada offline',
-                message:
-                    'Venta guardada localmente. Se sincronizará cuando haya conexión.',
-                buttonText: 'Entendido',
-                icon: Icons.cloud_off,
-              );
-            }
-          });
+          if (mounted) {
+            await AppDialogs.showWarningDialog(
+              context: context,
+              title: 'Venta guardada offline',
+              message:
+                  'Venta guardada localmente. Se sincronizará cuando haya conexión.',
+              buttonText: 'Entendido',
+              icon: Icons.cloud_off,
+            );
+          }
         }
 
         // Manejar asignación según el tipo de empleado (en background si es offline)

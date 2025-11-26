@@ -1,9 +1,15 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:tobaco/Helpers/api_handler.dart';
 import 'package:tobaco/Models/Abono.dart';
 import 'package:tobaco/Services/Abonos_Service/abonos_service.dart';
+import 'package:tobaco/Services/Cache/cuenta_corriente_cache_service.dart';
+import 'package:tobaco/Services/Connectivity/connectivity_service.dart';
 
 class AbonosProvider with ChangeNotifier {
   final AbonosService _abonosService = AbonosService();
+  final CuentaCorrienteCacheService _ccCacheService = CuentaCorrienteCacheService();
+  final ConnectivityService _connectivityService = ConnectivityService();
 
   List<Abono> _abonos = [];
   bool _isLoading = false;
@@ -35,12 +41,28 @@ class AbonosProvider with ChangeNotifier {
     _clearError();
     
     try {
+      final tieneConexion = await _connectivityService.checkFullConnectivity();
+      if (!tieneConexion) {
+        final offline = await _ccCacheService.obtenerAbonosOffline(clienteId);
+        _abonos = List<Abono>.from(offline);
+        notifyListeners();
+        return offline;
+      }
       final abonos = await _abonosService.obtenerAbonosPorClienteId(clienteId);
+      _abonos = List<Abono>.from(abonos);
+      await _ccCacheService.cacheAbonos(clienteId, abonos);
       notifyListeners();
       return abonos;
     } catch (e) {
       _setError('Error al obtener los abonos del cliente: $e');
       debugPrint('Error: $e');
+      final esTimeout = e is TimeoutException;
+      if (Apihandler.isConnectionError(e) || esTimeout) {
+        final offline = await _ccCacheService.obtenerAbonosOffline(clienteId);
+        _abonos = List<Abono>.from(offline);
+        notifyListeners();
+        return offline;
+      }
       return [];
     } finally {
       _setLoading(false);
@@ -86,13 +108,33 @@ class AbonosProvider with ChangeNotifier {
     }
   }
 
-  Future<Abono?> saldarDeuda(int clienteId, double monto, DateTime fecha, String? nota) async {
+  Future<Abono?> saldarDeuda(
+    int clienteId,
+    double monto,
+    DateTime fecha,
+    String? nota, {
+    required String clienteNombre,
+  }) async {
     _setLoading(true);
     _clearError();
     
     try {
+      final tieneConexion = await _connectivityService.checkFullConnectivity();
+      if (!tieneConexion) {
+        final abonoOffline = await _ccCacheService.registrarAbonoOffline(
+          clienteId: clienteId,
+          clienteNombre: clienteNombre,
+          monto: monto,
+          nota: nota,
+        );
+        _abonos.add(abonoOffline);
+        notifyListeners();
+        return abonoOffline;
+      }
+
       final abonoCreado = await _abonosService.saldarDeuda(clienteId, monto, fecha, nota);
       _abonos.add(abonoCreado);
+      await _ccCacheService.cacheAbonos(clienteId, _abonos);
       notifyListeners();
       return abonoCreado;
     } catch (e) {
@@ -123,8 +165,19 @@ class AbonosProvider with ChangeNotifier {
     _clearError();
     try {
       await _abonosService.eliminarAbono(id);
-      // Remover el abono de la lista local
-      _abonos.removeWhere((abono) => abono.id == id);
+      int? clienteId;
+      final index = _abonos.indexWhere((abono) => abono.id == id);
+      if (index != -1) {
+        clienteId = _abonos[index].clienteId;
+        _abonos.removeAt(index);
+      } else if (_abonos.isNotEmpty) {
+        clienteId = _abonos.first.clienteId;
+      }
+      if (clienteId != null) {
+        final abonosCliente =
+            _abonos.where((abono) => abono.clienteId == clienteId).toList();
+        await _ccCacheService.cacheAbonos(clienteId, abonosCliente);
+      }
       return true;
     } catch (e) {
       _setError(e.toString());
