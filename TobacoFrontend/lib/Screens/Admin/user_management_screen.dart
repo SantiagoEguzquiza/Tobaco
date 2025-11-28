@@ -1433,47 +1433,79 @@ class _CreateUserDialogState extends State<_CreateUserDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Dialog(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
+      backgroundColor: Colors.transparent,
+      elevation: 0,
       child: Container(
-        width: double.maxFinite,
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Header
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF4CAF50).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Icon(
-                    Icons.person_add,
-                    color: Color(0xFF4CAF50),
-                    size: 24,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Text(
-                    'Crear Nuevo Usuario',
-                    style: TextStyle(
-                    color: Theme.of(context).brightness == Brightness.dark
-                        ? const Color(0xFFE0E0E0)
-                        : const Color(0xFF1B5E20),
-                      fontWeight: FontWeight.bold,
-                      fontSize: 20,
-                    ),
-                ),
-              ],
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(isDark ? 0.5 : 0.15),
+              blurRadius: 20,
+              spreadRadius: 0,
+              offset: const Offset(0, 8),
             ),
-            const SizedBox(height: 20),
-            // Content
-                      Form(
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header con título
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+                decoration: BoxDecoration(
+                  color: isDark 
+                      ? const Color(0xFF2A2A2A).withOpacity(0.5) 
+                      : Colors.grey.shade50,
+                  border: Border(
+                    bottom: BorderSide(
+                      color: isDark 
+                          ? Colors.grey.shade800 
+                          : Colors.grey.shade200,
+                      width: 1,
+                    ),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF4CAF50).withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(
+                        Icons.person_add,
+                        color: Color(0xFF4CAF50),
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Crear Nuevo Usuario',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w700,
+                          color: isDark ? Colors.white : Colors.black87,
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Contenido
+              Padding(
+                padding: const EdgeInsets.all(24),
+                child: SingleChildScrollView(
+                  child: Form(
                         key: _formKey,
                         child: Column(
                           children: [
@@ -1848,116 +1880,138 @@ class _CreateUserDialogState extends State<_CreateUserDialog> {
                                   fontStyle: FontStyle.italic,
                                 ),
                               ),
-                              const SizedBox(height: 16),
-                              TextFormField(
-                                controller: _zonaController,
-                                style: TextStyle(
-                                  color: Theme.of(context).brightness == Brightness.dark
-                                      ? const Color(0xFFE0E0E0)
-                                      : Colors.black,
-                                ),
-                                decoration: InputDecoration(
-                                  labelText: 'Zona (opcional)',
-                                  labelStyle: TextStyle(
-                                    color: Theme.of(context).brightness == Brightness.dark
-                                        ? Colors.white
-                                        : const Color(0xFF4CAF50),
-                                  ),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  focusedBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                    borderSide: const BorderSide(
-                                      color: Color(0xFF4CAF50),
-                                      width: 2,
-                                    ),
-                                  ),
-                                  prefixIcon: const Icon(
-                                    Icons.location_on,
-                                    color: Color(0xFF4CAF50),
-                                  ),
-                                  isDense: true,
-                                  contentPadding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 16,
-                                  ),
-                                  helperText: 'Ej: Zona Norte, Zona Sur, Centro',
-                                  helperStyle: TextStyle(
-                                    color: Theme.of(context).brightness == Brightness.dark
-                                        ? Colors.grey[500]
-                                        : Colors.grey[600],
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ),
                             ],
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-            // Action buttons
-                      Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton(
-                              onPressed: () => Navigator.of(context).pop(),
-                              style: OutlinedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(vertical: 12),
-                                side: BorderSide(color: AppTheme.primaryColor.withOpacity(0.3), width: 1.5),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
+                            const SizedBox(height: 16),
+                            TextFormField(
+                              controller: _zonaController,
+                              style: TextStyle(
+                                color: Theme.of(context).brightness == Brightness.dark
+                                    ? const Color(0xFFE0E0E0)
+                                    : Colors.black,
                               ),
-                              child: Text(
-                                'Cancelar',
-                                style: TextStyle(
+                              decoration: InputDecoration(
+                                labelText: 'Zona (opcional)',
+                                labelStyle: TextStyle(
                                   color: Theme.of(context).brightness == Brightness.dark
                                       ? Colors.white
-                                      : Colors.black,
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 14,
+                                      : const Color(0xFF4CAF50),
+                                ),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: const BorderSide(
+                                    color: Color(0xFF4CAF50),
+                                    width: 2,
+                                  ),
+                                ),
+                                prefixIcon: const Icon(
+                                  Icons.location_on,
+                                  color: Color(0xFF4CAF50),
+                                ),
+                                isDense: true,
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 16,
+                                ),
+                                helperText: 'Ej: Zona Norte, Zona Sur, Centro',
+                                helperStyle: TextStyle(
+                                  color: Theme.of(context).brightness == Brightness.dark
+                                      ? Colors.grey[500]
+                                      : Colors.grey[600],
+                                  fontSize: 12,
                                 ),
                               ),
                             ),
+                            ],
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Consumer<UserProvider>(
-                              builder: (context, userProvider, child) {
-                                return ElevatedButton(
-                                  onPressed: userProvider.isLoading
-                                      ? null
-                                      : () => _createUser(context, userProvider),
-                                  style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.primaryColor,
-                                    foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                  ),
-                                  child: userProvider.isLoading
-                                      ? const SizedBox(
-                                          width: 20,
-                                          height: 20,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                        Colors.white),
-                                          ),
-                                        )
-                                      : const Text('Crear'),
-                                );
-                              },
+                        ),
+                      ),
+                    ),
+              // Botones
+              Container(
+                padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                child: Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            backgroundColor: isDark 
+                                ? const Color(0xFF2A2A2A) 
+                                : Colors.transparent,
+                            side: BorderSide(
+                              color: isDark 
+                                  ? Colors.white
+                                  : Colors.grey.shade300,
+                              width: 1.5,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            elevation: 0,
+                          ),
+                          child: Text(
+                            'Cancelar',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 15,
+                              letterSpacing: 0.2,
                             ),
                           ),
-                        ],
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Consumer<UserProvider>(
+                          builder: (context, userProvider, child) {
+                            return ElevatedButton(
+                              onPressed: userProvider.isLoading
+                                  ? null
+                                  : () => _createUser(context, userProvider),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppTheme.primaryColor,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                elevation: 0,
+                                shadowColor: AppTheme.primaryColor.withOpacity(0.3),
+                              ),
+                              child: userProvider.isLoading
+                                  ? const SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        valueColor: AlwaysStoppedAnimation<Color>(
+                                            Colors.white),
+                                      ),
+                                    )
+                                  : const Text(
+                                      'Crear',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 15,
+                                        letterSpacing: 0.2,
+                                      ),
+                                    ),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
-      ),
-    );
+      );
   }
 
   Future<void> _createUser(
@@ -2103,54 +2157,82 @@ class _EditUserDialogState extends State<_EditUserDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Dialog(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
+      backgroundColor: Colors.transparent,
+      elevation: 0,
       child: Container(
-        width: double.maxFinite,
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Header
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF4CAF50).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Icon(
-                    Icons.edit,
-                  color: Color(0xFF4CAF50),
-                    size: 24,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    'Editar Usuario',
-                    style: TextStyle(
-                      color: Theme.of(context).brightness == Brightness.dark
-                          ? const Color(0xFFE0E0E0)
-                          : const Color(0xFF1B5E20),
-                      fontWeight: FontWeight.bold,
-                      fontSize: 20,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                const SizedBox(width: 12),
-              ],
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(isDark ? 0.5 : 0.15),
+              blurRadius: 20,
+              spreadRadius: 0,
+              offset: const Offset(0, 8),
             ),
-            const SizedBox(height: 20),
-            // Content
-                      Form(
-                        key: _formKey,
-                        child: Column(
-                          children: [
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header con título
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+                decoration: BoxDecoration(
+                  color: isDark 
+                      ? const Color(0xFF2A2A2A).withOpacity(0.5) 
+                      : Colors.grey.shade50,
+                  border: Border(
+                    bottom: BorderSide(
+                      color: isDark 
+                          ? Colors.grey.shade800 
+                          : Colors.grey.shade200,
+                      width: 1,
+                    ),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF4CAF50).withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(
+                        Icons.edit,
+                        color: Color(0xFF4CAF50),
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Editar Usuario',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w700,
+                          color: isDark ? Colors.white : Colors.black87,
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Contenido
+              Padding(
+                padding: const EdgeInsets.all(24),
+                child: SingleChildScrollView(
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      children: [
                             TextFormField(
                               controller: _userNameController,
                               style: TextStyle(
@@ -2631,69 +2713,91 @@ class _EditUserDialogState extends State<_EditUserDialog> {
                         ),
                       ),
                       const SizedBox(height: 16),
-                    ],
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              // Botones
+              Container(
+                padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          backgroundColor: isDark 
+                              ? const Color(0xFF2A2A2A) 
+                              : Colors.transparent,
+                          side: BorderSide(
+                            color: isDark 
+                                ? Colors.white
+                                : Colors.grey.shade300,
+                            width: 1.5,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: Text(
+                          'Cancelar',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 15,
+                            letterSpacing: 0.2,
+                          ),
                         ),
                       ),
-                      const SizedBox(height: 20),
-            // Action buttons
-                      Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton(
-                              onPressed: () => Navigator.of(context).pop(),
-                              style: OutlinedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(vertical: 12),
-                                side: BorderSide(color: AppTheme.primaryColor.withOpacity(0.3), width: 1.5),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Consumer<UserProvider>(
+                        builder: (context, userProvider, child) {
+                          return ElevatedButton(
+                            onPressed: userProvider.isLoading
+                                ? null
+                                : () => _updateUser(context, userProvider),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.primaryColor,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
                               ),
-                              child: Text(
-                                'Cancelar',
-                                style: TextStyle(
-                                  color: Theme.of(context).brightness == Brightness.dark
-                                      ? Colors.white
-                                      : Colors.black,
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 14,
-                                ),
-                              ),
+                              elevation: 0,
+                              shadowColor: AppTheme.primaryColor.withOpacity(0.3),
                             ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Consumer<UserProvider>(
-                              builder: (context, userProvider, child) {
-                                return ElevatedButton(
-                                  onPressed: userProvider.isLoading
-                                      ? null
-                                      : () => _updateUser(context, userProvider),
-                                  style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.primaryColor,
-                                    foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(8),
+                            child: userProvider.isLoading
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                          Colors.white),
+                                    ),
+                                  )
+                                : const Text(
+                                    'Actualizar',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 15,
+                                      letterSpacing: 0.2,
                                     ),
                                   ),
-                                  child: userProvider.isLoading
-                                      ? const SizedBox(
-                                          width: 20,
-                                          height: 20,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                      Colors.white),
-                                          ),
-                                        )
-                                      : const Text('Actualizar'),
-                                );
-                              },
-                            ),
-                          ),
-                        ],
-            ),
-          ],
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

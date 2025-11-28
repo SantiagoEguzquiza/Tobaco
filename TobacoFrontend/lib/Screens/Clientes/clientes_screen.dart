@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:tobaco/Models/Cliente.dart';
 import 'package:tobaco/Services/Clientes_Service/clientes_provider.dart';
-import 'package:tobaco/Screens/Clientes/wizardNuevoCliente_screen.dart';
-import 'package:tobaco/Screens/Clientes/wizardEditarCliente_screen.dart';
+import 'package:tobaco/Screens/Clientes/nuevoCliente_screen.dart';
+import 'package:tobaco/Screens/Clientes/editarCliente_screen.dart';
 import 'package:tobaco/Screens/Clientes/detalleCliente_screen.dart';
 import 'package:tobaco/Theme/app_theme.dart';
 import 'package:tobaco/Theme/dialogs.dart';
@@ -182,11 +182,12 @@ class _ClientesScreenState extends State<ClientesScreen> {
                                 final result = await Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (context) => const WizardNuevoClienteScreen(),
+                                    builder: (context) => const NuevoClienteScreen(),
                                   ),
                                 );
-                                if (result == true && mounted) {
-                                  provider.cargarClientes();
+                                // Si se retorna un Cliente, significa que se creó exitosamente
+                                if (result is Cliente && mounted) {
+                                  await context.read<ClienteProvider>().cargarClientes();
                                 }
                               },
                               style: ElevatedButton.styleFrom(
@@ -312,8 +313,17 @@ class _ClientesScreenState extends State<ClientesScreen> {
                 builder: (context) => DetalleClienteScreen(cliente: cliente),
               ),
             );
+            // Si se retorna true o un Cliente, significa que hubo cambios
             if (result == true) {
-              _actualizarClienteEnLista(cliente);
+              // Si es true (desde detalle), actualizar el cliente desde el servidor
+              if (mounted && cliente.id != null) {
+                await context.read<ClienteProvider>().actualizarClienteEnLista(cliente.id!);
+              }
+            } else if (result is Cliente) {
+              // Si es un Cliente actualizado, actualizar directamente en la lista sin cambiar posición
+              if (mounted) {
+                context.read<ClienteProvider>().actualizarClienteDirecto(result);
+              }
             }
           },
           child: Padding(
@@ -394,11 +404,15 @@ class _ClientesScreenState extends State<ClientesScreen> {
                           final result = await Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => WizardEditarClienteScreen(cliente: cliente),
+                              builder: (context) => EditarClienteScreen(cliente: cliente),
                             ),
                           );
-                          if (result == true) {
-                            _actualizarClienteEnLista(cliente);
+                          // Si se retorna un Cliente, significa que se guardó exitosamente
+                          if (result is Cliente) {
+                            // Actualizar directamente el cliente en la lista sin cambiar su posición
+                            if (mounted) {
+                              context.read<ClienteProvider>().actualizarClienteDirecto(result);
+                            }
                           }
                         },
                       ),

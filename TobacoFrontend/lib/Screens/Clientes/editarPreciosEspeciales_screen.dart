@@ -280,24 +280,41 @@ class _EditarPreciosEspecialesScreenState
             backgroundColor: Theme.of(context).scaffoldBackgroundColor,
             appBar: widget.isIndividualEdit 
                 ? AppBar(
+                    title: const Text(
+                      'Precios Especiales',
+                      style: AppTheme.appBarTitleStyle,
+                    ),
                     backgroundColor: null, // Usar el tema
                     foregroundColor: Colors.white,
+                    centerTitle: true,
                     leading: IconButton(
                       icon: const Icon(Icons.arrow_back),
                       onPressed: () => Navigator.pop(context),
                     ),
                   )
                 : AppBar(
-                    title: Text('Precios Especiales - ${widget.cliente.nombre}'),
+                    title: const Text(
+                      'Precios Especiales',
+                      style: AppTheme.appBarTitleStyle,
+                    ),
                     backgroundColor: null, // Usar el tema
                     foregroundColor: Colors.white,
+                    centerTitle: true,
                     leading: IconButton(
                       icon: const Icon(Icons.arrow_back),
                       onPressed: () => Navigator.pop(context),
                     ),
                   ),
-            body: SafeArea(child: _buildContent()),
-            floatingActionButton: _buildFloatingActionButton(),
+            body: Stack(
+              children: [
+                SafeArea(child: _buildContent()),
+                Positioned(
+                  bottom: 0,
+                  right: 0,
+                  child: _buildFloatingActionButton(),
+                ),
+              ],
+            ),
           );
   }
 
@@ -478,28 +495,40 @@ class _EditarPreciosEspecialesScreenState
                   itemCount: categorias.length + 1,
                   itemBuilder: (context, index) {
                     if (index == 0) {
+                      final isSelected = selectedCategory == null;
                       return Container(
                         margin: const EdgeInsets.only(right: 8),
                         child: FilterChip(
-                          label: const Text('Todas'),
-                          selected: selectedCategory == null,
+                          label: Text(
+                            'Todas',
+                            style: TextStyle(
+                              color: isSelected ? Colors.white : null,
+                            ),
+                          ),
+                          selected: isSelected,
                           onSelected: (selected) {
                             setState(() {
                               selectedCategory = null;
                             });
                           },
                           selectedColor: AppTheme.primaryColor.withOpacity(0.2),
-                          checkmarkColor: AppTheme.primaryColor,
+                          checkmarkColor: Colors.white,
                         ),
                       );
                     }
 
                     final categoria = categorias[index - 1];
+                    final isSelected = selectedCategory == categoria.nombre;
                     return Container(
                       margin: const EdgeInsets.only(right: 8),
                       child: FilterChip(
-                        label: Text(categoria.nombre),
-                        selected: selectedCategory == categoria.nombre,
+                        label: Text(
+                          categoria.nombre,
+                          style: TextStyle(
+                            color: isSelected ? Colors.white : null,
+                          ),
+                        ),
+                        selected: isSelected,
                         onSelected: (selected) {
                           setState(() {
                             selectedCategory =
@@ -507,7 +536,7 @@ class _EditarPreciosEspecialesScreenState
                           });
                         },
                         selectedColor: AppTheme.primaryColor.withOpacity(0.2),
-                        checkmarkColor: AppTheme.primaryColor,
+                        checkmarkColor: Colors.white,
                       ),
                     );
                   },
@@ -805,23 +834,37 @@ class _EditarPreciosEspecialesScreenState
   }
 
   Widget _buildFloatingActionButton() {
-    return FloatingActionButton.extended(
-      onPressed: isSaving ? null : _guardarTodosLosPrecios,
-      backgroundColor: AppTheme.primaryColor,
-      icon: isSaving
-          ? const SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(
-                color: Colors.white,
-                strokeWidth: 2,
-              ),
-            )
-          : const Icon(Icons.save, color: Colors.white),
-      label: Text(
-        isSaving ? 'Guardando...' : 'Guardar Todos',
-        style:
-            const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16, right: 16),
+      child: ElevatedButton.icon(
+        onPressed: isSaving ? null : _guardarTodosLosPrecios,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppTheme.primaryColor,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
+          elevation: 4,
+        ),
+        icon: isSaving
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  color: Colors.white,
+                  strokeWidth: 2,
+                ),
+              )
+            : const Icon(Icons.save, color: Colors.white),
+        label: Text(
+          isSaving ? 'Guardando...' : 'Guardar Todos',
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+          ),
+        ),
       ),
     );
   }

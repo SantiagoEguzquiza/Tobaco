@@ -42,13 +42,14 @@ class _ConfigScreenState extends State<ConfigScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        centerTitle: true,
         title: const Text(
           'Configuración',
           style: AppTheme.appBarTitleStyle,
         ),
-        backgroundColor: AppTheme.primaryColor,
+        backgroundColor: null, // Usar el tema
         foregroundColor: Colors.white,
+        elevation: 0,
+        centerTitle: true,
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -114,8 +115,9 @@ class _ConfigScreenState extends State<ConfigScreen> {
 
     return Card(
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
+        borderRadius: BorderRadius.circular(16),
       ),
+      clipBehavior: Clip.antiAlias,
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Row(
@@ -200,8 +202,9 @@ class _ConfigScreenState extends State<ConfigScreen> {
   Widget _buildThemeCard() {
     return Card(
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
+        borderRadius: BorderRadius.circular(16),
       ),
+      clipBehavior: Clip.antiAlias,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16.0),
         child: Consumer<ThemeProvider>(
@@ -266,8 +269,9 @@ class _ConfigScreenState extends State<ConfigScreen> {
   }) {
     return Card(
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
+        borderRadius: BorderRadius.circular(16),
       ),
+      clipBehavior: Clip.antiAlias,
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -342,8 +346,9 @@ class _ConfigScreenState extends State<ConfigScreen> {
   }) {
     return Card(
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
+        borderRadius: BorderRadius.circular(16),
       ),
+      clipBehavior: Clip.antiAlias,
       child: ListTile(
         leading: CircleAvatar(
           backgroundColor: iconColor.withOpacity(0.15),
@@ -544,12 +549,49 @@ class _ConfigScreenState extends State<ConfigScreen> {
                   final historial = snapshot.data ?? [];
 
                   if (historial.isEmpty) {
+                    final isDark = Theme.of(context).brightness == Brightness.dark;
                     return Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.history, size: 48, color: Colors.grey[400]),
-                        const SizedBox(height: 12),
-                        const Text('Aún no tienes registros disponibles.'),
+                        Container(
+                          padding: const EdgeInsets.all(24),
+                          decoration: BoxDecoration(
+                            color: isDark 
+                                ? AppTheme.primaryColor.withOpacity(0.15)
+                                : AppTheme.secondaryColor,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Icons.history_outlined,
+                            size: 64,
+                            color: isDark 
+                                ? AppTheme.primaryColor
+                                : AppTheme.primaryColor,
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        Text(
+                          'Sin registros de asistencia',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w600,
+                            color: isDark ? Colors.white : Colors.grey.shade800,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 40),
+                          child: Text(
+                            'Aún no tienes registros de asistencia. Tus registros aparecerán aquí cuando los generes.',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: isDark 
+                                  ? Colors.grey.shade400 
+                                  : Colors.grey.shade600,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
                       ],
                     );
                   }

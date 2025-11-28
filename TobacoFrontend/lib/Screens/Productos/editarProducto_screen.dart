@@ -110,23 +110,14 @@ class EditarProductoScreenState extends State<EditarProductoScreen> {
       child: Scaffold(
       backgroundColor: isDark ? const Color(0xFF121212) : const Color(0xFFF5F5F5),
       appBar: AppBar(
-        elevation: 0,
-        backgroundColor: AppTheme.primaryColor,
         title: const Text(
           'Editar Producto',
           style: AppTheme.appBarTitleStyle,
         ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.delete_outline, color: Colors.white),
-            onPressed: _mostrarDialogoEliminar,
-            tooltip: 'Eliminar producto',
-          ),
-        ],
+        backgroundColor: null, // Usar el tema
+        foregroundColor: Colors.white,
+        elevation: 0,
+        centerTitle: true,
       ),
       body: Stack(
         children: [
