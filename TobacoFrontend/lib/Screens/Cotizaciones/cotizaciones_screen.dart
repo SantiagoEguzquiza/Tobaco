@@ -16,7 +16,7 @@ class CotizacionesScreen extends StatefulWidget {
 class _CotizacionesScreenState extends State<CotizacionesScreen> {
   int _selectedGroup = 2; // 1 int, 2 locales, 3 tasas, 0 todos
   int _selectedDays = 7;
-  final List<int> _selectedCurrencies = [2222]; // USD por defecto
+  final List<int> _selectedCurrencies = [2222, 2223, 2224, 2225]; // USD, EUR, ARS, BRL
 
   final Map<int, String> _groups = {
     0: 'Todas',
