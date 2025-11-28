@@ -487,6 +487,17 @@ class ClienteProvider with ChangeNotifier {
     }
   }
 
+  // Actualiza un cliente directamente en la lista sin hacer llamada al servidor
+  void actualizarClienteDirecto(Cliente clienteActualizado) {
+    if (clienteActualizado.id == null) return;
+    
+    final index = _clientes.indexWhere((c) => c.id == clienteActualizado.id);
+    if (index != -1) {
+      _clientes[index] = clienteActualizado;
+      notifyListeners();
+    }
+  }
+
   // Limpia el estado de búsqueda y recarga los clientes
   Future<void> limpiarBusqueda() async {
     _searchQuery = '';

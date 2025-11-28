@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:provider/provider.dart';
 import '../../Models/Cliente.dart';
 import '../../Services/Clientes_Service/clientes_provider.dart';
 import '../../Theme/app_theme.dart';
@@ -7,61 +7,55 @@ import '../../Helpers/api_handler.dart';
 import 'editarPreciosEspeciales_screen.dart';
 import 'map_picker_screen.dart';
 
-class WizardEditarClienteScreen extends StatefulWidget {
-  final Cliente cliente;
-
-  const WizardEditarClienteScreen({
-    super.key,
-    required this.cliente,
-  });
+class NuevoClienteScreen extends StatefulWidget {
+  const NuevoClienteScreen({super.key});
 
   @override
-  State<WizardEditarClienteScreen> createState() => _WizardEditarClienteScreenState();
+  State<NuevoClienteScreen> createState() => _NuevoClienteScreenState();
 }
 
-class _WizardEditarClienteScreenState extends State<WizardEditarClienteScreen> {
-  final PageController _pageController = PageController();
-  int _currentStep = 0;
-  
+class _NuevoClienteScreenState extends State<NuevoClienteScreen> {
   // Datos del cliente
   final _formKey = GlobalKey<FormState>();
   final _nombreController = TextEditingController();
   final _telefonoController = TextEditingController();
   final _direccionController = TextEditingController();
-  final _deudaController = TextEditingController();
-  final _descuentoGlobalController = TextEditingController();
   double? _latitud;
   double? _longitud;
+  final _deudaController = TextEditingController();
+  final _descuentoGlobalController = TextEditingController();
   
-  Cliente? _clienteActualizado;
+  Cliente? _clienteCreado;
   bool _isLoading = false;
   String? _errorMessage;
-  
-  final ClienteProvider _clienteProvider = ClienteProvider();
 
-  @override
-  void initState() {
-    super.initState();
-    _cargarDatosCliente();
-  }
-
-  void _cargarDatosCliente() {
-    _nombreController.text = widget.cliente.nombre;
-    _telefonoController.text = widget.cliente.telefono?.toString() ?? '';
-    _direccionController.text = widget.cliente.direccion ?? '';
-    _deudaController.text = (widget.cliente.deuda == null || widget.cliente.deuda == '0') 
-        ? '' 
-        : widget.cliente.deuda!;
-    _descuentoGlobalController.text = widget.cliente.descuentoGlobal == 0.0 
-        ? '' 
-        : widget.cliente.descuentoGlobal.toString();
-    _latitud = widget.cliente.latitud;
-    _longitud = widget.cliente.longitud;
+  /// Normaliza el valor de deuda: convierte comas a puntos y formatea correctamente
+  String _normalizarDeuda(String? valor) {
+    if (valor == null || valor.trim().isEmpty) {
+      return "0";
+    }
+    
+    // Reemplazar coma por punto y eliminar espacios
+    String normalizado = valor.trim().replaceAll(',', '.').replaceAll(' ', '');
+    
+    // Intentar parsear como double
+    final double? numero = double.tryParse(normalizado);
+    
+    if (numero == null || numero < 0) {
+      return "0";
+    }
+    
+    // Si es un número entero, retornarlo sin decimales
+    if (numero == numero.truncateToDouble()) {
+      return numero.toInt().toString();
+    }
+    
+    // Si tiene decimales, retornarlo con punto como separador
+    return numero.toString();
   }
 
   @override
   void dispose() {
-    _pageController.dispose();
     _nombreController.dispose();
     _telefonoController.dispose();
     _direccionController.dispose();
@@ -70,7 +64,7 @@ class _WizardEditarClienteScreenState extends State<WizardEditarClienteScreen> {
     super.dispose();
   }
 
-  Future<void> _actualizarCliente() async {
+  Future<void> _crearCliente() async {
     if (!_formKey.currentState!.validate()) {
       setState(() {
         _errorMessage = 'Por favor, completa todos los campos obligatorios marcados con *';
@@ -84,61 +78,124 @@ class _WizardEditarClienteScreenState extends State<WizardEditarClienteScreen> {
     });
 
     try {
-      final clienteActualizado = Cliente(
-        id: widget.cliente.id,
+      final cliente = Cliente(
+        id: null,
         nombre: _nombreController.text.trim(),
         telefono: int.tryParse(_telefonoController.text.trim()),
         direccion: _direccionController.text.trim(),
-        deuda: _deudaController.text.trim().isNotEmpty ? _deudaController.text.trim() : "0",
+        deuda: _normalizarDeuda(_deudaController.text),
         descuentoGlobal: _descuentoGlobalController.text.trim().isEmpty 
             ? 0.0 
             : double.tryParse(_descuentoGlobalController.text.trim()) ?? 0.0,
-        preciosEspeciales: widget.cliente.preciosEspeciales,
+        preciosEspeciales: [],
         latitud: _latitud,
         longitud: _longitud,
-        visible: widget.cliente.visible,
       );
 
-      await _clienteProvider.editarCliente(clienteActualizado);
+      final clienteProvider = Provider.of<ClienteProvider>(context, listen: false);
+      final clienteCreado = await clienteProvider.crearCliente(cliente);
+      
+      if (!mounted) return;
       
       setState(() {
-        _clienteActualizado = clienteActualizado;
+        _clienteCreado = clienteCreado;
         _isLoading = false;
       });
       
-      // Avanzar al siguiente paso
-      _pageController.nextPage(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-      );
+      // Retornar con el cliente creado
+      Navigator.pop(context, clienteCreado);
     } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
+      if (!mounted) return;
       
-      if (mounted && Apihandler.isConnectionError(e)) {
-        await Apihandler.handleConnectionError(context, e);
+      if (Apihandler.isConnectionError(e)) {
         setState(() {
-          _errorMessage = 'Error de conexión al servidor';
+          _isLoading = false;
+          // No establecer errorMessage para errores de conexión
         });
+        await Apihandler.handleConnectionError(context, e);
       } else {
         setState(() {
-          _errorMessage = 'Error al actualizar el cliente: ${e.toString().replaceAll('Exception: ', '')}';
+          _isLoading = false;
+          _errorMessage = 'Error al crear el cliente: ${e.toString().replaceAll('Exception: ', '')}';
         });
       }
     }
   }
 
-  void _finalizarWizard() {
-    Navigator.pop(context, true);
-  }
+  Future<void> _editarPreciosEspeciales() async {
+    // Primero validar el formulario
+    if (!_formKey.currentState!.validate()) {
+      setState(() {
+        _errorMessage = 'Por favor, completa todos los campos obligatorios antes de editar precios especiales';
+      });
+      return;
+    }
 
-  void _anteriorPaso() {
-    if (_currentStep > 0) {
-      _pageController.previousPage(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
+    // Si el cliente no ha sido creado aún, crearlo primero
+    if (_clienteCreado == null) {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+
+      try {
+        final cliente = Cliente(
+          id: null,
+          nombre: _nombreController.text.trim(),
+          telefono: int.tryParse(_telefonoController.text.trim()),
+          direccion: _direccionController.text.trim(),
+          deuda: _normalizarDeuda(_deudaController.text),
+          descuentoGlobal: _descuentoGlobalController.text.trim().isEmpty 
+              ? 0.0 
+              : double.tryParse(_descuentoGlobalController.text.trim()) ?? 0.0,
+          preciosEspeciales: [],
+          latitud: _latitud,
+          longitud: _longitud,
+        );
+
+        final clienteProvider = Provider.of<ClienteProvider>(context, listen: false);
+        final clienteCreado = await clienteProvider.crearCliente(cliente);
+        
+        if (!mounted) return;
+        
+        setState(() {
+          _clienteCreado = clienteCreado;
+          _isLoading = false;
+        });
+      } catch (e) {
+        setState(() {
+          _isLoading = false;
+        });
+        
+        if (mounted && Apihandler.isConnectionError(e)) {
+          await Apihandler.handleConnectionError(context, e);
+        } else {
+          setState(() {
+            _errorMessage = 'Error al crear el cliente: ${e.toString().replaceAll('Exception: ', '')}';
+          });
+        }
+        return;
+      }
+    }
+
+    // Navegar a la pantalla de precios especiales
+    if (mounted && _clienteCreado != null) {
+      final result = await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => EditarPreciosEspecialesScreen(
+            cliente: _clienteCreado!,
+            isWizardMode: false, // No es modo wizard, es una pantalla independiente
+          ),
+        ),
       );
+
+      // Si se guardaron cambios en precios especiales, actualizar el cliente
+      if (result is Cliente && mounted) {
+        setState(() {
+          _clienteCreado = result;
+        });
+      }
     }
   }
 
@@ -147,123 +204,18 @@ class _WizardEditarClienteScreenState extends State<WizardEditarClienteScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          _currentStep == 0 ? 'Editar Cliente' : 'Precios Especiales',
+          'Nuevo Cliente',
           style: AppTheme.appBarTitleStyle,
         ),
         backgroundColor: null, // Usar el tema
         foregroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
-        leading: _currentStep == 0 
-            ? IconButton(
-                icon: const Icon(Icons.close, color: Colors.white),
-                onPressed: () => Navigator.pop(context),
-              )
-            : IconButton(
-                icon: const Icon(Icons.arrow_back, color: Colors.white),
-                onPressed: _anteriorPaso,
-              ),
-        actions: _currentStep == 1 
-            ? [
-                Padding(
-                  padding: const EdgeInsets.only(right: 16.0),
-                  child: TextButton(
-                    onPressed: _finalizarWizard,
-                    style: TextButton.styleFrom(
-                      backgroundColor: Theme.of(context).cardTheme.color?.withOpacity(0.2) ?? Colors.white.withOpacity(0.2),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                    ),
-                    child: const Text(
-                      'Finalizar',
-                      style: TextStyle(
-                        color: Colors.white, 
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
-                  ),
-                ),
-              ]
-            : [
-                // Espacio vacío para balancear cuando no hay botón Finalizar
-                const SizedBox(width: 48),
-              ],
       ),
-      body: Column(
-        children: [
-          // Indicador de progreso
-          Container(
-            padding: const EdgeInsets.all(20),
-            child: Row(
-              children: [
-                _buildStepIndicator(0, 'Datos Básicos', _currentStep >= 0),
-                Expanded(
-                  child: Container(
-                    height: 2,
-                    color: _currentStep > 0 ? AppTheme.primaryColor : Colors.grey.shade300,
-                  ),
-                ),
-                _buildStepIndicator(1, 'Precios Especiales', _currentStep >= 1),
-              ],
-            ),
-          ),
-          
-          // Contenido de los pasos
-          Expanded(
-            child: PageView(
-              controller: _pageController,
-              physics: const NeverScrollableScrollPhysics(), // Deshabilitar deslizamiento
-              onPageChanged: (index) {
-                setState(() {
-                  _currentStep = index;
-                });
-              },
-              children: [
-                _buildPasoDatosBasicos(),
-                _buildPasoPreciosEspeciales(),
-              ],
-            ),
-          ),
-        ],
-      ),
+      body: _buildPasoDatosBasicos(),
     );
   }
 
-  Widget _buildStepIndicator(int step, String title, bool isActive) {
-    return Column(
-      children: [
-        Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: isActive ? AppTheme.primaryColor : Colors.grey.shade300,
-            shape: BoxShape.circle,
-          ),
-          child: Center(
-            child: Text(
-              '${step + 1}',
-              style: TextStyle(
-                color: isActive ? Colors.white : Colors.grey.shade600,
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          title,
-          style: TextStyle(
-            color: isActive ? AppTheme.primaryColor : Colors.grey.shade600,
-            fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-            fontSize: 12,
-          ),
-        ),
-      ],
-    );
-  }
 
   Widget _buildPasoDatosBasicos() {
     return SingleChildScrollView(
@@ -282,7 +234,7 @@ class _WizardEditarClienteScreenState extends State<WizardEditarClienteScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
             Text(
-              'Editar Información del Cliente',
+              'Información del Cliente',
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
@@ -293,7 +245,7 @@ class _WizardEditarClienteScreenState extends State<WizardEditarClienteScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Modifica los datos del cliente ${widget.cliente.nombre}',
+              'Completa los datos básicos del cliente',
               style: TextStyle(
                 fontSize: 16,
                 color: Theme.of(context).brightness == Brightness.dark
@@ -325,7 +277,7 @@ class _WizardEditarClienteScreenState extends State<WizardEditarClienteScreen> {
               },
             ),
             const SizedBox(height: 20),
-            // Coordenadas
+            // Coordenadas seleccionadas
             Row(
               children: [
                 Expanded(
@@ -361,11 +313,7 @@ class _WizardEditarClienteScreenState extends State<WizardEditarClienteScreen> {
                   final result = await Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => MapPickerScreen(
-                        initial: (_latitud != null && _longitud != null)
-                            ? LatLng(_latitud!, _longitud!)
-                            : null,
-                      ),
+                      builder: (_) => const MapPickerScreen(),
                     ),
                   );
                   if (result is List && result.length == 2) {
@@ -376,7 +324,7 @@ class _WizardEditarClienteScreenState extends State<WizardEditarClienteScreen> {
                   }
                 },
                 icon: const Icon(Icons.place),
-                label: const Text('Editar ubicación en mapa'),
+                label: const Text('Elegir ubicación en mapa'),
               ),
             ),
             const SizedBox(height: 20),
@@ -442,15 +390,22 @@ class _WizardEditarClienteScreenState extends State<WizardEditarClienteScreen> {
               ),
               decoration: const InputDecoration(
                 labelText: 'Deuda',
-                hintText: 'Ingresa el monto de la deuda (opcional)',
+                hintText: 'Ingresa el monto de la deuda',
                 prefixIcon: Icon(Icons.attach_money),
                 border: OutlineInputBorder(),
               ),
               keyboardType: TextInputType.number,
               validator: (value) {
                 if (value != null && value.isNotEmpty) {
-                  if (double.tryParse(value) == null) {
+                  // Normalizar el valor (reemplazar coma por punto)
+                  final normalizado = value.trim().replaceAll(',', '.').replaceAll(' ', '');
+                  if (double.tryParse(normalizado) == null) {
                     return 'Ingresa un monto válido';
+                  }
+                  // Validar que no sea negativo
+                  final numero = double.tryParse(normalizado);
+                  if (numero != null && numero < 0) {
+                    return 'La deuda no puede ser negativa';
                   }
                 }
                 return null;
@@ -516,12 +471,12 @@ class _WizardEditarClienteScreenState extends State<WizardEditarClienteScreen> {
             
             const SizedBox(height: 30),
             
-            // Botón Siguiente
+            // Botón Crear Cliente
             SizedBox(
               width: double.infinity,
               height: 50,
               child: ElevatedButton(
-                onPressed: _isLoading ? null : _actualizarCliente,
+                onPressed: _isLoading ? null : _crearCliente,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.primaryColor,
                   foregroundColor: Colors.white,
@@ -541,19 +496,49 @@ class _WizardEditarClienteScreenState extends State<WizardEditarClienteScreen> {
                     : const Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
+                          Icon(Icons.person_add),
+                          SizedBox(width: 8),
                           Text(
-                            'Siguiente',
+                            'Crear Cliente',
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
-                          SizedBox(width: 8),
-                          Icon(Icons.arrow_forward),
                         ],
                       ),
               ),
             ),
+            const SizedBox(height: 16),
+            
+            // Botón Precios Especiales (opcional)
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: OutlinedButton.icon(
+                onPressed: _isLoading ? null : _editarPreciosEspeciales,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.white,
+                  backgroundColor: Theme.of(context).brightness == Brightness.dark
+                      ? const Color(0xFF333333)
+                      : Colors.transparent,
+                  side: const BorderSide(color: Colors.white, width: 2),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                icon: const Icon(Icons.local_offer, color: Colors.white),
+                label: const Text(
+                  'Precios Especiales',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
           ],
         ),
         ),
@@ -561,20 +546,4 @@ class _WizardEditarClienteScreenState extends State<WizardEditarClienteScreen> {
     );
   }
 
-  Widget _buildPasoPreciosEspeciales() {
-    if (_clienteActualizado == null) {
-      return Center(
-        child: CircularProgressIndicator(
-          valueColor: AlwaysStoppedAnimation<Color>(
-            Theme.of(context).primaryColor,
-          ),
-        ),
-      );
-    }
-
-    return EditarPreciosEspecialesScreen(
-      cliente: _clienteActualizado!,
-      isWizardMode: true,
-    );
-  }
 }

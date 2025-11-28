@@ -431,6 +431,21 @@ class VentasProvider with ChangeNotifier {
     }
   }
 
+  /// Verifica si una venta está pendiente de sincronización
+  bool esVentaPendiente(Ventas venta) {
+    // Una venta está pendiente si no tiene ID del servidor (id == null)
+    // Las ventas offline/pendientes se guardan sin ID hasta que se sincronizan
+    if (venta.id == null) return true;
+    
+    // También verificar si está en el mapa de IDs locales como pendiente
+    final localId = _ventaLocalIds[venta];
+    if (localId != null && localId.startsWith('local_')) {
+      return true;
+    }
+    
+    return false;
+  }
+
   Future<int> contarVentasPendientes() async {
     final stats = await _db.getStats();
     return stats['pending'] ?? 0;

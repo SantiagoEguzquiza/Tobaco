@@ -221,13 +221,13 @@ class _VentasScreenState extends State<VentasScreen> {
           return _buildLoadingIndicator();
         }
         final venta = filteredVentas[index];
-        return _buildVentaCard(venta);
+        return _buildVentaCard(venta, provider);
       },
     );
   }
 
   // Card individual de venta
-  Widget _buildVentaCard(Ventas venta) {
+  Widget _buildVentaCard(Ventas venta, VentasProvider provider) {
     final key = venta.id != null
         ? Key(venta.id.toString())
         : Key(
@@ -296,7 +296,9 @@ class _VentasScreenState extends State<VentasScreen> {
                       width: 4,
                       height: 60,
                       decoration: BoxDecoration(
-                        color: Colors.green,
+                        color: provider.esVentaPendiente(venta) 
+                            ? Colors.orange 
+                            : Colors.green,
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
@@ -366,6 +368,11 @@ class _VentasScreenState extends State<VentasScreen> {
                               ),
                               const SizedBox(width: 8),
                               _buildEstadoEntregaBadge(venta.estadoEntrega),
+                              // Badge de venta pendiente
+                              if (provider.esVentaPendiente(venta)) ...[
+                                const SizedBox(width: 8),
+                                _buildPendienteBadge(),
+                              ],
                             ],
                           ),
                         ],
@@ -658,6 +665,32 @@ class _VentasScreenState extends State<VentasScreen> {
         child: CircularProgressIndicator(
           valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
         ),
+      ),
+    );
+  }
+
+  // Badge de venta pendiente
+  Widget _buildPendienteBadge() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.orange.shade100,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.cloud_upload, size: 12, color: Colors.orange.shade700),
+          const SizedBox(width: 4),
+          Text(
+            'Pendiente',
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+              color: Colors.orange.shade700,
+            ),
+          ),
+        ],
       ),
     );
   }
