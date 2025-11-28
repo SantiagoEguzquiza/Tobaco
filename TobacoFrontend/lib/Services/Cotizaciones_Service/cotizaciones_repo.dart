@@ -151,21 +151,39 @@ class BcuRepository {
 
       final cotizacionesSinDuplicados = cotizacionesUnicas.values.toList();
 
-      // Ordenar por fecha descendente (más recientes primero)
+      // Ordenar: primero por fecha descendente (más recientes primero), luego por moneda (USD, BRL, ARS, EUR)
+      final ordenMonedas = {'USD': 1, 'BRL': 2, 'ARS': 3, 'EUR': 4};
       cotizacionesSinDuplicados.sort((a, b) {
-        if (a.fecha == null && b.fecha == null) return 0;
-        if (a.fecha == null) return 1; // Sin fecha al final
-        if (b.fecha == null) return -1; // Sin fecha al final
-        
-        try {
-          final fechaA = DateTime.parse(a.fecha!);
-          final fechaB = DateTime.parse(b.fecha!);
-          // Orden descendente: fechas más recientes primero
-          return fechaB.compareTo(fechaA);
-        } catch (e) {
-          // Si hay error al parsear, mantener el orden original
-          return 0;
+        // Primero comparar por fecha (descendente - más recientes primero)
+        if (a.fecha == null && b.fecha == null) {
+          // Si ambas no tienen fecha, ordenar por moneda
+        } else if (a.fecha == null) {
+          return 1; // Sin fecha al final
+        } else if (b.fecha == null) {
+          return -1; // Sin fecha al final
+        } else {
+          try {
+            final fechaA = DateTime.parse(a.fecha!);
+            final fechaB = DateTime.parse(b.fecha!);
+            final comparacionFecha = fechaB.compareTo(fechaA); // Descendente
+            
+            // Si las fechas son diferentes, ordenar por fecha
+            if (comparacionFecha != 0) {
+              return comparacionFecha;
+            }
+            // Si es la misma fecha, continuar a ordenar por moneda
+          } catch (e) {
+            // Si hay error al parsear, mantener el orden original y continuar a ordenar por moneda
+          }
         }
+        
+        // Si es la misma fecha (o ambas sin fecha), ordenar por moneda (USD, BRL, ARS, EUR)
+        final isoA = a.codigoIso?.toUpperCase() ?? '';
+        final isoB = b.codigoIso?.toUpperCase() ?? '';
+        final ordenA = ordenMonedas[isoA] ?? 999;
+        final ordenB = ordenMonedas[isoB] ?? 999;
+        
+        return ordenA.compareTo(ordenB);
       });
 
       developer.log('Cotizaciones obtenidas: ${cotizacionesSinDuplicados.length} (USD, EUR, ARS, BRL)');

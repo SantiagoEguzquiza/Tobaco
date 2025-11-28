@@ -45,6 +45,23 @@ class _CotizacionesScreenState extends State<CotizacionesScreen> {
     );
   }
 
+  String _getCurrencyFlag(String? codigoIso) {
+    if (codigoIso == null) return '🏳️';
+    
+    switch (codigoIso.toUpperCase()) {
+      case 'USD':
+        return '🇺🇸'; // Estados Unidos
+      case 'BRL':
+        return '🇧🇷'; // Brasil
+      case 'ARS':
+        return '🇦🇷'; // Argentina
+      case 'EUR':
+        return '🇪🇺'; // Unión Europea
+      default:
+        return '🏳️'; // Bandera genérica
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -58,8 +75,10 @@ class _CotizacionesScreenState extends State<CotizacionesScreen> {
   Widget build(BuildContext context) {
     final vm = context.watch<BcuProvider>();
 
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: isDarkMode ? Colors.black : Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text(
           'Cotizaciones de Monedas',
@@ -79,10 +98,12 @@ class _CotizacionesScreenState extends State<CotizacionesScreen> {
             width: double.infinity,
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: isDarkMode ? const Color(0xFF1A1A1A) : Colors.white,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.grey.withOpacity(0.1),
+                  color: isDarkMode 
+                      ? Colors.black.withOpacity(0.3)
+                      : Colors.grey.withOpacity(0.1),
                   spreadRadius: 1,
                   blurRadius: 3,
                   offset: const Offset(0, 2),
@@ -92,12 +113,12 @@ class _CotizacionesScreenState extends State<CotizacionesScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Configuración de Consulta',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: AppTheme.textColor,
+                    color: isDarkMode ? Colors.white : AppTheme.textColor,
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -105,16 +126,35 @@ class _CotizacionesScreenState extends State<CotizacionesScreen> {
                 // Selector de grupo
                 Row(
                   children: [
-                    const Text('Tipo: ', style: TextStyle(fontWeight: FontWeight.w500)),
+                    Text(
+                      'Tipo: ',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w500,
+                        color: isDarkMode ? Colors.grey.shade300 : null,
+                      ),
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: DropdownButton<int>(
                         value: _selectedGroup,
                         isExpanded: true,
+                        dropdownColor: isDarkMode ? const Color(0xFF2A2A2A) : Colors.white,
+                        style: TextStyle(
+                          color: isDarkMode ? Colors.white : Colors.black87,
+                        ),
+                        icon: Icon(
+                          Icons.arrow_drop_down,
+                          color: isDarkMode ? Colors.white : Colors.black87,
+                        ),
                         items: _groups.entries.map((entry) {
                           return DropdownMenuItem<int>(
                             value: entry.key,
-                            child: Text(entry.value),
+                            child: Text(
+                              entry.value,
+                              style: TextStyle(
+                                color: isDarkMode ? Colors.white : Colors.black87,
+                              ),
+                            ),
                           );
                         }).toList(),
                         onChanged: (value) {
@@ -132,17 +172,63 @@ class _CotizacionesScreenState extends State<CotizacionesScreen> {
                 // Selector de días
                 Row(
                   children: [
-                    const Text('Período: ', style: TextStyle(fontWeight: FontWeight.w500)),
+                    Text(
+                      'Período: ',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w500,
+                        color: isDarkMode ? Colors.grey.shade300 : null,
+                      ),
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: DropdownButton<int>(
                         value: _selectedDays,
                         isExpanded: true,
-                        items: const [
-                          DropdownMenuItem(value: 1, child: Text('Último día')),
-                          DropdownMenuItem(value: 7, child: Text('Últimos 7 días')),
-                          DropdownMenuItem(value: 15, child: Text('Últimos 15 días')),
-                          DropdownMenuItem(value: 30, child: Text('Últimos 30 días')),
+                        dropdownColor: isDarkMode ? const Color(0xFF2A2A2A) : Colors.white,
+                        style: TextStyle(
+                          color: isDarkMode ? Colors.white : Colors.black87,
+                        ),
+                        icon: Icon(
+                          Icons.arrow_drop_down,
+                          color: isDarkMode ? Colors.white : Colors.black87,
+                        ),
+                        items: [
+                          DropdownMenuItem(
+                            value: 1,
+                            child: Text(
+                              'Último día',
+                              style: TextStyle(
+                                color: isDarkMode ? Colors.white : Colors.black87,
+                              ),
+                            ),
+                          ),
+                          DropdownMenuItem(
+                            value: 7,
+                            child: Text(
+                              'Últimos 7 días',
+                              style: TextStyle(
+                                color: isDarkMode ? Colors.white : Colors.black87,
+                              ),
+                            ),
+                          ),
+                          DropdownMenuItem(
+                            value: 15,
+                            child: Text(
+                              'Últimos 15 días',
+                              style: TextStyle(
+                                color: isDarkMode ? Colors.white : Colors.black87,
+                              ),
+                            ),
+                          ),
+                          DropdownMenuItem(
+                            value: 30,
+                            child: Text(
+                              'Últimos 30 días',
+                              style: TextStyle(
+                                color: isDarkMode ? Colors.white : Colors.black87,
+                              ),
+                            ),
+                          ),
                         ],
                         onChanged: (value) {
                           setState(() {
@@ -187,15 +273,27 @@ class _CotizacionesScreenState extends State<CotizacionesScreen> {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: vm.items.length > 5 ? Colors.green[50] : Colors.orange[50],
+              color: isDarkMode
+                  ? (vm.items.length > 5 
+                      ? Colors.green.shade900.withOpacity(0.3) 
+                      : Colors.orange.shade900.withOpacity(0.3))
+                  : (vm.items.length > 5 ? Colors.green[50] : Colors.orange[50]),
               borderRadius: BorderRadius.circular(6),
-              border: Border.all(color: vm.items.length > 5 ? Colors.green[200]! : Colors.orange[200]!),
+              border: Border.all(
+                color: isDarkMode
+                    ? (vm.items.length > 5 
+                        ? Colors.green.shade700 
+                        : Colors.orange.shade700)
+                    : (vm.items.length > 5 ? Colors.green[200]! : Colors.orange[200]!),
+              ),
             ),
             child: Row(
               children: [
                 Icon(
                   vm.items.length > 5 ? Icons.check_circle : Icons.info,
-                  color: vm.items.length > 5 ? Colors.green[600] : Colors.orange[600],
+                  color: isDarkMode
+                      ? (vm.items.length > 5 ? Colors.green.shade400 : Colors.orange.shade400)
+                      : (vm.items.length > 5 ? Colors.green[600] : Colors.orange[600]),
                   size: 16,
                 ),
                 const SizedBox(width: 8),
@@ -206,7 +304,9 @@ class _CotizacionesScreenState extends State<CotizacionesScreen> {
                         : 'Mostrando ${vm.items.length} cotizaciones ${_groups[_selectedGroup]?.toLowerCase()} (datos de ejemplo - API no disponible)',
                     style: TextStyle(
                       fontSize: 12,
-                      color: vm.items.length > 5 ? Colors.green[700] : Colors.orange[700],
+                      color: isDarkMode
+                          ? (vm.items.length > 5 ? Colors.green.shade300 : Colors.orange.shade300)
+                          : (vm.items.length > 5 ? Colors.green[700] : Colors.orange[700]),
                     ),
                   ),
                 ),
@@ -224,11 +324,13 @@ class _CotizacionesScreenState extends State<CotizacionesScreen> {
             child: Container(
               margin: const EdgeInsets.symmetric(horizontal: 16),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: isDarkMode ? Colors.black : Colors.white,
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.grey.withOpacity(0.1),
+                    color: isDarkMode
+                        ? Colors.black.withOpacity(0.3)
+                        : Colors.grey.withOpacity(0.1),
                     spreadRadius: 1,
                     blurRadius: 3,
                     offset: const Offset(0, 2),
@@ -236,7 +338,7 @@ class _CotizacionesScreenState extends State<CotizacionesScreen> {
                 ],
               ),
               child: vm.isLoading
-                        ? const Center(
+                        ? Center(
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
@@ -247,7 +349,7 @@ class _CotizacionesScreenState extends State<CotizacionesScreen> {
                                 Text(
                                   'Consultando cotizaciones...',
                                   style: TextStyle(
-                                    color: Colors.grey,
+                                    color: isDarkMode ? Colors.grey.shade300 : Colors.grey,
                                     fontSize: 16,
                                   ),
                                 ),
@@ -270,7 +372,7 @@ class _CotizacionesScreenState extends State<CotizacionesScreen> {
                                       style: TextStyle(
                                         fontSize: 18,
                                         fontWeight: FontWeight.bold,
-                                        color: Colors.red[700],
+                                        color: isDarkMode ? Colors.red.shade300 : Colors.red[700],
                                       ),
                                     ),
                                     const SizedBox(height: 8),
@@ -279,8 +381,8 @@ class _CotizacionesScreenState extends State<CotizacionesScreen> {
                                       child: Text(
                                         vm.error!,
                                         textAlign: TextAlign.center,
-                                        style: const TextStyle(
-                                          color: Colors.grey,
+                                        style: TextStyle(
+                                          color: isDarkMode ? Colors.grey.shade400 : Colors.grey,
                                           fontSize: 14,
                                         ),
                                       ),
@@ -341,6 +443,8 @@ class _CotizacionesScreenState extends State<CotizacionesScreen> {
                                 : ListView.builder(
                                     padding: const EdgeInsets.all(16),
                                     itemCount: vm.items.length,
+                                    // Asegurar que el fondo de la lista sea negro en modo oscuro
+                                    controller: ScrollController(),
                                     itemBuilder: (_, i) {
                                       final c = vm.items[i];
                                       return Container(
@@ -380,15 +484,26 @@ class _CotizacionesScreenState extends State<CotizacionesScreen> {
                                                 child: Column(
                                                   crossAxisAlignment: CrossAxisAlignment.start,
                                                   children: [
-                                                    Text(
-                                                      c.nombre ?? 'Moneda ${c.moneda}',
-                                                      style: TextStyle(
-                                                        fontSize: 18,
-                                                        fontWeight: FontWeight.bold,
-                                                        color: Theme.of(context).brightness == Brightness.dark
-                                                            ? Colors.white
-                                                            : AppTheme.textColor,
-                                                      ),
+                                                    Row(
+                                                      children: [
+                                                        Text(
+                                                          _getCurrencyFlag(c.codigoIso),
+                                                          style: const TextStyle(fontSize: 24),
+                                                        ),
+                                                        const SizedBox(width: 8),
+                                                        Expanded(
+                                                          child: Text(
+                                                            c.nombre ?? 'Moneda ${c.moneda}',
+                                                            style: TextStyle(
+                                                              fontSize: 18,
+                                                              fontWeight: FontWeight.bold,
+                                                              color: Theme.of(context).brightness == Brightness.dark
+                                                                  ? Colors.white
+                                                                  : AppTheme.textColor,
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ],
                                                     ),
                                                     const SizedBox(height: 4),
                                                     if (c.codigoIso != null)
