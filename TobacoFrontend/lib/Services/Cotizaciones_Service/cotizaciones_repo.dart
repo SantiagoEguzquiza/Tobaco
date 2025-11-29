@@ -191,103 +191,8 @@ class BcuRepository {
       return cotizacionesSinDuplicados;
     } catch (e) {
       developer.log('Error in getCotizaciones: $e');
-      // Solo usar datos de prueba si hay un error de conexión crítico
-      if (e.toString().contains('SocketException') || e.toString().contains('TimeoutException') || e.toString().contains('HandshakeException')) {
-        developer.log('Critical connection error, using test data as fallback');
-        return _getTestCotizaciones();
-      }
       rethrow;
     }
-  }
-
-  List<Cotizacion> _getTestCotizaciones() {
-    final hoy = DateTime.now();
-    final fechaStr = '${hoy.year}-${hoy.month.toString().padLeft(2, '0')}-${hoy.day.toString().padLeft(2, '0')}';
-    
-    return [
-      // Moneda local uruguaya
-      Cotizacion(
-        fecha: fechaStr,
-        moneda: 0,
-        nombre: 'Peso Uruguayo',
-        codigoIso: 'UYU',
-        tcc: 1.0,
-        tcv: 1.0,
-      ),
-      // Monedas internacionales principales
-      Cotizacion(
-        fecha: fechaStr,
-        moneda: 2222,
-        nombre: 'Dólar Americano',
-        codigoIso: 'USD',
-        tcc: 39.50,
-        tcv: 40.20,
-      ),
-      Cotizacion(
-        fecha: fechaStr,
-        moneda: 2223,
-        nombre: 'Euro',
-        codigoIso: 'EUR',
-        tcc: 42.80,
-        tcv: 43.50,
-      ),
-      Cotizacion(
-        fecha: fechaStr,
-        moneda: 2224,
-        nombre: 'Peso Argentino',
-        codigoIso: 'ARS',
-        tcc: 0.045,
-        tcv: 0.048,
-      ),
-      Cotizacion(
-        fecha: fechaStr,
-        moneda: 2225,
-        nombre: 'Real Brasileño',
-        codigoIso: 'BRL',
-        tcc: 7.80,
-        tcv: 8.20,
-      ),
-      Cotizacion(
-        fecha: fechaStr,
-        moneda: 2226,
-        nombre: 'Libra Esterlina',
-        codigoIso: 'GBP',
-        tcc: 50.20,
-        tcv: 51.80,
-      ),
-      Cotizacion(
-        fecha: fechaStr,
-        moneda: 2227,
-        nombre: 'Yen Japonés',
-        codigoIso: 'JPY',
-        tcc: 0.28,
-        tcv: 0.32,
-      ),
-      Cotizacion(
-        fecha: fechaStr,
-        moneda: 2228,
-        nombre: 'Franco Suizo',
-        codigoIso: 'CHF',
-        tcc: 44.50,
-        tcv: 45.20,
-      ),
-      Cotizacion(
-        fecha: fechaStr,
-        moneda: 2229,
-        nombre: 'Dólar Canadiense',
-        codigoIso: 'CAD',
-        tcc: 29.80,
-        tcv: 30.50,
-      ),
-      Cotizacion(
-        fecha: fechaStr,
-        moneda: 2230,
-        nombre: 'Dólar Australiano',
-        codigoIso: 'AUD',
-        tcc: 26.20,
-        tcv: 27.80,
-      ),
-    ];
   }
 
   /// Parsea un elemento dato según la estructura del WSDL del BCU
@@ -460,18 +365,4 @@ class BcuRepository {
     }
   }
 
-  String _getGrupoName(int grupo) {
-    switch (grupo) {
-      case 1:
-        return 'Internacional';
-      case 2:
-        return 'Local';
-      case 3:
-        return 'Tasas';
-      case 0:
-        return 'Todos';
-      default:
-        return 'Desconocido';
-    }
-  }
 }
