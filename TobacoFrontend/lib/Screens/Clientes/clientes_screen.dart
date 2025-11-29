@@ -412,6 +412,11 @@ class _ClientesScreenState extends State<ClientesScreen> {
                             // Actualizar directamente el cliente en la lista sin cambiar su posición
                             if (mounted) {
                               context.read<ClienteProvider>().actualizarClienteDirecto(result);
+                              // Mostrar snackbar de éxito (el snackbar de editarCliente_screen ya se mostró, pero este es adicional en la pantalla principal)
+                              AppTheme.showSnackBar(
+                                context,
+                                AppTheme.successSnackBar('Cliente actualizado exitosamente'),
+                              );
                             }
                           }
                         },
