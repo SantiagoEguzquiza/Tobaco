@@ -3,8 +3,15 @@ import 'package:tobaco/Services/Cotizaciones_Service/cotizaciones_service.dart';
 import 'package:xml/xml.dart' as xml;
 import 'dart:developer' as developer;
 
+class CotizacionesResult {
+  final List<Cotizacion> items;
+  final DateTime? timestamp; // Timestamp de la respuesta de la API (si existe)
+
+  CotizacionesResult({required this.items, this.timestamp});
+}
+
 class BcuRepository {
-  Future<List<Cotizacion>> getCotizaciones({
+  Future<CotizacionesResult> getCotizaciones({
     required List<int> monedas,
     required DateTime desde,
     required DateTime hasta,
@@ -96,9 +103,9 @@ class BcuRepository {
         }
       }
 
-      // Normalizar códigos ISO y filtrar solo las monedas solicitadas: USD, EUR, ARS, BRL
+      // Normalizar códigos ISO y filtrar solo las monedas según el grupo seleccionado
       // La API del BCU puede usar "EURO" en lugar de "EUR", así que normalizamos
-      final codigosIsoPermitidos = ['USD', 'EUR', 'ARS', 'BRL'];
+      final codigosIsoPermitidos = _getCodigosIsoPermitidosForGrupo(grupo);
       final cotizacionesFiltradas = out.map((cot) {
         // Normalizar código ISO si es necesario
         if (cot.codigoIso != null) {
@@ -188,7 +195,10 @@ class BcuRepository {
 
       developer.log('Cotizaciones obtenidas: ${cotizacionesSinDuplicados.length} (USD, EUR, ARS, BRL)');
 
-      return cotizacionesSinDuplicados;
+      return CotizacionesResult(
+        items: cotizacionesSinDuplicados,
+        timestamp: null, // La API no devuelve timestamp, se usa el fetch local
+      );
     } catch (e) {
       developer.log('Error in getCotizaciones: $e');
       rethrow;
@@ -362,6 +372,21 @@ class BcuRepository {
         return 'AUD';
       default:
         return '';
+    }
+  }
+
+  // Obtiene los códigos ISO permitidos según el grupo
+  List<String> _getCodigosIsoPermitidosForGrupo(int grupo) {
+    switch (grupo) {
+      case 1: // Internacionales
+        return ['USD', 'BRL', 'EUR']; // Solo internacionales (Dólar, Real, Euro)
+      case 2: // Locales
+        return ['ARS']; // Solo locales (Peso Argentino)
+      case 3: // Tasas
+        return []; // Por ahora vacío, ajustar según necesidad
+      case 0: // Todas
+      default:
+        return ['USD', 'BRL', 'ARS', 'EUR']; // Todas las monedas (Dólar, Real, Peso Argentino, Euro)
     }
   }
 

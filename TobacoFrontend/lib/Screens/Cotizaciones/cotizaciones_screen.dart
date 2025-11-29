@@ -109,7 +109,7 @@ class CotizacionesScreen extends StatefulWidget {
 }
 
 class _CotizacionesScreenState extends State<CotizacionesScreen> with SingleTickerProviderStateMixin {
-  int _selectedGroup = 2; // 1 int, 2 locales, 3 tasas, 0 todos
+  int _selectedGroup = 0; // 1 int, 2 locales, 3 tasas, 0 todos
   int _selectedDays = 7;
   final List<int> _selectedCurrencies = [2222, 2223, 2224, 2225]; // USD, EUR, ARS, BRL
 
@@ -137,15 +137,31 @@ class _CotizacionesScreenState extends State<CotizacionesScreen> with SingleTick
     
     switch (codigoIso.toUpperCase()) {
       case 'USD':
-        return '🇺🇸'; // Estados Unidos
+        return '🇺🇸'; 
       case 'BRL':
-        return '🇧🇷'; // Brasil
+        return '🇧🇷'; 
       case 'ARS':
-        return '🇦🇷'; // Argentina
+        return '🇦🇷'; 
       case 'EUR':
-        return '🇪🇺'; // Unión Europea
+        return '🇪🇺'; 
       default:
-        return '🏳️'; // Bandera genérica
+        return '🏳️'; 
+    }
+  }
+
+  // Formatea el mensaje de actualización basado en el fetch local
+  String _getUpdateMessage(DateTime? lastFetchTime) {
+    if (lastFetchTime == null) return '';
+    
+    final now = DateTime.now();
+    final difference = now.difference(lastFetchTime);
+    
+    if (difference.inMinutes < 1) {
+      return 'Actualizado hace menos de 1 min';
+    } else if (difference.inMinutes == 1) {
+      return 'Actualizado hace 1 min';
+    } else {
+      return 'Actualizado hace ${difference.inMinutes} min';
     }
   }
 
@@ -167,14 +183,34 @@ class _CotizacionesScreenState extends State<CotizacionesScreen> with SingleTick
   // Monedas esperadas en orden: USD, BRL, ARS, EUR
   static const List<String> _expectedCurrencies = ['USD', 'BRL', 'ARS', 'EUR'];
 
+  // Obtiene las monedas esperadas según el grupo seleccionado
+  List<String> _getExpectedCurrenciesForGroup(int grupo) {
+    switch (grupo) {
+      case 1: // Internacionales
+        return ['USD', 'BRL', 'EUR']; // Solo internacionales (Dólar, Real, Euro)
+      case 2: // Locales
+        return ['ARS']; // Solo locales (Peso Argentino)
+      case 3: // Tasas
+        return []; 
+      case 0: // Todas
+      default:
+        return _expectedCurrencies; // Todas las monedas
+    }
+  }
+
   // Procesa las cotizaciones y agrega filas para monedas faltantes
-  List<Cotizacion> _processCotizacionesWithMissing(List<Cotizacion> cotizaciones) {
-    // Si la lista está vacía, crear tarjetas de "no disponible" para todas las monedas esperadas
+  List<Cotizacion> _processCotizacionesWithMissing(List<Cotizacion> cotizaciones, int grupo) {
+    // Obtener las monedas esperadas según el grupo
+    final monedasEsperadas = _getExpectedCurrenciesForGroup(grupo);
+    
+    // Si la lista está vacía, crear tarjetas de "no disponible" para las monedas esperadas del grupo
     if (cotizaciones.isEmpty) {
+      if (monedasEsperadas.isEmpty) return [];
+      
       final hoy = DateTime.now();
       final fechaStr = '${hoy.year}-${hoy.month.toString().padLeft(2, '0')}-${hoy.day.toString().padLeft(2, '0')}';
       
-      return _expectedCurrencies.map((iso) {
+      return monedasEsperadas.map((iso) {
         return Cotizacion(
           fecha: fechaStr,
           codigoIso: iso,
@@ -196,13 +232,18 @@ class _CotizacionesScreenState extends State<CotizacionesScreen> with SingleTick
         cotizacionesPorFecha[fecha] = {};
       }
       
-      if (iso.isNotEmpty && _expectedCurrencies.contains(iso)) {
+      if (iso.isNotEmpty && monedasEsperadas.contains(iso)) {
         cotizacionesPorFecha[fecha]![iso] = cot;
       }
     }
 
-    // Crear lista final con todas las monedas esperadas por fecha
+    // Crear lista final con las monedas esperadas del grupo por fecha
     final List<Cotizacion> resultado = [];
+    
+    // Si no hay monedas esperadas para este grupo, retornar solo las que vinieron
+    if (monedasEsperadas.isEmpty) {
+      return cotizaciones;
+    }
     
     // Ordenar fechas (más recientes primero)
     final fechas = cotizacionesPorFecha.keys.toList()
@@ -217,8 +258,8 @@ class _CotizacionesScreenState extends State<CotizacionesScreen> with SingleTick
     for (final fecha in fechas) {
       final cotizacionesFecha = cotizacionesPorFecha[fecha]!;
       
-      // Para cada moneda esperada en orden
-      for (final iso in _expectedCurrencies) {
+      // Para cada moneda esperada del grupo en orden
+      for (final iso in monedasEsperadas) {
         if (cotizacionesFecha.containsKey(iso)) {
           // Moneda existe, agregarla
           resultado.add(cotizacionesFecha[iso]!);
@@ -836,27 +877,47 @@ class _CotizacionesScreenState extends State<CotizacionesScreen> with SingleTick
                       : Colors.green[200]!,
                 ),
               ),
-              child: Row(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(
-                    Icons.check_circle,
-                    color: isDarkMode
-                        ? Colors.green.shade400
-                        : Colors.green[600],
-                    size: 16,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Mostrando ${vm.items.length} cotizaciones ${_groups[_selectedGroup]?.toLowerCase()} de la API del BCU',
-                      style: TextStyle(
-                        fontSize: 12,
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.check_circle,
                         color: isDarkMode
-                            ? Colors.green.shade300
-                            : Colors.green[700],
+                            ? Colors.green.shade400
+                            : Colors.green[600],
+                        size: 16,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Mostrando ${vm.items.length} cotizaciones ${_groups[_selectedGroup]?.toLowerCase()} de la API del BCU',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: isDarkMode
+                                ? Colors.green.shade300
+                                : Colors.green[700],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (_getUpdateMessage(vm.lastFetchTime).isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Padding(
+                      padding: const EdgeInsets.only(left: 24),
+                      child: Text(
+                        _getUpdateMessage(vm.lastFetchTime),
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: isDarkMode
+                              ? Colors.grey.shade400
+                              : Colors.grey.shade600,
+                        ),
                       ),
                     ),
-                  ),
+                  ],
                 ],
               ),
             ),
@@ -972,8 +1033,8 @@ class _CotizacionesScreenState extends State<CotizacionesScreen> with SingleTick
                                   )
                                 : Builder(
                                     builder: (context) {
-                                      // Procesar las cotizaciones para incluir monedas faltantes
-                                      final processedItems = _processCotizacionesWithMissing(vm.items);
+                                      // Procesar las cotizaciones para incluir monedas faltantes según el grupo
+                                      final processedItems = _processCotizacionesWithMissing(vm.items, _selectedGroup);
                                       
                                       return ListView.builder(
                                         padding: const EdgeInsets.all(16),
