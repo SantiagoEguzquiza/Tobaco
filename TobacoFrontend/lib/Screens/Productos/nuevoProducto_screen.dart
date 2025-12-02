@@ -794,7 +794,7 @@ class _NuevoProductoScreenState extends State<NuevoProductoScreen> {
                       ],
                     ),
                   );
-                }).toList(),
+                }),
               ],
             ),
           ),

@@ -32,8 +32,8 @@ String _formatCurrency(num value) {
     (m) => '${m[1]}.'
   );
 
-  final formatted = withThousands + ',' + decimalPart;
-  return isNegative ? '-' + formatted : formatted;
+  final formatted = '$withThousands,$decimalPart';
+  return isNegative ? '-$formatted' : formatted;
 }
 
 String _formatDate(DateTime date) {

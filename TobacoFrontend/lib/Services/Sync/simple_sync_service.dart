@@ -142,11 +142,6 @@ class SimpleSyncService {
           debugPrint('   Tipo de respuesta: ${response.runtimeType}');
           debugPrint('   Keys: ${response.keys.toList()}');
           
-          // Verificar que la respuesta sea válida
-          if (response is! Map<String, dynamic>) {
-            throw Exception('Respuesta inválida del servidor: $response');
-          }
-          
           // Si llegamos aquí, la venta se creó exitosamente en el servidor (sin excepción)
           ventaCreadaExitosamente = true;
           ventaCreada = venta;
@@ -208,7 +203,7 @@ class SimpleSyncService {
             debugPrint('   ⚠️ Verifica los logs del backend para el "inner exception"');
           } else if (statusCode == 401 || statusCode == 403) {
             userMessage = 'Error de autenticación. Inicia sesión nuevamente.';
-            errorMessage = 'Error ${statusCode}: Autenticación';
+            errorMessage = 'Error $statusCode: Autenticación';
           } else if (statusCode == 404) {
             userMessage = 'Recurso no encontrado en el servidor.';
             errorMessage = 'Error 404: No encontrado';
@@ -241,9 +236,9 @@ class SimpleSyncService {
               // Buscar una venta que coincida con esta (mismo cliente, misma fecha, mismo total aproximado)
               if (venta != null) {
                 debugPrint('   Buscando venta en servidor:');
-                debugPrint('     Cliente ID: ${venta!.clienteId}');
-                debugPrint('     Fecha: ${venta!.fecha.year}-${venta!.fecha.month}-${venta!.fecha.day}');
-                debugPrint('     Total: ${venta!.total}');
+                debugPrint('     Cliente ID: ${venta.clienteId}');
+                debugPrint('     Fecha: ${venta.fecha.year}-${venta.fecha.month}-${venta.fecha.day}');
+                debugPrint('     Total: ${venta.total}');
                 debugPrint('   Total de ventas en servidor: ${ventasDelServidor.length}');
                 
                 Ventas? ventaEncontrada;
@@ -251,10 +246,10 @@ class SimpleSyncService {
                   ventaEncontrada = ventasDelServidor.firstWhere(
                     (v) {
                       final mismoCliente = v.clienteId == venta!.clienteId;
-                      final mismaFecha = v.fecha.year == venta!.fecha.year &&
-                                       v.fecha.month == venta!.fecha.month &&
-                                       v.fecha.day == venta!.fecha.day;
-                      final mismoTotal = (v.total - venta!.total).abs() < 0.01;
+                      final mismaFecha = v.fecha.year == venta.fecha.year &&
+                                       v.fecha.month == venta.fecha.month &&
+                                       v.fecha.day == venta.fecha.day;
+                      final mismoTotal = (v.total - venta.total).abs() < 0.01;
                       
                       if (mismoCliente && mismaFecha && mismoTotal) {
                         debugPrint('   ✅ Coincidencia encontrada: ID=${v.id}, Total=${v.total}');
@@ -272,7 +267,7 @@ class SimpleSyncService {
                   ventaEncontrada = null;
                 }
                 
-                if (ventaEncontrada != null && ventaEncontrada.id != null && ventaEncontrada.id != venta!.id) {
+                if (ventaEncontrada != null && ventaEncontrada.id != null && ventaEncontrada.id != venta.id) {
                   ventaExisteEnServidor = true;
                   serverIdEncontrado = ventaEncontrada.id;
                   debugPrint('✅ SimpleSyncService: ¡VENTA ENCONTRADA EN EL SERVIDOR!');
@@ -282,7 +277,7 @@ class SimpleSyncService {
                   debugPrint('❌ SimpleSyncService: La venta NO existe en el servidor');
                   debugPrint('   ventaEncontrada: $ventaEncontrada');
                   debugPrint('   ventaEncontrada.id: ${ventaEncontrada?.id}');
-                  debugPrint('   venta.id: ${venta!.id}');
+                  debugPrint('   venta.id: ${venta.id}');
                 }
               }
             } catch (verifyError) {
@@ -328,7 +323,7 @@ class SimpleSyncService {
 
         // Si la venta se creó exitosamente en el servidor, marcarla como sincronizada
         // Esto se hace FUERA del try-catch anterior para asegurar que siempre se marque
-        if (ventaCreadaExitosamente && ventaCreada != null) {
+        if (ventaCreadaExitosamente) {
           debugPrint('💾 SimpleSyncService: Marcando venta $localId como sincronizada...');
           try {
             await _dbHelper.markVentaAsSynced(localId, serverIdObtenido);

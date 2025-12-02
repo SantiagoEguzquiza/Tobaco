@@ -8,6 +8,7 @@ import 'package:tobaco/Models/EstadoEntrega.dart';
 import 'package:tobaco/Screens/Ventas/nuevaVenta_screen.dart';
 import 'package:tobaco/Screens/Ventas/detalleVentas_screen.dart';
 import 'package:tobaco/Services/Ventas_Service/ventas_provider.dart';
+import 'package:tobaco/Services/Permisos_Service/permisos_provider.dart';
 import 'package:tobaco/Theme/app_theme.dart';
 import 'package:tobaco/Theme/dialogs.dart';
 import 'package:tobaco/Theme/headers.dart';
@@ -133,40 +134,48 @@ class _VentasScreenState extends State<VentasScreen> {
           },
         ),
         const SizedBox(height: 16),
-        SizedBox(
-          width: double.infinity,
-          child: ElevatedButton.icon(
-            onPressed: () async {
-              final result = await Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const NuevaVentaScreen(),
+        // Botón Nueva Venta - Solo mostrar si tiene permiso
+        Consumer<PermisosProvider>(
+          builder: (context, permisosProvider, child) {
+            if (permisosProvider.canCreateVentas || permisosProvider.isAdmin) {
+              return SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () async {
+                    final result = await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const NuevaVentaScreen(),
+                      ),
+                    );
+                    if (!mounted) return;
+                    if (result != null) {
+                      await context.read<VentasProvider>().cargarVentas();
+                      Future.delayed(const Duration(milliseconds: 500), () {
+                        _syncButtonKey.currentState?.recargarPendientes();
+                      });
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryColor,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius:
+                          BorderRadius.circular(AppTheme.borderRadiusMainButtons),
+                    ),
+                    elevation: 2,
+                  ),
+                  icon: const Icon(Icons.add_shopping_cart, size: 20),
+                  label: const Text(
+                    'Nueva Venta',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  ),
                 ),
               );
-              if (!mounted) return;
-              if (result != null) {
-                await context.read<VentasProvider>().cargarVentas();
-                Future.delayed(const Duration(milliseconds: 500), () {
-                  _syncButtonKey.currentState?.recargarPendientes();
-                });
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.primaryColor,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius:
-                    BorderRadius.circular(AppTheme.borderRadiusMainButtons),
-              ),
-              elevation: 2,
-            ),
-            icon: const Icon(Icons.add_shopping_cart, size: 20),
-            label: const Text(
-              'Nueva Venta',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-            ),
-          ),
+            }
+            return const SizedBox.shrink();
+          },
         ),
       ],
     );
@@ -235,24 +244,30 @@ class _VentasScreenState extends State<VentasScreen> {
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
-      child: Slidable(
-        key: key,
-        endActionPane: ActionPane(
-          motion: const ScrollMotion(),
-          children: [
-            SlidableAction(
-              onPressed: (context) => _confirmDeleteVenta(venta),
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-              icon: Icons.delete,
-              label: 'Eliminar',
-              borderRadius: const BorderRadius.only(
-                topRight: Radius.circular(16),
-                bottomRight: Radius.circular(16),
-              ),
-            ),
-          ],
-        ),
+      child: Consumer<PermisosProvider>(
+        builder: (context, permisosProvider, child) {
+          final canDelete = permisosProvider.canDeleteVentas || permisosProvider.isAdmin;
+          
+          return Slidable(
+            key: key,
+            endActionPane: canDelete
+                ? ActionPane(
+                    motion: const ScrollMotion(),
+                    children: [
+                      SlidableAction(
+                        onPressed: (context) => _confirmDeleteVenta(venta),
+                        backgroundColor: Colors.red,
+                        foregroundColor: Colors.white,
+                        icon: Icons.delete,
+                        label: 'Eliminar',
+                        borderRadius: const BorderRadius.only(
+                          topRight: Radius.circular(16),
+                          bottomRight: Radius.circular(16),
+                        ),
+                      ),
+                    ],
+                  )
+                : null,
         child: Container(
           decoration: BoxDecoration(
             color: Theme.of(context).brightness == Brightness.dark
@@ -384,6 +399,8 @@ class _VentasScreenState extends State<VentasScreen> {
             ),
           ),
         ),
+          );
+        },
       ),
     );
   }
@@ -797,9 +814,7 @@ class _SincronizarButtonState extends State<_SincronizarButton> {
       if (mounted) {
         setState(() {
           // Si ya teníamos un valor, mantenerlo; si no, usar 1 como fallback
-          if (_pendientes == null) {
-            _pendientes = 1; // Fallback: asumir que hay al menos una pendiente
-          }
+          _pendientes ??= 1;
           _isLoading = false;
         });
       }

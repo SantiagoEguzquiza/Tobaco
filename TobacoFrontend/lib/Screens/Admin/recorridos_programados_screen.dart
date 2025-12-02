@@ -400,7 +400,7 @@ class _RecorridosProgramadosScreenState extends State<RecorridosProgramadosScree
                               onCambiarDia: _cambiarDia,
                               onReordenar: _reordenar,
                             );
-                          }).toList(),
+                          }),
                         ],
                       ),
                     ),

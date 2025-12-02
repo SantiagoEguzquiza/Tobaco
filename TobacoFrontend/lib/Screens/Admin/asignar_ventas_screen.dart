@@ -101,7 +101,7 @@ class _AsignarVentasScreenState extends State<AsignarVentasScreen> {
           });
           return;
         }
-        throw e;
+        rethrow;
       }
 
       if (!mounted) return;

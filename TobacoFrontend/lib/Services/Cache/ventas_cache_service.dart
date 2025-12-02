@@ -2,11 +2,6 @@ import 'dart:convert';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import '../../Models/Ventas.dart';
-import '../../Models/VentasProductos.dart';
-import '../../Models/Cliente.dart';
-import '../../Models/metodoPago.dart';
-import '../../Models/EstadoEntrega.dart';
-import '../../Models/User.dart';
 
 /// Servicio SIMPLE de caché de ventas para mostrar offline
 /// Solo guarda ventas del servidor para verlas cuando no hay conexión

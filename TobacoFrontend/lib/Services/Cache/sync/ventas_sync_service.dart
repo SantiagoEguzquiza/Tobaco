@@ -123,7 +123,7 @@ class VentasSyncService {
       }
 
       final mensaje = sincronizadas > 0
-          ? '${sincronizadas} venta(s) sincronizada(s) correctamente'
+          ? '$sincronizadas venta(s) sincronizada(s) correctamente'
           : fallidas > 0
               ? 'Error al sincronizar ventas. Verifica la conexión y los datos.'
               : 'No hay ventas pendientes';

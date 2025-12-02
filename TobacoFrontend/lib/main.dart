@@ -13,13 +13,13 @@ import 'package:tobaco/Theme/theme_provider.dart';
 import 'package:tobaco/Services/Productos_Service/productos_provider.dart';
 import 'package:tobaco/Services/Ventas_Service/ventas_provider.dart';
 import 'package:tobaco/Services/VentaBorrador_Service/venta_borrador_provider.dart';
-import 'package:tobaco/Services/Sync/simple_sync_service.dart';
 import 'package:tobaco/Services/Entregas_Service/entregas_provider.dart';
 import 'package:tobaco/Services/Entregas_Service/entregas_service.dart';
 import 'package:tobaco/Services/Entregas_Service/ubicacion_service.dart';
 import 'package:tobaco/Services/Cache/database_helper.dart';
 import 'package:tobaco/Services/Connectivity/connectivity_service.dart';
 import 'package:tobaco/Services/RecorridosProgramados_Service/recorridos_programados_provider.dart';
+import 'package:tobaco/Services/Permisos_Service/permisos_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -35,6 +35,7 @@ void main() async {
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => UserProvider()),
+        ChangeNotifierProvider(create: (_) => PermisosProvider()),
         ChangeNotifierProvider(create: (_) => ClienteProvider()),
         ChangeNotifierProvider(create: (_) => ProductoProvider()),
         ChangeNotifierProvider(create: (_) => CategoriasProvider()),
@@ -96,8 +97,15 @@ class _AuthWrapperState extends State<AuthWrapper> {
   void initState() {
     super.initState();
     // Initialize authentication state
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<AuthProvider>().initializeAuth();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final authProvider = context.read<AuthProvider>();
+      await authProvider.initializeAuth();
+      
+      // Si el usuario está autenticado, cargar permisos (forzando recarga para asegurar estado correcto)
+      if (authProvider.isAuthenticated && mounted) {
+        final permisosProvider = context.read<PermisosProvider>();
+        await permisosProvider.loadPermisos(authProvider, forceReload: true);
+      }
     });
   }
 

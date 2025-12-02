@@ -39,7 +39,7 @@ class TicketBuilder {
       (m) => '${m[1]}.',
     );
     
-    final formatted = withThousands + ',' + decimalPart;
+    final formatted = '$withThousands,$decimalPart';
     return isNegative ? '-$formatted' : formatted;
   }
   
@@ -98,7 +98,7 @@ class TicketBuilder {
       // Nombre del producto (truncar si es muy largo)
       var nombreProducto = producto.nombre.toUpperCase();
       if (nombreProducto.length > width - 10) {
-        nombreProducto = nombreProducto.substring(0, width - 13) + '...';
+        nombreProducto = '${nombreProducto.substring(0, width - 13)}...';
       }
       lines.add(nombreProducto);
       

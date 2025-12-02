@@ -17,8 +17,7 @@ class DirectionsService {
   }) async {
     final waypointStr = waypoints.isEmpty
         ? ''
-        : '&waypoints=${optimizeWaypoints ? 'optimize:true|' : ''}' +
-            waypoints.map((w) => '${w.latitude},${w.longitude}').join('|');
+        : '&waypoints=${optimizeWaypoints ? 'optimize:true|' : ''}${waypoints.map((w) => '${w.latitude},${w.longitude}').join('|')}';
 
     final uri = Uri.parse(
       '$_baseUrl?origin=${origin.latitude},${origin.longitude}'

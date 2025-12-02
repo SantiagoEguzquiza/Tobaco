@@ -6,10 +6,10 @@ class CacheIndicator extends StatelessWidget {
   final bool compact;
 
   const CacheIndicator({
-    Key? key,
+    super.key,
     required this.isUsingCache,
     this.compact = false,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

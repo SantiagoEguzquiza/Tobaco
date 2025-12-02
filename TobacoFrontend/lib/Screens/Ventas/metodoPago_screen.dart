@@ -5,7 +5,6 @@ import 'package:tobaco/Models/metodoPago.dart';
 import 'package:tobaco/Models/ventasPago.dart';
 import 'package:tobaco/Theme/app_theme.dart';
 import 'package:tobaco/Theme/dialogs.dart';
-import 'package:tobaco/Helpers/api_handler.dart';
 
 class FormaPagoScreen extends StatefulWidget {
   final Ventas venta;

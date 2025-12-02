@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../Services/Auth_Service/auth_provider.dart';
+import '../../Services/Permisos_Service/permisos_provider.dart';
 import '../../Helpers/api_handler.dart';
 import '../menu_screen.dart';
 
@@ -501,6 +502,10 @@ class _LoginScreenState extends State<LoginScreen> {
     if (_formKey.currentState!.validate()) {
       authProvider.clearError();
       
+      // Limpiar permisos antes de iniciar login para asegurar estado limpio
+      final permisosProvider = context.read<PermisosProvider>();
+      permisosProvider.clearPermisos();
+      
       try {
         final success = await authProvider.login(
           _userNameController.text.trim(),
@@ -508,6 +513,9 @@ class _LoginScreenState extends State<LoginScreen> {
         );
 
         if (success && mounted) {
+          // Cargar permisos después del login exitoso, forzando recarga
+          await permisosProvider.loadPermisos(authProvider, forceReload: true);
+          
           // Navigate to main menu using direct navigation instead of named routes
           Navigator.of(context).pushReplacement(
             MaterialPageRoute(builder: (context) => const MenuScreen()),

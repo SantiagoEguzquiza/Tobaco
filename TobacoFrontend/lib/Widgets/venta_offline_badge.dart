@@ -7,11 +7,11 @@ class VentaOfflineBadge extends StatelessWidget {
   final bool compact;
 
   const VentaOfflineBadge({
-    Key? key,
+    super.key,
     this.isPending = true,
     this.isFailed = false,
     this.compact = false,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

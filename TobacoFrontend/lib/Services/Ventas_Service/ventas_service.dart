@@ -87,7 +87,7 @@ class VentasService {
       
       final jsonBody = jsonEncode(ventaJson);
       debugPrint('   Tamaño del body: ${jsonBody.length} bytes');
-      debugPrint('   Body completo (primeros 500 chars): ${jsonBody.length > 500 ? jsonBody.substring(0, 500) + "..." : jsonBody}');
+      debugPrint('   Body completo (primeros 500 chars): ${jsonBody.length > 500 ? "${jsonBody.substring(0, 500)}..." : jsonBody}');
       
       // Verificar específicamente los pagos en el JSON
       try {

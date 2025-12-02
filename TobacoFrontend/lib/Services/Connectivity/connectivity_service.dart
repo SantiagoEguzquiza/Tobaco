@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:http/http.dart' as http;
 import '../Auth_Service/auth_service.dart';
 import '../../Helpers/api_handler.dart';
 

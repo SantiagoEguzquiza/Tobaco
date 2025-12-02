@@ -10,6 +10,7 @@ import 'package:tobaco/Screens/Productos/editarProducto_screen.dart';
 import 'package:tobaco/Screens/Productos/nuevoProducto_screen.dart';
 import 'package:tobaco/Services/Categoria_Service/categoria_provider.dart';
 import 'package:tobaco/Services/Productos_Service/productos_provider.dart';
+import 'package:tobaco/Services/Permisos_Service/permisos_provider.dart';
 import 'package:tobaco/Theme/app_theme.dart'; 
 import 'package:tobaco/Theme/dialogs.dart'; 
 import 'package:tobaco/Theme/headers.dart';
@@ -295,48 +296,55 @@ class _ProductosScreenState extends State<ProductosScreen> {
 
                       const SizedBox(height: 15),
 
-                      // Botón de crear producto
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          onPressed: () async {
-                            if (categorias.isEmpty) {
-                              AppTheme.showSnackBar(
-                                context,
-                                AppTheme.warningSnackBar(
-                                    'Primero debes crear una categoría'),
-                              );
-                              return;
-                            }
-                            final result = await Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    const NuevoProductoScreen(),
+                      // Botón de crear producto - Solo mostrar si tiene permiso
+                      Consumer<PermisosProvider>(
+                        builder: (context, permisosProvider, child) {
+                          if (permisosProvider.canCreateProductos || permisosProvider.isAdmin) {
+                            return SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton.icon(
+                                onPressed: () async {
+                                  if (categorias.isEmpty) {
+                                    AppTheme.showSnackBar(
+                                      context,
+                                      AppTheme.warningSnackBar(
+                                          'Primero debes crear una categoría'),
+                                    );
+                                    return;
+                                  }
+                                  final result = await Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          const NuevoProductoScreen(),
+                                    ),
+                                  );
+                                  if (result == true) {
+                                    final categoriasProvider = context.read<CategoriasProvider>();
+                                    prov.recargarProductos(categoriasProvider);
+                                  }
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppTheme.primaryColor,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(
+                                        AppTheme.borderRadiusMainButtons),
+                                  ),
+                                  elevation: 2,
+                                ),
+                                icon: const Icon(Icons.add_circle_outline, size: 20),
+                                label: const Text(
+                                  'Crear Nuevo Producto',
+                                  style: TextStyle(
+                                      fontSize: 16, fontWeight: FontWeight.w600),
+                                ),
                               ),
                             );
-                            if (result == true) {
-                              final categoriasProvider = context.read<CategoriasProvider>();
-                              prov.recargarProductos(categoriasProvider);
-                            }
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.primaryColor,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(
-                                  AppTheme.borderRadiusMainButtons),
-                            ),
-                            elevation: 2,
-                          ),
-                          icon: const Icon(Icons.add_circle_outline, size: 20),
-                          label: const Text(
-                            'Crear Nuevo Producto',
-                            style: TextStyle(
-                                fontSize: 16, fontWeight: FontWeight.w600),
-                          ),
-                        ),
+                          }
+                          return const SizedBox.shrink();
+                        },
                       ),
 
                       const SizedBox(height: 15),
@@ -634,61 +642,78 @@ class _ProductosScreenState extends State<ProductosScreen> {
                                           ),
                                         ),
 
-                                        // Botones de acción
-                                        Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Container(
-                                              decoration: BoxDecoration(
-                                                color: AppTheme.primaryColor
-                                                    .withOpacity(0.1),
-                                                borderRadius:
-                                                    BorderRadius.circular(15),
-                                              ),
-                                              child: IconButton(
-                                                icon: Icon(
-                                                  Icons.edit_outlined,
-                                                  color: AppTheme.primaryColor,
-                                                  size: 20,
-                                                ),
-                                                onPressed: () async {
-                                                  final result =
-                                                      await Navigator.push(
-                                                    context,
-                                                    MaterialPageRoute(
-                                                      builder: (context) =>
-                                                          EditarProductoScreen(
-                                                        producto: producto,
-                                                      ),
+                                        // Botones de acción - Ocultar según permisos
+                                        Consumer<PermisosProvider>(
+                                          builder: (context, permisosProvider, child) {
+                                            final canEdit = permisosProvider.canEditProductos || permisosProvider.isAdmin;
+                                            final canDelete = permisosProvider.canDeleteProductos || permisosProvider.isAdmin;
+                                            
+                                            // Si no tiene ningún permiso de acción, no mostrar la fila
+                                            if (!canEdit && !canDelete) {
+                                              return const SizedBox.shrink();
+                                            }
+                                            
+                                            return Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                // Botón Editar
+                                                if (canEdit)
+                                                  Container(
+                                                    decoration: BoxDecoration(
+                                                      color: AppTheme.primaryColor
+                                                          .withOpacity(0.1),
+                                                      borderRadius:
+                                                          BorderRadius.circular(15),
                                                     ),
-                                                  );
-                                                  if (result == true) {
-                                                    final categoriasProvider = context.read<CategoriasProvider>();
-                                                    prov.recargarProductos(categoriasProvider);
-                                                  }
-                                                },
-                                              ),
-                                            ),
-                                            const SizedBox(width: 8),
-                                            Container(
-                                              decoration: BoxDecoration(
-                                                color:
-                                                    Colors.red.withOpacity(0.1),
-                                                borderRadius:
-                                                    BorderRadius.circular(15),
-                                              ),
-                                              child: IconButton(
-                                                icon: Icon(
-                                                  Icons.delete_outline,
-                                                  color: Colors.red,
-                                                  size: 20,
-                                                ),
-                                                onPressed: () =>
-                                                    _eliminarProducto(
-                                                        context, producto),
-                                              ),
-                                            ),
-                                          ],
+                                                    child: IconButton(
+                                                      icon: Icon(
+                                                        Icons.edit_outlined,
+                                                        color: AppTheme.primaryColor,
+                                                        size: 20,
+                                                      ),
+                                                      onPressed: () async {
+                                                        final result =
+                                                            await Navigator.push(
+                                                          context,
+                                                          MaterialPageRoute(
+                                                            builder: (context) =>
+                                                                EditarProductoScreen(
+                                                              producto: producto,
+                                                            ),
+                                                          ),
+                                                        );
+                                                        if (result == true) {
+                                                          final categoriasProvider = context.read<CategoriasProvider>();
+                                                          prov.recargarProductos(categoriasProvider);
+                                                        }
+                                                      },
+                                                    ),
+                                                  ),
+                                                if (canEdit && canDelete)
+                                                  const SizedBox(width: 8),
+                                                // Botón Eliminar
+                                                if (canDelete)
+                                                  Container(
+                                                    decoration: BoxDecoration(
+                                                      color:
+                                                          Colors.red.withOpacity(0.1),
+                                                      borderRadius:
+                                                          BorderRadius.circular(15),
+                                                    ),
+                                                    child: IconButton(
+                                                      icon: Icon(
+                                                        Icons.delete_outline,
+                                                        color: Colors.red,
+                                                        size: 20,
+                                                      ),
+                                                      onPressed: () =>
+                                                          _eliminarProducto(
+                                                              context, producto),
+                                                    ),
+                                                  ),
+                                              ],
+                                            );
+                                          },
                                         ),
                                       ],
                                     ),
