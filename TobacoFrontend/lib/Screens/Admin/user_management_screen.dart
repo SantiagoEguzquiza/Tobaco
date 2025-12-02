@@ -9,6 +9,8 @@ import '../../Theme/app_theme.dart';
 import '../../Theme/dialogs.dart';
 import '../../Theme/headers.dart';
 import '../../Helpers/api_handler.dart';
+import 'permisos_empleado_screen.dart';
+import '../../Services/Permisos_Service/permisos_provider.dart';
 
 // Helper function to check if a user is the last active admin
 bool _isLastAdmin(User user, UserProvider userProvider) {
@@ -895,6 +897,18 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                       ],
                     ),
                   ),
+                  // Solo mostrar permisos para empleados (no admins)
+                  if (!user.isAdmin)
+                    const PopupMenuItem(
+                      value: 'permisos',
+                      child: Row(
+                        children: [
+                          Icon(Icons.security, size: 20, color: Color(0xFF2196F3)),
+                          SizedBox(width: 8),
+                          Text('Permisos'),
+                        ],
+                      ),
+                    ),
                   PopupMenuItem(
                     value: user.isActive ? 'deactivate' : 'activate',
                     enabled: !shouldDisableToggle,
@@ -987,6 +1001,14 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     switch (action) {
       case 'edit':
         _showEditUserDialog(context, user, userProvider);
+        break;
+      case 'permisos':
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => PermisosEmpleadoScreen(user: user),
+          ),
+        );
         break;
       case 'activate':
       case 'deactivate':
@@ -1133,6 +1155,8 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     if (result['success']) {
       // Check if current user was affected (deactivated themselves)
       if (result['currentUserAffected']) {
+        // Limpiar permisos antes de hacer logout
+        context.read<PermisosProvider>().clearPermisos();
         // Clear the session first
         await AuthService.logout();
 
@@ -1322,6 +1346,8 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     if (result['success']) {
       // Check if current user was affected (deleted themselves)
       if (result['currentUserAffected']) {
+        // Limpiar permisos antes de hacer logout
+        context.read<PermisosProvider>().clearPermisos();
         // Clear the session first
         await AuthService.logout();
 
@@ -1394,6 +1420,30 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
   }
 }
 
+// Helper functions for password validation
+bool _hasUpperCase(String password) {
+  return password.contains(RegExp(r'[A-Z]'));
+}
+
+bool _hasLowerCase(String password) {
+  return password.contains(RegExp(r'[a-z]'));
+}
+
+bool _hasNumber(String password) {
+  return password.contains(RegExp(r'[0-9]'));
+}
+
+bool _hasMinLength(String password) {
+  return password.length >= 6;
+}
+
+bool _isPasswordValid(String password) {
+  return _hasUpperCase(password) && 
+         _hasLowerCase(password) && 
+         _hasNumber(password) && 
+         _hasMinLength(password);
+}
+
 class _CreateUserDialog extends StatefulWidget {
   @override
   _CreateUserDialogState createState() => _CreateUserDialogState();
@@ -1429,6 +1479,35 @@ class _CreateUserDialogState extends State<_CreateUserDialog> {
       _hasEmailError = false;
       _hasPasswordError = false;
     });
+  }
+
+  // Build password rule indicator
+  Widget _buildPasswordRule(BuildContext context, String text, bool isValid) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Row(
+      children: [
+        Icon(
+          isValid ? Icons.check_circle : Icons.circle_outlined,
+          size: 16,
+          color: isValid 
+              ? Colors.green[700] 
+              : (isDark ? Colors.grey.shade600 : Colors.grey.shade400),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            text,
+            style: TextStyle(
+              fontSize: 12,
+              color: isValid
+                  ? (isDark ? Colors.green[300] : Colors.green[700])
+                  : (isDark ? Colors.grey.shade400 : Colors.grey.shade600),
+              decoration: isValid ? null : TextDecoration.none,
+            ),
+          ),
+        ),
+      ],
+    );
   }
 
   @override
@@ -1683,13 +1762,14 @@ class _CreateUserDialogState extends State<_CreateUserDialog> {
                                       ? Colors.red
                                 : const Color(0xFF4CAF50),
                                 ),
-                                helperText: 'Mínimo 6 caracteres',
+                                helperText: 'Requisitos: mayúscula, minúscula, número y 6+ caracteres',
                                 helperStyle: TextStyle(
                                   color: _hasPasswordError
                                       ? Colors.red
                                 : const Color(0xFF4CAF50),
                                   fontSize: 12,
                                 ),
+                                helperMaxLines: 2,
                               ),
                               selectionControls: MaterialTextSelectionControls(),
                               obscureText: true,
@@ -1697,39 +1777,76 @@ class _CreateUserDialogState extends State<_CreateUserDialog> {
                                 if (value == null || value.isEmpty) {
                                   return 'La contraseña es requerida';
                                 }
-                                if (value.length < 6) {
+                                if (!_hasMinLength(value)) {
                                   return 'La contraseña debe tener al menos 6 caracteres';
+                                }
+                                if (!_hasUpperCase(value)) {
+                                  return 'La contraseña debe contener al menos una letra mayúscula';
+                                }
+                                if (!_hasLowerCase(value)) {
+                                  return 'La contraseña debe contener al menos una letra minúscula';
+                                }
+                                if (!_hasNumber(value)) {
+                                  return 'La contraseña debe contener al menos un número';
                                 }
                                 return null;
                               },
                             ),
+                            // Indicadores de reglas de contraseña (solo si hay texto)
                             if (_passwordController.text.isNotEmpty) ...[
                               const SizedBox(height: 8),
-                              Row(
-                                children: [
-                                  Icon(
-                                    _passwordController.text.length >= 6
-                                        ? Icons.check_circle
-                                        : Icons.info,
-                                    color: _passwordController.text.length >= 6
-                                        ? Colors.green[700]
-                                        : Colors.orange[700],
-                                    size: 16,
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context).brightness == Brightness.dark
+                                      ? Colors.grey.shade900
+                                      : Colors.grey.shade50,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color: _hasPasswordError
+                                        ? Colors.red.withOpacity(0.3)
+                                        : Colors.grey.withOpacity(0.3),
                                   ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    _passwordController.text.length >= 6
-                                        ? 'Válida'
-                                        : 'Faltan ${6 - _passwordController.text.length}',
-                                    style: TextStyle(
-                                      color: _passwordController.text.length >= 6
-                                          ? Colors.green[700]
-                                          : Colors.orange[700],
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w500,
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Requisitos de contraseña:',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        color: Theme.of(context).brightness == Brightness.dark
+                                            ? Colors.grey.shade300
+                                            : Colors.grey.shade700,
+                                      ),
                                     ),
-                                  ),
-                                ],
+                                    const SizedBox(height: 8),
+                                    _buildPasswordRule(
+                                      context,
+                                      'Al menos 6 caracteres',
+                                      _hasMinLength(_passwordController.text),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    _buildPasswordRule(
+                                      context,
+                                      'Una letra mayúscula',
+                                      _hasUpperCase(_passwordController.text),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    _buildPasswordRule(
+                                      context,
+                                      'Una letra minúscula',
+                                      _hasLowerCase(_passwordController.text),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    _buildPasswordRule(
+                                      context,
+                                      'Un número',
+                                      _hasNumber(_passwordController.text),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ],
                             const SizedBox(height: 16),
@@ -1944,7 +2061,7 @@ class _CreateUserDialogState extends State<_CreateUserDialog> {
                                 : Colors.transparent,
                             side: BorderSide(
                               color: isDark 
-                                  ? Colors.white
+                                  ? Colors.grey.shade700 
                                   : Colors.grey.shade300,
                               width: 1.5,
                             ),
@@ -1956,7 +2073,7 @@ class _CreateUserDialogState extends State<_CreateUserDialog> {
                           child: Text(
                             'Cancelar',
                             style: TextStyle(
-                              color: Colors.white,
+                              color: Theme.of(context).textTheme.bodyLarge?.color,
                               fontWeight: FontWeight.w600,
                               fontSize: 15,
                               letterSpacing: 0.2,
@@ -2155,6 +2272,35 @@ class _EditUserDialogState extends State<_EditUserDialog> {
     });
   }
 
+  // Build password rule indicator
+  Widget _buildPasswordRule(BuildContext context, String text, bool isValid) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Row(
+      children: [
+        Icon(
+          isValid ? Icons.check_circle : Icons.circle_outlined,
+          size: 16,
+          color: isValid 
+              ? Colors.green[700] 
+              : (isDark ? Colors.grey.shade600 : Colors.grey.shade400),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            text,
+            style: TextStyle(
+              fontSize: 12,
+              color: isValid
+                  ? (isDark ? Colors.green[300] : Colors.green[700])
+                  : (isDark ? Colors.grey.shade400 : Colors.grey.shade600),
+              decoration: isValid ? null : TextDecoration.none,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -2176,62 +2322,67 @@ class _EditUserDialogState extends State<_EditUserDialog> {
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Header con título
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
-                decoration: BoxDecoration(
-                  color: isDark 
-                      ? const Color(0xFF2A2A2A).withOpacity(0.5) 
-                      : Colors.grey.shade50,
-                  border: Border(
-                    bottom: BorderSide(
-                      color: isDark 
-                          ? Colors.grey.shade800 
-                          : Colors.grey.shade200,
-                      width: 1,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.9,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Header con título
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+                  decoration: BoxDecoration(
+                    color: isDark 
+                        ? const Color(0xFF2A2A2A).withOpacity(0.5) 
+                        : Colors.grey.shade50,
+                    border: Border(
+                      bottom: BorderSide(
+                        color: isDark 
+                            ? Colors.grey.shade800 
+                            : Colors.grey.shade200,
+                        width: 1,
+                      ),
                     ),
                   ),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF4CAF50).withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Icon(
-                        Icons.edit,
-                        color: Color(0xFF4CAF50),
-                        size: 24,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        'Editar Usuario',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.w700,
-                          color: isDark ? Colors.white : Colors.black87,
-                          letterSpacing: -0.5,
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF4CAF50).withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(
+                          Icons.edit,
+                          color: Color(0xFF4CAF50),
+                          size: 24,
                         ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Editar Usuario',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w700,
+                            color: isDark ? Colors.white : Colors.black87,
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              // Contenido
-              Padding(
-                padding: const EdgeInsets.all(24),
-                child: SingleChildScrollView(
+                // Contenido
+                Flexible(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(24),
                   child: Form(
                     key: _formKey,
                     child: Column(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                             TextFormField(
                               controller: _userNameController,
@@ -2407,7 +2558,7 @@ class _EditUserDialogState extends State<_EditUserDialog> {
                                 : const Color(0xFF2E7D32),
                           ),
                           helperText:
-                              'Mín. 6 caracteres (vacío = mantener actual)',
+                              'Requisitos: mayúscula, minúscula, número y 6+ caracteres (vacío = mantener actual)',
                                 helperStyle: TextStyle(
                                   color: _hasPasswordError
                                       ? Colors.red
@@ -2418,42 +2569,78 @@ class _EditUserDialogState extends State<_EditUserDialog> {
                               ),
                               obscureText: true,
                               validator: (value) {
-                                if (value != null &&
-                                    value.isNotEmpty &&
-                                    value.length < 6) {
-                                  return 'La contraseña debe tener al menos 6 caracteres';
+                                if (value != null && value.isNotEmpty) {
+                                  if (!_hasMinLength(value)) {
+                                    return 'La contraseña debe tener al menos 6 caracteres';
+                                  }
+                                  if (!_hasUpperCase(value)) {
+                                    return 'La contraseña debe contener al menos una letra mayúscula';
+                                  }
+                                  if (!_hasLowerCase(value)) {
+                                    return 'La contraseña debe contener al menos una letra minúscula';
+                                  }
+                                  if (!_hasNumber(value)) {
+                                    return 'La contraseña debe contener al menos un número';
+                                  }
                                 }
                                 return null;
                               },
                             ),
-                            // Password requirements indicator
+                            // Indicadores de reglas de contraseña (solo si hay texto)
                             if (_passwordController.text.isNotEmpty) ...[
                               const SizedBox(height: 8),
-                              Row(
-                                children: [
-                                  Icon(
-                                    _passwordController.text.length >= 6
-                                        ? Icons.check_circle
-                                        : Icons.info,
-                                    color: _passwordController.text.length >= 6
-                                        ? Colors.green[700]
-                                        : Colors.orange[700],
-                                    size: 16,
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context).brightness == Brightness.dark
+                                      ? Colors.grey.shade900
+                                      : Colors.grey.shade50,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color: _hasPasswordError
+                                        ? Colors.red.withOpacity(0.3)
+                                        : Colors.grey.withOpacity(0.3),
                                   ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    _passwordController.text.length >= 6
-                                        ? 'Válida'
-                                        : 'Faltan ${6 - _passwordController.text.length}',
-                                    style: TextStyle(
-                                      color: _passwordController.text.length >= 6
-                                          ? Colors.green[700]
-                                          : Colors.orange[700],
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w500,
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Requisitos de contraseña:',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        color: Theme.of(context).brightness == Brightness.dark
+                                            ? Colors.grey.shade300
+                                            : Colors.grey.shade700,
+                                      ),
                                     ),
-                                  ),
-                                ],
+                                    const SizedBox(height: 8),
+                                    _buildPasswordRule(
+                                      context,
+                                      'Al menos 6 caracteres',
+                                      _hasMinLength(_passwordController.text),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    _buildPasswordRule(
+                                      context,
+                                      'Una letra mayúscula',
+                                      _hasUpperCase(_passwordController.text),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    _buildPasswordRule(
+                                      context,
+                                      'Una letra minúscula',
+                                      _hasLowerCase(_passwordController.text),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    _buildPasswordRule(
+                                      context,
+                                      'Un número',
+                                      _hasNumber(_passwordController.text),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ],
                             const SizedBox(height: 16),
@@ -2713,90 +2900,91 @@ class _EditUserDialogState extends State<_EditUserDialog> {
                         ),
                       ),
                       const SizedBox(height: 16),
+                      // Botones dentro del scroll
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8, bottom: 8),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton(
+                                onPressed: () => Navigator.of(context).pop(),
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                  backgroundColor: isDark 
+                                      ? const Color(0xFF2A2A2A) 
+                                      : Colors.transparent,
+                                  side: BorderSide(
+                                    color: isDark 
+                                        ? Colors.grey.shade700 
+                                        : Colors.grey.shade300,
+                                    width: 1.5,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  elevation: 0,
+                                ),
+                                child: Text(
+                                  'Cancelar',
+                                  style: TextStyle(
+                                    color: Theme.of(context).textTheme.bodyLarge?.color,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 15,
+                                    letterSpacing: 0.2,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Consumer<UserProvider>(
+                                builder: (context, userProvider, child) {
+                                  return ElevatedButton(
+                                    onPressed: userProvider.isLoading
+                                        ? null
+                                        : () => _updateUser(context, userProvider),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: AppTheme.primaryColor,
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(vertical: 14),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      elevation: 0,
+                                      shadowColor: AppTheme.primaryColor.withOpacity(0.3),
+                                    ),
+                                    child: userProvider.isLoading
+                                        ? const SizedBox(
+                                            width: 20,
+                                            height: 20,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              valueColor: AlwaysStoppedAnimation<Color>(
+                                                  Colors.white),
+                                            ),
+                                          )
+                                        : const Text(
+                                            'Actualizar',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.w600,
+                                              fontSize: 15,
+                                              letterSpacing: 0.2,
+                                            ),
+                                          ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                       ],
                     ),
                   ),
                 ),
               ),
-              // Botones
-              Container(
-                padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          backgroundColor: isDark 
-                              ? const Color(0xFF2A2A2A) 
-                              : Colors.transparent,
-                          side: BorderSide(
-                            color: isDark 
-                                ? Colors.white
-                                : Colors.grey.shade300,
-                            width: 1.5,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          elevation: 0,
-                        ),
-                        child: Text(
-                          'Cancelar',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 15,
-                            letterSpacing: 0.2,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Consumer<UserProvider>(
-                        builder: (context, userProvider, child) {
-                          return ElevatedButton(
-                            onPressed: userProvider.isLoading
-                                ? null
-                                : () => _updateUser(context, userProvider),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppTheme.primaryColor,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              elevation: 0,
-                              shadowColor: AppTheme.primaryColor.withOpacity(0.3),
-                            ),
-                            child: userProvider.isLoading
-                                ? const SizedBox(
-                                    width: 20,
-                                    height: 20,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      valueColor: AlwaysStoppedAnimation<Color>(
-                                          Colors.white),
-                                    ),
-                                  )
-                                : const Text(
-                                    'Actualizar',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 15,
-                                      letterSpacing: 0.2,
-                                    ),
-                                  ),
-                          );
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -2856,6 +3044,8 @@ class _EditUserDialogState extends State<_EditUserDialog> {
       if (result['success']) {
         // Check if current user was affected (deactivated themselves)
         if (result['currentUserAffected']) {
+          // Limpiar permisos antes de hacer logout
+          context.read<PermisosProvider>().clearPermisos();
           // Clear the session first
           await AuthService.logout();
 

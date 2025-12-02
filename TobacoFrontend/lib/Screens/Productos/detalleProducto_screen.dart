@@ -4,6 +4,7 @@ import 'package:tobaco/Models/Producto.dart';
 import 'package:tobaco/Screens/Productos/editarProducto_screen.dart';
 import 'package:tobaco/Services/Productos_Service/productos_provider.dart';
 import 'package:tobaco/Services/Productos_Service/productos_service.dart';
+import 'package:tobaco/Services/Permisos_Service/permisos_provider.dart';
 import 'package:tobaco/Theme/app_theme.dart'; // Importa el tema
 import 'package:tobaco/Theme/dialogs.dart'; // Importa los diálogos
 import 'package:tobaco/Helpers/api_handler.dart';
@@ -274,106 +275,126 @@ class _DetalleProductoScreenState extends State<DetalleProductoScreen> {
                     ),
                     const SizedBox(height: 20),
                     
-                    // Botón Editar
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        onPressed: () async {
-                          final result = await Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => EditarProductoScreen(
-                                producto: _producto,
+                    // Botones de acción - Ocultar según permisos
+                    Consumer<PermisosProvider>(
+                      builder: (context, permisosProvider, child) {
+                        final canEdit = permisosProvider.canEditProductos || permisosProvider.isAdmin;
+                        final canDelete = permisosProvider.canDeleteProductos || permisosProvider.isAdmin;
+                        
+                        // Si no tiene ningún permiso de acción, no mostrar nada
+                        if (!canEdit && !canDelete) {
+                          return const SizedBox.shrink();
+                        }
+                        
+                        return Column(
+                          children: [
+                            // Botón Editar
+                            if (canEdit)
+                              SizedBox(
+                                width: double.infinity,
+                                child: ElevatedButton.icon(
+                                  onPressed: () async {
+                                    final result = await Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => EditarProductoScreen(
+                                          producto: _producto,
+                                        ),
+                                      ),
+                                    );
+                                    
+                                    // Si se guardó exitosamente, actualizar el producto
+                                    if (result == true) {
+                                      _actualizarProducto();
+                                    }
+                                  },
+                                  icon: const Icon(Icons.edit_outlined, color: Colors.white),
+                                  label: const Text(
+                                    'Editar Producto',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF4CAF50),
+                                    padding: const EdgeInsets.symmetric(vertical: 16),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(15),
+                                    ),
+                                  ),
+                                ),
                               ),
-                            ),
-                          );
-                          
-                          // Si se guardó exitosamente, actualizar el producto
-                          if (result == true) {
-                            _actualizarProducto();
-                          }
-                        },
-                        icon: const Icon(Icons.edit_outlined, color: Colors.white),
-                        label: const Text(
-                          'Editar Producto',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                          ),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF4CAF50),
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(15),
-                          ),
-                        ),
-                      ),
-                    ),
-                    
-                    const SizedBox(height: 12),
-                    
-                    // Botón Eliminar
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        onPressed: () async {
-                          final confirm = await AppDialogs.showDeleteConfirmationDialog(
-                            context: context,
-                            title: 'Eliminar Producto',
-                            itemName: _producto.nombre,
-                            confirmText: 'Eliminar',
-                            cancelText: 'Cancelar',
-                          );
+                            
+                            if (canEdit && canDelete)
+                              const SizedBox(height: 12),
+                            
+                            // Botón Eliminar
+                            if (canDelete)
+                              SizedBox(
+                                width: double.infinity,
+                                child: ElevatedButton.icon(
+                                  onPressed: () async {
+                                    final confirm = await AppDialogs.showDeleteConfirmationDialog(
+                                      context: context,
+                                      title: 'Eliminar Producto',
+                                      itemName: _producto.nombre,
+                                      confirmText: 'Eliminar',
+                                      cancelText: 'Cancelar',
+                                    );
 
-                          if (confirm == true) {
-                            if (_producto.id != null) {
-                              try {
-                                await ProductoProvider().eliminarProducto(_producto.id!);
-                                AppTheme.showSnackBar(
-                                  context,
-                                  AppTheme.successSnackBar('Producto eliminado con éxito'),
-                                );
-                                Navigator.of(context).pop(true);
-                              } catch (e) {
-                                if (e.toString().contains('ventas vinculadas') || 
-                                    e.toString().contains('Conflict')) {
-                                  _showDeactivateDialog(context, _producto);
-                                } else if (Apihandler.isConnectionError(e)) {
-                                  await Apihandler.handleConnectionError(context, e);
-                                } else {
-                                  await AppDialogs.showErrorDialog(
-                                    context: context,
-                                    message: 'Error al eliminar producto: ${e.toString().replaceFirst('Exception: ', '')}',
-                                  );
-                                }
-                              }
-                            } else {
-                              AppTheme.showSnackBar(
-                                context,
-                                AppTheme.errorSnackBar('Error: ID del producto no válido'),
-                              );
-                            }
-                          }
-                        },
-                        icon: const Icon(Icons.delete_outline, color: Colors.white),
-                        label: const Text(
-                          'Eliminar Producto',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                          ),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red.shade600,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(15),
-                          ),
-                        ),
-                      ),
+                                    if (confirm == true) {
+                                      if (_producto.id != null) {
+                                        try {
+                                          await ProductoProvider().eliminarProducto(_producto.id!);
+                                          AppTheme.showSnackBar(
+                                            context,
+                                            AppTheme.successSnackBar('Producto eliminado con éxito'),
+                                          );
+                                          Navigator.of(context).pop(true);
+                                        } catch (e) {
+                                          if (e.toString().contains('ventas vinculadas') || 
+                                              e.toString().contains('Conflict')) {
+                                            _showDeactivateDialog(context, _producto);
+                                          } else if (Apihandler.isConnectionError(e)) {
+                                            await Apihandler.handleConnectionError(context, e);
+                                          } else {
+                                            await AppDialogs.showErrorDialog(
+                                              context: context,
+                                              message: 'Error al eliminar producto: ${e.toString().replaceFirst('Exception: ', '')}',
+                                            );
+                                          }
+                                        }
+                                      } else {
+                                        AppTheme.showSnackBar(
+                                          context,
+                                          AppTheme.errorSnackBar('Error: ID del producto no válido'),
+                                        );
+                                      }
+                                    }
+                                  },
+                                  icon: const Icon(Icons.delete_outline, color: Colors.white),
+                                  label: const Text(
+                                    'Eliminar Producto',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.red.shade600,
+                                    padding: const EdgeInsets.symmetric(vertical: 16),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(15),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          ],
+                        );
+                      },
                     ),
                     
                     const SizedBox(height: 12),

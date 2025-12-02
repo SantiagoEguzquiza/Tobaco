@@ -26,7 +26,7 @@ class EntregasService {
     // Filtrar cualquier entrega de venta asignada (ventaId > 0) que venga del servidor
     if (usuario?.esVendedor == true && !usuario!.isAdmin) {
       // Filtrar para solo mantener recorridos programados (ventaId == 0)
-      entregas.removeWhere((e) => e.ventaId != null && e.ventaId! > 0);
+      entregas.removeWhere((e) => e.ventaId > 0);
       debugPrint('📋 Vendedor: Filtrando entregas asignadas, quedan ${entregas.length} recorridos programados');
     }
     

@@ -6,6 +6,7 @@ import 'package:tobaco/Screens/Admin/user_management_screen.dart';
 import 'package:tobaco/Screens/Auth/login_screen.dart';
 import 'package:tobaco/Services/Asistencia_Service/asistencia_service.dart';
 import 'package:tobaco/Services/Auth_Service/auth_provider.dart';
+import 'package:tobaco/Services/Permisos_Service/permisos_provider.dart';
 import 'package:tobaco/Theme/app_theme.dart';
 import 'package:tobaco/Theme/dialogs.dart';
 import 'package:tobaco/Theme/theme_provider.dart';
@@ -765,6 +766,8 @@ class _ConfigScreenState extends State<ConfigScreen> {
     );
 
     if (confirmado) {
+      // Limpiar permisos antes de hacer logout
+      context.read<PermisosProvider>().clearPermisos();
       await context.read<AuthProvider>().logout();
       if (mounted) {
         Navigator.of(context).pushAndRemoveUntil(

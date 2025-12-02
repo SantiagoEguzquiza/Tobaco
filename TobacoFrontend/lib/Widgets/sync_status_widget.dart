@@ -6,9 +6,9 @@ class SyncStatusWidget extends StatelessWidget {
   final bool showDetails;
 
   const SyncStatusWidget({
-    Key? key,
+    super.key,
     this.showDetails = false,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -19,7 +19,7 @@ class SyncStatusWidget extends StatelessWidget {
 
 /// Botón de sincronización - DESACTIVADO en sistema simple
 class SyncButton extends StatelessWidget {
-  const SyncButton({Key? key}) : super(key: key);
+  const SyncButton({super.key});
 
   @override
   Widget build(BuildContext context) {

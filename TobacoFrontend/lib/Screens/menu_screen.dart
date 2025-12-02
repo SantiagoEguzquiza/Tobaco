@@ -13,6 +13,7 @@ import 'package:tobaco/Screens/Config/config_screen.dart';
 import 'package:tobaco/Screens/Entregas/mapa_entregas_screen.dart';
 import 'package:tobaco/Screens/Entregas/entregas_screen.dart';
 import 'package:tobaco/Services/Auth_Service/auth_provider.dart';
+import 'package:tobaco/Services/Permisos_Service/permisos_provider.dart';
 import 'package:tobaco/Theme/app_theme.dart';
 import 'package:tobaco/Theme/dialogs.dart';
 
@@ -50,8 +51,36 @@ class MenuScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
-        child: Consumer<AuthProvider>(
-          builder: (context, authProvider, child) {
+        child: Consumer2<AuthProvider, PermisosProvider>(
+          builder: (context, authProvider, permisosProvider, child) {
+            // Debug logs
+            debugPrint('MenuScreen: isAuthenticated: ${authProvider.isAuthenticated}, isLoading: ${permisosProvider.isLoading}, permisos: ${permisosProvider.permisos != null}, isAdmin: ${permisosProvider.isAdmin}');
+            debugPrint('MenuScreen: canViewProductos: ${permisosProvider.canViewProductos}');
+            if (permisosProvider.permisos != null) {
+              debugPrint('MenuScreen: productosVisualizar: ${permisosProvider.permisos!.productosVisualizar}');
+            }
+            
+            // Cargar permisos cuando el usuario está autenticado y aún no se han cargado
+            // El loadPermisos detectará automáticamente cambios de usuario
+            if (authProvider.isAuthenticated && 
+                !permisosProvider.isLoading && 
+                permisosProvider.permisos == null && 
+                !permisosProvider.isAdmin &&
+                !permisosProvider.hasAttemptedLoad) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                permisosProvider.loadPermisos(authProvider);
+              });
+            } else if (authProvider.isAuthenticated && 
+                       !permisosProvider.isLoading &&
+                       authProvider.currentUser?.id != null &&
+                       permisosProvider.currentUserId != null &&
+                       authProvider.currentUser!.id != permisosProvider.currentUserId) {
+              // Si el usuario cambió, forzar recarga de permisos
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                permisosProvider.loadPermisos(authProvider, forceReload: true);
+              });
+            }
+            
             return Center(
               
               child: SingleChildScrollView(             
@@ -128,52 +157,60 @@ class MenuScreen extends StatelessWidget {
                               width: 1,
                             ),
                           ),
-                          child: Row(
+                          child: Column(
                             children: [
-                              Expanded(
-                                child: ElevatedButton.icon(
-                                  onPressed: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) => const RecorridosProgramadosScreen(),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: ElevatedButton.icon(
+                                      onPressed: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => const AsignarVentasScreen(),
+                                          ),
+                                        );
+                                      },
+                                      icon: const Icon(Icons.assignment_ind, size: 18),
+                                      label: const Text('Asignar Ventas'),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: AppTheme.primaryColor,
+                                        foregroundColor: Colors.white,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
+                                        ),
+                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                                       ),
-                                    );
-                                  },
-                                  icon: const Icon(Icons.route, size: 18),
-                                  label: const Text('Recorridos'),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: AppTheme.primaryColor,
-                                    foregroundColor: Colors.white,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
                                     ),
-                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                                   ),
-                                ),
+                                ],
                               ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: ElevatedButton.icon(
-                                  onPressed: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) => const AsignarVentasScreen(),
+                              const SizedBox(height: 8),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: ElevatedButton.icon(
+                                      onPressed: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => const RecorridosProgramadosScreen(),
+                                          ),
+                                        );
+                                      },
+                                      icon: const Icon(Icons.route, size: 18),
+                                      label: const Text('Recorridos'),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: AppTheme.primaryColor,
+                                        foregroundColor: Colors.white,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
+                                        ),
+                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                                       ),
-                                    );
-                                  },
-                                  icon: const Icon(Icons.assignment_ind, size: 18),
-                                  label: const Text('Asignar Ventas'),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: AppTheme.primaryColor,
-                                    foregroundColor: Colors.white,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
                                     ),
-                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                                   ),
-                                ),
+                                ],
                               ),
                             ],
                           ),
@@ -254,114 +291,130 @@ class MenuScreen extends StatelessWidget {
                         ),
                       ],
                       
+                      // Row para Clientes y Productos - Mostrar solo los botones con permisos
+                      if ((permisosProvider.canViewClientes || permisosProvider.isAdmin) ||
+                          (permisosProvider.canViewProductos || permisosProvider.isAdmin))
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            // Clientes - Solo mostrar si tiene permiso de visualizar
+                            if (permisosProvider.canViewClientes || permisosProvider.isAdmin)
+                              Expanded(
+                                child: ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF3B82F6), // Modern blue
+                                    foregroundColor: Colors.white, // text color
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    minimumSize: Size(buttonSize, buttonSize),
+                                    elevation: 10,
+                                    shadowColor: Colors.black,
+                                  ),
+                                  onPressed: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                          builder: (context) => const ClientesScreen()),
+                                    );
+                                  },
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.people,
+                                        size: iconSize,
+                                        color: Colors.white,
+                                      ),
+                                      const SizedBox(),
+                                      Text(
+                                        'Clientes',
+                                        style: TextStyle(
+                                          fontSize: fontSize,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            // Espaciador solo si ambos botones están visibles
+                            if ((permisosProvider.canViewClientes || permisosProvider.isAdmin) &&
+                                (permisosProvider.canViewProductos || permisosProvider.isAdmin))
+                              SizedBox(width: spacing),
+                            // Productos - Solo mostrar si tiene permiso de visualizar
+                            if (permisosProvider.canViewProductos || permisosProvider.isAdmin)
+                              Expanded(
+                                child: ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFFF59E0B), // Modern amber
+                                    foregroundColor: Colors.white,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    minimumSize: Size(buttonSize, buttonSize),
+                                    elevation: 10,
+                                    shadowColor: Colors.black,
+                                  ),
+                                  onPressed: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                          builder: (context) =>
+                                              const ProductosScreen()),
+                                    );
+                                  },
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.inventory_2,
+                                        size: iconSize,
+                                        color: Colors.white,
+                                      ),
+                                      const SizedBox(
+                                        height: 5,
+                                      ),
+                                      Text(
+                                        'Productos',
+                                        style: TextStyle(
+                                          fontSize: fontSize,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      // Agregar espacio solo si se mostró la fila anterior
+                      if ((permisosProvider.canViewClientes || permisosProvider.isAdmin) ||
+                          (permisosProvider.canViewProductos || permisosProvider.isAdmin))
+                        SizedBox(height: spacing),
+                      // Cuenta Corriente y Ventas
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Expanded(
-                             child: ElevatedButton(
-                               style: ElevatedButton.styleFrom(
-                                 backgroundColor: const Color(0xFF3B82F6), // Modern blue
-                                 foregroundColor: Colors.white, // text color
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(20),
+                          // Cuenta Corriente - Solo mostrar si tiene permiso de visualizar
+                          if (permisosProvider.canViewCuentaCorriente || permisosProvider.isAdmin)
+                            Expanded(
+                               child: ElevatedButton(
+                                 style: ElevatedButton.styleFrom(
+                                   backgroundColor: const Color(0xFFEF4444), // Modern red
+                                   foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  minimumSize: Size(buttonSize, buttonSize),
+                                  elevation: 10,
+                                  shadowColor: Colors.black,
                                 ),
-                                minimumSize: Size(buttonSize, buttonSize),
-                                elevation: 10,
-                                shadowColor: Colors.black,
-                              ),
-                              onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                      builder: (context) => const ClientesScreen()),
-                                );
-                              },
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.people,
-                                    size: iconSize,
-                                    color: Colors.white,
-                                  ),
-                                  const SizedBox(),
-                                  Text(
-                                    'Clientes',
-                                    style: TextStyle(
-                                      fontSize: fontSize,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                          SizedBox(width: spacing),
-                          Expanded(
-                             child: ElevatedButton(
-                               style: ElevatedButton.styleFrom(
-                                 backgroundColor: const Color(0xFFF59E0B), // Modern amber
-                                 foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                minimumSize: Size(buttonSize, buttonSize),
-                                elevation: 10,
-                                shadowColor: Colors.black,
-                              ),
-                              onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                      builder: (context) =>
-                                          const ProductosScreen()),
-                                );
-                              },
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.inventory_2,
-                                    size: iconSize,
-                                    color: Colors.white,
-                                  ),
-                                  const SizedBox(
-                                    height: 5,
-                                  ),
-                                  Text(
-                                    'Productos',
-                                    style: TextStyle(
-                                      fontSize: fontSize,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: spacing),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Expanded(
-                             child: ElevatedButton(
-                               style: ElevatedButton.styleFrom(
-                                 backgroundColor: const Color(0xFFEF4444), // Modern red
-                                 foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                minimumSize: Size(buttonSize, buttonSize),
-                                elevation: 10,
-                                shadowColor: Colors.black,
-                              ),
-                              onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                      builder: (context) => CuentaCorrienteScreen()),
-                                );
-                              },
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (context) => CuentaCorrienteScreen()),
+                                  );
+                                },
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
@@ -381,26 +434,31 @@ class MenuScreen extends StatelessWidget {
                               ),
                             ),
                           ),
-                          SizedBox(width: spacing),
-                          Expanded(
-                             child: ElevatedButton(
-                               style: ElevatedButton.styleFrom(
-                                 backgroundColor: const Color(0xFF8B5CF6), // Modern purple
-                                 foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(20),
+                          // Espaciador solo si ambos botones están visibles
+                          if ((permisosProvider.canViewCuentaCorriente || permisosProvider.isAdmin) &&
+                              (permisosProvider.canViewVentas || permisosProvider.isAdmin))
+                            SizedBox(width: spacing),
+                          // Ventas - Solo mostrar si tiene permiso de visualizar
+                          if (permisosProvider.canViewVentas || permisosProvider.isAdmin)
+                            Expanded(
+                               child: ElevatedButton(
+                                 style: ElevatedButton.styleFrom(
+                                   backgroundColor: const Color(0xFF8B5CF6), // Modern purple
+                                   foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  minimumSize: Size(buttonSize, buttonSize),
+                                  elevation: 10,
+                                  shadowColor: Colors.black,
                                 ),
-                                minimumSize: Size(buttonSize, buttonSize),
-                                elevation: 10,
-                                shadowColor: Colors.black,
-                              ),
-                              onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                      builder: (context) => VentasScreen()),
-                                );
-                              },
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (context) => VentasScreen()),
+                                  );
+                                },
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
@@ -422,27 +480,32 @@ class MenuScreen extends StatelessWidget {
                           ),
                         ],
                       ),
-                      SizedBox(height: spacing),
-                      SizedBox(
-                        width: isTablet ? 400 : double.infinity,
-                        height: buttonSize,
-                        child: ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF10B981), // Modern emerald
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(20),
+                      // Agregar espacio solo si se mostró la fila anterior
+                      if ((permisosProvider.canViewCuentaCorriente || permisosProvider.isAdmin) ||
+                          (permisosProvider.canViewVentas || permisosProvider.isAdmin))
+                        SizedBox(height: spacing),
+                      // Crear nueva venta - Solo mostrar si tiene permiso de crear
+                      if (permisosProvider.canCreateVentas || permisosProvider.isAdmin) ...[
+                        SizedBox(
+                          width: isTablet ? 400 : double.infinity,
+                          height: buttonSize,
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF10B981), // Modern emerald
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              elevation: 10,
+                              shadowColor: Colors.black,
                             ),
-                            elevation: 10,
-                            shadowColor: Colors.black,
-                          ),
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (context) => const NuevaVentaScreen()),
-                            );
-                          },
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (context) => const NuevaVentaScreen()),
+                              );
+                            },
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
@@ -464,98 +527,102 @@ class MenuScreen extends StatelessWidget {
                             ],
                           ),
                         ),
-                      ),
-                      SizedBox(height: spacing),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Expanded(
-                            child: ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF2563EB), // Blue
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(20),
+                        ),
+                        SizedBox(height: spacing),
+                      ],
+                      if (permisosProvider.canViewEntregas || permisosProvider.isAdmin)
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Expanded(
+                              child: ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF2563EB), // Blue
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  minimumSize: Size(buttonSize, buttonSize),
+                                  elevation: 10,
+                                  shadowColor: Colors.black,
                                 ),
-                                minimumSize: Size(buttonSize, buttonSize),
-                                elevation: 10,
-                                shadowColor: Colors.black,
-                              ),
-                              onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        const MapaEntregasScreen(),
-                                  ),
-                                );
-                              },
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.map,
-                                    size: iconSize,
-                                    color: Colors.white,
-                                  ),
-                                  const SizedBox(height: 10),
-                                  Text(
-                                    'Mapa entregas',
-                                    style: TextStyle(
-                                      fontSize: fontSize,
-                                      fontWeight: FontWeight.bold,
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          const MapaEntregasScreen(),
                                     ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                ],
+                                  );
+                                },
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.map,
+                                      size: iconSize,
+                                      color: Colors.white,
+                                    ),
+                                    const SizedBox(height: 10),
+                                    Text(
+                                      'Mapa entregas',
+                                      style: TextStyle(
+                                        fontSize: fontSize,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
-                          ),
-                          SizedBox(width: spacing),
-                          Expanded(
-                            child: ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF34D399), // Teal
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(20),
+                            SizedBox(width: spacing),
+                            Expanded(
+                              child: ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF34D399), // Teal
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  minimumSize: Size(buttonSize, buttonSize),
+                                  elevation: 10,
+                                  shadowColor: Colors.black,
                                 ),
-                                minimumSize: Size(buttonSize, buttonSize),
-                                elevation: 10,
-                                shadowColor: Colors.black,
-                              ),
-                              onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => const EntregasScreen(),
-                                  ),
-                                );
-                              },
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.local_shipping,
-                                    size: iconSize,
-                                    color: Colors.white,
-                                  ),
-                                  const SizedBox(height: 10),
-                                  Text(
-                                    'Entregas',
-                                    style: TextStyle(
-                                      fontSize: fontSize,
-                                      fontWeight: FontWeight.bold,
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => const EntregasScreen(),
                                     ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                ],
+                                  );
+                                },
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.local_shipping,
+                                      size: iconSize,
+                                      color: Colors.white,
+                                    ),
+                                    const SizedBox(height: 10),
+                                    Text(
+                                      'Entregas',
+                                      style: TextStyle(
+                                        fontSize: fontSize,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: spacing),
+                          ],
+                        ),
+                      // Agregar espacio solo si se mostró la fila anterior
+                      if (permisosProvider.canViewEntregas || permisosProvider.isAdmin)
+                        SizedBox(height: spacing),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
@@ -662,6 +729,8 @@ class MenuScreen extends StatelessWidget {
     );
 
     if (confirmado) {
+      // Limpiar permisos antes de hacer logout
+      context.read<PermisosProvider>().clearPermisos();
       await context.read<AuthProvider>().logout();
       if (context.mounted) {
         Navigator.of(context).pushReplacement(

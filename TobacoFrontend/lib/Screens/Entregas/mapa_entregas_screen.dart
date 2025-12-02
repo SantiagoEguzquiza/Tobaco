@@ -890,7 +890,7 @@ class _DetalleEntregaSheetState extends State<_DetalleEntregaSheet> {
                           ),
                         ),
                       ),
-                    if (!esRecorridoProgramado && widget.entrega.ventaId != null && widget.entrega.ventaId! > 0)
+                    if (!esRecorridoProgramado && widget.entrega.ventaId > 0)
                       Container(
                         margin: const EdgeInsets.only(top: 4),
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -963,7 +963,7 @@ class _DetalleEntregaSheetState extends State<_DetalleEntregaSheet> {
           ),
           const SizedBox(height: 16),
           // Botón para ver detalles de venta si es una entrega de venta
-          if (!esRecorridoProgramado && widget.entrega.ventaId != null && widget.entrega.ventaId! > 0)
+          if (!esRecorridoProgramado && widget.entrega.ventaId > 0)
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
@@ -971,9 +971,9 @@ class _DetalleEntregaSheetState extends State<_DetalleEntregaSheet> {
                   try {
                     // Obtener la venta por ID
                     final ventasProvider = Provider.of<VentasProvider>(context, listen: false);
-                    final venta = await ventasProvider.obtenerVentaPorId(widget.entrega.ventaId!);
+                    final venta = await ventasProvider.obtenerVentaPorId(widget.entrega.ventaId);
                     
-                    if (mounted && venta != null) {
+                    if (mounted) {
                       Navigator.pop(context); // Cerrar el sheet del mapa primero
                       
                       // Navegar al detalle de venta y esperar a que regrese
@@ -1019,7 +1019,7 @@ class _DetalleEntregaSheetState extends State<_DetalleEntregaSheet> {
           // Las entregas parciales pueden seguir siendo editadas
           if (widget.entrega.estado != EstadoEntrega.entregada) ...[
             // Espaciado si hay botón de ver detalles de venta
-            if (!esRecorridoProgramado && widget.entrega.ventaId != null && widget.entrega.ventaId! > 0)
+            if (!esRecorridoProgramado && widget.entrega.ventaId > 0)
               const SizedBox(height: 8),
             // Botón para crear venta desde recorrido (solo Vendedor y Repartidor-Vendedor)
             if (esRecorridoProgramado && puedeCrearVenta)
@@ -1054,7 +1054,7 @@ class _DetalleEntregaSheetState extends State<_DetalleEntregaSheet> {
               builder: (context) {
                 // Si es una entrega de venta (no recorrido programado), no mostrar botón de marcar
                 // porque debe ir al detalle de la venta
-                if (!esRecorridoProgramado && widget.entrega.ventaId != null && widget.entrega.ventaId! > 0) {
+                if (!esRecorridoProgramado && widget.entrega.ventaId > 0) {
                   return const SizedBox.shrink(); // No mostrar botón, ya está el botón de ver detalles
                 }
                 

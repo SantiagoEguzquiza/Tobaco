@@ -138,7 +138,7 @@ class EntregasProvider with ChangeNotifier {
       final usuario = await AuthService.getCurrentUser();
       if (usuario?.esVendedor == true && !usuario!.isAdmin) {
         // Filtrar cualquier entrega de venta asignada que pueda haber venido del servidor
-        _entregas.removeWhere((e) => e.ventaId != null && e.ventaId! > 0);
+        _entregas.removeWhere((e) => e.ventaId > 0);
         
         // Agregar recorridos programados si faltan (solo si hay conexión)
         // En modo offline, los recorridos ya deberían estar en SQLite
@@ -304,7 +304,7 @@ class EntregasProvider with ChangeNotifier {
     
     // Si es Vendedor (no Admin), filtrar entregas asignadas (solo recorridos programados)
     if (usuario?.esVendedor == true && !usuario!.isAdmin) {
-      final recorridosProgramados = entregas.where((e) => e.ventaId == null || e.ventaId == 0).toList();
+      final recorridosProgramados = entregas.where((e) => e.ventaId == 0).toList();
       debugPrint('📦 Cargadas ${recorridosProgramados.length} recorridos programados desde SQLite (filtradas ${entregas.length - recorridosProgramados.length} entregas asignadas)');
       return recorridosProgramados;
     }
@@ -321,7 +321,7 @@ class EntregasProvider with ChangeNotifier {
       // Actualizar la lista preservando el orden y posición actual
       final usuario = await AuthService.getCurrentUser();
       if (usuario?.esVendedor == true && !usuario!.isAdmin) {
-        _entregas.removeWhere((e) => e.ventaId != null && e.ventaId! > 0);
+        _entregas.removeWhere((e) => e.ventaId > 0);
         await _agregarRecorridosProgramadosSiFaltan(usuario.id);
       }
       
@@ -388,7 +388,7 @@ class EntregasProvider with ChangeNotifier {
       
       // Obtener IDs de clientes que ya tienen ventas asignadas (entregas de venta, no recorridos)
       final clientesConVentaAsignada = _entregas
-          .where((e) => e.ventaId != null && e.ventaId! > 0) // Solo entregas de venta
+          .where((e) => e.ventaId > 0) // Solo entregas de venta
           .map((e) => e.clienteId)
           .toSet();
       

@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:tobaco/Theme/app_theme.dart';
+import 'package:flutter/services.dart';
 
 class SplashScreen extends StatefulWidget {
   final Widget nextScreen;
@@ -15,7 +15,9 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    Timer(const Duration(milliseconds: 1500), () {
+    // Precargar la imagen
+    _preloadImage();
+    Timer(const Duration(milliseconds: 2000), () {
       if (mounted) {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (_) => widget.nextScreen),
@@ -24,16 +26,37 @@ class _SplashScreenState extends State<SplashScreen> {
     });
   }
 
+  Future<void> _preloadImage() async {
+    try {
+      await precacheImage(
+        const AssetImage('Assets/images/LogoIntro.png'),
+        context,
+      );
+      debugPrint('LogoIntro.png preloaded successfully');
+    } catch (e) {
+      debugPrint('Error preloading LogoIntro.png: $e');
+      debugPrint('Make sure Assets/images/LogoIntro.png exists in pubspec.yaml');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.primaryColor,
+      backgroundColor: const Color.fromARGB(255, 167, 55, 55),
       body: Center(
         child: Image.asset(
           'Assets/images/LogoIntro.png',
-          width: 100,  // Logo más pequeño - 100 píxeles de ancho
-          height: 100, // Logo más pequeño - 100 píxeles de alto
+          width: 250,
+          height: 250,
           fit: BoxFit.contain,
+          filterQuality: FilterQuality.high,
+          gaplessPlayback: true,
+          errorBuilder: (context, error, stackTrace) {
+            debugPrint('Error loading LogoIntro.png: $error');
+            debugPrint('Stack trace: $stackTrace');
+            // Si hay error, no mostrar nada en lugar del icono de la app
+            return const SizedBox.shrink();
+          },
         ),
       ),
     );

@@ -186,7 +186,9 @@ class BcuRepository {
             if (numValue != null) {
               if (tcc == null) {
                 tcc = numValue;
-              } else tcv ??= numValue;
+              } else {
+                tcv ??= numValue;
+              }
             }
           }
         }

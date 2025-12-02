@@ -496,7 +496,7 @@ class _DetalleEntregasScreenState extends State<DetalleEntregasScreen> {
                   _buildInfoRow(
                     Icons.assignment_ind,
                     'Asignado a',
-                    widget.venta.usuarioAsignado!.userName!,
+                    widget.venta.usuarioAsignado!.userName,
                   ),
                 ],
                 if (widget.venta.usuarioCreador?.userName != null) ...[
@@ -504,7 +504,7 @@ class _DetalleEntregasScreenState extends State<DetalleEntregasScreen> {
                   _buildInfoRow(
                     Icons.person_outline,
                     'Registrado por',
-                    widget.venta.usuarioCreador!.userName!,
+                    widget.venta.usuarioCreador!.userName,
                   ),
                 ],
               ],

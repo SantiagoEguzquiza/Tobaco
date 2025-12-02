@@ -1,5 +1,6 @@
 /// Archivo de exportación centralizado para el módulo Cache
 /// Facilita las importaciones en el resto de la aplicación
+library;
 
 // Core
 export 'core/cache_interface.dart';

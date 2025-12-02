@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:tobaco/Models/Cliente.dart';
 import 'package:tobaco/Services/Clientes_Service/clientes_provider.dart';
+import 'package:tobaco/Services/Permisos_Service/permisos_provider.dart';
 import 'package:tobaco/Screens/Clientes/nuevoCliente_screen.dart';
 import 'package:tobaco/Screens/Clientes/editarCliente_screen.dart';
 import 'package:tobaco/Screens/Clientes/detalleCliente_screen.dart';
@@ -174,38 +175,45 @@ class _ClientesScreenState extends State<ClientesScreen> {
                           
                           const SizedBox(height: 16),
                           
-                          // Botón de crear cliente
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton.icon(
-                              onPressed: () async {
-                                final result = await Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => const NuevoClienteScreen(),
+                          // Botón de crear cliente - Solo mostrar si tiene permiso
+                          Consumer<PermisosProvider>(
+                            builder: (context, permisosProvider, child) {
+                              if (permisosProvider.canCreateClientes || permisosProvider.isAdmin) {
+                                return SizedBox(
+                                  width: double.infinity,
+                                  child: ElevatedButton.icon(
+                                    onPressed: () async {
+                                      final result = await Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => const NuevoClienteScreen(),
+                                        ),
+                                      );
+                                      // Si se retorna un Cliente, significa que se creó exitosamente
+                                      if (result is Cliente && mounted) {
+                                        await context.read<ClienteProvider>().cargarClientes();
+                                      }
+                                    },
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: AppTheme.primaryColor,
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(vertical: 16),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
+                                      ),
+                                      elevation: 2,
+                                    ),
+                                    icon: const Icon(Icons.person_add, size: 20),
+                                    label: const Text(
+                                      'Nuevo Cliente',
+                                      style: TextStyle(
+                                          fontSize: 16, fontWeight: FontWeight.w600),
+                                    ),
                                   ),
                                 );
-                                // Si se retorna un Cliente, significa que se creó exitosamente
-                                if (result is Cliente && mounted) {
-                                  await context.read<ClienteProvider>().cargarClientes();
-                                }
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppTheme.primaryColor,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(vertical: 16),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
-                                ),
-                                elevation: 2,
-                              ),
-                              icon: const Icon(Icons.person_add, size: 20),
-                              label: const Text(
-                                'Nuevo Cliente',
-                                style: TextStyle(
-                                    fontSize: 16, fontWeight: FontWeight.w600),
-                              ),
-                            ),
+                              }
+                              return const SizedBox.shrink();
+                            },
                           ),
 
                           
@@ -389,53 +397,75 @@ class _ClientesScreenState extends State<ClientesScreen> {
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Container(
-                      decoration: BoxDecoration(
-                        color: AppTheme.primaryColor.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: IconButton(
-                        icon: Icon(
-                          Icons.edit_outlined,
-                          color: AppTheme.primaryColor,
-                          size: 20,
-                        ),
-                        onPressed: () async {
-                          final result = await Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => EditarClienteScreen(cliente: cliente),
-                            ),
-                          );
-                          // Si se retorna un Cliente, significa que se guardó exitosamente
-                          if (result is Cliente) {
-                            // Actualizar directamente el cliente en la lista sin cambiar su posición
-                            if (mounted) {
-                              context.read<ClienteProvider>().actualizarClienteDirecto(result);
-                              // Mostrar snackbar de éxito (el snackbar de editarCliente_screen ya se mostró, pero este es adicional en la pantalla principal)
-                              AppTheme.showSnackBar(
-                                context,
-                                AppTheme.successSnackBar('Cliente actualizado exitosamente'),
-                              );
-                            }
-                          }
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.red.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: IconButton(
-                        icon: Icon(
-                          Icons.delete_outline,
-                          color: Colors.red,
-                          size: 20,
-                        ),
-                        onPressed: () => _eliminarCliente(cliente),
-                      ),
+                    Consumer<PermisosProvider>(
+                      builder: (context, permisosProvider, child) {
+                        final canEdit = permisosProvider.canEditClientes || permisosProvider.isAdmin;
+                        final canDelete = permisosProvider.canDeleteClientes || permisosProvider.isAdmin;
+                        
+                        // Si no tiene ningún permiso de acción, no mostrar nada
+                        if (!canEdit && !canDelete) {
+                          return const SizedBox.shrink();
+                        }
+                        
+                        return Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // Botón Editar
+                            if (canEdit)
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: AppTheme.primaryColor.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: IconButton(
+                                  icon: Icon(
+                                    Icons.edit_outlined,
+                                    color: AppTheme.primaryColor,
+                                    size: 20,
+                                  ),
+                                  onPressed: () async {
+                                    final result = await Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => EditarClienteScreen(cliente: cliente),
+                                      ),
+                                    );
+                                    // Si se retorna un Cliente, significa que se guardó exitosamente
+                                    if (result is Cliente) {
+                                      // Actualizar directamente el cliente en la lista sin cambiar su posición
+                                      if (mounted) {
+                                        context.read<ClienteProvider>().actualizarClienteDirecto(result);
+                                        // Mostrar snackbar de éxito (el snackbar de editarCliente_screen ya se mostró, pero este es adicional en la pantalla principal)
+                                        AppTheme.showSnackBar(
+                                          context,
+                                          AppTheme.successSnackBar('Cliente actualizado exitosamente'),
+                                        );
+                                      }
+                                    }
+                                  },
+                                ),
+                              ),
+                            if (canEdit && canDelete)
+                              const SizedBox(width: 8),
+                            // Botón Eliminar
+                            if (canDelete)
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.red.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: IconButton(
+                                  icon: Icon(
+                                    Icons.delete_outline,
+                                    color: Colors.red,
+                                    size: 20,
+                                  ),
+                                  onPressed: () => _eliminarCliente(cliente),
+                                ),
+                              ),
+                          ],
+                        );
+                      },
                     ),
                   ],
                 ),
