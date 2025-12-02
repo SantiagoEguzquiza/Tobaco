@@ -66,8 +66,6 @@ class BcuCotizacionesService {
   </soapenv:Body>
 </soapenv:Envelope>''';
 
-      developer.log('Consultando API del BCU...');
-
       final resp = await http.post(
         Uri.parse(_endpoint),
         headers: {
@@ -77,8 +75,6 @@ class BcuCotizacionesService {
         },
         body: utf8.encode(soapBody),
       ).timeout(const Duration(seconds: 30));
-
-      developer.log('Respuesta del BCU: ${resp.statusCode} - ${resp.body.length} caracteres');
 
       if (resp.statusCode != 200) {
         throw Exception('HTTP ${resp.statusCode}: ${resp.body}');
