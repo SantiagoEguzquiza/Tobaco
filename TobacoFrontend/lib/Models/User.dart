@@ -54,6 +54,7 @@ class User {
   }
 
   bool get isAdmin => role == 'Admin';
+  bool get isSuperAdmin => role == 'SuperAdmin';
   bool get isEmployee => role == 'Employee';
   
   /// Indica si es vendedor (visita sucursales y asigna entregas)

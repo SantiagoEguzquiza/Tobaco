@@ -4,6 +4,7 @@ import 'package:tobaco/Models/Cliente.dart';
 import 'package:tobaco/Services/Clientes_Service/clientes_service.dart';
 import 'package:tobaco/Services/Cache/datos_cache_service.dart';
 import 'package:tobaco/Services/Cache/cuenta_corriente_cache_service.dart';
+import 'package:tobaco/Services/Cache/data/clientes_cache_service.dart';
 import 'package:tobaco/Helpers/api_handler.dart';
 import 'package:tobaco/Services/Connectivity/connectivity_service.dart';
 
@@ -41,17 +42,19 @@ class ClienteProvider with ChangeNotifier {
     print('📡 ClienteProvider: Intentando obtener clientes del servidor...');
 
     try {
-      // Intentar obtener del servidor con timeout (500ms para ser más rápido en offline)
+      // Intentar obtener del servidor con timeout
       _clientes = await _clienteService
           .obtenerClientes()
-          .timeout(Duration(milliseconds: 500));
+          .timeout(Duration(seconds: 3));
 
       print(
           '✅ ClienteProvider: ${_clientes.length} clientes obtenidos del servidor');
 
-      // Guardar en caché para uso offline (en background)
-      if (_clientes.isNotEmpty) {
-        await _cacheService.guardarClientesEnCache(_clientes);
+      // Guardar en caché para uso offline (siempre, incluso si está vacío para limpiar caché)
+      await _cacheService.guardarClientesEnCache(_clientes);
+      if (_clientes.isEmpty) {
+        print('✅ ClienteProvider: Caché limpiado (servidor devolvió lista vacía)');
+      } else {
         print(
             '✅ ClienteProvider: ${_clientes.length} clientes guardados en caché');
       }
@@ -101,8 +104,9 @@ class ClienteProvider with ChangeNotifier {
       await _clienteService.eliminarCliente(id);
       _clientes.removeWhere((cliente) => cliente.id == id);
 
-      // Actualizar el caché removiendo el cliente eliminado
-      await _actualizarCache();
+      // Actualizar el caché: intentar obtener todos los clientes del servidor
+      // Si falla, eliminar el cliente específico del caché
+      await _actualizarCacheDespuesDeEliminar(id);
 
       notifyListeners();
     } catch (e) {
@@ -146,9 +150,10 @@ class ClienteProvider with ChangeNotifier {
 
       final List<Cliente> nuevosClientes = List<Cliente>.from(data['clientes']);
 
-      // Actualizar caché si es la primera página
-      if (nuevosClientes.isNotEmpty && _currentPage == 1) {
-        _actualizarCacheEnBackground(nuevosClientes);
+      // Actualizar caché con TODOS los clientes del servidor (no solo la primera página)
+      // Esto asegura que el caché esté siempre sincronizado con el estado real del servidor
+      if (_currentPage == 1) {
+        _actualizarCacheCompletoEnBackground();
       }
 
       _clientes = nuevosClientes;
@@ -169,20 +174,34 @@ class ClienteProvider with ChangeNotifier {
       // Si hay error de conexión, intentar cargar del caché
       if (_isOffline) {
         try {
-          final clientesCache = await _cacheService.obtenerClientesDelCache();
-          if (clientesCache.isNotEmpty) {
+          // Intentar cargar del caché
+          final clientesDelCache = await _cacheService.obtenerClientesDelCache();
+          if (clientesDelCache.isNotEmpty) {
             final start = (_currentPage - 1) * _pageSize;
             final end = start + _pageSize;
-            final clientesPag = clientesCache.sublist(
+            final clientesPag = clientesDelCache.sublist(
               start,
-              end > clientesCache.length ? clientesCache.length : end,
+              end > clientesDelCache.length ? clientesDelCache.length : end,
             );
             _clientes = clientesPag;
-            _hasMoreData = end < clientesCache.length;
+            _hasMoreData = end < clientesDelCache.length;
+            debugPrint('✅ ClienteProvider: ${_clientes.length} clientes cargados del caché (página $_currentPage)');
+          } else {
+            _clientes = [];
+            _hasMoreData = false;
+            debugPrint('📝 ClienteProvider: Caché vacío, mostrando lista vacía');
           }
+          // No relanzar el error si se pudo cargar del caché
+          notifyListeners();
+          return;
         } catch (cacheError) {
           debugPrint(
               '❌ ClienteProvider: Error cargando del caché: $cacheError');
+          // Si hay error cargando del caché, mostrar lista vacía
+          _clientes = [];
+          _hasMoreData = false;
+          notifyListeners();
+          return;
         }
       }
 
@@ -267,11 +286,11 @@ class ClienteProvider with ChangeNotifier {
     List<Cliente> resultados;
 
     try {
-      // Intentar buscar en el servidor con timeout (500ms para ser más rápido en offline)
+      // Intentar buscar en el servidor con timeout
       debugPrint('📡 ClienteProvider: Buscando clientes en servidor...');
       resultados = await _clienteService
           .buscarClientes(query)
-          .timeout(Duration(milliseconds: 500));
+          .timeout(Duration(seconds: 3));
 
       debugPrint(
           '✅ ClienteProvider: ${resultados.length} clientes encontrados en servidor');
@@ -407,14 +426,10 @@ class ClienteProvider with ChangeNotifier {
       final data =
           await _clienteService.obtenerClientesPaginados(page, pageSize);
 
-      // Si es la primera página y hay datos, guardar en caché para uso offline
-      if (page == 1 && data['clientes'] != null) {
-        final List<Cliente> clientes = List<Cliente>.from(data['clientes']);
-        if (clientes.isNotEmpty) {
-          // Obtener todos los clientes del servidor para cache completo si es necesario
-          // Por ahora, guardamos solo la primera página en caché
-          // El service ya maneja esto internamente, pero aquí podemos mejorar
-        }
+      // Actualizar caché completo con TODOS los clientes del servidor (no solo la primera página)
+      // Esto asegura que el caché esté siempre sincronizado con el estado real del servidor
+      if (page == 1) {
+        _actualizarCacheCompletoEnBackground();
       }
 
       return data;
@@ -512,10 +527,13 @@ class ClienteProvider with ChangeNotifier {
       try {
         final todosLosClientes = await _clienteService
             .obtenerClientes()
-            .timeout(Duration(milliseconds: 500));
+            .timeout(Duration(seconds: 3));
 
-        if (todosLosClientes.isNotEmpty) {
-          await _cacheService.guardarClientesEnCache(todosLosClientes);
+        // Actualizar caché (si está vacío, limpiará el caché SQLite)
+        await _cacheService.guardarClientesEnCache(todosLosClientes);
+        if (todosLosClientes.isEmpty) {
+          debugPrint('✅ ClienteProvider: Caché limpiado (servidor devolvió lista vacía)');
+        } else {
           debugPrint(
               '✅ ClienteProvider: Caché actualizado con ${todosLosClientes.length} clientes');
         }
@@ -534,9 +552,66 @@ class ClienteProvider with ChangeNotifier {
     }
   }
 
+  /// Actualiza el caché después de eliminar un cliente
+  /// Intenta obtener todos los clientes del servidor para sincronizar el caché completo
+  /// Si falla, elimina el cliente específico del caché
+  Future<void> _actualizarCacheDespuesDeEliminar(int clienteIdEliminado) async {
+    try {
+      // Intentar obtener todos los clientes del servidor para actualizar el caché completo
+      try {
+        final todosLosClientes = await _clienteService
+            .obtenerClientes()
+            .timeout(Duration(milliseconds: 2000)); // Timeout más largo para operación crítica
+
+        // Actualizar el caché con la lista completa del servidor (si está vacío, limpiará el caché)
+        await _cacheService.guardarClientesEnCache(todosLosClientes);
+        if (todosLosClientes.isEmpty) {
+          debugPrint('✅ ClienteProvider: Caché limpiado después de eliminar (servidor devolvió lista vacía)');
+        } else {
+          debugPrint(
+              '✅ ClienteProvider: Caché actualizado después de eliminar (${todosLosClientes.length} clientes)');
+        }
+      } catch (e) {
+        // Si no se puede obtener del servidor, eliminar el cliente específico del caché
+        debugPrint('⚠️ ClienteProvider: No se pudo obtener todos los clientes, eliminando del caché local');
+        final clientesCache = ClientesCacheService();
+        await clientesCache.deleteById(clienteIdEliminado);
+        debugPrint('✅ ClienteProvider: Cliente $clienteIdEliminado eliminado del caché');
+      }
+    } catch (e) {
+      debugPrint('⚠️ ClienteProvider: Error al actualizar caché después de eliminar: $e');
+      // Intentar eliminar del caché de todas formas
+      try {
+        final clientesCache = ClientesCacheService();
+        await clientesCache.deleteById(clienteIdEliminado);
+        debugPrint('✅ ClienteProvider: Cliente $clienteIdEliminado eliminado del caché (fallback)');
+      } catch (e2) {
+        debugPrint('❌ ClienteProvider: Error eliminando del caché: $e2');
+      }
+    }
+  }
+
   // Actualiza el caché en background sin bloquear
   void _actualizarCacheEnBackground(List<Cliente> clientes) {
     _cacheService.guardarClientesEnCache(clientes).catchError(
         (e) => debugPrint('⚠️ Error guardando clientes en caché: $e'));
+  }
+
+  /// Actualiza el caché completo obteniendo TODOS los clientes del servidor
+  /// Se ejecuta en background para no bloquear la UI
+  void _actualizarCacheCompletoEnBackground() {
+    _clienteService.obtenerClientes().then((todosLosClientes) async {
+      // Actualizar caché completo (si está vacío, limpiará el caché SQLite)
+      await _cacheService.guardarClientesEnCache(todosLosClientes);
+      if (todosLosClientes.isEmpty) {
+        debugPrint('✅ ClienteProvider: Caché completo limpiado (servidor devolvió lista vacía)');
+      } else {
+        debugPrint(
+            '✅ ClienteProvider: Caché completo actualizado con ${todosLosClientes.length} clientes');
+      }
+    }).catchError((e) {
+      debugPrint('⚠️ ClienteProvider: Error actualizando caché completo en background: $e');
+      // Si falla, no hacer nada - el caché se mantendrá con los datos anteriores
+    });
   }
 }

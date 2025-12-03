@@ -7,7 +7,7 @@ import 'Catalogo_Local/catalogo_local_service.dart';
 class PrecioEspecialService {
   static final Uri _baseUrl = Apihandler.baseUrl;
   static const String _endpoint = 'preciosespeciales';
-  static const Duration _timeoutDuration = Duration(seconds: 1); // Ultra rápido para modo offline
+  static const Duration _timeoutDuration = Duration(seconds: 10); // Timeout para operaciones de guardado
   static final CatalogoLocalService _catalogoLocal = CatalogoLocalService();
 
   // Obtener todos los precios especiales

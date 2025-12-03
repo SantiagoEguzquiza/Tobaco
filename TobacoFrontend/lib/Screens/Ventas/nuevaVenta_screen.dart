@@ -1299,26 +1299,22 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
         if (!result['isOffline'] && result['ventaId'] != null) {
           final usuario = await AuthService.getCurrentUser();
           if (usuario != null && (usuario.isEmployee || usuario.isAdmin)) {
-            // RepartidorVendedor se asigna automáticamente a sí mismo sin diálogo
-            if (usuario.esRepartidorVendedor) {
-              try {
-                await ventasProvider.asignarVenta(
-                    result['ventaId'], usuario.id);
-                if (mounted) {
-                  AppTheme.showSnackBar(
-                    context,
-                    AppTheme.successSnackBar(
-                        'Venta asignada a ti exitosamente'),
-                  );
-                }
-              } catch (e) {
-                if (mounted) {
-                  AppTheme.showSnackBar(
-                    context,
-                    AppTheme.errorSnackBar('Error al asignar la venta: $e'),
-                  );
-                }
+            // Verificar si la venta ya fue asignada automáticamente por el backend
+            if (result['asignada'] == true && result['usuarioAsignadoId'] != null) {
+              // La venta fue asignada automáticamente (solo para RepartidorVendedor)
+              final nombreAsignado = result['usuarioAsignadoNombre'];
+              if (mounted) {
+                AppTheme.showSnackBar(
+                  context,
+                  AppTheme.successSnackBar(
+                    nombreAsignado != null
+                        ? 'Venta asignada a $nombreAsignado exitosamente'
+                        : 'Venta asignada exitosamente'),
+                );
               }
+            } else if (usuario.isAdmin) {
+              // Admin: la venta se crea y queda pendiente de asignación
+              // No mostrar ningún diálogo, el admin puede asignarla después desde la pantalla de asignar ventas
             } else if (usuario.esVendedor) {
               // Vendedor: mostrar diálogo informativo de que la venta queda pendiente de asignación
               if (mounted) {
@@ -1332,7 +1328,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                 );
               }
             } else {
-              // Para otros tipos de empleados (Admin, Repartidor), mostrar el diálogo de asignación
+              // Para Repartidor, mostrar el diálogo de asignación
               final opcionAsignacion =
                   await _mostrarDialogoAsignacionVenta(context);
 
@@ -1600,7 +1596,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                               if (isSearching) ...[
                                 Padding(
                                   padding: const EdgeInsets.symmetric(
-                                      horizontal: 16),
+                                      horizontal: 16.0, vertical: 8.0),
                                   child: Column(
                                     crossAxisAlignment:
                                         CrossAxisAlignment.stretch,
@@ -1669,20 +1665,34 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
 
                                 // Lista de clientes
                                 if (clientesFiltrados.isNotEmpty)
-                                  _buildClientesList(
-                                      clientesFiltrados, 'Clientes encontrados')
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 8.0),
+                                    child: _buildClientesList(
+                                        clientesFiltrados, 'Clientes encontrados'),
+                                  )
                                 else if (clientesIniciales.isNotEmpty &&
                                     _searchController.text.trim().isEmpty)
-                                  _buildClientesList(
-                                      clientesIniciales, 'Clientes disponibles')
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 8.0),
+                                    child: _buildClientesList(
+                                        clientesIniciales, 'Clientes disponibles'),
+                                  )
                                 else if (_searchController.text
                                     .trim()
                                     .isNotEmpty)
-                                  _buildEmptyState(
-                                      'No se encontraron clientes con ese nombre')
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 16.0, vertical: 16.0),
+                                    child: _buildEmptyState(
+                                        'No se encontraron clientes con ese nombre'),
+                                  )
                                 else
-                                  _buildEmptyState(
-                                      'No hay clientes disponibles'),
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 16.0, vertical: 16.0),
+                                    child: _buildEmptyState(
+                                        'No hay clientes disponibles'),
+                                  ),
                               ] else ...[
                                 // Cliente seleccionado
                                 ClienteSection(

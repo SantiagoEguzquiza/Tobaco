@@ -46,12 +46,12 @@ class CategoriaService {
 
       if (response.statusCode != 200) {
         throw Exception(
-            'Error al guardar el cliente. Código de estado: ${response.statusCode}, Respuesta: ${response.body}');
+            'Error al guardar la categoría. Código de estado: ${response.statusCode}, Respuesta: ${response.body}');
       } else {
-        debugPrint('Cliente guardado exitosamente');
+        debugPrint('Categoría guardada exitosamente');
       }
     } catch (e) {
-      debugPrint('Error al guardar el cliente: $e');
+      debugPrint('Error al guardar la categoría: $e');
       rethrow;
     }
   }

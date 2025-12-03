@@ -113,21 +113,22 @@ class DatosCacheService {
   // ==================== CLIENTES ====================
 
   /// Guarda clientes en caché
+  /// Si la lista está vacía, limpia el caché para mantener sincronización con el servidor
   Future<void> guardarClientesEnCache(List<Cliente> clientes) async {
-    if (clientes.isEmpty) {
-      print('💾 DatosCacheService: No hay clientes para guardar');
-      return;
-    }
-
     try {
       final db = await database;
-      final now = DateTime.now().toIso8601String();
 
       await db.transaction((txn) async {
-        // Limpiar caché anterior
+        // Limpiar caché anterior (siempre, incluso si está vacío)
         await txn.delete('clientes_cache');
 
+        if (clientes.isEmpty) {
+          print('💾 DatosCacheService: Lista vacía recibida, caché limpiado');
+          return;
+        }
+
         // Guardar cada cliente como JSON
+        final now = DateTime.now().toIso8601String();
         for (var cliente in clientes) {
           await txn.insert('clientes_cache', {
             'id': cliente.id,
@@ -137,7 +138,11 @@ class DatosCacheService {
         }
       });
 
-      print('✅ DatosCacheService: ${clientes.length} clientes guardados en caché');
+      if (clientes.isEmpty) {
+        print('✅ DatosCacheService: Caché limpiado (servidor devolvió lista vacía)');
+      } else {
+        print('✅ DatosCacheService: ${clientes.length} clientes guardados en caché');
+      }
     } catch (e) {
       print('❌ DatosCacheService: Error guardando clientes: $e');
     }
@@ -179,21 +184,22 @@ class DatosCacheService {
   // ==================== PRODUCTOS ====================
 
   /// Guarda productos en caché
+  /// Si la lista está vacía, limpia el caché para mantener sincronización con el servidor
   Future<void> guardarProductosEnCache(List<Producto> productos) async {
-    if (productos.isEmpty) {
-      print('💾 DatosCacheService: No hay productos para guardar');
-      return;
-    }
-
     try {
       final db = await database;
-      final now = DateTime.now().toIso8601String();
 
       await db.transaction((txn) async {
-        // Limpiar caché anterior
+        // Limpiar caché anterior (siempre, incluso si está vacío)
         await txn.delete('productos_cache');
 
+        if (productos.isEmpty) {
+          print('💾 DatosCacheService: Lista vacía recibida, caché limpiado');
+          return;
+        }
+
         // Guardar cada producto como JSON
+        final now = DateTime.now().toIso8601String();
         for (var producto in productos) {
           await txn.insert('productos_cache', {
             'id': producto.id,
@@ -203,7 +209,11 @@ class DatosCacheService {
         }
       });
 
-      print('✅ DatosCacheService: ${productos.length} productos guardados en caché');
+      if (productos.isEmpty) {
+        print('✅ DatosCacheService: Caché limpiado (servidor devolvió lista vacía)');
+      } else {
+        print('✅ DatosCacheService: ${productos.length} productos guardados en caché');
+      }
     } catch (e) {
       print('❌ DatosCacheService: Error guardando productos: $e');
     }

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../Models/Cliente.dart';
@@ -102,6 +103,12 @@ class _NuevoClienteScreenState extends State<NuevoClienteScreen> {
         _isLoading = false;
       });
       
+      // Mostrar mensaje de éxito
+      AppTheme.showSnackBar(
+        context,
+        AppTheme.successSnackBar('Cliente creado exitosamente'),
+      );
+      
       // Retornar con el cliente creado
       Navigator.pop(context, clienteCreado);
     } catch (e) {
@@ -110,14 +117,40 @@ class _NuevoClienteScreenState extends State<NuevoClienteScreen> {
       if (Apihandler.isConnectionError(e)) {
         setState(() {
           _isLoading = false;
-          // No establecer errorMessage para errores de conexión
         });
         await Apihandler.handleConnectionError(context, e);
       } else {
         setState(() {
           _isLoading = false;
-          _errorMessage = 'Error al crear el cliente: ${e.toString().replaceAll('Exception: ', '')}';
         });
+        // Extraer el mensaje de error del backend si está disponible
+        String errorMessage = 'Error al crear el cliente';
+        final errorString = e.toString();
+        if (errorString.contains('Respuesta:')) {
+          try {
+            final jsonStart = errorString.indexOf('{');
+            if (jsonStart != -1) {
+              final jsonString = errorString.substring(jsonStart);
+              final jsonData = jsonDecode(jsonString);
+              if (jsonData is Map && jsonData.containsKey('message')) {
+                errorMessage = jsonData['message'].toString();
+              } else {
+                errorMessage = errorString.replaceAll('Exception: ', '');
+              }
+            } else {
+              errorMessage = errorString.replaceAll('Exception: ', '');
+            }
+          } catch (_) {
+            errorMessage = errorString.replaceAll('Exception: ', '');
+          }
+        } else {
+          errorMessage = errorString.replaceAll('Exception: ', '');
+        }
+        
+        AppTheme.showSnackBar(
+          context,
+          AppTheme.errorSnackBar(errorMessage),
+        );
       }
     }
   }
@@ -169,10 +202,35 @@ class _NuevoClienteScreenState extends State<NuevoClienteScreen> {
         
         if (mounted && Apihandler.isConnectionError(e)) {
           await Apihandler.handleConnectionError(context, e);
-        } else {
-          setState(() {
-            _errorMessage = 'Error al crear el cliente: ${e.toString().replaceAll('Exception: ', '')}';
-          });
+        } else if (mounted) {
+          // Extraer el mensaje de error del backend si está disponible
+          String errorMessage = 'Error al crear el cliente';
+          final errorString = e.toString();
+          if (errorString.contains('Respuesta:')) {
+            try {
+              final jsonStart = errorString.indexOf('{');
+              if (jsonStart != -1) {
+                final jsonString = errorString.substring(jsonStart);
+                final jsonData = jsonDecode(jsonString);
+                if (jsonData is Map && jsonData.containsKey('message')) {
+                  errorMessage = jsonData['message'].toString();
+                } else {
+                  errorMessage = errorString.replaceAll('Exception: ', '');
+                }
+              } else {
+                errorMessage = errorString.replaceAll('Exception: ', '');
+              }
+            } catch (_) {
+              errorMessage = errorString.replaceAll('Exception: ', '');
+            }
+          } else {
+            errorMessage = errorString.replaceAll('Exception: ', '');
+          }
+          
+          AppTheme.showSnackBar(
+            context,
+            AppTheme.errorSnackBar(errorMessage),
+          );
         }
         return;
       }
@@ -444,30 +502,6 @@ class _NuevoClienteScreenState extends State<NuevoClienteScreen> {
             ),
             const SizedBox(height: 30),
             
-            // Mensaje de error
-            if (_errorMessage != null) ...[
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.red.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.red.shade200),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.error, color: Colors.red.shade700),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        _errorMessage!,
-                        style: TextStyle(color: Colors.red.shade700),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 20),
-            ],
             
             const SizedBox(height: 30),
             

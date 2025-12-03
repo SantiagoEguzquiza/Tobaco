@@ -7,7 +7,7 @@ import 'package:tobaco/Services/Cache/datos_cache_service.dart';
 
 class ClienteService {
   final Uri baseUrl = Apihandler.baseUrl;
-  static const Duration _timeoutDuration = Duration(milliseconds: 500); // Ultra rápido para modo offline
+  static const Duration _timeoutDuration = Duration(seconds: 3); // Timeout razonable para detectar offline
   final DatosCacheService _cacheService = DatosCacheService();
 
   Future<List<Cliente>> obtenerClientes() async {
@@ -178,11 +178,8 @@ class ClienteService {
         
         print('✅ ClienteService: ${clientes.length} clientes obtenidos del servidor');
         
-        // Guardar en caché para uso offline (en background, solo primera página)
-        if (page == 1 && clientes.isNotEmpty) {
-          _cacheService.guardarClientesEnCache(clientes)
-              .catchError((e) => print('⚠️ Error guardando clientes en caché: $e'));
-        }
+        // NO guardar aquí - el provider maneja la actualización completa del caché
+        // para asegurar que siempre refleje TODOS los clientes del servidor
         
         return {
           'clientes': clientes,

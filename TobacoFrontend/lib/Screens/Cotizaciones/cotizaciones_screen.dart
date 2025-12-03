@@ -673,12 +673,10 @@ class _CotizacionesScreenState extends State<CotizacionesScreen> with SingleTick
     return Scaffold(
       backgroundColor: isDarkMode ? Colors.black : Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
+        centerTitle: true,
         title: const Text(
           'Cotizaciones de Monedas',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
+          style: AppTheme.appBarTitleStyle,
         ),
         backgroundColor: null, // Usar el tema
         elevation: 0,

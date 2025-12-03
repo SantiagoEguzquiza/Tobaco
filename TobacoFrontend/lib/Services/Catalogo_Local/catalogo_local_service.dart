@@ -98,11 +98,18 @@ class CatalogoLocalService {
 
   // ===== Productos =====
   Future<void> guardarProductos(List<Producto> productos) async {
-    if (productos.isEmpty) return;
     final db = await database;
-    final now = DateTime.now().toIso8601String();
     await db.transaction((txn) async {
+      // Limpiar caché anterior (siempre, incluso si está vacío)
       await txn.delete('productos');
+      
+      if (productos.isEmpty) {
+        print('💾 CatalogoLocalService: Lista vacía recibida, caché limpiado');
+        return;
+      }
+      
+      // Guardar cada producto
+      final now = DateTime.now().toIso8601String();
       for (final p in productos) {
         await txn.insert('productos', {
           'id': p.id,
@@ -111,6 +118,12 @@ class CatalogoLocalService {
         });
       }
     });
+    
+    if (productos.isEmpty) {
+      print('✅ CatalogoLocalService: Caché limpiado (servidor devolvió lista vacía)');
+    } else {
+      print('✅ CatalogoLocalService: ${productos.length} productos guardados');
+    }
   }
 
   Future<List<Producto>> obtenerProductos() async {

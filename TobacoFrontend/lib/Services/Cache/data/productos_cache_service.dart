@@ -26,12 +26,17 @@ class ProductosCacheService implements ICacheService<Producto> {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, _databaseName);
 
-    return await openDatabase(
+    final db = await openDatabase(
       path,
       version: _databaseVersion,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
+    
+    // Asegurar que cache_metadata existe después de abrir la base de datos
+    await _ensureCacheMetadataTable(db);
+    
+    return db;
   }
 
   Future<void> _onCreate(Database db, int version) async {
@@ -54,10 +59,58 @@ class ProductosCacheService implements ICacheService<Producto> {
 
     await db.execute('CREATE INDEX IF NOT EXISTS idx_productos_nombre ON $_tableName(nombre)');
     await db.execute('CREATE INDEX IF NOT EXISTS idx_productos_categoria ON $_tableName(categoria_id)');
+    
+    // Crear tabla de metadatos si no existe
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS cache_metadata (
+        entity_name TEXT PRIMARY KEY,
+        is_empty INTEGER NOT NULL DEFAULT 0,
+        marked_at TEXT
+      )
+    ''');
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    // Asegurar que la tabla cache_metadata existe
+    await _ensureCacheMetadataTable(db);
+    
     // Migraciones si es necesario
+  }
+
+  /// Asegura que la tabla cache_metadata existe
+  Future<void> _ensureCacheMetadataTable(Database db) async {
+    try {
+      // Verificar si la tabla existe
+      final result = await db.rawQuery(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='cache_metadata'"
+      );
+      
+      if (result.isEmpty) {
+        // Crear la tabla si no existe
+        await db.execute('''
+          CREATE TABLE cache_metadata (
+            entity_name TEXT PRIMARY KEY,
+            is_empty INTEGER NOT NULL DEFAULT 0,
+            marked_at TEXT
+          )
+        ''');
+        debugPrint('✅ ProductosCacheService: Tabla cache_metadata creada');
+      }
+    } catch (e) {
+      debugPrint('⚠️ ProductosCacheService: Error verificando/creando cache_metadata: $e');
+      // Intentar crear de todas formas
+      try {
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS cache_metadata (
+            entity_name TEXT PRIMARY KEY,
+            is_empty INTEGER NOT NULL DEFAULT 0,
+            marked_at TEXT
+          )
+        ''');
+      } catch (e2) {
+        debugPrint('❌ ProductosCacheService: Error creando cache_metadata: $e2');
+      }
+    }
   }
 
   @override
@@ -99,16 +152,21 @@ class ProductosCacheService implements ICacheService<Producto> {
 
   @override
   Future<void> saveAll(List<Producto> items) async {
-    if (items.isEmpty) return;
-
     final db = await database;
     final now = DateTime.now().toIso8601String();
-
-    debugPrint('💾 ProductosCacheService: Guardando ${items.length} productos en caché...');
 
     await db.transaction((txn) async {
       // Limpiar caché anterior
       await txn.delete(_tableName);
+      
+      // Limpiar marcador de vacío si hay datos
+      if (items.isNotEmpty) {
+        await txn.delete(
+          'cache_metadata',
+          where: 'entity_name = ?',
+          whereArgs: [_tableName],
+        );
+      }
 
       // Insertar nuevos productos
       for (var producto in items) {
@@ -127,7 +185,11 @@ class ProductosCacheService implements ICacheService<Producto> {
       }
     });
 
-    debugPrint('✅ ProductosCacheService: Productos guardados en caché');
+    if (items.isEmpty) {
+      debugPrint('💾 ProductosCacheService: Lista vacía, no se guardó nada');
+    } else {
+      debugPrint('✅ ProductosCacheService: ${items.length} productos guardados en caché');
+    }
   }
 
   @override
@@ -238,5 +300,44 @@ class ProductosCacheService implements ICacheService<Producto> {
         isActive: (map['activo'] as int) == 1,
       );
     }).toList();
+  }
+
+  @override
+  Future<void> markAsEmpty() async {
+    final db = await database;
+    await db.insert(
+      'cache_metadata',
+      {
+        'entity_name': _tableName,
+        'is_empty': 1,
+        'marked_at': DateTime.now().toIso8601String(),
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+    debugPrint('📝 ProductosCacheService: Marcado como vacío');
+  }
+
+  @override
+  Future<bool> isEmptyMarked() async {
+    final db = await database;
+    final result = await db.query(
+      'cache_metadata',
+      where: 'entity_name = ?',
+      whereArgs: [_tableName],
+      limit: 1,
+    );
+    if (result.isEmpty) return false;
+    return (result.first['is_empty'] as int) == 1;
+  }
+
+  @override
+  Future<void> clearEmptyMark() async {
+    final db = await database;
+    await db.delete(
+      'cache_metadata',
+      where: 'entity_name = ?',
+      whereArgs: [_tableName],
+    );
+    debugPrint('🧹 ProductosCacheService: Marcador de vacío limpiado');
   }
 }

@@ -109,17 +109,7 @@ class _ClientesScreenState extends State<ClientesScreen> {
         final hasMoreData = provider.hasMoreData;
         final searchQuery = provider.searchQuery;
         
-        // Mostrar mensajes de error si existen
-        if (provider.errorMessage != null && !isLoading) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted && provider.isOffline) {
-              AppTheme.showSnackBar(
-                context,
-                AppTheme.warningSnackBar(provider.errorMessage!),
-              );
-            }
-          });
-        }
+        // Snackbar de advertencia removido
 
         return Scaffold(
           backgroundColor: Theme.of(context).scaffoldBackgroundColor,

@@ -317,4 +317,59 @@ class VentasCacheService implements ICacheService<Ventas> {
       estadoEntrega: EstadoEntregaExtension.fromJson(ventaMap['estado_entrega'] as int),
     );
   }
+
+  @override
+  Future<void> markAsEmpty() async {
+    final db = await database;
+    await _ensureCacheMetadataTable(db);
+    await db.insert(
+      'cache_metadata',
+      {
+        'entity_name': _tableName,
+        'is_empty': 1,
+        'marked_at': DateTime.now().toIso8601String(),
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+    debugPrint('📝 VentasCacheService: Caché marcado como vacío');
+  }
+
+  @override
+  Future<bool> isEmptyMarked() async {
+    final db = await database;
+    await _ensureCacheMetadataTable(db);
+    final result = await db.query(
+      'cache_metadata',
+      where: 'entity_name = ?',
+      whereArgs: [_tableName],
+      limit: 1,
+    );
+
+    if (result.isEmpty) return false;
+
+    return (result.first['is_empty'] as int) == 1;
+  }
+
+  @override
+  Future<void> clearEmptyMark() async {
+    final db = await database;
+    await _ensureCacheMetadataTable(db);
+    await db.delete(
+      'cache_metadata',
+      where: 'entity_name = ?',
+      whereArgs: [_tableName],
+    );
+    debugPrint('🧹 VentasCacheService: Marcador de vacío limpiado');
+  }
+
+  /// Asegura que la tabla cache_metadata existe
+  Future<void> _ensureCacheMetadataTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS cache_metadata (
+        entity_name TEXT PRIMARY KEY,
+        is_empty INTEGER NOT NULL DEFAULT 0,
+        marked_at TEXT NOT NULL
+      )
+    ''');
+  }
 }

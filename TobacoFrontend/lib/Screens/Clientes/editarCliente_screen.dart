@@ -31,7 +31,6 @@ class _EditarClienteScreenState extends State<EditarClienteScreen> {
   double? _longitud;
   
   bool _isLoading = false;
-  String? _errorMessage;
   
   final ClienteProvider _clienteProvider = ClienteProvider();
 
@@ -92,15 +91,17 @@ class _EditarClienteScreenState extends State<EditarClienteScreen> {
 
   Future<void> _actualizarCliente() async {
     if (!_formKey.currentState!.validate()) {
-      setState(() {
-        _errorMessage = 'Por favor, completa todos los campos obligatorios marcados con *';
-      });
+      if (mounted) {
+        AppTheme.showSnackBar(
+          context,
+          AppTheme.errorSnackBar('Por favor, completa todos los campos obligatorios marcados con *'),
+        );
+      }
       return;
     }
 
     setState(() {
       _isLoading = true;
-      _errorMessage = null;
     });
 
     try {
@@ -126,6 +127,7 @@ class _EditarClienteScreenState extends State<EditarClienteScreen> {
       });
       
       // Retornar con el cliente actualizado
+      // El snackbar se mostrará en la pantalla de clientes después de cerrar
       if (mounted) {
         Navigator.pop(context, clienteActualizado);
       }
@@ -136,13 +138,27 @@ class _EditarClienteScreenState extends State<EditarClienteScreen> {
       
       if (mounted && Apihandler.isConnectionError(e)) {
         await Apihandler.handleConnectionError(context, e);
-        setState(() {
-          _errorMessage = 'Error de conexión al servidor';
-        });
-      } else {
-        setState(() {
-          _errorMessage = 'Error al actualizar el cliente: ${e.toString().replaceAll('Exception: ', '')}';
-        });
+      } else if (mounted) {
+        // Extraer el mensaje de error del backend si está disponible
+        String errorMessage = 'Error al actualizar el cliente';
+        final errorString = e.toString();
+        
+        // Intentar extraer el mensaje del backend
+        if (errorString.contains('Exception: ')) {
+          final parts = errorString.split('Exception: ');
+          if (parts.length > 1) {
+            errorMessage = parts[1].trim();
+          }
+        } else if (errorString.contains('404')) {
+          errorMessage = 'Cliente no encontrado. Por favor, recarga la lista de clientes.';
+        } else {
+          errorMessage = errorString.replaceAll('Exception: ', '');
+        }
+        
+        AppTheme.showSnackBar(
+          context,
+          AppTheme.errorSnackBar(errorMessage),
+        );
       }
     }
   }
@@ -150,9 +166,12 @@ class _EditarClienteScreenState extends State<EditarClienteScreen> {
   Future<void> _editarPreciosEspeciales() async {
     // Primero guardar el cliente si hay cambios sin guardar
     if (!_formKey.currentState!.validate()) {
-      setState(() {
-        _errorMessage = 'Por favor, completa todos los campos obligatorios antes de editar precios especiales';
-      });
+      if (mounted) {
+        AppTheme.showSnackBar(
+          context,
+          AppTheme.errorSnackBar('Por favor, completa todos los campos obligatorios antes de editar precios especiales'),
+        );
+      }
       return;
     }
 
@@ -160,7 +179,6 @@ class _EditarClienteScreenState extends State<EditarClienteScreen> {
     if (_hayCambiosSinGuardar()) {
       setState(() {
         _isLoading = true;
-        _errorMessage = null;
       });
 
       try {
@@ -196,10 +214,27 @@ class _EditarClienteScreenState extends State<EditarClienteScreen> {
         
         if (mounted && Apihandler.isConnectionError(e)) {
           await Apihandler.handleConnectionError(context, e);
-        } else {
-          setState(() {
-            _errorMessage = 'Error al guardar cambios: ${e.toString().replaceAll('Exception: ', '')}';
-          });
+        } else if (mounted) {
+          // Extraer el mensaje de error del backend si está disponible
+          String errorMessage = 'Error al guardar cambios';
+          final errorString = e.toString();
+          
+          // Intentar extraer el mensaje del backend
+          if (errorString.contains('Exception: ')) {
+            final parts = errorString.split('Exception: ');
+            if (parts.length > 1) {
+              errorMessage = parts[1].trim();
+            }
+          } else if (errorString.contains('404')) {
+            errorMessage = 'Cliente no encontrado. Por favor, recarga la lista de clientes.';
+          } else {
+            errorMessage = errorString.replaceAll('Exception: ', '');
+          }
+          
+          AppTheme.showSnackBar(
+            context,
+            AppTheme.errorSnackBar(errorMessage),
+          );
         }
         return;
       }
@@ -485,33 +520,6 @@ class _EditarClienteScreenState extends State<EditarClienteScreen> {
                 return null;
               },
             ),
-            const SizedBox(height: 30),
-            
-            // Mensaje de error
-            if (_errorMessage != null) ...[
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.red.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.red.shade200),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.error, color: Colors.red.shade700),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        _errorMessage!,
-                        style: TextStyle(color: Colors.red.shade700),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 20),
-            ],
-            
             const SizedBox(height: 30),
             
             // Botón Guardar Cliente
