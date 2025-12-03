@@ -24,4 +24,13 @@ abstract class ICacheService<T> {
 
   /// Obtiene el número de elementos en el caché
   Future<int> count();
+
+  /// Marca que no hay datos disponibles (para evitar cargas infinitas en offline)
+  Future<void> markAsEmpty();
+
+  /// Verifica si está marcado como vacío
+  Future<bool> isEmptyMarked();
+
+  /// Limpia el marcador de vacío
+  Future<void> clearEmptyMark();
 }

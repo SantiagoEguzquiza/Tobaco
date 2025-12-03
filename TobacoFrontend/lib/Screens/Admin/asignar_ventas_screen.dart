@@ -44,11 +44,11 @@ class _AsignarVentasScreenState extends State<AsignarVentasScreen> {
       try {
         await context.read<UserProvider>().loadUsers();
         final allUsers = context.read<UserProvider>().users;
-        // Filtrar solo empleados que pueden ser repartidores (Repartidor o Repartidor-Vendedor)
+        // Filtrar empleados que pueden ser repartidores (Repartidor o Repartidor-Vendedor) y también Admins
         _employees = allUsers.where((u) => 
           u.isActive && 
-          u.role == 'Employee' &&
-          (u.esRepartidor == true || u.esRepartidorVendedor == true)
+          (u.role == 'Admin' || 
+           (u.role == 'Employee' && (u.esRepartidor == true || u.esRepartidorVendedor == true)))
         ).toList();
         
         debugPrint('✅ Cargados ${_employees.length} empleados para asignar ventas');
@@ -167,8 +167,8 @@ class _AsignarVentasScreenState extends State<AsignarVentasScreen> {
         final allUsers = context.read<UserProvider>().users;
         _employees = allUsers.where((u) => 
           u.isActive && 
-          u.role == 'Employee' &&
-          (u.esRepartidor == true || u.esRepartidorVendedor == true)
+          (u.role == 'Admin' || 
+           (u.role == 'Employee' && (u.esRepartidor == true || u.esRepartidorVendedor == true)))
         ).toList();
         
         if (_employees.isNotEmpty) {
@@ -377,25 +377,7 @@ class _AsignarVentasScreenState extends State<AsignarVentasScreen> {
               child: CircularProgressIndicator(color: AppTheme.primaryColor),
             )
           : _errorMessage != null
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.error_outline, size: 64, color: Colors.red),
-                      const SizedBox(height: 16),
-                      Text(
-                        _errorMessage!,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(fontSize: 16),
-                      ),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: _loadData,
-                        child: const Text('Reintentar'),
-                      ),
-                    ],
-                  ),
-                )
+              ? _buildErrorState(_errorMessage!)
               : _unassignedSales.isEmpty
                   ? Center(
                       child: Column(
@@ -640,6 +622,34 @@ class _AsignarVentasScreenState extends State<AsignarVentasScreen> {
                         ),
                       ],
                     ),
+    );
+  }
+
+  Widget _buildErrorState(String message) {
+    return Padding(
+      padding: const EdgeInsets.all(24.0),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.people_outline,
+              size: 80,
+              color: Colors.grey.shade400,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w500,
+                color: Colors.grey.shade600,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

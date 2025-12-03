@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../Services/User_Service/user_provider.dart';
 import '../../Services/Auth_Service/auth_provider.dart';
@@ -1231,106 +1232,25 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
   }
 
   void _showDeleteUserDialog(
-      BuildContext context, User user, UserProvider userProvider) {
+      BuildContext context, User user, UserProvider userProvider) async {
     // Check if trying to delete the last admin
     if (_isLastAdmin(user, userProvider)) {
       _showLastAdminWarningDialog(context);
       return;
     }
 
-    showDialog(
+    final confirm = await AppDialogs.showDeleteConfirmationDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        title: Row(
-          children: [
-            Icon(Icons.warning, color: Colors.red[400], size: 24),
-            const SizedBox(width: 8),
-            const Text(
-              'Eliminar Usuario',
-              style: TextStyle(
-                color: Color(0xFF1B5E20),
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '¿Estás seguro de que quieres eliminar permanentemente al usuario "${user.userName}"?',
-              style: const TextStyle(fontSize: 16),
-            ),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.red.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.red.withOpacity(0.3)),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.warning, color: Colors.red, size: 20),
-                  const SizedBox(width: 8),
-                  const Expanded(
-                    child: Text(
-                      'Esta acción no se puede deshacer. El usuario será eliminado permanentemente de la base de datos.',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.red,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          OutlinedButton(
-            onPressed: () => Navigator.of(context).pop(),
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              side: BorderSide(color: AppTheme.primaryColor.withOpacity(0.3), width: 1.5),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-            child: Text(
-              'Cancelar',
-              style: TextStyle(
-                color: Theme.of(context).brightness == Brightness.dark 
-                    ? Colors.grey.shade300 
-                    : Colors.grey.shade700,
-                fontWeight: FontWeight.w600,
-                fontSize: 14,
-              ),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.of(context).pop();
-              await _deleteUser(context, user, userProvider);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-            child: const Text('Eliminar'),
-          ),
-        ],
-      ),
+      title: 'Eliminar Usuario',
+      message: '¿Estás seguro de que quieres eliminar permanentemente al usuario "${user.userName}"?\n\nEsta acción no se puede deshacer. El usuario será eliminado permanentemente de la base de datos.',
+      itemName: user.userName,
+      confirmText: 'Eliminar',
+      cancelText: 'Cancelar',
     );
+
+    if (confirm == true) {
+      await _deleteUser(context, user, userProvider);
+    }
   }
 
   Future<void> _deleteUser(
@@ -1510,13 +1430,216 @@ class _CreateUserDialogState extends State<_CreateUserDialog> {
     );
   }
 
+  // Build input decoration helper
+  InputDecoration _buildInputDecoration({
+    required String labelText,
+    required IconData icon,
+    required bool hasError,
+    String? helperText,
+    int? helperMaxLines,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return InputDecoration(
+      labelText: labelText,
+      labelStyle: TextStyle(
+        color: hasError
+            ? Colors.red
+            : (isDark ? Colors.white : const Color(0xFF4CAF50)),
+      ),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(
+          color: hasError ? Colors.red : Colors.grey,
+        ),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(
+          color: hasError ? Colors.red : const Color(0xFF4CAF50),
+          width: 2,
+        ),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Colors.red, width: 2),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Colors.red, width: 2),
+      ),
+      prefixIcon: Icon(
+        icon,
+        color: hasError ? Colors.red : const Color(0xFF4CAF50),
+      ),
+      helperText: helperText,
+      helperMaxLines: helperMaxLines,
+      helperStyle: TextStyle(
+        color: hasError
+            ? Colors.red
+            : (isDark ? Colors.grey.shade400 : Colors.grey.shade600),
+        fontSize: 12,
+      ),
+    );
+  }
+
+  // Build header widget
+  Widget _buildHeader(bool isDark) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+      decoration: BoxDecoration(
+        color: isDark 
+            ? const Color(0xFF2A2A2A).withOpacity(0.5) 
+            : Colors.grey.shade50,
+        border: Border(
+          bottom: BorderSide(
+            color: isDark 
+                ? Colors.grey.shade800 
+                : Colors.grey.shade200,
+            width: 1,
+          ),
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: const Color(0xFF4CAF50).withOpacity(0.15),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Icon(
+              Icons.person_add,
+              color: Color(0xFF4CAF50),
+              size: 24,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'Crear Nuevo Usuario',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.w700,
+                color: isDark ? Colors.white : Colors.black87,
+                letterSpacing: -0.5,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Build footer buttons
+  Widget _buildFooter(bool isDark) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+      decoration: BoxDecoration(
+        color: isDark 
+            ? const Color(0xFF2A2A2A).withOpacity(0.3) 
+            : Colors.grey.shade50,
+        border: Border(
+          top: BorderSide(
+            color: isDark 
+                ? Colors.grey.shade800 
+                : Colors.grey.shade200,
+            width: 1,
+          ),
+        ),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: OutlinedButton(
+              onPressed: () => Navigator.of(context).pop(),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                backgroundColor: isDark 
+                    ? const Color(0xFF2A2A2A) 
+                    : Colors.transparent,
+                side: BorderSide(
+                  color: isDark 
+                      ? Colors.grey.shade700 
+                      : Colors.grey.shade300,
+                  width: 1.5,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                elevation: 0,
+              ),
+              child: Text(
+                'Cancelar',
+                style: TextStyle(
+                  color: Theme.of(context).textTheme.bodyLarge?.color,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 15,
+                  letterSpacing: 0.2,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Consumer<UserProvider>(
+              builder: (context, userProvider, child) {
+                return ElevatedButton(
+                  onPressed: userProvider.isLoading
+                      ? null
+                      : () => _createUser(context, userProvider),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryColor,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 0,
+                    shadowColor: AppTheme.primaryColor.withOpacity(0.3),
+                  ),
+                  child: userProvider.isLoading
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.white),
+                          ),
+                        )
+                      : const Text(
+                          'Crear',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 15,
+                            letterSpacing: 0.2,
+                          ),
+                        ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? const Color(0xFFE0E0E0) : Colors.black;
+    
     return Dialog(
       backgroundColor: Colors.transparent,
       elevation: 0,
-      child: Container(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: Container(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.9,
+          maxWidth: 500,
+        ),
         decoration: BoxDecoration(
           color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
           borderRadius: BorderRadius.circular(24),
@@ -1532,603 +1655,315 @@ class _CreateUserDialogState extends State<_CreateUserDialog> {
         child: ClipRRect(
           borderRadius: BorderRadius.circular(24),
           child: Column(
-            mainAxisSize: MainAxisSize.min,
+            mainAxisSize: MainAxisSize.max,
             children: [
-              // Header con título
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
-                decoration: BoxDecoration(
-                  color: isDark 
-                      ? const Color(0xFF2A2A2A).withOpacity(0.5) 
-                      : Colors.grey.shade50,
-                  border: Border(
-                    bottom: BorderSide(
-                      color: isDark 
-                          ? Colors.grey.shade800 
-                          : Colors.grey.shade200,
-                      width: 1,
-                    ),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF4CAF50).withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Icon(
-                        Icons.person_add,
-                        color: Color(0xFF4CAF50),
-                        size: 24,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        'Crear Nuevo Usuario',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.w700,
-                          color: isDark ? Colors.white : Colors.black87,
-                          letterSpacing: -0.5,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              // Contenido
-              Padding(
-                padding: const EdgeInsets.all(24),
+              // Header fijo
+              _buildHeader(isDark),
+              // Contenido scrolleable
+              Expanded(
                 child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(24),
                   child: Form(
-                        key: _formKey,
-                        child: Column(
-                          children: [
-                            TextFormField(
-                              controller: _userNameController,
-                              style: TextStyle(
-                      color: Theme.of(context).brightness == Brightness.dark
-                          ? const Color(0xFFE0E0E0)
-                          : Colors.black,
-                    ),
-                              onChanged: (value) => _clearFieldErrors(),
-                              decoration: InputDecoration(
-                                labelText: 'Nombre de Usuario',
-                                labelStyle: TextStyle(
-                                  color: _hasUserNameError
-                                      ? Colors.red
-                                : Theme.of(context).brightness == Brightness.dark
-                                    ? Colors.white
-                                    : const Color(0xFF4CAF50),
-                                ),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide(
-                              color:
-                                  _hasUserNameError ? Colors.red : Colors.grey,
-                                  ),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide(
-                                    color: _hasUserNameError
-                                        ? Colors.red
-                                  : const Color(0xFF4CAF50),
-                                    width: 2,
-                                  ),
-                                ),
-                                errorBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                            borderSide:
-                                const BorderSide(color: Colors.red, width: 2),
-                                ),
-                                focusedErrorBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                            borderSide:
-                                const BorderSide(color: Colors.red, width: 2),
-                                ),
-                                prefixIcon: Icon(
-                                  Icons.person,
-                                  color: _hasUserNameError
-                                      ? Colors.red
-                                : const Color(0xFF4CAF50),
-                                ),
-                              ),
-                              selectionControls: MaterialTextSelectionControls(),
-                              validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return 'El nombre de usuario es requerido';
-                                }
-                                return null;
-                              },
-                            ),
-                            const SizedBox(height: 16),
-                            TextFormField(
-                              controller: _emailController,
-                              style: TextStyle(
-                          color: Theme.of(context).brightness == Brightness.dark
-                              ? const Color(0xFFE0E0E0)
-                              : Colors.black,
-                        ),
-                              onChanged: (value) => _clearFieldErrors(),
-                              validator: (value) {
-                                if (value != null && value.isNotEmpty) {
-                                  // Validar formato de email solo si hay contenido
-                                  final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
-                                  if (!emailRegex.hasMatch(value)) {
-                                    return 'Ingrese un email válido';
-                                  }
-                                }
-                                return null;
-                              },
-                              decoration: InputDecoration(
-                                labelText: 'Email (Opcional)',
-                                labelStyle: TextStyle(
-                                  color: _hasEmailError
-                                      ? Colors.red
-                                : Theme.of(context).brightness == Brightness.dark
-                                    ? Colors.white
-                                    : const Color(0xFF4CAF50),
-                                ),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide(
-                                    color: _hasEmailError ? Colors.red : Colors.grey,
-                                  ),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide(
-                              color: _hasEmailError
-                                  ? Colors.red
-                                  : const Color(0xFF4CAF50),
-                                    width: 2,
-                                  ),
-                                ),
-                                errorBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                            borderSide:
-                                const BorderSide(color: Colors.red, width: 2),
-                                ),
-                                focusedErrorBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                            borderSide:
-                                const BorderSide(color: Colors.red, width: 2),
-                                ),
-                                prefixIcon: Icon(
-                                  Icons.email,
-                            color: _hasEmailError
-                                ? Colors.red
-                                : const Color(0xFF4CAF50),
-                                ),
-                              ),
-                              selectionControls: MaterialTextSelectionControls(),
-                              keyboardType: TextInputType.emailAddress,
-                            ),
-                            const SizedBox(height: 16),
-                            TextFormField(
-                              controller: _passwordController,
-                              style: TextStyle(
-                          color: Theme.of(context).brightness == Brightness.dark
-                              ? const Color(0xFFE0E0E0)
-                              : Colors.black,
-                        ),
-                              onChanged: (value) {
-                                setState(() {}); // para actualizar requisitos
-                                _clearFieldErrors();
-                              },
-                              decoration: InputDecoration(
-                                labelText: 'Contraseña',
-                                labelStyle: TextStyle(
-                                  color: _hasPasswordError
-                                      ? Colors.red
-                                : Theme.of(context).brightness == Brightness.dark
-                                    ? Colors.white
-                                    : const Color(0xFF4CAF50),
-                                ),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide(
-                              color:
-                                  _hasPasswordError ? Colors.red : Colors.grey,
-                                  ),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide(
-                                    color: _hasPasswordError
-                                        ? Colors.red
-                                  : const Color(0xFF4CAF50),
-                                    width: 2,
-                                  ),
-                                ),
-                                errorBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                            borderSide:
-                                const BorderSide(color: Colors.red, width: 2),
-                                ),
-                                focusedErrorBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                            borderSide:
-                                const BorderSide(color: Colors.red, width: 2),
-                                ),
-                                prefixIcon: Icon(
-                                  Icons.lock,
-                                  color: _hasPasswordError
-                                      ? Colors.red
-                                : const Color(0xFF4CAF50),
-                                ),
-                                helperText: 'Requisitos: mayúscula, minúscula, número y 6+ caracteres',
-                                helperStyle: TextStyle(
-                                  color: _hasPasswordError
-                                      ? Colors.red
-                                : const Color(0xFF4CAF50),
-                                  fontSize: 12,
-                                ),
-                                helperMaxLines: 2,
-                              ),
-                              selectionControls: MaterialTextSelectionControls(),
-                              obscureText: true,
-                              validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return 'La contraseña es requerida';
-                                }
-                                if (!_hasMinLength(value)) {
-                                  return 'La contraseña debe tener al menos 6 caracteres';
-                                }
-                                if (!_hasUpperCase(value)) {
-                                  return 'La contraseña debe contener al menos una letra mayúscula';
-                                }
-                                if (!_hasLowerCase(value)) {
-                                  return 'La contraseña debe contener al menos una letra minúscula';
-                                }
-                                if (!_hasNumber(value)) {
-                                  return 'La contraseña debe contener al menos un número';
-                                }
-                                return null;
-                              },
-                            ),
-                            // Indicadores de reglas de contraseña (solo si hay texto)
-                            if (_passwordController.text.isNotEmpty) ...[
-                              const SizedBox(height: 8),
-                              Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: Theme.of(context).brightness == Brightness.dark
-                                      ? Colors.grey.shade900
-                                      : Colors.grey.shade50,
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(
-                                    color: _hasPasswordError
-                                        ? Colors.red.withOpacity(0.3)
-                                        : Colors.grey.withOpacity(0.3),
-                                  ),
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Requisitos de contraseña:',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w600,
-                                        color: Theme.of(context).brightness == Brightness.dark
-                                            ? Colors.grey.shade300
-                                            : Colors.grey.shade700,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    _buildPasswordRule(
-                                      context,
-                                      'Al menos 6 caracteres',
-                                      _hasMinLength(_passwordController.text),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    _buildPasswordRule(
-                                      context,
-                                      'Una letra mayúscula',
-                                      _hasUpperCase(_passwordController.text),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    _buildPasswordRule(
-                                      context,
-                                      'Una letra minúscula',
-                                      _hasLowerCase(_passwordController.text),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    _buildPasswordRule(
-                                      context,
-                                      'Un número',
-                                      _hasNumber(_passwordController.text),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                            const SizedBox(height: 16),
-                            DropdownButtonFormField<String>(
-                              value: _selectedRole,
-                        dropdownColor:
-                            Theme.of(context).brightness == Brightness.dark
-                                ? const Color(0xFF1A1A1A)
-                                : Colors.white,
-                              style: TextStyle(
-                          color: Theme.of(context).brightness == Brightness.dark
-                              ? const Color(0xFFE0E0E0)
-                              : Colors.black,
-                        ),
-                              decoration: InputDecoration(
-                                labelText: 'Rol',
-                                labelStyle: TextStyle(
-                            color: Theme.of(context).brightness == Brightness.dark
-                                ? Colors.white
-                                : const Color(0xFF4CAF50),
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // Campo de nombre de usuario
+                        TextFormField(
+                          controller: _userNameController,
+                          style: TextStyle(color: textColor),
+                          onChanged: (value) => _clearFieldErrors(),
+                          inputFormatters: [
+                            FilteringTextInputFormatter.deny(RegExp(r'\s')),
+                          ],
+                          decoration: _buildInputDecoration(
+                            labelText: 'Nombre de Usuario',
+                            icon: Icons.person,
+                            hasError: _hasUserNameError,
+                            helperText: 'No se permiten espacios',
                           ),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: const BorderSide(
-                              color: Color(0xFF4CAF50),
-                                    width: 2,
-                                  ),
-                                ),
-                                prefixIcon: const Icon(
-                                  Icons.admin_panel_settings,
-                            color: Color(0xFF4CAF50),
-                                ),
-                                isDense: true,
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 8,
-                                ),
-                              ),
-                              items: [
-                                DropdownMenuItem(
-                                  value: 'Employee',
-                                  child: Text(
-                                    'Empleado',
-                                    style: TextStyle(
-                                color: Theme.of(context).brightness ==
-                                        Brightness.dark
-                                    ? Colors.white
-                                    : Colors.black,
-                                fontSize: 14,
-                              ),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                                DropdownMenuItem(
-                                  value: 'Admin',
-                                  child: Text(
-                                    'Administrador',
-                                    style: TextStyle(
-                                color: Theme.of(context).brightness ==
-                                        Brightness.dark
-                                    ? Colors.white
-                                    : Colors.black,
-                                fontSize: 14,
-                              ),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ],
-                              onChanged: (value) {
-                                setState(() {
-                                  _selectedRole = value!;
-                                });
-                              },
-                            ),
-                            // Mostrar selector de TipoVendedor solo si es Employee
-                            if (_selectedRole == 'Employee') ...[
-                              const SizedBox(height: 16),
-                              DropdownButtonFormField<TipoVendedor>(
-                                value: _selectedTipoVendedor,
-                                dropdownColor:
-                                    Theme.of(context).brightness == Brightness.dark
-                                        ? const Color(0xFF1A1A1A)
-                                        : Colors.white,
-                                style: TextStyle(
-                                  color: Theme.of(context).brightness == Brightness.dark
-                                      ? const Color(0xFFE0E0E0)
-                                      : Colors.black,
-                                ),
-                                decoration: InputDecoration(
-                                  labelText: 'Tipo de Usuario',
-                                  labelStyle: TextStyle(
-                                    color: Theme.of(context).brightness == Brightness.dark
-                                        ? Colors.white
-                                        : const Color(0xFF4CAF50),
-                                  ),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  focusedBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                    borderSide: const BorderSide(
-                                      color: Color(0xFF4CAF50),
-                                      width: 2,
-                                    ),
-                                  ),
-                                  prefixIcon: const Icon(
-                                    Icons.badge,
-                                    color: Color(0xFF4CAF50),
-                                  ),
-                                  isDense: true,
-                                  contentPadding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 8,
-                                  ),
-                                ),
-                                items: TipoVendedor.values.map((tipo) {
-                                  return DropdownMenuItem(
-                                    value: tipo,
-                                    child: Text(
-                                      tipo.displayName,
-                                      style: TextStyle(
-                                        color: Theme.of(context).brightness == Brightness.dark
-                                            ? Colors.white
-                                            : Colors.black,
-                                        fontSize: 14,
-                                      ),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  );
-                                }).toList(),
-                                onChanged: (value) {
-                                  setState(() {
-                                    _selectedTipoVendedor = value!;
-                                  });
-                                },
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                _selectedTipoVendedor.description,
-                                style: TextStyle(
-                                  color: Theme.of(context).brightness == Brightness.dark
-                                      ? Colors.grey[400]
-                                      : Colors.grey[700],
-                                  fontSize: 12,
-                                  fontStyle: FontStyle.italic,
-                                ),
-                              ),
-                            ],
-                            const SizedBox(height: 16),
-                            TextFormField(
-                              controller: _zonaController,
-                              style: TextStyle(
-                                color: Theme.of(context).brightness == Brightness.dark
-                                    ? const Color(0xFFE0E0E0)
-                                    : Colors.black,
-                              ),
-                              decoration: InputDecoration(
-                                labelText: 'Zona (opcional)',
-                                labelStyle: TextStyle(
-                                  color: Theme.of(context).brightness == Brightness.dark
-                                      ? Colors.white
-                                      : const Color(0xFF4CAF50),
-                                ),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: const BorderSide(
-                                    color: Color(0xFF4CAF50),
-                                    width: 2,
-                                  ),
-                                ),
-                                prefixIcon: const Icon(
-                                  Icons.location_on,
-                                  color: Color(0xFF4CAF50),
-                                ),
-                                isDense: true,
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 16,
-                                ),
-                                helperText: 'Ej: Zona Norte, Zona Sur, Centro',
-                                helperStyle: TextStyle(
-                                  color: Theme.of(context).brightness == Brightness.dark
-                                      ? Colors.grey[500]
-                                      : Colors.grey[600],
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-              // Botones
-              Container(
-                padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-                child: Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            backgroundColor: isDark 
-                                ? const Color(0xFF2A2A2A) 
-                                : Colors.transparent,
-                            side: BorderSide(
-                              color: isDark 
-                                  ? Colors.grey.shade700 
-                                  : Colors.grey.shade300,
-                              width: 1.5,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            elevation: 0,
-                          ),
-                          child: Text(
-                            'Cancelar',
-                            style: TextStyle(
-                              color: Theme.of(context).textTheme.bodyLarge?.color,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 15,
-                              letterSpacing: 0.2,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Consumer<UserProvider>(
-                          builder: (context, userProvider, child) {
-                            return ElevatedButton(
-                              onPressed: userProvider.isLoading
-                                  ? null
-                                  : () => _createUser(context, userProvider),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppTheme.primaryColor,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(vertical: 14),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                elevation: 0,
-                                shadowColor: AppTheme.primaryColor.withOpacity(0.3),
-                              ),
-                              child: userProvider.isLoading
-                                  ? const SizedBox(
-                                      width: 20,
-                                      height: 20,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        valueColor: AlwaysStoppedAnimation<Color>(
-                                            Colors.white),
-                                      ),
-                                    )
-                                  : const Text(
-                                      'Crear',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 15,
-                                        letterSpacing: 0.2,
-                                      ),
-                                    ),
-                            );
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'El nombre de usuario es requerido';
+                            }
+                            if (value.contains(' ')) {
+                              return 'El nombre de usuario no puede contener espacios';
+                            }
+                            return null;
                           },
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: 16),
+                        // Campo de email
+                        TextFormField(
+                          controller: _emailController,
+                          style: TextStyle(color: textColor),
+                          onChanged: (value) => _clearFieldErrors(),
+                          keyboardType: TextInputType.emailAddress,
+                          decoration: _buildInputDecoration(
+                            labelText: 'Email (Opcional)',
+                            icon: Icons.email,
+                            hasError: _hasEmailError,
+                          ),
+                          validator: (value) {
+                            if (value != null && value.isNotEmpty) {
+                              final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+                              if (!emailRegex.hasMatch(value)) {
+                                return 'Ingrese un email válido';
+                              }
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        // Campo de contraseña
+                        TextFormField(
+                          controller: _passwordController,
+                          style: TextStyle(color: textColor),
+                          obscureText: true,
+                          onChanged: (value) {
+                            setState(() {}); // para actualizar requisitos
+                            _clearFieldErrors();
+                          },
+                          decoration: _buildInputDecoration(
+                            labelText: 'Contraseña',
+                            icon: Icons.lock,
+                            hasError: _hasPasswordError,
+                            helperText: 'Requisitos: mayúscula, minúscula, número y 6+ caracteres',
+                            helperMaxLines: 2,
+                          ),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'La contraseña es requerida';
+                            }
+                            if (!_hasMinLength(value)) {
+                              return 'La contraseña debe tener al menos 6 caracteres';
+                            }
+                            if (!_hasUpperCase(value)) {
+                              return 'La contraseña debe contener al menos una letra mayúscula';
+                            }
+                            if (!_hasLowerCase(value)) {
+                              return 'La contraseña debe contener al menos una letra minúscula';
+                            }
+                            if (!_hasNumber(value)) {
+                              return 'La contraseña debe contener al menos un número';
+                            }
+                            return null;
+                          },
+                        ),
+                        // Indicadores de reglas de contraseña (solo si hay texto)
+                        if (_passwordController.text.isNotEmpty) ...[
+                          const SizedBox(height: 8),
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).brightness == Brightness.dark
+                                  ? Colors.grey.shade900
+                                  : Colors.grey.shade50,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: _hasPasswordError
+                                    ? Colors.red.withOpacity(0.3)
+                                    : Colors.grey.withOpacity(0.3),
+                              ),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Requisitos de contraseña:',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: Theme.of(context).brightness == Brightness.dark
+                                        ? Colors.grey.shade300
+                                        : Colors.grey.shade700,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                _buildPasswordRule(
+                                  context,
+                                  'Al menos 6 caracteres',
+                                  _hasMinLength(_passwordController.text),
+                                ),
+                                const SizedBox(height: 4),
+                                _buildPasswordRule(
+                                  context,
+                                  'Una letra mayúscula',
+                                  _hasUpperCase(_passwordController.text),
+                                ),
+                                const SizedBox(height: 4),
+                                _buildPasswordRule(
+                                  context,
+                                  'Una letra minúscula',
+                                  _hasLowerCase(_passwordController.text),
+                                ),
+                                const SizedBox(height: 4),
+                                _buildPasswordRule(
+                                  context,
+                                  'Un número',
+                                  _hasNumber(_passwordController.text),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 16),
+                        // Dropdown de Rol
+                        DropdownButtonFormField<String>(
+                          value: _selectedRole,
+                          dropdownColor: Theme.of(context).brightness == Brightness.dark
+                              ? const Color(0xFF1A1A1A)
+                              : Colors.white,
+                          style: TextStyle(color: textColor),
+                          decoration: InputDecoration(
+                            labelText: 'Rol',
+                            labelStyle: TextStyle(
+                              color: Theme.of(context).brightness == Brightness.dark
+                                  ? Colors.white
+                                  : const Color(0xFF4CAF50),
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(
+                                color: Color(0xFF4CAF50),
+                                width: 2,
+                              ),
+                            ),
+                            prefixIcon: const Icon(
+                              Icons.admin_panel_settings,
+                              color: Color(0xFF4CAF50),
+                            ),
+                            isDense: true,
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
+                          ),
+                          items: [
+                            DropdownMenuItem(
+                              value: 'Employee',
+                              child: Text(
+                                'Empleado',
+                                style: TextStyle(
+                                  color: textColor,
+                                  fontSize: 14,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            DropdownMenuItem(
+                              value: 'Admin',
+                              child: Text(
+                                'Administrador',
+                                style: TextStyle(
+                                  color: textColor,
+                                  fontSize: 14,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                          onChanged: (value) {
+                            setState(() {
+                              _selectedRole = value!;
+                            });
+                          },
+                        ),
+                        // Mostrar selector de TipoVendedor solo si es Employee
+                        if (_selectedRole == 'Employee') ...[
+                          const SizedBox(height: 16),
+                          DropdownButtonFormField<TipoVendedor>(
+                            value: _selectedTipoVendedor,
+                            dropdownColor: Theme.of(context).brightness == Brightness.dark
+                                ? const Color(0xFF1A1A1A)
+                                : Colors.white,
+                            style: TextStyle(color: textColor),
+                            decoration: InputDecoration(
+                              labelText: 'Tipo de Usuario',
+                              labelStyle: TextStyle(
+                                color: Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.white
+                                    : const Color(0xFF4CAF50),
+                              ),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: const BorderSide(
+                                  color: Color(0xFF4CAF50),
+                                  width: 2,
+                                ),
+                              ),
+                              prefixIcon: const Icon(
+                                Icons.badge,
+                                color: Color(0xFF4CAF50),
+                              ),
+                              isDense: true,
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 8,
+                              ),
+                            ),
+                            items: TipoVendedor.values.map((tipo) {
+                              return DropdownMenuItem(
+                                value: tipo,
+                                child: Text(
+                                  tipo.displayName,
+                                  style: TextStyle(
+                                    color: textColor,
+                                    fontSize: 14,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              );
+                            }).toList(),
+                            onChanged: (value) {
+                              setState(() {
+                                _selectedTipoVendedor = value!;
+                              });
+                            },
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            _selectedTipoVendedor.description,
+                            style: TextStyle(
+                              color: Theme.of(context).brightness == Brightness.dark
+                                  ? Colors.grey[400]
+                                  : Colors.grey[700],
+                              fontSize: 12,
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 16),
+                        // Campo de zona
+                        TextFormField(
+                          controller: _zonaController,
+                          style: TextStyle(color: textColor),
+                          decoration: _buildInputDecoration(
+                            labelText: 'Zona (opcional)',
+                            icon: Icons.location_on,
+                            hasError: false,
+                            helperText: 'Ej: Zona Norte, Zona Sur, Centro',
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ],
-            ),
+              ),
+              // Footer con botones
+              _buildFooter(isDark),
+            ],
           ),
         ),
-      );
+      ),
+      ),
+    );
   }
 
   Future<void> _createUser(
@@ -2163,7 +1998,6 @@ class _CreateUserDialogState extends State<_CreateUserDialog> {
         // Get the error message and make it more user-friendly
         String errorMessage =
             userProvider.errorMessage ?? 'Error al crear usuario';
-        String errorTitle = 'Error al Crear Usuario';
 
         // Clear all error states first
         setState(() {
@@ -2176,42 +2010,39 @@ class _CreateUserDialogState extends State<_CreateUserDialog> {
         if (errorMessage.toLowerCase().contains('duplicate') ||
             errorMessage.toLowerCase().contains('username') ||
             errorMessage.toLowerCase().contains('ya existe') ||
-            errorMessage.toLowerCase().contains('duplicado')) {
-          errorTitle = 'Nombre de Usuario No Disponible';
+            errorMessage.toLowerCase().contains('duplicado') ||
+            errorMessage.toLowerCase().contains('ya está en uso')) {
           errorMessage =
-              'El nombre de usuario "${_userNameController.text.trim()}" ya está en uso.\n\nPor favor, elige un nombre diferente.';
+              'El nombre de usuario "${_userNameController.text.trim()}" no está disponible. Por favor, elige otro nombre de usuario.';
           setState(() {
             _hasUserNameError = true;
           });
         } else if (errorMessage.toLowerCase().contains('email') ||
             errorMessage.toLowerCase().contains('correo')) {
-          errorTitle = 'Email No Válido';
           errorMessage =
-              'El email ingresado no es válido o ya está en uso.\n\nPor favor, verifica el email e intenta nuevamente.';
+              'El email ingresado no es válido o ya está en uso. Por favor, verifica el email e intenta nuevamente.';
           setState(() {
             _hasEmailError = true;
           });
         } else if (errorMessage.toLowerCase().contains('password') ||
             errorMessage.toLowerCase().contains('contraseña')) {
-          errorTitle = 'Contraseña No Válida';
           errorMessage =
-              'La contraseña no cumple con los requisitos.\n\nPor favor, asegúrate de que tenga al menos 6 caracteres.';
+              'La contraseña no cumple con los requisitos. Por favor, asegúrate de que tenga al menos 6 caracteres.';
           setState(() {
             _hasPasswordError = true;
           });
         } else {
           errorMessage =
-              'No se pudo crear el usuario.\n\nPor favor, verifica los datos e intenta nuevamente.';
+              'No se pudo crear el usuario. Por favor, verifica los datos e intenta nuevamente.';
         }
 
-        // Show error dialog instead of SnackBar
-        AppDialogs.showErrorDialog(
-          context: context,
-          title: errorTitle,
-          message: errorMessage,
+        // Show error SnackBar
+        AppTheme.showSnackBar(
+          context,
+          AppTheme.errorSnackBar(errorMessage),
         );
 
-        // Clear the error from provider after showing dialog
+        // Clear the error from provider after showing SnackBar
         userProvider.clearError();
       }
     }
@@ -2307,22 +2138,24 @@ class _EditUserDialogState extends State<_EditUserDialog> {
     return Dialog(
       backgroundColor: Colors.transparent,
       elevation: 0,
-      child: Container(
-        decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(isDark ? 0.5 : 0.15),
-              blurRadius: 20,
-              spreadRadius: 0,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(24),
-          child: ConstrainedBox(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: Container(
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(isDark ? 0.5 : 0.15),
+                blurRadius: 20,
+                spreadRadius: 0,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(24),
+            child: ConstrainedBox(
             constraints: BoxConstraints(
               maxHeight: MediaQuery.of(context).size.height * 0.9,
             ),
@@ -2392,6 +2225,9 @@ class _EditUserDialogState extends State<_EditUserDialog> {
                               : Colors.black,
                         ),
                               onChanged: (value) => _clearFieldErrors(),
+                              inputFormatters: [
+                                FilteringTextInputFormatter.deny(RegExp(r'\s')),
+                              ],
                               decoration: InputDecoration(
                                 labelText: 'Nombre de Usuario',
                                 labelStyle: TextStyle(
@@ -2433,10 +2269,22 @@ class _EditUserDialogState extends State<_EditUserDialog> {
                                       ? Colors.red
                                 : const Color(0xFF2E7D32),
                                 ),
+                                helperText: 'No se permiten espacios',
+                                helperStyle: TextStyle(
+                                  color: _hasUserNameError
+                                      ? Colors.red
+                                      : Theme.of(context).brightness == Brightness.dark
+                                          ? Colors.grey.shade400
+                                          : Colors.grey.shade600,
+                                  fontSize: 12,
                                 ),
+                              ),
                               validator: (value) {
                                 if (value == null || value.isEmpty) {
                                   return 'El nombre de usuario es requerido';
+                                }
+                                if (value.contains(' ')) {
+                                  return 'El nombre de usuario no puede contener espacios';
                                 }
                                 return null;
                               },
@@ -2988,6 +2836,7 @@ class _EditUserDialogState extends State<_EditUserDialog> {
           ),
         ),
       ),
+      ),
     );
   }
 
@@ -3025,11 +2874,10 @@ class _EditUserDialogState extends State<_EditUserDialog> {
           await Apihandler.handleConnectionError(context, e);
           return;
         } else {
-          // Para otros errores, mostrar el diálogo de error genérico
-          AppDialogs.showErrorDialog(
-            context: context,
-            title: 'Error al Actualizar Usuario',
-            message: 'No se pudo actualizar el usuario. Por favor, intente más tarde.',
+          // Para otros errores, mostrar SnackBar de error
+          AppTheme.showSnackBar(
+            context,
+            AppTheme.errorSnackBar('No se pudo actualizar el usuario. Por favor, intente más tarde.'),
           );
           return;
         }
@@ -3113,7 +2961,6 @@ class _EditUserDialogState extends State<_EditUserDialog> {
         // Get the error message and make it more user-friendly
         String errorMessage =
             userProvider.errorMessage ?? 'Error al actualizar usuario';
-        String errorTitle = 'Error al Actualizar Usuario';
 
         // Clear all error states first
         setState(() {
@@ -3126,42 +2973,39 @@ class _EditUserDialogState extends State<_EditUserDialog> {
         if (errorMessage.toLowerCase().contains('duplicate') ||
             errorMessage.toLowerCase().contains('username') ||
             errorMessage.toLowerCase().contains('ya existe') ||
-            errorMessage.toLowerCase().contains('duplicado')) {
-          errorTitle = 'Nombre de Usuario No Disponible';
+            errorMessage.toLowerCase().contains('duplicado') ||
+            errorMessage.toLowerCase().contains('ya está en uso')) {
           errorMessage =
-              'El nombre de usuario "${_userNameController.text.trim()}" ya está en uso.\n\nPor favor, elige un nombre diferente.';
+              'El nombre de usuario "${_userNameController.text.trim()}" no está disponible. Por favor, elige otro nombre de usuario.';
           setState(() {
             _hasUserNameError = true;
           });
         } else if (errorMessage.toLowerCase().contains('email') ||
             errorMessage.toLowerCase().contains('correo')) {
-          errorTitle = 'Email No Válido';
           errorMessage =
-              'El email ingresado no es válido o ya está en uso.\n\nPor favor, verifica el email e intenta nuevamente.';
+              'El email ingresado no es válido o ya está en uso. Por favor, verifica el email e intenta nuevamente.';
           setState(() {
             _hasEmailError = true;
           });
         } else if (errorMessage.toLowerCase().contains('password') ||
             errorMessage.toLowerCase().contains('contraseña')) {
-          errorTitle = 'Contraseña No Válida';
           errorMessage =
-              'La contraseña no cumple con los requisitos.\n\nPor favor, asegúrate de que tenga al menos 6 caracteres.';
+              'La contraseña no cumple con los requisitos. Por favor, asegúrate de que tenga al menos 6 caracteres.';
           setState(() {
             _hasPasswordError = true;
           });
         } else {
           errorMessage =
-              'No se pudo actualizar el usuario.\n\nPor favor, verifica los datos e intenta nuevamente.';
+              'No se pudo actualizar el usuario. Por favor, verifica los datos e intenta nuevamente.';
         }
 
-        // Show error dialog instead of SnackBar
-        AppDialogs.showErrorDialog(
-          context: context,
-          title: errorTitle,
-          message: errorMessage,
+        // Show error SnackBar
+        AppTheme.showSnackBar(
+          context,
+          AppTheme.errorSnackBar(errorMessage),
         );
 
-        // Clear the error from provider after showing dialog
+        // Clear the error from provider after showing SnackBar
         userProvider.clearError();
       }
     }

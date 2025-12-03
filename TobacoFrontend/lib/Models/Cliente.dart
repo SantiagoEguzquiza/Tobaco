@@ -53,11 +53,23 @@ class Cliente {
   }
 
   Map<String, dynamic> toJson() {
+    // Normalizar deuda: si es null, vacío o solo espacios, usar "0"
+    String deudaNormalizada = '0';
+    final deudaValue = deuda;
+    if (deudaValue != null && deudaValue.trim().isNotEmpty) {
+      // Remover espacios y reemplazar comas por puntos
+      deudaNormalizada = deudaValue.trim().replaceAll(',', '.');
+      // Si después de normalizar está vacío, usar "0"
+      if (deudaNormalizada.isEmpty) {
+        deudaNormalizada = '0';
+      }
+    }
+    
     Map<String, dynamic> json = {
       'nombre': nombre,
       'direccion': direccion,
       'telefono': telefono?.toString(),
-      'deuda': deuda,
+      'deuda': deudaNormalizada,
       'descuentoGlobal': descuentoGlobal,
       'latitud': latitud,
       'longitud': longitud,

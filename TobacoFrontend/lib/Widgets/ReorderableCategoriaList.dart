@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:tobaco/Models/Categoria.dart';
 import 'package:tobaco/Services/Categoria_Service/categoria_provider.dart';
+import 'package:tobaco/Services/Permisos_Service/permisos_provider.dart';
 import 'package:tobaco/Theme/app_theme.dart';
 
 class ReorderableCategoriaList extends StatefulWidget {
@@ -230,35 +231,39 @@ class _ReorderableCategoriaListState extends State<ReorderableCategoriaList> {
               ),
 
               // Botones de acción
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (widget.onDelete != null)
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.red.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: IconButton(
-                        icon: const Icon(
-                          Icons.delete_outline,
-                          color: Colors.red,
-                          size: 20,
+              Consumer<PermisosProvider>(
+                builder: (context, permisosProvider, child) {
+                  return Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (widget.onDelete != null && permisosProvider.canDeleteProductos)
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.red.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: IconButton(
+                            icon: const Icon(
+                              Icons.delete_outline,
+                              color: Colors.red,
+                              size: 20,
+                            ),
+                            onPressed: () {
+                              widget.onDelete!(categoria);
+                            },
+                            tooltip: 'Eliminar',
+                          ),
                         ),
-                        onPressed: () {
-                          widget.onDelete!(categoria);
-                        },
-                        tooltip: 'Eliminar',
+                      const SizedBox(width: 8),
+                      Icon(
+                        Icons.drag_handle,
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.grey.shade400
+                            : Colors.grey.shade400,
                       ),
-                    ),
-                  const SizedBox(width: 8),
-                  Icon(
-                    Icons.drag_handle,
-                    color: Theme.of(context).brightness == Brightness.dark
-                        ? Colors.grey.shade400
-                        : Colors.grey.shade400,
-                  ),
-                ],
+                    ],
+                  );
+                },
               ),
             ],
           ),

@@ -442,4 +442,45 @@ class VentasOfflineCacheService implements ICacheService<Ventas> {
       };
     }
   }
+
+  @override
+  Future<void> markAsEmpty() async {
+    final db = await _dbHelper.database;
+    await db.insert(
+      'cache_metadata',
+      {
+        'entity_name': _ventasTable,
+        'is_empty': 1,
+        'marked_at': DateTime.now().toIso8601String(),
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+    debugPrint('📝 VentasOfflineCacheService: Caché marcado como vacío');
+  }
+
+  @override
+  Future<bool> isEmptyMarked() async {
+    final db = await _dbHelper.database;
+    final result = await db.query(
+      'cache_metadata',
+      where: 'entity_name = ?',
+      whereArgs: [_ventasTable],
+      limit: 1,
+    );
+
+    if (result.isEmpty) return false;
+
+    return (result.first['is_empty'] as int) == 1;
+  }
+
+  @override
+  Future<void> clearEmptyMark() async {
+    final db = await _dbHelper.database;
+    await db.delete(
+      'cache_metadata',
+      where: 'entity_name = ?',
+      whereArgs: [_ventasTable],
+    );
+    debugPrint('🧹 VentasOfflineCacheService: Marcador de vacío limpiado');
+  }
 }

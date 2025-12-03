@@ -88,9 +88,11 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
       } catch (e) {
         if (!mounted) return;
 
-        await AppDialogs.showErrorDialog(
-          context: context,
-          message: e.toString().replaceFirst('Exception: ', ''),
+        AppTheme.showSnackBar(
+          context,
+          AppTheme.errorSnackBar(
+            e.toString().replaceFirst('Exception: ', ''),
+          ),
         );
       }
     }

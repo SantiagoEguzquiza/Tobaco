@@ -75,6 +75,16 @@ class _EditarPreciosEspecialesScreenState
         categorias = fetchedCategorias;
         preciosEspeciales = fetchedPrecios;
 
+        // Limpiar controladores anteriores que ya no existen
+        final productosIds = productos.map((p) => p.id).toSet();
+        precioControllers.removeWhere((key, controller) {
+          if (!productosIds.contains(key)) {
+            controller.dispose();
+            return true;
+          }
+          return false;
+        });
+
         // Inicializar controladores y estado
         for (var producto in productos) {
           final precioEspecial = preciosEspeciales.firstWhere(
@@ -88,9 +98,14 @@ class _EditarPreciosEspecialesScreenState
             ),
           );
 
-          precioControllers[producto.id!] = TextEditingController(
-            text: precioEspecial.precio.toStringAsFixed(2),
-          );
+          // Si el controlador ya existe, actualizar su texto, si no, crear uno nuevo
+          if (precioControllers.containsKey(producto.id!)) {
+            precioControllers[producto.id!]!.text = precioEspecial.precio.toStringAsFixed(2);
+          } else {
+            precioControllers[producto.id!] = TextEditingController(
+              text: precioEspecial.precio.toStringAsFixed(2),
+            );
+          }
 
           tienePrecioEspecial[producto.id!] = preciosEspeciales.any(
             (p) => p.productoId == producto.id,
@@ -309,8 +324,9 @@ class _EditarPreciosEspecialesScreenState
               children: [
                 SafeArea(child: _buildContent()),
                 Positioned(
-                  bottom: 0,
+                  left: 0,
                   right: 0,
+                  bottom: 0,
                   child: _buildFloatingActionButton(),
                 ),
               ],
@@ -792,40 +808,43 @@ class _EditarPreciosEspecialesScreenState
             padding: const EdgeInsets.all(20),
             child: SizedBox(
               width: double.infinity,
-              height: 50,
-              child: ElevatedButton(
-                onPressed: isSaving ? null : _guardarTodosLosPrecios,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primaryColor,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                child: isSaving
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          color: Colors.white,
-                          strokeWidth: 2,
-                        ),
-                      )
-                    : const Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.save),
-                          SizedBox(width: 8),
-                          Text(
-                            'Guardar Precios Especiales',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
+              child: isSaving
+                  ? Container(
+                      height: 56,
+                      decoration: BoxDecoration(
+                        color: AppTheme.primaryColor,
+                        borderRadius: BorderRadius.circular(12),
                       ),
-              ),
+                      child: const Center(
+                        child: SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 3,
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        ),
+                      ),
+                    )
+                  : ElevatedButton.icon(
+                      onPressed: _guardarTodosLosPrecios,
+                      icon: const Icon(Icons.save_outlined, size: 24),
+                      label: const Text(
+                        'Guardar Precios Especiales',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primaryColor,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
             ),
           ),
         ],
@@ -834,36 +853,57 @@ class _EditarPreciosEspecialesScreenState
   }
 
   Widget _buildFloatingActionButton() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
-      margin: const EdgeInsets.only(bottom: 16, right: 16),
-      child: ElevatedButton.icon(
-        onPressed: isSaving ? null : _guardarTodosLosPrecios,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppTheme.primaryColor,
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+        border: Border(
+          top: BorderSide(
+            color: isDark ? Colors.grey.shade800 : Colors.grey.shade300,
           ),
-          elevation: 4,
         ),
-        icon: isSaving
-            ? const SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  color: Colors.white,
-                  strokeWidth: 2,
+      ),
+      child: SafeArea(
+        child: SizedBox(
+          width: double.infinity,
+          child: isSaving
+              ? Container(
+                  height: 56,
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryColor,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Center(
+                    child: SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 3,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    ),
+                  ),
+                )
+              : ElevatedButton.icon(
+                  onPressed: _guardarTodosLosPrecios,
+                  icon: const Icon(Icons.save_outlined, size: 24),
+                  label: const Text(
+                    'Guardar Todos',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryColor,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
                 ),
-              )
-            : const Icon(Icons.save, color: Colors.white),
-        label: Text(
-          isSaving ? 'Guardando...' : 'Guardar Todos',
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            fontSize: 16,
-          ),
         ),
       ),
     );

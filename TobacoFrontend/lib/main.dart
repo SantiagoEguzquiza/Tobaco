@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:tobaco/Screens/menu_screen.dart';
 import 'package:tobaco/Screens/Auth/login_screen.dart';
+import 'package:tobaco/Screens/SuperAdmin/super_admin_menu_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:tobaco/Services/Categoria_Service/categoria_provider.dart';
 import 'package:tobaco/Services/Clientes_Service/clientes_provider.dart';
@@ -20,6 +21,7 @@ import 'package:tobaco/Services/Cache/database_helper.dart';
 import 'package:tobaco/Services/Connectivity/connectivity_service.dart';
 import 'package:tobaco/Services/RecorridosProgramados_Service/recorridos_programados_provider.dart';
 import 'package:tobaco/Services/Permisos_Service/permisos_provider.dart';
+import 'package:tobaco/Services/Tenant_Service/tenant_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -59,6 +61,8 @@ void main() async {
         ),
         // 🛣️ Provider de Recorridos Programados
         ChangeNotifierProvider(create: (_) => RecorridosProgramadosProvider()),
+        // 🏢 Provider de Tenants (para SuperAdmin)
+        ChangeNotifierProvider(create: (_) => TenantProvider()),
       ],
       child: const MyApp(),
     ),
@@ -79,6 +83,7 @@ class MyApp extends StatelessWidget {
       home: const AuthWrapper(),
       routes: {
         '/menu': (context) => const MenuScreen(),
+        '/superadmin': (context) => const SuperAdminMenuScreen(),
         '/login': (context) => const LoginScreen(),
       },
     );
@@ -101,10 +106,14 @@ class _AuthWrapperState extends State<AuthWrapper> {
       final authProvider = context.read<AuthProvider>();
       await authProvider.initializeAuth();
       
-      // Si el usuario está autenticado, cargar permisos (forzando recarga para asegurar estado correcto)
+      // Si el usuario está autenticado y NO es SuperAdmin, cargar permisos
+      // El SuperAdmin no necesita permisos de empleado porque no gestiona datos de clientes
       if (authProvider.isAuthenticated && mounted) {
-        final permisosProvider = context.read<PermisosProvider>();
-        await permisosProvider.loadPermisos(authProvider, forceReload: true);
+        final user = authProvider.currentUser;
+        if (user != null && !user.isSuperAdmin) {
+          final permisosProvider = context.read<PermisosProvider>();
+          await permisosProvider.loadPermisos(authProvider, forceReload: true);
+        }
       }
     });
   }
@@ -113,10 +122,37 @@ class _AuthWrapperState extends State<AuthWrapper> {
   Widget build(BuildContext context) {
     return Consumer<AuthProvider>(
       builder: (context, authProvider, child) {
-        // Sin pantalla de carga, va directo al resultado
+        // Si está cargando, mostrar pantalla de carga
+        if (authProvider.isLoading) {
+          return const Scaffold(
+            body: Center(
+              child: CircularProgressIndicator(),
+            ),
+          );
+        }
+        
+        // Si está autenticado, verificar el rol
         if (authProvider.isAuthenticated) {
+          final user = authProvider.currentUser;
+          
+          // Si el usuario aún no está cargado, mostrar pantalla de carga
+          if (user == null) {
+            return const Scaffold(
+              body: Center(
+                child: CircularProgressIndicator(),
+              ),
+            );
+          }
+          
+          // Si es SuperAdmin, mostrar su menú especial
+          if (user.isSuperAdmin) {
+            return const SuperAdminMenuScreen();
+          }
+          
+          // Si es Admin o Employee, mostrar el menú normal
           return const MenuScreen();
         } else {
+          // Si no está autenticado, mostrar login
           return const LoginScreen();
         }
       },

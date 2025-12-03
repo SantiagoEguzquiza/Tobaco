@@ -5,6 +5,7 @@ import 'package:tobaco/Helpers/api_handler.dart';
 import 'package:tobaco/Models/Categoria.dart';
 import 'package:tobaco/Models/CategoriaReorderDTO.dart';
 import 'package:tobaco/Services/Cache/datos_cache_service.dart';
+import 'package:tobaco/Services/Cache/data/categorias_cache_service.dart';
 import 'package:tobaco/Services/Catalogo_Local/catalogo_local_service.dart';
 import 'package:tobaco/Services/Categoria_Service/categoria_service.dart';
 
@@ -48,6 +49,11 @@ class CategoriasProvider with ChangeNotifier {
       if (_categorias.isNotEmpty) {
         await _catalogoLocal.guardarCategorias(_categorias);
         await _datosCacheService.guardarCategoriasEnCache(_categorias);
+      } else {
+        // Si no hay datos en modo online, marcar como vacío en caché
+        final categoriasCache = CategoriasCacheService();
+        await categoriasCache.markAsEmpty();
+        debugPrint('📝 CategoriasProvider: Sin datos, marcado como vacío en caché');
       }
     } catch (e) {
       if (Apihandler.isConnectionError(e)) {
@@ -67,6 +73,20 @@ class CategoriasProvider with ChangeNotifier {
 
   Future<void> _cargarCategoriasOffline() async {
     try {
+      // Verificar si está marcado como vacío
+      final categoriasCache = CategoriasCacheService();
+      final isEmptyMarked = await categoriasCache.isEmptyMarked();
+      
+      if (isEmptyMarked) {
+        // Está marcado como vacío, no intentar cargar
+        _categorias = [];
+        _isOffline = true;
+        _loadedFromCache = false;
+        _errorMessage = null;
+        debugPrint('📝 CategoriasProvider: Caché marcado como vacío, mostrando lista vacía');
+        return;
+      }
+      
       final cache = await _datosCacheService.obtenerCategoriasDelCache();
       if (cache.isNotEmpty) {
         _categorias = List.from(cache)
@@ -93,8 +113,7 @@ class CategoriasProvider with ChangeNotifier {
       _categorias = [];
       _isOffline = true;
       _loadedFromCache = false;
-      _errorMessage =
-          'No hay categorías disponibles offline. Conecta para sincronizar.';
+      _errorMessage = null; // No mostrar error si está marcado como vacío
     }
   }
 

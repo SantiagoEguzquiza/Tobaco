@@ -53,6 +53,16 @@ class MenuScreen extends StatelessWidget {
       body: SafeArea(
         child: Consumer2<AuthProvider, PermisosProvider>(
           builder: (context, authProvider, permisosProvider, child) {
+            // Si el usuario es SuperAdmin, no mostrar este menú (debería estar en SuperAdminMenuScreen)
+            final user = authProvider.currentUser;
+            if (user != null && user.isSuperAdmin) {
+              // Redirigir al menú de SuperAdmin
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                Navigator.of(context).pushReplacementNamed('/superadmin');
+              });
+              return const Center(child: CircularProgressIndicator());
+            }
+            
             // Debug logs
             debugPrint('MenuScreen: isAuthenticated: ${authProvider.isAuthenticated}, isLoading: ${permisosProvider.isLoading}, permisos: ${permisosProvider.permisos != null}, isAdmin: ${permisosProvider.isAdmin}');
             debugPrint('MenuScreen: canViewProductos: ${permisosProvider.canViewProductos}');

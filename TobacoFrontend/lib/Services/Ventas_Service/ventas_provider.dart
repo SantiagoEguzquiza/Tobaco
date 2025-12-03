@@ -110,6 +110,17 @@ class VentasProvider with ChangeNotifier {
         }
       }
 
+      // Guardar ventas del servidor en caché (incluso si está vacío, para marcar que no hay datos)
+      await _cacheService.guardarVentasEnCache(
+        ventasDelServidor.where((venta) => venta.id != null).toList(),
+      );
+      
+      // Si no hay ventas del servidor, limpiar el caché para indicar que no hay datos
+      if (ventasDelServidor.isEmpty) {
+        await _cacheService.limpiarCache();
+        debugPrint('📝 VentasProvider: Sin datos del servidor, caché limpiado');
+      }
+
       // Combinar ventas del servidor con las pendientes de sincronizar
       final combinadas = await _combinarConVentasOfflinePendientes(
         ventasDelServidor,
@@ -120,10 +131,6 @@ class VentasProvider with ChangeNotifier {
       _isOffline = false;
       _hasMoreData = false;
       _offlineMessageShown = false;
-
-      await _cacheService.guardarVentasEnCache(
-        ventasDelServidor.where((venta) => venta.id != null).toList(),
-      );
     } catch (e) {
       if (Apihandler.isConnectionError(e) ||
           e is TimeoutException ||
@@ -815,18 +822,9 @@ class VentasProvider with ChangeNotifier {
 
     _ventaLocalIds.clear();
 
-    try {
-      final cache = await _cacheService.obtenerVentasDelCache();
-      for (final venta in cache) {
-        resultado.add(venta);
-        if (venta.id != null) {
-          idsAgregados.add(venta.id!);
-          _ventaLocalIds[venta] = 'servidor_${venta.id}';
-        }
-      }
-    } catch (e) {
-      debugPrint('⚠️ VentasProvider: Error leyendo ventas del caché simple: $e');
-    }
+    // En modo offline, SOLO cargar ventas offline pendientes de sincronizar
+    // NO cargar ventas del servidor cacheadas
+    debugPrint('📦 VentasProvider: Cargando solo ventas offline pendientes...');
 
     try {
       final db = await _db.database;
