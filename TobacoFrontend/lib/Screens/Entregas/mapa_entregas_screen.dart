@@ -185,7 +185,7 @@ class _MapaEntregasScreenState extends State<MapaEntregasScreen> {
       infoWindow: InfoWindow(
         title: '$emoji ${entrega.nombreCliente}',
         snippet: entrega.estado == EstadoEntrega.parcial
-            ? '${entrega.direccion}\n⚠️ Parcialmente entregada'
+            ? '${entrega.direccion}\n⚠️ Parcial'
             : entrega.estado == EstadoEntrega.entregada
                 ? '${entrega.direccion}\n✅ Entregada'
                 : entrega.direccion,
@@ -933,7 +933,7 @@ class _DetalleEntregaSheetState extends State<_DetalleEntregaSheet> {
                     : Icons.info,
             label: 'Estado',
             value: widget.entrega.estado == EstadoEntrega.parcial
-                ? 'Parcialmente Entregada (Pendiente)'
+                ? 'Parcial (Pendiente)'
                 : widget.entrega.estado.displayName,
           ),
           const SizedBox(height: 16),

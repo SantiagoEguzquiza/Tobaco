@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:tobaco/Models/EstadoEntrega.dart';
 import 'package:tobaco/Models/Ventas.dart';
+import 'package:tobaco/Models/VentasProductos.dart';
 import 'package:tobaco/Services/Ventas_Service/ventas_provider.dart';
 import 'package:tobaco/Theme/app_theme.dart';
 import 'package:tobaco/Theme/headers.dart';
@@ -252,6 +253,61 @@ class _EntregasScreenState extends State<EntregasScreen> {
     );
   }
 
+  /// Verifica si un producto tiene motivo con formato "Unidad X: ..." 
+  /// lo que indica que está parcialmente entregado (algunas unidades entregadas, otras no)
+  bool _tieneMotivoPorUnidad(String? motivo) {
+    if (motivo == null || motivo.trim().isEmpty) {
+      return false;
+    }
+    // Verificar si el motivo tiene el formato "Unidad X: ..." (debe tener al menos una línea con este formato)
+    final lineas = motivo.split('\n');
+    final regex = RegExp(r'^Unidad\s+\d+:\s*.+$');
+    for (var linea in lineas) {
+      if (regex.hasMatch(linea.trim())) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  EstadoEntrega _calcularEstadoDesdeProductos(List<VentasProductos> productos) {
+    if (productos.isEmpty) {
+      return EstadoEntrega.noEntregada;
+    }
+    
+    final total = productos.length;
+    int productosCompletamenteEntregados = 0;
+    int productosParcialmenteEntregados = 0;
+    
+    for (var producto in productos) {
+      if (producto.entregado == true) {
+        // Producto completamente entregado
+        productosCompletamenteEntregados++;
+      } else if (_tieneMotivoPorUnidad(producto.motivo)) {
+        // Producto parcialmente entregado (tiene motivo por unidad, lo que indica que algunas unidades fueron entregadas)
+        productosParcialmenteEntregados++;
+      }
+      // Si no está entregado y no tiene motivo por unidad, es completamente no entregado (no cuenta)
+    }
+    
+    final productosConAlgunasUnidadesEntregadas = 
+        productosCompletamenteEntregados + productosParcialmenteEntregados;
+    
+    // Si no hay productos con unidades entregadas, es NO_ENTREGADA
+    // (esto incluye entregas nuevas sin productos entregados)
+    if (productosConAlgunasUnidadesEntregadas == 0) {
+      return EstadoEntrega.noEntregada;
+    }
+    
+    // Si todos los productos están completamente entregados, es ENTREGADA
+    if (productosCompletamenteEntregados == total) {
+      return EstadoEntrega.entregada;
+    }
+    
+    // Si hay algunos productos entregados (completamente o parcialmente) pero no todos, es PARCIAL
+    return EstadoEntrega.parcial;
+  }
+
   Widget _buildVentaCard(Ventas venta) {
     final ventaKey = _ventaKey(venta);
     final fechaFormateada = DateFormat('dd/MM/yyyy').format(venta.fecha);
@@ -259,6 +315,9 @@ class _EntregasScreenState extends State<EntregasScreen> {
     final pendientes =
         venta.ventasProductos.where((producto) => !producto.entregado).length;
     final entregados = venta.ventasProductos.length - pendientes;
+    
+    // Calcular el estado basándose en los productos actuales
+    final estadoCalculado = _calcularEstadoDesdeProductos(venta.ventasProductos);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -362,11 +421,13 @@ class _EntregasScreenState extends State<EntregasScreen> {
                 const SizedBox(height: 12),
                 Row(
                   children: [
-                    _buildEstadoEntregaBadge(venta.estadoEntrega),
+                    _buildEstadoEntregaBadge(estadoCalculado),
                     const SizedBox(width: 8),
-                    _buildResumenProductosBadge(
-                      pendientes: pendientes,
-                      entregados: entregados,
+                    Expanded(
+                      child: _buildResumenProductosBadge(
+                        pendientes: pendientes,
+                        entregados: entregados,
+                      ),
                     ),
                   ],
                 ),
@@ -380,7 +441,24 @@ class _EntregasScreenState extends State<EntregasScreen> {
 
   List<Ventas> _filtrarVentas(List<Ventas> ventas) {
     final filtros = ventas.where((venta) {
-      final estadoValido = _estadoFilters.contains(venta.estadoEntrega);
+      // Si la venta no tiene productos, siempre mostrarla si el filtro "No entregada" está activo
+      if (venta.ventasProductos.isEmpty) {
+        if (!_estadoFilters.contains(EstadoEntrega.noEntregada)) {
+          return false;
+        }
+        // Verificar búsqueda
+        final coincideBusqueda = _searchQuery.isEmpty
+            ? true
+            : venta.cliente.nombre.toLowerCase().contains(
+                  _searchQuery.toLowerCase(),
+                ) ||
+                (venta.id?.toString().contains(_searchQuery) ?? false);
+        return coincideBusqueda;
+      }
+      
+      // Calcular el estado basándose en los productos actuales (más preciso)
+      final estadoCalculado = _calcularEstadoDesdeProductos(venta.ventasProductos);
+      final estadoValido = _estadoFilters.contains(estadoCalculado);
       if (!estadoValido) return false;
 
       final coincideBusqueda = _searchQuery.isEmpty
@@ -450,24 +528,101 @@ class _EntregasScreenState extends State<EntregasScreen> {
     required int pendientes,
     required int entregados,
   }) {
-    final pendienteText =
-        pendientes == 1 ? '1 pendiente' : '$pendientes pendientes';
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.blue.shade50,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Text(
-        pendientes == 0
-            ? 'Sin pendientes'
-            : '$pendienteText · $entregados entregados',
-        style: TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w600,
-          color: Colors.blue.shade700,
+    // Si no hay productos (pendientes + entregados = 0), mostrar mensaje especial
+    if (pendientes == 0 && entregados == 0) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        decoration: BoxDecoration(
+          color: Colors.orange.shade50,
+          borderRadius: BorderRadius.circular(12),
         ),
-      ),
+        child: Text(
+          'Sin productos',
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: Colors.orange.shade700,
+          ),
+        ),
+      );
+    }
+    
+    // Mostrar badges separados para pendientes y entregados
+    return Row(
+      children: [
+        if (pendientes > 0) ...[
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.orange.shade50,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.pending_actions_outlined, 
+                    size: 12, 
+                    color: Colors.orange.shade700),
+                const SizedBox(width: 4),
+                Text(
+                  pendientes == 1 
+                      ? '1 pendiente' 
+                      : '$pendientes pendientes',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.orange.shade700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (entregados > 0) const SizedBox(width: 6),
+        ],
+        if (entregados > 0)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.green.shade50,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.check_circle_outline, 
+                    size: 12, 
+                    color: Colors.green.shade700),
+                const SizedBox(width: 4),
+                Text(
+                  entregados == 1 
+                      ? '1 entregado' 
+                      : '$entregados entregados',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.green.shade700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        if (pendientes == 0 && entregados > 0)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.green.shade50,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              'Sin pendientes',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: Colors.green.shade700,
+              ),
+            ),
+          ),
+      ],
     );
   }
 
