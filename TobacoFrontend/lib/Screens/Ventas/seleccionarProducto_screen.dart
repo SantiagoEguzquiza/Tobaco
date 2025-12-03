@@ -1016,11 +1016,13 @@ class _SeleccionarProductosScreenState
             )
           : SafeArea(
               child: Column(
+                mainAxisSize: MainAxisSize.max,
                 children: [
                   // Header fijo
                   Padding(
                     padding: const EdgeInsets.all(16.0),
                     child: Column(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         // Barra de búsqueda usando HeaderConBuscador
                         HeaderConBuscador(
@@ -1720,37 +1722,37 @@ class _SeleccionarProductosScreenState
                                             ],
                                           ),
                                         ),
-                                      // Ribbon "ESPECIAL" en la esquina superior derecha
-                                      if (_tienePrecioEspecial(producto))
-                                        Positioned(
-                                          top: 0,
-                                          right: 0,
-                                          child: Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 8,
-                                              vertical: 4,
-                                            ),
-                                            decoration: const BoxDecoration(
-                                              color: Colors.purple,
-                                              borderRadius: BorderRadius.only(
-                                                topRight: Radius.circular(12),
-                                                bottomLeft: Radius.circular(12),
-                                              ),
-                                            ),
-                                            child: const Text(
-                                              'ESPECIAL',
-                                              style: TextStyle(
-                                                color: Colors.white,
-                                                fontSize: 9,
-                                                fontWeight: FontWeight.bold,
-                                                letterSpacing: 0.5,
-                                              ),
-                                            ),
-                                          ),
-                                        ),
                                     ],
                                   ),
                                 ),
+                                // Ribbon "ESPECIAL" en la esquina superior derecha
+                                if (_tienePrecioEspecial(producto))
+                                  Positioned(
+                                    top: 0,
+                                    right: 0,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 4,
+                                      ),
+                                      decoration: const BoxDecoration(
+                                        color: Colors.purple,
+                                        borderRadius: BorderRadius.only(
+                                          topRight: Radius.circular(12),
+                                          bottomLeft: Radius.circular(12),
+                                        ),
+                                      ),
+                                      child: const Text(
+                                        'ESPECIAL',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.bold,
+                                          letterSpacing: 0.5,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
                               ]),
                             );
                           },

@@ -125,9 +125,9 @@ class _DetalleEntregasScreenState extends State<DetalleEntregasScreen> {
   Widget build(BuildContext context) {
     final fechaFormateada =
         DateFormat('dd/MM/yyyy – HH:mm').format(widget.venta.fecha);
-    final estadoActual = _hasChanges
-        ? _calcularEstadoEntrega(_productosEditables)
-        : widget.venta.estadoEntrega;
+    
+    // Calcular el estado directamente desde las unidades (más preciso)
+    final estadoActual = _calcularEstadoDesdeUnidades();
     final unidadesPendientes =
         _unidades.where((unidad) => !unidad.entregado).toList();
     final unidadesEntregadas =
@@ -1127,55 +1127,61 @@ class _DetalleEntregasScreenState extends State<DetalleEntregasScreen> {
             Row(
               children: [
                 Expanded(
-                  child: OutlinedButton(
-                    onPressed: _isSaving
-                        ? null
-                        : () => Navigator.pop(
-                              context,
-                              _hasGuardadoCambios ? 'updated' : null,
-                            ),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                  child: SizedBox(
+                    height: 48,
+                    child: OutlinedButton(
+                      onPressed: _isSaving
+                          ? null
+                          : () => Navigator.pop(
+                                context,
+                                _hasGuardadoCambios ? 'updated' : null,
+                              ),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
-                    ),
-                    child: const Text(
-                      'Volver',
-                      style: TextStyle(fontWeight: FontWeight.w600),
+                      child: const Text(
+                        'Volver',
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
                     ),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: !_hasChanges ||
-                            _isSaving ||
-                            widget.venta.id == null ||
-                            unidadesSinMotivo.isNotEmpty
-                        ? null
-                        : _guardarEstadoEntrega,
-                    icon: _isSaving
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor:
-                                  AlwaysStoppedAnimation<Color>(Colors.white),
-                            ),
-                          )
-                        : const Icon(Icons.save),
-                    label: Text(
-                      _isSaving ? 'Guardando...' : 'Guardar cambios',
-                      style: const TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primaryColor,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                  child: SizedBox(
+                    height: 48,
+                    child: ElevatedButton.icon(
+                      onPressed: !_hasChanges ||
+                              _isSaving ||
+                              widget.venta.id == null ||
+                              unidadesSinMotivo.isNotEmpty
+                          ? null
+                          : _guardarEstadoEntrega,
+                      icon: _isSaving
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor:
+                                    AlwaysStoppedAnimation<Color>(Colors.white),
+                              ),
+                            )
+                          : const Icon(Icons.save),
+                      label: Text(
+                        _isSaving ? 'Guardando...' : 'Guardar cambios',
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primaryColor,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                     ),
                   ),
@@ -1365,7 +1371,9 @@ class _DetalleEntregasScreenState extends State<DetalleEntregasScreen> {
                                           size: 18,
                                           color: isSelected
                                               ? Colors.white
-                                              : Colors.grey.shade600,
+                                              : (Theme.of(context).brightness == Brightness.dark
+                                                  ? Colors.white
+                                                  : Colors.grey.shade600),
                                         ),
                                         const SizedBox(width: 6),
                                         Text(
@@ -1373,7 +1381,9 @@ class _DetalleEntregasScreenState extends State<DetalleEntregasScreen> {
                                           style: TextStyle(
                                             color: isSelected
                                                 ? Colors.white
-                                                : Colors.grey.shade700,
+                                                : (Theme.of(context).brightness == Brightness.dark
+                                                    ? Colors.white
+                                                    : Colors.grey.shade700),
                                             fontWeight: FontWeight.w600,
                                           ),
                                         ),
@@ -1389,7 +1399,9 @@ class _DetalleEntregasScreenState extends State<DetalleEntregasScreen> {
                               style: TextStyle(
                                 fontWeight: FontWeight.w600,
                                 fontSize: 13,
-                                color: Colors.grey.shade700,
+                                color: Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.white
+                                    : Colors.grey.shade700,
                               ),
                             ),
                             const SizedBox(height: 8),
@@ -1397,8 +1409,18 @@ class _DetalleEntregasScreenState extends State<DetalleEntregasScreen> {
                               controller: notaController,
                               maxLines: 3,
                               maxLength: 120,
+                              style: TextStyle(
+                                color: Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.white
+                                    : Colors.black,
+                              ),
                               decoration: InputDecoration(
                                 hintText: 'Agregar un comentario…',
+                                hintStyle: TextStyle(
+                                  color: Theme.of(context).brightness == Brightness.dark
+                                      ? Colors.grey.shade400
+                                      : Colors.grey.shade600,
+                                ),
                                 filled: true,
                                 fillColor:
                                     Theme.of(context).brightness == Brightness.dark
@@ -1415,6 +1437,11 @@ class _DetalleEntregasScreenState extends State<DetalleEntregasScreen> {
                                     color: AppTheme.primaryColor,
                                     width: 1.5,
                                   ),
+                                ),
+                                counterStyle: TextStyle(
+                                  color: Theme.of(context).brightness == Brightness.dark
+                                      ? Colors.grey.shade400
+                                      : Colors.grey.shade600,
                                 ),
                               ),
                             ),
@@ -1436,8 +1463,20 @@ class _DetalleEntregasScreenState extends State<DetalleEntregasScreen> {
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(10),
                                 ),
+                                side: BorderSide(
+                                  color: Theme.of(context).brightness == Brightness.dark
+                                      ? Colors.grey.shade600
+                                      : Colors.grey.shade300,
+                                ),
                               ),
-                              child: const Text('Cancelar'),
+                              child: Text(
+                                'Cancelar',
+                                style: TextStyle(
+                                  color: Theme.of(context).brightness == Brightness.dark
+                                      ? Colors.white
+                                      : Colors.black87,
+                                ),
+                              ),
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -1614,14 +1653,69 @@ class _DetalleEntregasScreenState extends State<DetalleEntregasScreen> {
     return producto.cantidad.ceil();
   }
 
+  /// Calcula el estado de entrega directamente desde las unidades
+  /// Esto es más preciso porque considera el estado real de cada unidad
+  EstadoEntrega _calcularEstadoDesdeUnidades() {
+    if (_productosEditables.isEmpty) {
+      return EstadoEntrega.noEntregada;
+    }
+    
+    // Contar productos completamente entregados y productos con al menos una unidad entregada
+    int productosCompletamenteEntregados = 0;
+    int productosConAlgunasUnidadesEntregadas = 0;
+    
+    for (var i = 0; i < _productosEditables.length; i++) {
+      final unidadesProducto =
+          _unidades.where((unidad) => unidad.productoIndex == i).toList();
+      
+      if (unidadesProducto.isEmpty) continue;
+      
+      final todasEntregadas = unidadesProducto.every((unidad) => unidad.entregado);
+      final algunasEntregadas = unidadesProducto.any((unidad) => unidad.entregado);
+      
+      if (todasEntregadas) {
+        productosCompletamenteEntregados++;
+        productosConAlgunasUnidadesEntregadas++;
+      } else if (algunasEntregadas) {
+        // Producto parcialmente entregado (algunas unidades sí, otras no)
+        productosConAlgunasUnidadesEntregadas++;
+      }
+    }
+    
+    final total = _productosEditables.length;
+    
+    // Si no hay productos con unidades entregadas, es NO_ENTREGADA
+    if (productosConAlgunasUnidadesEntregadas == 0) {
+      return EstadoEntrega.noEntregada;
+    }
+    
+    // Si todos los productos están completamente entregados, es ENTREGADA
+    if (productosCompletamenteEntregados == total) {
+      return EstadoEntrega.entregada;
+    }
+    
+    // Si hay algunos productos entregados (completamente o parcialmente) pero no todos, es PARCIAL
+    return EstadoEntrega.parcial;
+  }
+
   EstadoEntrega _calcularEstadoEntrega(List<VentasProductos> productos) {
     if (productos.isEmpty) {
       return EstadoEntrega.noEntregada;
     }
     final total = productos.length;
-    final entregados = productos.where((p) => p.entregado).length;
-    if (entregados == 0) return EstadoEntrega.noEntregada;
-    if (entregados == total) return EstadoEntrega.entregada;
+    final entregados = productos.where((p) => p.entregado == true).length;
+    
+    // Si no hay productos entregados, es NO_ENTREGADA
+    if (entregados == 0) {
+      return EstadoEntrega.noEntregada;
+    }
+    
+    // Si todos los productos están entregados, es ENTREGADA
+    if (entregados == total) {
+      return EstadoEntrega.entregada;
+    }
+    
+    // Si hay algunos productos entregados pero no todos, es PARCIAL
     return EstadoEntrega.parcial;
   }
 
