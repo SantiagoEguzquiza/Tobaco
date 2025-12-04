@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../Helpers/api_handler.dart';
 import '../../Models/LoginRequest.dart';
@@ -55,15 +56,24 @@ class AuthService {
   static Future<void> _saveAuthData(LoginResponse loginResponse) async {
     final prefs = await SharedPreferences.getInstance();
     
+    debugPrint('AuthService._saveAuthData: Guardando token (${loginResponse.token.length} chars)');
+    debugPrint('AuthService._saveAuthData: Token expira en: ${loginResponse.expiresAt}');
+    
     await prefs.setString(_tokenKey, loginResponse.token);
     await prefs.setString(_tokenExpiryKey, loginResponse.expiresAt.toIso8601String());
     await prefs.setString(_userKey, jsonEncode(loginResponse.user.toJson()));
+    
+    // Verificar que se guardó correctamente
+    final savedToken = prefs.getString(_tokenKey);
+    debugPrint('AuthService._saveAuthData: Token guardado correctamente: ${savedToken != null}');
   }
 
   // Get stored token
   static Future<String?> getToken() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_tokenKey);
+    final token = prefs.getString(_tokenKey);
+    debugPrint('AuthService.getToken: Token ${token != null ? "encontrado (${token.length} chars)" : "NO ENCONTRADO"}');
+    return token;
   }
 
   // Get stored user data
@@ -148,9 +158,16 @@ class AuthService {
   // Get headers with authorization token
   static Future<Map<String, String>> getAuthHeaders() async {
     final token = await getToken();
+    
+    if (token == null) {
+      debugPrint('AuthService.getAuthHeaders: ERROR - Token es NULL');
+      throw Exception('No hay token de autenticación. Por favor, inicia sesión nuevamente.');
+    }
+    
+    debugPrint('AuthService.getAuthHeaders: Token presente, agregando a headers');
     return {
       'Content-Type': 'application/json',
-      if (token != null) 'Authorization': 'Bearer $token',
+      'Authorization': 'Bearer $token',
     };
   }
 }

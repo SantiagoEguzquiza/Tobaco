@@ -217,7 +217,7 @@ class HeaderConBuscador extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(15),
         border: Border.all(
           color: isDark 
             ? const Color(0xFF404040)
@@ -243,7 +243,7 @@ class HeaderConBuscador extends StatelessWidget {
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: customBackgroundColor ?? AppTheme.primaryColor,
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
                   ),
                   child: Icon(
                     leadingIcon,
@@ -293,7 +293,7 @@ class HeaderConBuscador extends StatelessWidget {
             child: Container(
               decoration: BoxDecoration(
                 color: isDark ? Colors.grey[800] : Colors.white,
-                borderRadius: BorderRadius.circular(15),
+                borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),

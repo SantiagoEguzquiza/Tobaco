@@ -200,13 +200,23 @@ class AppTheme {
     ),
   );
 
-  static ButtonStyle elevatedButtonStyle(Color backgroundColor) {
+  static ButtonStyle elevatedButtonStyle(
+    Color backgroundColor, {
+    Color foregroundColor = Colors.white,
+  }) {
     return ElevatedButton.styleFrom(
-      padding: const EdgeInsets.symmetric(vertical: 20),
+      backgroundColor: backgroundColor,
+      foregroundColor: foregroundColor,
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      minimumSize: const Size.fromHeight(56),
+      elevation: 2,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(borderRadiusMainButtons),
       ),
-      backgroundColor: backgroundColor,
+      textStyle: const TextStyle(
+        fontSize: 16,
+        fontWeight: FontWeight.w600,
+      ),
     );
   }
 

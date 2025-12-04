@@ -71,6 +71,11 @@ class PermisosService {
         headers: headers,
       ).timeout(_timeoutDuration);
       debugPrint('PermisosService.getMisPermisos: Respuesta recibida - Status: ${response.statusCode}');
+      
+      if (response.statusCode == 401) {
+        debugPrint('PermisosService.getMisPermisos: Error 401 - Body: ${response.body}');
+        debugPrint('PermisosService.getMisPermisos: Error 401 - Headers enviados: ${headers.keys.toList()}');
+      }
 
       if (response.statusCode == 200) {
         // Verificar que la respuesta sea JSON válido
@@ -116,10 +121,25 @@ class PermisosService {
 
   static Future<Map<String, String>> _getAuthHeaders() async {
     final token = await AuthService.getToken();
-    return {
+    debugPrint('PermisosService._getAuthHeaders: Token ${token != null ? "presente (${token.length} chars)" : "NULL"}');
+    
+    if (token == null) {
+      throw Exception('No hay token de autenticación. Por favor, inicia sesión nuevamente.');
+    }
+    
+    // Log de los primeros y últimos caracteres del token para verificar formato
+    if (token.length > 20) {
+      debugPrint('PermisosService._getAuthHeaders: Token inicia con: ${token.substring(0, 10)}... termina con: ...${token.substring(token.length - 10)}');
+    }
+    
+    final headers = {
       'Content-Type': 'application/json',
       'Authorization': 'Bearer $token',
     };
+    
+    debugPrint('PermisosService._getAuthHeaders: Header Authorization: ${headers['Authorization']?.substring(0, 30)}...');
+    
+    return headers;
   }
 }
 
