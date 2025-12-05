@@ -280,5 +280,27 @@ class ClienteService {
       rethrow;
     }
   }
+
+  /// Obtiene o crea el cliente "Consumidor Final" compartido entre todos los tenants
+  Future<Cliente> obtenerOCrearConsumidorFinal() async {
+    try {
+      final headers = await AuthService.getAuthHeaders();
+      final response = await Apihandler.client.get(
+        Uri.parse('$baseUrl/Clientes/consumidor-final'),
+        headers: headers,
+      ).timeout(_timeoutDuration);
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> clienteJson = jsonDecode(response.body);
+        return Cliente.fromJson(clienteJson);
+      } else {
+        throw Exception(
+            'Error al obtener o crear Consumidor Final. Código de estado: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('Error al obtener o crear Consumidor Final: $e');
+      rethrow;
+    }
+  }
   
 }

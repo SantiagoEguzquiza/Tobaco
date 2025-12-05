@@ -11,20 +11,40 @@ class AdminService {
   Future<List<User>> obtenerAdminsPorTenant(int tenantId) async {
     try {
       final headers = await AuthService.getAuthHeaders();
+      final url = Uri.parse('$baseUrl/api/SuperAdmin/tenants/$tenantId/admins');
+      
+      debugPrint('AdminService: Obteniendo administradores para tenant $tenantId');
+      debugPrint('AdminService: URL: $url');
+      
       final response = await Apihandler.client.get(
-        Uri.parse('$baseUrl/api/SuperAdmin/tenants/$tenantId/admins'),
+        url,
         headers: headers,
       ).timeout(_timeoutDuration);
 
+      debugPrint('AdminService: Status code: ${response.statusCode}');
+      debugPrint('AdminService: Response body: ${response.body}');
+
       if (response.statusCode == 200) {
         final List<dynamic> adminsJson = jsonDecode(response.body);
-        return adminsJson.map((json) => User.fromJson(json)).toList();
+        debugPrint('AdminService: Se encontraron ${adminsJson.length} administradores');
+        final admins = adminsJson.map((json) => User.fromJson(json)).toList();
+        return admins;
+      } else if (response.statusCode == 404) {
+        debugPrint('AdminService: No se encontraron administradores (404)');
+        return []; // Retornar lista vacía en lugar de lanzar error
       } else {
-        throw Exception(
-            'Error al obtener los administradores. Código de estado: ${response.statusCode}');
+        String errorMessage = 'Error al obtener los administradores. Código de estado: ${response.statusCode}';
+        try {
+          final errorData = jsonDecode(response.body);
+          errorMessage = errorData['message'] ?? errorMessage;
+        } catch (e) {
+          errorMessage = 'Error ${response.statusCode}: ${response.body}';
+        }
+        throw Exception(errorMessage);
       }
     } catch (e) {
-      debugPrint('Error al obtener los administradores: $e');
+      debugPrint('AdminService: Error al obtener los administradores: $e');
+      debugPrint('AdminService: Error tipo: ${e.runtimeType}');
       rethrow;
     }
   }

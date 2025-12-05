@@ -31,6 +31,8 @@ String _getRoleDisplayName(String role) {
       return 'Administrador';
     case 'Employee':
       return 'Empleado';
+    case 'SuperAdmin':
+      return 'SuperAdmin';
     default:
       return role;
   }
@@ -581,6 +583,13 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                   );
                 }
 
+                  // Filter out superadmins if current user is not a superadmin
+                  final currentUser = authProvider.currentUser;
+                  final isCurrentUserSuperAdmin = currentUser?.isSuperAdmin ?? false;
+                  final visibleUsers = isCurrentUserSuperAdmin
+                      ? userProvider.users
+                      : userProvider.users.where((u) => !u.isSuperAdmin).toList();
+
                   return Column(
                     children: [
                       // Header
@@ -589,7 +598,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                         child: HeaderSimple(
                           leadingIcon: Icons.people,
                           title: 'Usuarios del Sistema',
-                          subtitle: '${userProvider.users.length} usuarios registrados',
+                          subtitle: '${visibleUsers.length} usuarios registrados',
                         ),
                       ),
                       
@@ -626,7 +635,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
 
                       // Users list
                       Expanded(
-                        child: userProvider.users.isEmpty
+                        child: visibleUsers.isEmpty
                             ? Center(
                                 child: Padding(
                                   padding: const EdgeInsets.all(32),
@@ -672,11 +681,11 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                               )
                             : ListView.builder(
                                 padding: const EdgeInsets.all(16),
-                  itemCount: userProvider.users.length,
+                  itemCount: visibleUsers.length,
                   itemBuilder: (context, index) {
-                    final user = userProvider.users[index];
+                    final user = visibleUsers[index];
                                   return _buildUserCard(
-                                      context, user, userProvider);
+                                      context, user, userProvider, authProvider);
               },
             ),
           ),
@@ -690,10 +699,15 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
   }
 
   Widget _buildUserCard(
-      BuildContext context, User user, UserProvider userProvider) {
+      BuildContext context, User user, UserProvider userProvider, AuthProvider authProvider) {
     final indicatorColor = user.isActive 
         ? (user.isAdmin ? const Color(0xFF4CAF50) : AppTheme.primaryColor)
         : Colors.red;
+    
+    final currentUser = authProvider.currentUser;
+    final isCurrentUserSuperAdmin = currentUser?.isSuperAdmin ?? false;
+    final isUserSuperAdmin = user.isSuperAdmin;
+    final canModifySuperAdmin = isCurrentUserSuperAdmin || !isUserSuperAdmin;
     
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -885,16 +899,36 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                 final isLastAdmin = _isLastAdmin(user, userProvider);
                 // Only disable if it's the last active admin (can't deactivate)
                 // Inactive users can always be activated
-                final shouldDisableToggle = isLastAdmin;
+                // Also disable if trying to modify a superadmin and current user is not superadmin
+                final shouldDisableToggle = isLastAdmin || (!canModifySuperAdmin && user.isActive);
+                final canDelete = !isLastAdmin && canModifySuperAdmin;
 
                 return [
-                  const PopupMenuItem(
+                  PopupMenuItem(
                     value: 'edit',
+                    enabled: canModifySuperAdmin,
                     child: Row(
                       children: [
-                        Icon(Icons.edit, size: 20, color: Color(0xFF4CAF50)),
-                        SizedBox(width: 8),
-                        Text('Editar'),
+                        Icon(
+                          Icons.edit, 
+                          size: 20, 
+                          color: canModifySuperAdmin ? const Color(0xFF4CAF50) : Colors.grey,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Editar',
+                          style: TextStyle(
+                            color: canModifySuperAdmin ? null : Colors.grey,
+                          ),
+                        ),
+                        if (!canModifySuperAdmin) ...[
+                          const SizedBox(width: 4),
+                          const Icon(
+                            Icons.lock,
+                            size: 14,
+                            color: Colors.grey,
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -946,22 +980,22 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                   ),
                   PopupMenuItem(
                     value: 'delete',
-                    enabled: !isLastAdmin,
+                    enabled: canDelete,
                     child: Row(
                       children: [
                         Icon(
                           Icons.delete_forever,
                           size: 20,
-                          color: isLastAdmin ? Colors.grey : Colors.red,
+                          color: canDelete ? Colors.red : Colors.grey,
                         ),
                         const SizedBox(width: 8),
                         Text(
                           'Eliminar Permanentemente',
                           style: TextStyle(
-                            color: isLastAdmin ? Colors.grey : Colors.red,
+                            color: canDelete ? Colors.red : Colors.grey,
                           ),
                         ),
-                        if (isLastAdmin) ...[
+                        if (!canDelete) ...[
                           const SizedBox(width: 4),
                           const Icon(
                             Icons.lock,
@@ -1134,6 +1168,20 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
 
   void _toggleUserStatus(
       BuildContext context, User user, UserProvider userProvider) async {
+    // Prevent deactivating superadmins (only superadmins can deactivate other superadmins)
+    if (user.isSuperAdmin) {
+      final authProvider = context.read<AuthProvider>();
+      final currentUser = authProvider.currentUser;
+      if (currentUser == null || !currentUser.isSuperAdmin) {
+        await AppDialogs.showWarningDialog(
+          context: context,
+          title: 'No se puede desactivar',
+          message: 'No se puede desactivar un usuario SuperAdmin. Los SuperAdmins tienen permisos especiales y solo pueden ser desactivados por otros SuperAdmins.',
+        );
+        return;
+      }
+    }
+
     // Check if trying to deactivate the last admin
     if (user.isActive && _isLastAdmin(user, userProvider)) {
       _showLastAdminWarningDialog(context);
@@ -1233,6 +1281,16 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
 
   void _showDeleteUserDialog(
       BuildContext context, User user, UserProvider userProvider) async {
+    // Prevent deleting superadmins
+    if (user.isSuperAdmin) {
+      await AppDialogs.showWarningDialog(
+        context: context,
+        title: 'No se puede eliminar',
+        message: 'No se puede eliminar un usuario SuperAdmin. Los SuperAdmins tienen permisos especiales y no pueden ser eliminados por administradores normales.',
+      );
+      return;
+    }
+
     // Check if trying to delete the last admin
     if (_isLastAdmin(user, userProvider)) {
       _showLastAdminWarningDialog(context);
