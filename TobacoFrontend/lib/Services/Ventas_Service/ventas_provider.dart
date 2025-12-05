@@ -17,6 +17,7 @@ import 'package:tobaco/Services/Cache/database_helper.dart';
 import 'package:tobaco/Services/Cache/ventas_cache_service.dart';
 import 'package:tobaco/Services/Cache/cuenta_corriente_cache_service.dart';
 import 'package:tobaco/Services/Clientes_Service/clientes_provider.dart';
+import 'package:tobaco/Services/Clientes_Service/clientes_service.dart';
 import 'package:tobaco/Services/Sync/simple_sync_service.dart';
 import 'package:tobaco/Services/Ventas_Service/ventas_service.dart';
 import 'package:tobaco/Theme/app_theme.dart';
@@ -1106,6 +1107,7 @@ class VentasProvider with ChangeNotifier {
     required List<Cliente> clientesFiltrados,
     required Cliente? clienteSeleccionado,
   }) async {
+    // Primero buscar en las colecciones locales
     Cliente? clienteConsumidor = _buscarConsumidorFinalEnColecciones([
       if (clienteSeleccionado != null) [clienteSeleccionado],
       clientesFiltrados,
@@ -1123,40 +1125,21 @@ class VentasProvider with ChangeNotifier {
       return clienteConsumidor;
     }
 
+    // Si no se encuentra localmente, usar el endpoint del backend que garantiza un único Consumidor Final compartido
     try {
-      final clientesServidor = await clienteProvider.obtenerClientes();
-      clienteConsumidor = _buscarConsumidorFinalEnColecciones([clientesServidor]);
+      final clienteService = ClienteService();
+      clienteConsumidor = await clienteService.obtenerOCrearConsumidorFinal();
+      
       if (clienteConsumidor != null) {
+        // Actualizar la lista de clientes para incluir el Consumidor Final
+        await clienteProvider.obtenerClientes();
         return clienteConsumidor;
       }
     } catch (e) {
-      debugPrint('Error cargando clientes al buscar Consumidor Final: $e');
-    }
-
-    try {
-      final nuevoCliente = Cliente(
-        id: null,
-        nombre: 'Consumidor Final',
-        direccion: 'Sin dirección especificada',
-        telefono: 0,
-        deuda: '0',
-        descuentoGlobal: 0.0,
-        preciosEspeciales: const [],
-        latitud: null,
-        longitud: null,
-      );
-
-      final clienteCreado = await clienteProvider.crearCliente(nuevoCliente);
-
-      if (clienteCreado != null) {
-        await clienteProvider.obtenerClientes();
-        return clienteCreado;
-      }
-    } catch (e) {
-      debugPrint('Error al crear cliente Consumidor Final: $e');
+      debugPrint('Error al obtener o crear Consumidor Final desde el servidor: $e');
       AppTheme.showSnackBar(
         context,
-        AppTheme.errorSnackBar('Error al crear cliente Consumidor Final: $e'),
+        AppTheme.errorSnackBar('Error al obtener Consumidor Final: $e'),
       );
       return null;
     }

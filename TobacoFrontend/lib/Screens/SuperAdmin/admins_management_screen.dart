@@ -62,10 +62,13 @@ class _AdminsManagementScreenState extends State<AdminsManagementScreen> {
     });
 
     try {
+      debugPrint('AdminsManagementScreen: Cargando administradores para tenant $tenantId');
       _admins = await _adminService.obtenerAdminsPorTenant(tenantId);
+      debugPrint('AdminsManagementScreen: Se obtuvieron ${_admins.length} administradores');
       _filteredAdmins = _admins;
       _errorMessage = null;
     } catch (e) {
+      debugPrint('AdminsManagementScreen: Error al cargar administradores: $e');
       _errorMessage = e.toString().replaceFirst('Exception: ', '');
       _admins = [];
       _filteredAdmins = [];
@@ -363,35 +366,24 @@ class _AdminsManagementScreenState extends State<AdminsManagementScreen> {
                                   ],
                                   Expanded(
                                     child: admins.isEmpty
-                                        ? Container(
-                                            padding: const EdgeInsets.all(40),
+                                        ? Center(
                                             child: Column(
                                               mainAxisAlignment: MainAxisAlignment.center,
                                               children: [
                                                 Icon(
-                                                  Icons.people_outline,
-                                                  size: 80,
+                                                  Icons.admin_panel_settings_outlined,
+                                                  size: 64,
                                                   color: Colors.grey.shade400,
                                                 ),
                                                 const SizedBox(height: 16),
                                                 Text(
                                                   _searchQuery.isNotEmpty
                                                       ? 'No se encontraron administradores'
-                                                      : 'No hay administradores para este tenant',
+                                                      : 'Sin administradores',
                                                   style: TextStyle(
-                                                    fontSize: 18,
-                                                    color: Colors.grey.shade600,
-                                                    fontWeight: FontWeight.w500,
-                                                  ),
-                                                ),
-                                                const SizedBox(height: 8),
-                                                Text(
-                                                  _searchQuery.isNotEmpty
-                                                      ? 'Intenta con otros términos de búsqueda'
-                                                      : 'Crea tu primer administrador para comenzar',
-                                                  style: TextStyle(
-                                                    fontSize: 14,
+                                                    fontSize: 16,
                                                     color: Colors.grey.shade500,
+                                                    fontWeight: FontWeight.w500,
                                                   ),
                                                   textAlign: TextAlign.center,
                                                 ),
