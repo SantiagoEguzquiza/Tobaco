@@ -49,6 +49,10 @@ class CategoriasProvider with ChangeNotifier {
       if (_categorias.isNotEmpty) {
         await _catalogoLocal.guardarCategorias(_categorias);
         await _datosCacheService.guardarCategoriasEnCache(_categorias);
+        // También guardar en CategoriasCacheService para SQLite
+        final categoriasCache = CategoriasCacheService();
+        await categoriasCache.saveAll(_categorias);
+        await categoriasCache.clearEmptyMark(); // Limpiar marcador de vacío si hay datos
       } else {
         // Si no hay datos en modo online, marcar como vacío en caché
         final categoriasCache = CategoriasCacheService();
@@ -87,6 +91,7 @@ class CategoriasProvider with ChangeNotifier {
         return;
       }
       
+      // Intentar cargar desde DatosCacheService primero
       final cache = await _datosCacheService.obtenerCategoriasDelCache();
       if (cache.isNotEmpty) {
         _categorias = List.from(cache)
@@ -95,26 +100,54 @@ class CategoriasProvider with ChangeNotifier {
         _isOffline = true;
         _loadedFromCache = true;
         _errorMessage = null;
+        debugPrint('✅ CategoriasProvider: Categorías cargadas desde DatosCacheService');
         return;
       }
-    } catch (_) {
-      // Ignorar error del caché y continuar con SQLite
+    } catch (e) {
+      debugPrint('⚠️ CategoriasProvider: Error cargando desde DatosCacheService: $e');
     }
 
-    final locales = await _catalogoLocal.obtenerCategorias();
-    if (locales.isNotEmpty) {
-      _categorias = List.from(locales)
-        ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
-      _categorias = _normalizeCategorias(_categorias);
-      _isOffline = true;
-      _loadedFromCache = true;
-      _errorMessage = null;
-    } else {
-      _categorias = [];
-      _isOffline = true;
-      _loadedFromCache = false;
-      _errorMessage = null; // No mostrar error si está marcado como vacío
+    // Intentar cargar desde CategoriasCacheService (SQLite normalizado)
+    try {
+      final categoriasCache = CategoriasCacheService();
+      final cacheSqlite = await categoriasCache.getAll();
+      if (cacheSqlite.isNotEmpty) {
+        _categorias = List.from(cacheSqlite)
+          ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+        _categorias = _normalizeCategorias(_categorias);
+        _isOffline = true;
+        _loadedFromCache = true;
+        _errorMessage = null;
+        debugPrint('✅ CategoriasProvider: Categorías cargadas desde CategoriasCacheService (SQLite)');
+        return;
+      }
+    } catch (e) {
+      debugPrint('⚠️ CategoriasProvider: Error cargando desde CategoriasCacheService: $e');
     }
+
+    // Intentar cargar desde catalogo local como último recurso
+    try {
+      final locales = await _catalogoLocal.obtenerCategorias();
+      if (locales.isNotEmpty) {
+        _categorias = List.from(locales)
+          ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+        _categorias = _normalizeCategorias(_categorias);
+        _isOffline = true;
+        _loadedFromCache = true;
+        _errorMessage = null;
+        debugPrint('✅ CategoriasProvider: Categorías cargadas desde CatalogoLocal');
+        return;
+      }
+    } catch (e) {
+      debugPrint('⚠️ CategoriasProvider: Error cargando desde CatalogoLocal: $e');
+    }
+
+    // Si no se encontraron categorías en ningún lugar
+    _categorias = [];
+    _isOffline = true;
+    _loadedFromCache = false;
+    _errorMessage = null;
+    debugPrint('⚠️ CategoriasProvider: No se encontraron categorías en ningún caché');
   }
 
   Future<void> agregarCategoria(Categoria nueva) async {
@@ -163,11 +196,17 @@ class CategoriasProvider with ChangeNotifier {
     notifyListeners();
 
     try {
+      // Verificar si hay productos vinculados a esta categoría antes de eliminar
+      await _verificarProductosVinculados(id);
+      
       await _categoriaService.eliminarCategoria(id);
       _categorias.removeWhere((cat) => cat.id == id);
       await _guardarCategoriasLocales();
     } catch (e) {
       if (Apihandler.isConnectionError(e)) {
+        // Verificar productos vinculados también en modo offline
+        await _verificarProductosVinculados(id);
+        
         _categorias.removeWhere((cat) => cat.id == id);
         _isOffline = true;
         await _guardarCategoriasLocales();
@@ -178,6 +217,36 @@ class CategoriasProvider with ChangeNotifier {
     } finally {
       _isLoading = false;
       notifyListeners();
+    }
+  }
+
+  /// Verifica si hay productos vinculados a una categoría
+  /// Lanza una excepción si hay productos vinculados
+  Future<void> _verificarProductosVinculados(int categoriaId) async {
+    try {
+      // Obtener productos del cache
+      final productos = await _datosCacheService.obtenerProductosDelCache();
+      
+      // Filtrar productos que tienen esta categoría
+      final productosVinculados = productos.where((p) => p.categoriaId == categoriaId).toList();
+      
+      if (productosVinculados.isNotEmpty) {
+        final cantidad = productosVinculados.length;
+        final mensaje = cantidad == 1
+            ? 'No se puede eliminar la categoría porque tiene 1 producto vinculado. Primero elimina o cambia la categoría del producto.'
+            : 'No se puede eliminar la categoría porque tiene $cantidad productos vinculados. Primero elimina o cambia la categoría de los productos.';
+        throw Exception(mensaje);
+      }
+    } catch (e) {
+      // Si el error ya contiene un mensaje sobre productos vinculados, re-lanzarlo
+      if (e.toString().contains('producto') && e.toString().contains('vinculado')) {
+        rethrow;
+      }
+      // Si hay un error al verificar (por ejemplo, cache vacío), intentar continuar
+      // pero registrar el error
+      debugPrint('⚠️ CategoriasProvider: Error verificando productos vinculados: $e');
+      // No re-lanzar el error para no bloquear la eliminación si el cache falla
+      // El backend también validará esto
     }
   }
 
@@ -256,6 +325,12 @@ class CategoriasProvider with ChangeNotifier {
   Future<void> _guardarCategoriasLocales() async {
     await _catalogoLocal.guardarCategorias(_categorias);
     await _datosCacheService.guardarCategoriasEnCache(_categorias);
+    // También guardar en CategoriasCacheService para SQLite
+    if (_categorias.isNotEmpty) {
+      final categoriasCache = CategoriasCacheService();
+      await categoriasCache.saveAll(_categorias);
+      await categoriasCache.clearEmptyMark(); // Limpiar marcador de vacío si hay datos
+    }
   }
 
   void seleccionarColor(String color) {

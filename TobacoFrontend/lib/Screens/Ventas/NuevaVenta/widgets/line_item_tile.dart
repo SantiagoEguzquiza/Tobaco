@@ -88,7 +88,7 @@ class LineItemTile extends StatelessWidget {
             foregroundColor: Colors.white,
             icon: Icons.delete_outline,
             label: 'Eliminar',
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(8),
             padding: const EdgeInsets.all(8),
           ),
         ],
@@ -97,7 +97,7 @@ class LineItemTile extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 8),
         decoration: BoxDecoration(
           color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(8),
           border: Border.all(
             color: isDark
                 ? const Color(0xFF404040)
@@ -107,7 +107,7 @@ class LineItemTile extends StatelessWidget {
         ),
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(8),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             child: Row(
@@ -161,7 +161,7 @@ class LineItemTile extends StatelessWidget {
                       color:
                           isDark ? Colors.grey.shade600 : Colors.grey.shade300,
                     ),
-                    borderRadius: BorderRadius.circular(6),
+                    borderRadius: BorderRadius.circular(8),
                     color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
                   ),
                   child: Center(

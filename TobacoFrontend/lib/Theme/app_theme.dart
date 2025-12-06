@@ -736,7 +736,7 @@ class AppTheme {
   }) {
     return AlertDialog(
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(8),
       ),
       backgroundColor: null, // Usar el tema del contexto
       title: Text(

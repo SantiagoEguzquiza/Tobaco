@@ -409,9 +409,16 @@ class _SeleccionarProductosScreenState
 
     // Obtener el precio unitario promedio basado en la parte entera (sin decimales)
     final precioUnitarioPromedio = _getPrecioUnitarioPromedio(producto);
+    
+    // Asegurar que el precio unitario no sea 0 (especialmente importante para mitades)
+    final precioFinal = precioUnitarioPromedio > 0 
+        ? precioUnitarioPromedio * cantidad
+        : (_getPrecioUnitarioReal(producto) > 0 
+            ? _getPrecioUnitarioReal(producto) * cantidad 
+            : producto.precio * cantidad);
 
     // El precio total es el precio unitario multiplicado por la cantidad completa (incluyendo decimales)
-    return precioUnitarioPromedio * cantidad;
+    return precioFinal;
   }
 
   bool _tienePrecioEspecial(Producto producto) {
@@ -446,11 +453,19 @@ class _SeleccionarProductosScreenState
       precioBase = producto.precio;
     }
     
+    // Asegurar que el precio base no sea 0 o negativo
+    if (precioBase <= 0) {
+      debugPrint('⚠️ ADVERTENCIA: Precio base 0 o negativo para producto ${producto.nombre}, usando precio del producto: ${producto.precio}');
+      precioBase = producto.precio > 0 ? producto.precio : 0.0;
+    }
+    
     // Aplicar descuento del producto si está activo
     if (ProductoDescuentoHelper.tieneDescuentoActivo(producto)) {
       // Si hay precio especial, aplicar descuento sobre ese precio
       final descuento = producto.descuento;
-      return precioBase * (1 - descuento / 100);
+      final precioConDescuento = precioBase * (1 - descuento / 100);
+      // Asegurar que el precio con descuento no sea 0
+      return precioConDescuento > 0 ? precioConDescuento : precioBase;
     }
     
     return precioBase;
@@ -467,8 +482,24 @@ class _SeleccionarProductosScreenState
     // Calcular el precio unitario basándose solo en la parte entera de la cantidad
     // Esto asegura que las mitades no afecten el cálculo del precio unitario
     final cantidadEntera = cantidad.toInt();
+    
+    // Si solo hay parte decimal (0.5, 1.5, etc.) sin parte entera, usar el precio base
+    // para que cuando se multiplique por la cantidad decimal, dé el precio correcto
     if (cantidadEntera <= 0) {
-      return _getPrecioUnitarioReal(producto);
+      // Si la cantidad es solo 0.5 (o cualquier decimal menor a 1), retornar el precio base
+      // para que cuando se multiplique por 0.5, dé la mitad del precio
+      // IMPORTANTE: Asegurar que siempre retorne un precio válido (no 0)
+      final precioBase = _getPrecioUnitarioReal(producto);
+      debugPrint('🔍 _getPrecioUnitarioPromedio: cantidad=$cantidad, cantidadEntera=$cantidadEntera, precioBase=$precioBase, producto.precio=${producto.precio}');
+      
+      if (precioBase <= 0) {
+        // Si el precio base es 0 o negativo, usar el precio del producto directamente
+        final precioFinal = producto.precio > 0 ? producto.precio : 0.0;
+        debugPrint('⚠️ Precio base 0, usando precio del producto: $precioFinal');
+        return precioFinal;
+      }
+      debugPrint('✅ Retornando precio base: $precioBase');
+      return precioBase;
     }
 
     final cacheKey = '${producto.id}_$cantidadEntera';
@@ -1490,21 +1521,25 @@ class _SeleccionarProductosScreenState
                                     key: _productKeys[producto.id],
                                     height:
                                         80, // Altura fija para todos los items
-                                    child: Stack(children: [
-                                      // Contenedor principal clickeable
-                                      InkWell(
-                                        onTap: () {
-                                          setState(() {
-                                            if (isExpanded) {
-                                              _expandedProducts
-                                                  .remove(producto.id);
-                                            } else {
-                                              _expandedProducts
-                                                  .add(producto.id!);
-                                            }
-                                          });
-                                        },
-                                        child: Container(
+                                    margin: const EdgeInsets.only(bottom: 8), // Espacio entre items
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(12), // Border radius para todo el contenedor
+                                      child: Stack(children: [
+                                        // Contenedor principal clickeable
+                                        GestureDetector(
+                                          behavior: HitTestBehavior.opaque,
+                                          onTap: () {
+                                            setState(() {
+                                              if (isExpanded) {
+                                                _expandedProducts
+                                                    .remove(producto.id);
+                                              } else {
+                                                _expandedProducts
+                                                    .add(producto.id!);
+                                              }
+                                            });
+                                          },
+                                          child: Container(
                                           decoration: BoxDecoration(
                                             color: Theme.of(context)
                                                         .brightness ==
@@ -1515,6 +1550,8 @@ class _SeleccionarProductosScreenState
                                                 : (index % 2 == 0
                                                     ? Colors.white
                                                     : Colors.grey.shade50),
+                                            // Agregar border radius
+                                            borderRadius: BorderRadius.circular(12),
                                           ),
                                           child: Padding(
                                             padding: const EdgeInsets.symmetric(
@@ -1614,6 +1651,8 @@ class _SeleccionarProductosScreenState
                                                             ? Colors.white
                                                             : Colors
                                                                 .grey.shade50),
+                                                    // Agregar border radius también al contenedor expandido
+                                                    borderRadius: BorderRadius.circular(12),
                                                   ),
                                                   padding:
                                                       const EdgeInsets.only(
@@ -1952,7 +1991,8 @@ class _SeleccionarProductosScreenState
                                             ),
                                           ),
                                         ),
-                                    ]),
+                                      ]),
+                                    ),
                                   );
                                 },
                               ),
@@ -2018,11 +2058,31 @@ class _SeleccionarProductosScreenState
                         // Las cantidades decimales no afectan el precio unitario
                         final precioUnitarioPromedio =
                             _getPrecioUnitarioPromedio(producto);
+                        
+                        // Asegurar que el precio no sea 0 (especialmente importante para mitades)
+                        // Si el precio unitario promedio es 0 o negativo, usar el precio real del producto
+                        double precioFinal = precioUnitarioPromedio;
+                        
+                        if (precioFinal <= 0) {
+                          precioFinal = _getPrecioUnitarioReal(producto);
+                        }
+                        
+                        if (precioFinal <= 0) {
+                          precioFinal = producto.precio;
+                        }
+                        
+                        // Verificación final: si aún es 0, usar el precio del producto directamente
+                        if (precioFinal <= 0) {
+                          debugPrint('⚠️ ADVERTENCIA: Precio 0 para producto ${producto.nombre}, usando precio base: ${producto.precio}');
+                          precioFinal = producto.precio > 0 ? producto.precio : 0.0;
+                        }
+                        
+                        debugPrint('✅ ProductoSeleccionado: ${producto.nombre}, cantidad=${e.value}, precioUnitario=$precioFinal, total=${precioFinal * e.value}');
 
                         return ProductoSeleccionado(
                             id: producto.id!,
                             nombre: producto.nombre,
-                            precio: precioUnitarioPromedio,
+                            precio: precioFinal,
                             cantidad: e.value,
                             categoria: producto.categoriaNombre ?? '',
                             categoriaId: producto.categoriaId);

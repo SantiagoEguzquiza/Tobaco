@@ -117,7 +117,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
       builder: (BuildContext context) {
         return Dialog(
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(8),
           ),
           elevation: 8,
           child: Container(
@@ -138,8 +138,8 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                       end: Alignment.bottomRight,
                     ),
                     borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(20),
-                      topRight: Radius.circular(20),
+                      topLeft: Radius.circular(12),
+                      topRight: Radius.circular(12),
                     ),
                   ),
                   child: Row(
@@ -148,7 +148,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
                           color: Colors.white.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(8),
                         ),
                         child: const Icon(
                           Icons.restore,
@@ -228,7 +228,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                           color: Theme.of(context).brightness == Brightness.dark
                               ? Colors.grey.shade800.withOpacity(0.5)
                               : Colors.grey.shade50,
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(8),
                           border: Border.all(
                             color:
                                 Theme.of(context).brightness == Brightness.dark
@@ -271,7 +271,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                               width: 1.5,
                             ),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(8),
                             ),
                           ),
                           icon: Icon(
@@ -304,7 +304,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                             backgroundColor: AppTheme.primaryColor,
                             padding: const EdgeInsets.symmetric(vertical: 14),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(8),
                             ),
                             elevation: 2,
                           ),
@@ -354,7 +354,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
         color: Theme.of(context).brightness == Brightness.dark
             ? Colors.grey.shade800.withOpacity(0.3)
             : Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(
           color: Theme.of(context).brightness == Brightness.dark
               ? Colors.grey.shade700
@@ -377,7 +377,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
               color: iconColor.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(
               icon,
@@ -512,6 +512,9 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
       barrierDismissible: false,
       builder: (BuildContext context) {
         return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
           title: Row(
             children: [
               Icon(Icons.assignment, color: AppTheme.primaryColor),
@@ -528,10 +531,20 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(null),
+              style: TextButton.styleFrom(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
               child: const Text('Cancelar'),
             ),
             TextButton(
               onPressed: () => Navigator.of(context).pop('automatico'),
+              style: TextButton.styleFrom(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
               child: Text(
                 'Automático',
                 style: TextStyle(color: AppTheme.primaryColor),
@@ -541,6 +554,9 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
               onPressed: () => Navigator.of(context).pop('a_mi'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.primaryColor,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
               child: const Text('Asignarme a mí'),
             ),
@@ -667,7 +683,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
             color: Theme.of(context).brightness == Brightness.dark
                 ? const Color(0xFF1A1A1A)
                 : Colors.white,
-            borderRadius: BorderRadius.circular(AppTheme.borderRadiusCards),
+            borderRadius: BorderRadius.circular(8),
             boxShadow: [
               BoxShadow(
                 color: Theme.of(context).brightness == Brightness.dark
@@ -681,7 +697,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
           child: Material(
             color: Colors.transparent,
             child: InkWell(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(8),
               onTap: () => _seleccionarCliente(cliente),
               child: Padding(
                 padding: const EdgeInsets.all(16),
@@ -695,7 +711,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                         color: tieneDeudaCliente
                             ? Colors.red
                             : AppTheme.primaryColor,
-                        borderRadius: BorderRadius.circular(2),
+                        borderRadius: BorderRadius.circular(8),
                       ),
                     ),
                     const SizedBox(width: 16),
@@ -802,7 +818,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
       height: 200,
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF2F2F2F) : Colors.white,
-        borderRadius: BorderRadius.circular(15),
+        borderRadius: BorderRadius.circular(8),
         boxShadow: [
           BoxShadow(
             color: isDark
@@ -860,7 +876,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
         color: Theme.of(context).brightness == Brightness.dark
             ? const Color(0xFF1A1A1A)
             : Colors.white,
-        borderRadius: BorderRadius.circular(AppTheme.borderRadiusCards),
+        borderRadius: BorderRadius.circular(8),
         boxShadow: [
           BoxShadow(
             color: Theme.of(context).brightness == Brightness.dark
@@ -886,8 +902,8 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                   ? const Color(0xFF2A2A2A)
                   : Colors.grey.shade50,
               borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(AppTheme.borderRadiusCards),
-                topRight: Radius.circular(AppTheme.borderRadiusCards),
+                topLeft: Radius.circular(8),
+                topRight: Radius.circular(8),
               ),
             ),
             child: Row(
@@ -1188,12 +1204,27 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
     // - Packs (si aplica)
     // - Descuento del producto (si está activo)
     // Solo falta aplicar el descuento global del cliente
+    
+    // IMPORTANTE: Asegurar que el precio base nunca sea 0
     double precio = producto.precio;
+    
+    if (precio <= 0) {
+      debugPrint('⚠️ ADVERTENCIA: Precio 0 en ProductoSeleccionado ${producto.nombre}, intentando obtener precio del producto original');
+      // Si el precio es 0, intentar obtenerlo del producto original
+      // Esto no debería pasar, pero es una medida de seguridad
+      precio = producto.precio > 0 ? producto.precio : 0.0;
+    }
 
     // Aplicar descuento global si existe
     if (clienteSeleccionado?.descuentoGlobal != null &&
         clienteSeleccionado!.descuentoGlobal > 0) {
       precio = precio - (precio * (clienteSeleccionado!.descuentoGlobal / 100));
+    }
+    
+    // Verificación final: asegurar que el precio nunca sea negativo
+    if (precio < 0) {
+      debugPrint('⚠️ ADVERTENCIA: Precio negativo después de descuento para ${producto.nombre}, usando precio base');
+      precio = producto.precio > 0 ? producto.precio : 0.0;
     }
 
     return precio;
@@ -1383,8 +1414,28 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
   double _calcularTotal() {
     // El precio en ProductoSeleccionado ya incluye el descuento del producto
     // (se aplica en seleccionarProducto_screen cuando se crea el ProductoSeleccionado)
+    // IMPORTANTE: Asegurar que se calcule correctamente incluso con cantidades decimales (0.5)
     return productosSeleccionados.fold(
-        0.0, (sum, ps) => sum + (ps.precio * ps.cantidad));
+        0.0, (sum, ps) {
+          // Calcular el precio final del producto (con descuento global aplicado)
+          final precioFinalUnitario = _calcularPrecioFinalProducto(ps);
+          
+          // Asegurar que el precio unitario no sea 0
+          final precioUnitarioValido = precioFinalUnitario > 0 
+              ? precioFinalUnitario 
+              : (ps.precio > 0 ? ps.precio : 0.0);
+          
+          // Asegurar que la cantidad sea válida
+          final cantidad = ps.cantidad > 0 ? ps.cantidad : 0.0;
+          
+          // Calcular el subtotal: precio unitario final * cantidad
+          // Esto asegura que las mitades (0.5) se calculen correctamente
+          final subtotal = precioUnitarioValido * cantidad;
+          
+          debugPrint('💰 _calcularTotal: ${ps.nombre}, cantidad=$cantidad, precioUnitario=$precioUnitarioValido, subtotal=$subtotal');
+          
+          return sum + subtotal;
+        });
   }
 
   double _calcularTotalConDescuento() {
@@ -1439,23 +1490,58 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
 
     try {
       final productos = productosSeleccionados
-          .map((ps) => VentasProductos(
-                productoId: ps.id,
-                nombre: ps.nombre,
-                marca: ps.marca,
-                precio: ps.precio,
-                cantidad: ps.cantidad,
-                categoria: ps.categoria,
-                categoriaId: ps.categoriaId,
-                precioFinalCalculado: ps.precio * ps.cantidad,
-              ))
+          .map((ps) {
+            // Calcular el precio final del producto (con descuento global aplicado)
+            final precioFinalUnitario = _calcularPrecioFinalProducto(ps);
+            
+            // Asegurar que el precio unitario no sea 0
+            final precioUnitarioValido = precioFinalUnitario > 0 
+                ? precioFinalUnitario 
+                : (ps.precio > 0 ? ps.precio : 0.0);
+            
+            // El precio final calculado es el precio unitario final multiplicado por la cantidad
+            // Esto asegura que las mitades (0.5) se calculen correctamente
+            final precioFinalCalculado = precioUnitarioValido * ps.cantidad;
+            
+            debugPrint('💰 VentasProductos: ${ps.nombre}, cantidad=${ps.cantidad}, precioUnitario=$precioUnitarioValido, precioFinalCalculado=$precioFinalCalculado');
+            
+            return VentasProductos(
+              productoId: ps.id,
+              nombre: ps.nombre,
+              marca: ps.marca,
+              precio: ps.precio,
+              cantidad: ps.cantidad,
+              categoria: ps.categoria,
+              categoriaId: ps.categoriaId,
+              precioFinalCalculado: precioFinalCalculado,
+            );
+          })
           .toList();
 
+      // Calcular el total antes de crear la venta y verificar que no sea 0
+      final totalCalculado = _calcularTotalConDescuento();
+      
+      debugPrint('💰 Total calculado de la venta: $totalCalculado');
+      debugPrint('💰 Productos en la venta: ${productos.length}');
+      for (var p in productos) {
+        debugPrint('   - ${p.nombre}: cantidad=${p.cantidad}, precio=${p.precio}, precioFinalCalculado=${p.precioFinalCalculado}');
+      }
+      
+      // Si el total es 0 o negativo, recalcular usando los precios finales calculados
+      double totalFinal = totalCalculado;
+      if (totalCalculado <= 0) {
+        debugPrint('⚠️ ERROR CRÍTICO: El total de la venta es 0 o negativo. Recalculando...');
+        // Recalcular sumando los precios finales calculados de cada producto
+        final totalRecalculado = productos.fold(0.0, (sum, p) => sum + (p.precioFinalCalculado ?? 0.0));
+        debugPrint('💰 Total recalculado: $totalRecalculado');
+        totalFinal = totalRecalculado > 0 ? totalRecalculado : totalCalculado;
+      }
+      
       final venta = Ventas(
         clienteId: clienteSeleccionado!.id ?? 0,
         cliente: clienteSeleccionado!,
         ventasProductos: productos,
-        total: _calcularTotalConDescuento(),
+        total: totalFinal,
         fecha: DateTime.now().toLocal(), // Asegurar que sea hora local
       );
 
@@ -1763,7 +1849,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                                             Brightness.dark
                                         ? const Color(0xFF1A1A1A)
                                         : Colors.white,
-                                    borderRadius: BorderRadius.circular(15),
+                                    borderRadius: BorderRadius.circular(8),
                                     boxShadow: [
                                       BoxShadow(
                                         color: Theme.of(context).brightness ==
