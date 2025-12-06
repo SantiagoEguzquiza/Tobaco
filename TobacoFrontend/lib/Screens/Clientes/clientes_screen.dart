@@ -54,6 +54,11 @@ class _ClientesScreenState extends State<ClientesScreen> {
     });
   }
 
+  /// Verifica si un cliente es "Consumidor Final"
+  bool _esConsumidorFinal(Cliente cliente) {
+    return cliente.nombre.trim().toLowerCase() == 'consumidor final';
+  }
+
   Future<void> _actualizarClienteEnLista(Cliente clienteOriginal) async {
     if (clienteOriginal.id == null) return;
     
@@ -104,13 +109,6 @@ class _ClientesScreenState extends State<ClientesScreen> {
   Widget build(BuildContext context) {
     return Consumer<ClienteProvider>(
       builder: (context, provider, child) {
-        final clientes = provider.clientes;
-        final isLoading = provider.isLoading;
-        final hasMoreData = provider.hasMoreData;
-        final searchQuery = provider.searchQuery;
-        
-        // Snackbar de advertencia removido
-
         return Scaffold(
           backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           appBar: AppBar(
@@ -122,161 +120,229 @@ class _ClientesScreenState extends State<ClientesScreen> {
               style: AppTheme.appBarTitleStyle,
             ),
           ),
-          body: isLoading && clientes.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      CircularProgressIndicator(
-                        valueColor:
-                            AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Cargando clientes...',
-                        style: TextStyle(
-                          color: Colors.grey.shade600,
-                          fontSize: 16,
-                        ),
-                      ),
-                    ],
-                  ),
-                )
-              : Column(
-                  children: [
-                    // Header con buscador
-                    Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          HeaderConBuscador(
-                            leadingIcon: Icons.people,
-                            title: 'Gestión de Clientes',
-                            subtitle: '${clientes.length} clientes registrados',
-                            controller: _searchController,
-                            hintText: 'Buscar clientes...',
-                            onChanged: _onSearchChanged,
-                            onClear: () {
-                              _searchController.clear();
-                              provider.buscarClientes('');
-                            },
-                          ),
-                          
-                          const SizedBox(height: 16),
-                          
-                          // Botón de crear cliente - Solo mostrar si tiene permiso
-                          Consumer<PermisosProvider>(
-                            builder: (context, permisosProvider, child) {
-                              if (permisosProvider.canCreateClientes || permisosProvider.isAdmin) {
-                                return SizedBox(
-                                  width: double.infinity,
-                                  child: ElevatedButton.icon(
-                                    onPressed: () async {
-                                      final result = await Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) => const NuevoClienteScreen(),
-                                        ),
-                                      );
-                                      // Si se retorna un Cliente, significa que se creó exitosamente
-                                      if (result is Cliente && mounted) {
-                                        await context.read<ClienteProvider>().cargarClientes();
-                                      }
-                                    },
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: AppTheme.primaryColor,
-                                      foregroundColor: Colors.white,
-                                      padding: const EdgeInsets.symmetric(vertical: 16),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
-                                      ),
-                                      elevation: 2,
-                                    ),
-                                    icon: const Icon(Icons.person_add, size: 20),
-                                    label: const Text(
-                                      'Nuevo Cliente',
-                                      style: TextStyle(
-                                          fontSize: 16, fontWeight: FontWeight.w600),
-                                    ),
-                                  ),
-                                );
-                              }
-                              return const SizedBox.shrink();
-                            },
-                          ),
-
-                          
-                        ],
-                      ),
-                    ),
-
-                    // Lista scrolleable de clientes
-                    Expanded(
-                      child: clientes.isEmpty
-                          ? Container(
-                              padding: const EdgeInsets.all(40),
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.people_outline,
-                                    size: 80,
-                                    color: Colors.grey.shade400,
-                                  ),
-                                  const SizedBox(height: 16),
-                                  Text(
-                                    searchQuery.isNotEmpty
-                                        ? 'No se encontraron clientes'
-                                        : 'No hay clientes registrados',
-                                    style: TextStyle(
-                                      fontSize: 18,
-                                      color: Colors.grey.shade600,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    searchQuery.isNotEmpty
-                                        ? 'Intenta con otros términos de búsqueda'
-                                        : 'Crea tu primer cliente para comenzar',
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      color: Colors.grey.shade500,
-                                    ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                ],
-                              ),
-                            )
-                          : ListView.builder(
-                              controller: _scrollController,
-                              padding: const EdgeInsets.symmetric(horizontal: 16),
-                              itemCount: clientes.length + (hasMoreData ? 1 : 0),
-                              itemBuilder: (context, index) {
-                                if (index == clientes.length) {
-                                  // Indicador de carga al final
-                                  return isLoading
-                                      ? const Padding(
-                                          padding: EdgeInsets.all(16),
-                                          child: Center(
-                                            child: CircularProgressIndicator(
-                                              valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
-                                            ),
-                                          ),
-                                        )
-                                      : const SizedBox.shrink();
-                                }
-
-                                final cliente = clientes[index];
-                                return _buildClienteCard(cliente);
-                              },
-                            ),
-                    ),
-                  ],
-                ),
+          body: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                children: [
+                  // Header con buscador - SIEMPRE VISIBLE
+                  _buildHeaderSection(provider),
+                  const SizedBox(height: 20),
+                  // Lista con estados dentro
+                  Expanded(child: _buildClientesList(provider)),
+                ],
+              ),
+            ),
+          ),
         );
       },
+    );
+  }
+
+  Widget _buildHeaderSection(ClienteProvider provider) {
+    // Contar clientes excluyendo "Consumidor Final"
+    final clientesVisibles = provider.clientes.where((c) => !_esConsumidorFinal(c)).length;
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        HeaderConBuscador(
+          leadingIcon: Icons.people,
+          title: 'Gestión de Clientes',
+          subtitle: '$clientesVisibles clientes registrados',
+          controller: _searchController,
+          hintText: 'Buscar clientes...',
+          onChanged: _onSearchChanged,
+          onClear: () {
+            _searchController.clear();
+            provider.buscarClientes('');
+          },
+        ),
+        const SizedBox(height: 16),
+        // Botón de crear cliente - Solo mostrar si tiene permiso
+        Consumer<PermisosProvider>(
+          builder: (context, permisosProvider, child) {
+            if (permisosProvider.canCreateClientes || permisosProvider.isAdmin) {
+              return SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () async {
+                    final result = await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const NuevoClienteScreen(),
+                      ),
+                    );
+                    // Si se retorna un Cliente, significa que se creó exitosamente
+                    if (result is Cliente && mounted) {
+                      await context.read<ClienteProvider>().cargarClientes();
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryColor,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
+                    ),
+                    elevation: 2,
+                  ),
+                  icon: const Icon(Icons.person_add, size: 20),
+                  label: const Text(
+                    'Nuevo Cliente',
+                    style: TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.w600),
+                  ),
+                ),
+              );
+            }
+            return const SizedBox.shrink();
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildClientesList(ClienteProvider provider) {
+    final clientes = provider.clientes;
+    final isLoading = provider.isLoading;
+    final hasMoreData = provider.hasMoreData;
+    final searchQuery = provider.searchQuery;
+
+    // Filtrar "Consumidor Final" de la lista
+    final clientesFiltrados = clientes.where((cliente) => !_esConsumidorFinal(cliente)).toList();
+
+    if (isLoading && clientesFiltrados.isEmpty) {
+      return _buildLoadingState();
+    }
+
+    if (clientesFiltrados.isEmpty) {
+      return _buildEmptyState(searchQuery);
+    }
+
+    return RefreshIndicator(
+      color: AppTheme.primaryColor,
+      onRefresh: () async {
+        await context.read<ClienteProvider>().cargarClientes();
+      },
+      child: ListView.builder(
+        controller: _scrollController,
+        physics: const AlwaysScrollableScrollPhysics(),
+        itemCount: clientesFiltrados.length + (hasMoreData ? 1 : 0),
+        itemBuilder: (context, index) {
+          if (index == clientesFiltrados.length) {
+            // Indicador de carga al final
+            return isLoading
+                ? const Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Center(
+                      child: CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
+                      ),
+                    ),
+                  )
+                : const SizedBox.shrink();
+          }
+
+          final cliente = clientesFiltrados[index];
+          return _buildClienteCard(cliente);
+        },
+      ),
+    );
+  }
+
+  Widget _buildLoadingState() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).brightness == Brightness.dark
+            ? const Color(0xFF1A1A1A)
+            : Colors.white,
+        borderRadius: BorderRadius.circular(15),
+        boxShadow: [
+          BoxShadow(
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.black.withOpacity(0.3)
+                : Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
+            ),
+            SizedBox(height: 16),
+            Text(
+              'Cargando clientes...',
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(String searchQuery) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).brightness == Brightness.dark
+            ? const Color(0xFF1A1A1A)
+            : Colors.white,
+        borderRadius: BorderRadius.circular(15),
+        boxShadow: [
+          BoxShadow(
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.black.withOpacity(0.3)
+                : Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(40),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.people_outline,
+                size: 80,
+                color: Colors.grey.shade400,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                searchQuery.isNotEmpty
+                    ? 'No se encontraron clientes'
+                    : 'No hay clientes registrados',
+                style: TextStyle(
+                  fontSize: 18,
+                  color: Colors.grey.shade600,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                searchQuery.isNotEmpty
+                    ? 'Intenta con otros términos de búsqueda'
+                    : 'Crea tu primer cliente para comenzar',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey.shade500,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -389,6 +455,11 @@ class _ClientesScreenState extends State<ClientesScreen> {
                   children: [
                     Consumer<PermisosProvider>(
                       builder: (context, permisosProvider, child) {
+                        // No mostrar botones de editar/eliminar para "Consumidor Final"
+                        if (_esConsumidorFinal(cliente)) {
+                          return const SizedBox.shrink();
+                        }
+
                         final canEdit = permisosProvider.canEditClientes || permisosProvider.isAdmin;
                         final canDelete = permisosProvider.canDeleteClientes || permisosProvider.isAdmin;
                         

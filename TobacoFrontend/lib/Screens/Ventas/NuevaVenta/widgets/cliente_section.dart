@@ -110,17 +110,7 @@ class ClienteSection extends StatelessWidget {
                         color: isDark ? Colors.white : AppTheme.primaryColor,
                       ),
                       overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
-                    if (cliente.telefono != null)
-                      Text(
-                        'Tel: ${cliente.telefono}',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
-                        ),
-                      ),
-                    
+                    ),                                  
                     // Mostrar deuda si tiene
                     if (tieneDeuda) ...[
                       const SizedBox(height: 4),

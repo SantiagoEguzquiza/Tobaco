@@ -222,16 +222,23 @@ class _VentasScreenState extends State<VentasScreen> {
       return _buildEmptyState(provider.searchQuery.isNotEmpty);
     }
 
-    return ListView.builder(
-      controller: _scrollController,
-      itemCount: filteredVentas.length + (provider.isLoadingMore ? 1 : 0),
-      itemBuilder: (context, index) {
-        if (index == filteredVentas.length) {
-          return _buildLoadingIndicator();
-        }
-        final venta = filteredVentas[index];
-        return _buildVentaCard(venta, provider);
+    return RefreshIndicator(
+      color: AppTheme.primaryColor,
+      onRefresh: () async {
+        await context.read<VentasProvider>().cargarVentas();
       },
+      child: ListView.builder(
+        controller: _scrollController,
+        physics: const AlwaysScrollableScrollPhysics(),
+        itemCount: filteredVentas.length + (provider.isLoadingMore ? 1 : 0),
+        itemBuilder: (context, index) {
+          if (index == filteredVentas.length) {
+            return _buildLoadingIndicator();
+          }
+          final venta = filteredVentas[index];
+          return _buildVentaCard(venta, provider);
+        },
+      ),
     );
   }
 
