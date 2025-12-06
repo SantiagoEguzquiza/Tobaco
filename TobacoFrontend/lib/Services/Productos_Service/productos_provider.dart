@@ -43,6 +43,7 @@ class ProductoProvider with ChangeNotifier {
   List<Producto> get productosFiltrados {
     List<Producto> filtered;
     if (_searchQuery.isNotEmpty) {
+      // Búsqueda global: filtrar todos los productos cargados
       final queryLower = _searchQuery.toLowerCase();
       filtered = _productos.where((p) {
         // Buscar en el nombre
@@ -54,8 +55,10 @@ class ProductoProvider with ChangeNotifier {
         return nombreMatch || marcaMatch;
       }).toList();
     } else if (_selectedCategory != null) {
+      // Filtrar por categoría seleccionada
       filtered = _productos.where((p) => p.categoriaNombre == _selectedCategory).toList();
     } else {
+      // Sin filtros: mostrar todos los productos
       filtered = List.from(_productos);
     }
     // Ordenar alfabéticamente
@@ -86,52 +89,44 @@ class ProductoProvider with ChangeNotifier {
       final categoriasData = futures[0] as List<Categoria>;
       final productosData = futures[1] as Map<String, dynamic>;
 
-      final productosList = List<Producto>.from(productosData['productos']);
+      // Actualizar caché completo en background (sin bloquear la UI)
+      // Esto asegura que el caché esté siempre sincronizado con el servidor
+      _actualizarCacheCompletoEnBackground();
       
-      // Actualizar caché completo con TODOS los productos del servidor (no solo la primera página)
-      // Esto asegura que el caché esté siempre sincronizado con el estado real del servidor
-      if (_currentPage == 1) {
-        // Actualizar caché completo de forma síncrona para asegurar que se ejecute
-        try {
-          debugPrint('🔄 ProductoProvider: Obteniendo TODOS los productos del servidor para actualizar caché...');
-          final todosLosProductos = await _productoService.obtenerProductos()
-              .timeout(Duration(seconds: 10)); // Timeout más largo para asegurar que se complete
-          
-          debugPrint('📦 ProductoProvider: ${todosLosProductos.length} productos obtenidos del servidor para actualizar caché');
-          
-          // Actualizar AMBOS sistemas de caché para asegurar sincronización completa
-          // 1. DatosCacheService (tabla productos_cache)
-          final cacheService = DatosCacheService();
-          await cacheService.guardarProductosEnCache(todosLosProductos);
-          debugPrint('✅ ProductoProvider: DatosCacheService actualizado');
-          
-          // 2. CatalogoLocalService (tabla productos)
-          await _catalogoLocal.guardarProductos(todosLosProductos);
-          debugPrint('✅ ProductoProvider: CatalogoLocalService actualizado');
-          
-          if (todosLosProductos.isEmpty) {
-            debugPrint('✅ ProductoProvider: Caché completo limpiado (servidor devolvió lista vacía)');
-          } else {
-            debugPrint(
-                '✅ ProductoProvider: Caché completo actualizado con ${todosLosProductos.length} productos en ambos sistemas');
-          }
-        } catch (e) {
-          debugPrint('⚠️ ProductoProvider: Error actualizando caché completo: $e');
-          // Si falla (timeout o error de conexión), NO actualizar el caché con datos locales
-          // porque esos datos pueden estar desactualizados. Solo loguear el error.
-          debugPrint('⚠️ ProductoProvider: No se actualizó el caché porque el servidor no respondió. El caché se mantendrá con los datos anteriores.');
+      // Seleccionar la primera categoría por defecto si no hay ninguna seleccionada
+      String? categoriaInicial;
+      if (_selectedCategory == null && categoriasData.isNotEmpty) {
+        categoriaInicial = categoriasData.first.nombre;
+        _selectedCategory = categoriaInicial;
+      } else if (_selectedCategory != null) {
+        categoriaInicial = _selectedCategory;
+      }
+
+      // Cargar todos los productos desde el caché para permitir filtrado por categoría
+      // Si el caché está vacío o desactualizado, se actualizará en background
+      List<Producto> productosList = [];
+      try {
+        // Intentar cargar todos los productos desde el caché
+        final cacheService = DatosCacheService();
+        productosList = await cacheService.obtenerProductosDelCache();
+        
+        if (productosList.isNotEmpty) {
+          debugPrint('📦 ProductoProvider: ${productosList.length} productos cargados desde caché');
+        } else {
+          // Si no hay productos en caché, usar productos paginados como fallback inicial
+          productosList = List<Producto>.from(productosData['productos']);
+          debugPrint('⚠️ ProductoProvider: Caché vacío, usando productos paginados como fallback (${productosList.length} productos)');
         }
+      } catch (e) {
+        debugPrint('⚠️ ProductoProvider: Error cargando productos desde caché: $e');
+        // Fallback a productos paginados
+        productosList = List<Producto>.from(productosData['productos']);
       }
       
       _productos = productosList;
       _categorias = categoriasData;
-      _hasMoreData = productosData['hasNextPage'] ?? false;
+      _hasMoreData = false; // No usamos scroll infinito cuando filtramos por categoría
       _isOffline = categoriasProvider.loadedFromCache;
-
-      // Seleccionar la primera categoría por defecto si no hay ninguna seleccionada
-      if (_selectedCategory == null && categoriasData.isNotEmpty) {
-        _selectedCategory = categoriasData.first.nombre;
-      }
 
       _isLoading = false;
       notifyListeners();
@@ -158,19 +153,12 @@ class ProductoProvider with ChangeNotifier {
           
           // Intentar obtener del caché directamente
           final cacheService = DatosCacheService();
+          
+          // Cargar todos los productos desde el caché
           final productosDelCache = await cacheService.obtenerProductosDelCache();
-
           if (productosDelCache.isNotEmpty) {
-            // Hay datos en caché, cargarlos manualmente
-            final start = (_currentPage - 1) * _pageSize;
-            final end = start + _pageSize;
-            final productosPag = productosDelCache.sublist(
-              start,
-              end > productosDelCache.length ? productosDelCache.length : end,
-            );
-
-            _productos = productosPag;
-            _hasMoreData = end < productosDelCache.length;
+            _productos = productosDelCache;
+            _hasMoreData = false;
             _isOffline = true;
             _isLoading = false;
             notifyListeners();
@@ -220,7 +208,7 @@ class ProductoProvider with ChangeNotifier {
     }
   }
 
-  /// Cambia la categoría seleccionada
+  /// Cambia la categoría seleccionada (el filtrado se hace en productosFiltrados)
   void seleccionarCategoria(String? nombre) {
     _selectedCategory = nombre;
     _searchQuery = ''; // Limpiar búsqueda al seleccionar categoría
@@ -447,19 +435,27 @@ class ProductoProvider with ChangeNotifier {
   /// Actualiza el caché completo obteniendo TODOS los productos del servidor
   /// Se ejecuta en background para no bloquear la UI
   void _actualizarCacheCompletoEnBackground() {
-    debugPrint('🔄 ProductoProvider: Iniciando actualización completa del caché...');
+    debugPrint('🔄 ProductoProvider: Iniciando actualización completa del caché en background...');
     _productoService.obtenerProductos()
-        .timeout(Duration(seconds: 5)) // Timeout más largo para operación crítica
+        .timeout(Duration(seconds: 10)) // Timeout más largo para operación crítica
         .then((todosLosProductos) async {
       debugPrint('📦 ProductoProvider: ${todosLosProductos.length} productos obtenidos del servidor para actualizar caché');
-      // Actualizar caché completo (si está vacío, limpiará el caché SQLite)
+      
+      // Actualizar AMBOS sistemas de caché para asegurar sincronización completa
+      // 1. DatosCacheService (tabla productos_cache)
       final cacheService = DatosCacheService();
       await cacheService.guardarProductosEnCache(todosLosProductos);
+      debugPrint('✅ ProductoProvider: DatosCacheService actualizado en background');
+      
+      // 2. CatalogoLocalService (tabla productos)
+      await _catalogoLocal.guardarProductos(todosLosProductos);
+      debugPrint('✅ ProductoProvider: CatalogoLocalService actualizado en background');
+      
       if (todosLosProductos.isEmpty) {
         debugPrint('✅ ProductoProvider: Caché completo limpiado (servidor devolvió lista vacía)');
       } else {
         debugPrint(
-            '✅ ProductoProvider: Caché completo actualizado con ${todosLosProductos.length} productos');
+            '✅ ProductoProvider: Caché completo actualizado con ${todosLosProductos.length} productos en ambos sistemas');
       }
     }).catchError((e) {
       debugPrint('⚠️ ProductoProvider: Error actualizando caché completo en background: $e');

@@ -5,9 +5,12 @@ import 'package:tobaco/Models/EstadoEntrega.dart';
 import 'package:tobaco/Models/Ventas.dart';
 import 'package:tobaco/Models/VentasProductos.dart';
 import 'package:tobaco/Services/Ventas_Service/ventas_provider.dart';
+import 'package:tobaco/Services/Auth_Service/auth_provider.dart';
 import 'package:tobaco/Theme/app_theme.dart';
 import 'package:tobaco/Theme/headers.dart';
 import 'package:tobaco/Screens/Entregas/detalle_entregas_screen.dart';
+import 'package:tobaco/Screens/Admin/asignar_ventas_screen.dart';
+import 'package:tobaco/Screens/Admin/recorridos_programados_screen.dart';
 
 class EntregasScreen extends StatefulWidget {
   const EntregasScreen({super.key});
@@ -109,6 +112,70 @@ class _EntregasScreenState extends State<EntregasScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // Botones de Asignar Ventas y Recorridos (solo para admins, vendedores y repartidores-vendedores)
+        Consumer<AuthProvider>(
+          builder: (context, authProvider, _) {
+            final user = authProvider.currentUser;
+            final mostrarBotones = user?.isAdmin == true ||
+                user?.esVendedor == true ||
+                user?.esRepartidorVendedor == true;
+            
+            if (!mostrarBotones) {
+              return const SizedBox.shrink();
+            }
+            
+            return Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const AsignarVentasScreen(),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.assignment_ind, size: 20),
+                    label: const Text('Asignar Ventas'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryColor,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const RecorridosProgramadosScreen(),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.route, size: 20),
+                    label: const Text('Recorridos'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryColor,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+        const SizedBox(height: 16),
         HeaderConBuscador(
           leadingIcon: Icons.local_shipping,
           title: 'Entregas pendientes',

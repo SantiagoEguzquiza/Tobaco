@@ -124,7 +124,7 @@ class _FormaPagoScreenState extends State<FormaPagoScreen> {
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     color: AppTheme.primaryColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(8),
                   ),
                   child: Row(
                     children: [
@@ -165,15 +165,15 @@ class _FormaPagoScreenState extends State<FormaPagoScreen> {
                   hintText: 'Ingrese el monto',
                   prefixText: '\$ ',                 
                   focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(8),
                   borderSide: const BorderSide(color: AppTheme.primaryColor),
                   ),
                   enabledBorder:  OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(8),
                   borderSide: BorderSide(color: Colors.grey),
                   ),
                   border:  OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(8),
                   ),
                 ),
                 onChanged: (value) {
@@ -190,7 +190,7 @@ class _FormaPagoScreenState extends State<FormaPagoScreen> {
                         backgroundColor: Theme.of(context).cardTheme.color,
                         side: const BorderSide(color: Colors.grey, width: 1.5),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(8),
                         ),
                         padding: const EdgeInsets.symmetric(vertical: 14),
                       ),
@@ -235,7 +235,7 @@ class _FormaPagoScreenState extends State<FormaPagoScreen> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppTheme.primaryColor,
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(8),
                         ),
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         elevation: 2,
@@ -292,7 +292,7 @@ class _FormaPagoScreenState extends State<FormaPagoScreen> {
                     color: Theme.of(context).brightness == Brightness.dark
                         ? const Color(0xFF1A1A1A)
                         : Colors.grey.shade50,
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(8),
                     border: Border.all(
                       color: Theme.of(context).brightness == Brightness.dark
                           ? Colors.grey.shade700
@@ -308,7 +308,7 @@ class _FormaPagoScreenState extends State<FormaPagoScreen> {
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
                               color: Colors.green.shade600,
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(8),
                             ),
                             child: const Icon(
                               Icons.attach_money,
@@ -349,7 +349,7 @@ class _FormaPagoScreenState extends State<FormaPagoScreen> {
                 // Métodos de pago disponibles
                 Container(
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(15),
+                    borderRadius: BorderRadius.circular(8),
                     boxShadow: [
                       BoxShadow(
                         color: Theme.of(context).brightness == Brightness.dark
@@ -367,7 +367,7 @@ class _FormaPagoScreenState extends State<FormaPagoScreen> {
                     ),
                   ),
                   child: ClipRRect(
-                    borderRadius: BorderRadius.circular(15),
+                    borderRadius: BorderRadius.circular(8),
                     child: Container(
                       color: Theme.of(context).brightness == Brightness.dark
                           ? const Color(0xFF1A1A1A)
@@ -418,7 +418,7 @@ class _FormaPagoScreenState extends State<FormaPagoScreen> {
                       color: Theme.of(context).brightness == Brightness.dark
                           ? const Color(0xFF1A1A1A)
                           : Colors.white,
-                      borderRadius: BorderRadius.circular(15),
+                      borderRadius: BorderRadius.circular(8),
                       boxShadow: [
                         BoxShadow(
                           color: Theme.of(context).brightness == Brightness.dark
@@ -554,7 +554,7 @@ class _FormaPagoScreenState extends State<FormaPagoScreen> {
                     color: Theme.of(context).brightness == Brightness.dark
                         ? const Color(0xFF1A1A1A)
                         : Colors.white,
-                    borderRadius: BorderRadius.circular(15),
+                    borderRadius: BorderRadius.circular(8),
                     border: Border.all(
                       color: Theme.of(context).brightness == Brightness.dark
                           ? Colors.grey.shade700

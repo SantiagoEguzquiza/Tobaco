@@ -141,11 +141,94 @@ class _HistorialVentasScreenState extends State<HistorialVentasScreen> {
   }
 
   Future<void> _seleccionarFecha(BuildContext context, bool esFechaInicio) async {
-    final DateTime? fechaSeleccionada = await showDatePicker(
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final DateTime? fechaSeleccionada = await showDialog<DateTime>(
       context: context,
-      initialDate: esFechaInicio ? (_dateFrom ?? DateTime.now()) : (_dateTo ?? DateTime.now()),
-      firstDate: DateTime(2020),
-      lastDate: DateTime.now(),
+      builder: (dialogContext) {
+        DateTime? selectedDate = esFechaInicio ? (_dateFrom ?? DateTime.now()) : (_dateTo ?? DateTime.now());
+        
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: isDark 
+              ? ColorScheme.dark(
+                  primary: AppTheme.primaryColor,
+                  onPrimary: Colors.white,
+                  surface: const Color(0xFF1A1A1A),
+                  onSurface: Colors.white,
+                  surfaceVariant: const Color(0xFF2A2A2A),
+                )
+              : ColorScheme.light(
+                  primary: AppTheme.primaryColor,
+                  onPrimary: Colors.white,
+                  onSurface: Colors.black87,
+                ),
+            dialogBackgroundColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+          ),
+          child: StatefulBuilder(
+            builder: (context, setState) {
+              return AlertDialog(
+                backgroundColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                contentPadding: const EdgeInsets.fromLTRB(0, 20, 0, 0),
+                content: SizedBox(
+                  width: 300,
+                  child: CalendarDatePicker(
+                    initialDate: selectedDate,
+                    firstDate: DateTime(2020),
+                    lastDate: DateTime.now(),
+                    onDateChanged: (date) {
+                      setState(() {
+                        selectedDate = date;
+                      });
+                    },
+                  ),
+                ),
+                actionsPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                actions: [
+                  Center(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        TextButton(
+                          onPressed: () => Navigator.of(dialogContext).pop(),
+                          style: TextButton.styleFrom(
+                            backgroundColor: isDark ? const Color(0xFF2A2A2A) : Colors.grey.shade200,
+                            foregroundColor: isDark ? Colors.white : Colors.black87,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                            minimumSize: const Size(120, 44),
+                            fixedSize: const Size(120, 44),
+                          ),
+                          child: const Text('Cancelar'),
+                        ),
+                        const SizedBox(width: 12),
+                        TextButton(
+                          onPressed: () => Navigator.of(dialogContext).pop(selectedDate),
+                          style: TextButton.styleFrom(
+                            backgroundColor: AppTheme.primaryColor,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                            minimumSize: const Size(120, 44),
+                            fixedSize: const Size(120, 44),
+                          ),
+                          child: const Text('Aceptar'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        );
+      },
     );
 
     if (fechaSeleccionada != null) {

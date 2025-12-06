@@ -68,10 +68,48 @@ class _ResumenVentaScreenState extends State<ResumenVentaScreen> {
       
       if (!mounted) return;
       
-      setState(() {
-        venta = ventaCargada;
-        ventaCargadaBD = ventaCargada;
-      });
+      // Guardar el total de la venta local antes de actualizar
+      final totalLocal = venta?.total ?? 0;
+      final totalServidor = ventaCargada.total;
+      
+      debugPrint('💰 ResumenVenta: Total local=$totalLocal, Total servidor=$totalServidor');
+      
+      // Si el servidor devuelve un total válido (> 0), usar la venta del servidor
+      // Si el servidor devuelve 0 pero la venta local tiene un total válido, mantener el total local
+      if (totalServidor > 0) {
+        setState(() {
+          venta = ventaCargada;
+          ventaCargadaBD = ventaCargada;
+        });
+        debugPrint('✅ ResumenVenta: Usando venta del servidor con total=$totalServidor');
+      } else if (totalLocal > 0) {
+        // El servidor devolvió 0 pero la venta local tiene un total válido
+        // Actualizar la venta del servidor pero preservar el total local
+        debugPrint('⚠️ ResumenVenta: Servidor devolvió total=0, preservando total local=$totalLocal');
+        setState(() {
+          ventaCargada.total = totalLocal;
+          // También actualizar los precios finales calculados si es necesario
+          if (venta != null && venta!.ventasProductos.isNotEmpty && ventaCargada.ventasProductos.isNotEmpty) {
+            // Preservar los precios finales calculados de la venta local si el servidor los tiene en 0
+            for (var i = 0; i < venta!.ventasProductos.length && i < ventaCargada.ventasProductos.length; i++) {
+              final productoLocal = venta!.ventasProductos[i];
+              final productoServidor = ventaCargada.ventasProductos[i];
+              if (productoServidor.precioFinalCalculado <= 0 && productoLocal.precioFinalCalculado > 0) {
+                productoServidor.precioFinalCalculado = productoLocal.precioFinalCalculado;
+              }
+            }
+          }
+          venta = ventaCargada;
+          ventaCargadaBD = ventaCargada;
+        });
+      } else {
+        // Ambos son 0, usar la venta del servidor de todas formas
+        setState(() {
+          venta = ventaCargada;
+          ventaCargadaBD = ventaCargada;
+        });
+        debugPrint('⚠️ ResumenVenta: Ambos totales son 0, usando venta del servidor');
+      }
     } on TimeoutException {
       // Si timeout, mantener la venta local sin error visible
       debugPrint('⚠️ Timeout al cargar venta del servidor en background, usando venta local');

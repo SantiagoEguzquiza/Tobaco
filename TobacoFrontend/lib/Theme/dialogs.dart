@@ -309,7 +309,7 @@ class _ConfirmationDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     return Dialog(
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(15),
+        borderRadius: BorderRadius.circular(8),
       ),
       elevation: 8,
       child: Container(
@@ -360,7 +360,7 @@ class _ConfirmationDialog extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       side: BorderSide(color: Colors.grey.shade300),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(15),
+                        borderRadius: BorderRadius.circular(8),
                       ),
                     ),
                     child: Text(
@@ -382,7 +382,7 @@ class _ConfirmationDialog extends StatelessWidget {
                           : AppTheme.primaryColor,
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(15),
+                        borderRadius: BorderRadius.circular(8),
                       ),
                       elevation: 2,
                     ),
@@ -423,7 +423,7 @@ class _InfoDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     return Dialog(
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(15),
+        borderRadius: BorderRadius.circular(8),
       ),
       elevation: 8,
       child: Container(
@@ -474,7 +474,7 @@ class _InfoDialog extends StatelessWidget {
                   backgroundColor: iconColor,
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(15),
+                    borderRadius: BorderRadius.circular(8),
                   ),
                   elevation: 2,
                 ),
@@ -513,7 +513,7 @@ class _DeactivateProductDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     return Dialog(
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(15),
+        borderRadius: BorderRadius.circular(8),
       ),
       elevation: 8,
       child: Container(
@@ -600,7 +600,7 @@ class _DeactivateProductDialog extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       side: BorderSide(color: Colors.grey.shade300),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(15),
+                        borderRadius: BorderRadius.circular(8),
                       ),
                     ),
                     child: Text(
@@ -620,7 +620,7 @@ class _DeactivateProductDialog extends StatelessWidget {
                       backgroundColor: Colors.orange,
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(15),
+                        borderRadius: BorderRadius.circular(8),
                       ),
                       elevation: 2,
                     ),
