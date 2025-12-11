@@ -178,20 +178,49 @@ class VentasProvider with ChangeNotifier {
       };
     }
 
+    // CRÍTICO: Validar conexión ANTES de iniciar sincronización
+    // Si no hay conexión, NO intentar sincronizar y NO modificar las ventas
+    final tieneConexion = await _connectivityService.checkFullConnectivity();
+    if (!tieneConexion) {
+      debugPrint('⚠️ VentasProvider: Sin conexión - ABORTANDO sincronización');
+      final stats = await _db.getStats();
+      final cantidadPendientes = stats['pending'] ?? 0;
+      
+      return {
+        'success': false,
+        'sincronizadas': 0,
+        'fallidas': 0,
+        'message': 'Sin conexión. No se puede sincronizar en este momento. Los datos siguen guardados localmente.',
+        'noConnection': true, // Flag para identificar que fue por falta de conexión
+        'ventasPendientes': cantidadPendientes,
+      };
+    }
+
     _isSincronizando = true;
     notifyListeners();
 
     Map<String, dynamic> resultado;
     try {
+      // El servicio SimpleSyncService también valida conexión, pero hacerlo aquí
+      // evita cualquier intento de sincronización si no hay conexión
       resultado = await _syncService.sincronizarAhora();
-      await cargarVentas(usarTimeoutNormal: true);
+      
+      // CRÍTICO: Solo recargar ventas si la sincronización fue exitosa
+      // Si falló, NO recargar para no perder las ventas pendientes de la vista
+      if (resultado['success'] == true || (resultado['sincronizadas'] as int? ?? 0) > 0) {
+        await cargarVentas(usarTimeoutNormal: true);
+      }
     } catch (e) {
+      debugPrint('❌ VentasProvider: Error en sincronización: $e');
+      debugPrint('⚠️ VentasProvider: NINGUNA venta fue borrada - todas permanecen en la BD local');
+      
       _errorMessage = _limpiarMensajeError(e.toString());
       resultado = {
         'success': false,
-        'message': _errorMessage,
+        'message': 'Error al sincronizar. Los datos siguen guardados localmente.',
         'sincronizadas': 0,
         'fallidas': 0,
+        'error': _errorMessage,
       };
     } finally {
       _isSincronizando = false;

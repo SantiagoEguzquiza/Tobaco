@@ -66,19 +66,23 @@ class SimpleSyncService {
       };
     }
 
-    // Verificar conectividad antes de sincronizar
+    // CRÍTICO: Verificar conectividad ANTES de sincronizar
+    // Si no hay conexión, NO intentar sincronizar y NO modificar las ventas
     final isConnected = await _connectivityService.checkFullConnectivity();
     if (!isConnected) {
-      debugPrint('⚠️ SimpleSyncService: Sin conexión o backend no disponible');
+      debugPrint('⚠️ SimpleSyncService: Sin conexión o backend no disponible - ABORTANDO sincronización');
       // Obtener cantidad de ventas pendientes para mostrar en el mensaje
       final ventasPendientes = await _dbHelper.getPendingVentas();
       final cantidadPendientes = ventasPendientes.length;
+      
+      // IMPORTANTE: NO modificar ninguna venta, solo retornar error
       return {
         'success': false,
         'sincronizadas': 0,
-        'fallidas': cantidadPendientes,
-        'message': 'No hay conexión al backend. Verifica que el servidor esté encendido y que tengas conexión a internet.',
+        'fallidas': 0, // No son fallidas, solo no se pueden sincronizar
+        'message': 'Sin conexión. No se puede sincronizar en este momento. Los datos siguen guardados localmente.',
         'ventasSincronizadas': [],
+        'noConnection': true, // Flag para identificar que fue por falta de conexión
       };
     }
 
@@ -170,6 +174,16 @@ class SimpleSyncService {
           debugPrint('   Error completo: $e');
           debugPrint('   Tipo de error: ${e.runtimeType}');
           debugPrint('   Mensaje: ${e.toString()}');
+          
+          // CRÍTICO: Verificar si perdió conexión durante la sincronización
+          final stillConnected = await _connectivityService.checkFullConnectivity();
+          if (!stillConnected) {
+            debugPrint('⚠️ SimpleSyncService: Se perdió la conexión durante la sincronización');
+            debugPrint('⚠️ SimpleSyncService: NO se modifica el estado de la venta - permanece como pendiente');
+            // NO marcar como fallida si perdió conexión - mantener como pendiente
+            fallidas++;
+            continue; // Continuar con la siguiente venta sin modificar esta
+          }
           
           // Extraer código de estado HTTP si está disponible
           String errorString = e.toString();
@@ -308,33 +322,36 @@ class SimpleSyncService {
             }
           }
           
-          // Si no se encontró en el servidor, marcar como fallida
+          // Si no se encontró en el servidor, marcar como fallida PERO NO BORRAR
+          // La venta permanece en la base de datos para reintentar más tarde
           try {
-            debugPrint('💾 SimpleSyncService: Marcando venta $localId como fallida...');
+            debugPrint('💾 SimpleSyncService: Marcando venta $localId como fallida (NO se borra)...');
             await _dbHelper.markVentaAsSyncFailed(localId, errorMessage);
-            debugPrint('✅ SimpleSyncService: Venta marcada como fallida');
+            debugPrint('✅ SimpleSyncService: Venta marcada como fallida - PERMANECE EN LA BASE DE DATOS');
+            debugPrint('✅ SimpleSyncService: La venta puede reintentarse más tarde');
           } catch (markError) {
             debugPrint('⚠️ Error al marcar venta como fallida: $markError');
+            debugPrint('⚠️ La venta permanece como pendiente para reintentar');
           }
           fallidas++;
           debugPrint('📊 SimpleSyncService: Contador actualizado (fallida) - sincronizadas: $sincronizadas, fallidas: $fallidas');
           continue; // Continuar con la siguiente venta
         }
 
-        // Si la venta se creó exitosamente en el servidor, marcarla como sincronizada
+        // CRÍTICO: Solo marcar como sincronizada si recibimos confirmación del servidor
         // Esto se hace FUERA del try-catch anterior para asegurar que siempre se marque
-        if (ventaCreadaExitosamente) {
-          debugPrint('💾 SimpleSyncService: Marcando venta $localId como sincronizada...');
+        if (ventaCreadaExitosamente && serverIdObtenido != null) {
+          debugPrint('💾 SimpleSyncService: Confirmación del servidor recibida - Marcando venta $localId como sincronizada...');
           try {
+            // SOLO después de confirmación exitosa del servidor, marcar como sincronizada
             await _dbHelper.markVentaAsSynced(localId, serverIdObtenido);
             // Actualizar también el movimiento de cuenta corriente
-            if (serverIdObtenido != null) {
-              await _ccCacheService.marcarMovimientosDeVentaComoSincronizados(
-                ventaLocalId: localId,
-                ventaServerId: serverIdObtenido,
-              );
-            }
+            await _ccCacheService.marcarMovimientosDeVentaComoSincronizados(
+              ventaLocalId: localId,
+              ventaServerId: serverIdObtenido,
+            );
             debugPrint('✅ SimpleSyncService: Venta $localId sincronizada exitosamente (ID servidor: $serverIdObtenido)');
+            debugPrint('✅ SimpleSyncService: La venta ahora puede ser eliminada de la BD local (solo después de 30 días)');
             
             // Agregar a lista de ventas sincronizadas
             ventasSincronizadas.add(ventaCreada);
@@ -345,20 +362,33 @@ class SimpleSyncService {
             debugPrint('⚠️ SimpleSyncService: Venta creada en servidor pero error al marcar como sincronizada: $markError');
             debugPrint('   Stack trace: $stackTrace');
             debugPrint('   La venta se creó exitosamente en el servidor, pero no se pudo actualizar el estado local');
-            // Aún así considerar como sincronizada porque está en el servidor
-            ventasSincronizadas.add(ventaCreada);
-            sincronizadas++;
-            debugPrint('📊 SimpleSyncService: Contador actualizado (con error de marcado) - sincronizadas: $sincronizadas, fallidas: $fallidas');
+            debugPrint('   La venta permanecerá como pendiente para evitar pérdida de datos');
+            // NO considerar como sincronizada si no se pudo marcar - mantener como pendiente
+            // Esto evita pérdida de datos si hay un error al actualizar la BD
+            fallidas++;
+            debugPrint('📊 SimpleSyncService: Contador actualizado (error de marcado) - sincronizadas: $sincronizadas, fallidas: $fallidas');
           }
+        } else if (ventaCreadaExitosamente && serverIdObtenido == null) {
+          // Si la venta se creó pero no recibimos ID del servidor, mantener como pendiente
+          debugPrint('⚠️ SimpleSyncService: Venta creada pero sin ID del servidor - manteniendo como pendiente');
+          fallidas++;
         }
 
         // Pausa pequeña entre ventas
         await Future.delayed(Duration(milliseconds: 500));
       }
       
-      // Limpiar ventas sincronizadas antiguas (opcional, para mantener la BD limpia)
+      // CRÍTICO: Solo limpiar ventas sincronizadas ANTIGUAS (más de 30 días)
+      // NO borrar ventas recién sincronizadas ni ventas pendientes/fallidas
       if (sincronizadas > 0) {
-        await _dbHelper.cleanOldSyncedVentas(daysOld: 30);
+        try {
+          final deleted = await _dbHelper.cleanOldSyncedVentas(daysOld: 30);
+          debugPrint('🧹 SimpleSyncService: Limpiadas $deleted ventas sincronizadas antiguas (más de 30 días)');
+          debugPrint('✅ SimpleSyncService: Las ventas recién sincronizadas NO se borran');
+        } catch (e) {
+          debugPrint('⚠️ SimpleSyncService: Error al limpiar ventas antiguas: $e');
+          // No relanzar - la limpieza es opcional
+        }
       }
 
       debugPrint('');
@@ -376,11 +406,11 @@ class SimpleSyncService {
       // Solo marcar como fallido si todas las ventas fallaron
       final todasFallaron = sincronizadas == 0 && fallidas > 0;
       final mensaje = sincronizadas > 0 && fallidas > 0
-          ? '$sincronizadas ventas sincronizadas correctamente. $fallidas fallaron.'
+          ? '$sincronizadas venta(s) sincronizada(s) correctamente. $fallidas fallaron. Los datos siguen guardados localmente.'
           : sincronizadas > 0
-              ? '$sincronizadas ventas sincronizadas exitosamente'
+              ? '$sincronizadas venta(s) sincronizada(s) exitosamente'
               : fallidas > 0
-                  ? '$fallidas ventas fallaron al sincronizar'
+                  ? 'Error al sincronizar. Los datos siguen guardados localmente. Puedes reintentar más tarde.'
                   : 'No hay ventas pendientes';
 
       debugPrint('📝 SimpleSyncService: Mensaje para el usuario: $mensaje');
@@ -397,17 +427,29 @@ class SimpleSyncService {
       };
 
     } catch (e) {
-      debugPrint('❌ SimpleSyncService: Error en sincronización: $e');
+      debugPrint('❌ SimpleSyncService: Error general en sincronización: $e');
+      debugPrint('⚠️ SimpleSyncService: NINGUNA venta fue borrada - todas permanecen en la BD local');
+      debugPrint('⚠️ SimpleSyncService: Las ventas pendientes NO fueron modificadas');
+      
+      // CRÍTICO: Verificar si perdió conexión durante el proceso
+      final stillConnected = await _connectivityService.checkFullConnectivity();
+      final mensajeError = !stillConnected
+          ? 'Se perdió la conexión durante la sincronización. Los datos siguen guardados localmente.'
+          : 'Error al sincronizar: ${e.toString()}. Los datos siguen guardados localmente.';
+      
       return {
         'success': false,
         'sincronizadas': sincronizadas,
         'fallidas': fallidas,
-        'message': 'Error: $e',
+        'message': mensajeError,
         'ventasSincronizadas': ventasSincronizadas,
+        'noConnection': !stillConnected,
       };
     } finally {
       // Asegurar que el flag se resetee SIEMPRE
       _isSyncing = false;
+      debugPrint('✅ SimpleSyncService: Sincronización finalizada. Estado de ventas preservado.');
+      debugPrint('✅ SimpleSyncService: Todas las ventas pendientes y fallidas permanecen en la BD local.');
     }
   }
 

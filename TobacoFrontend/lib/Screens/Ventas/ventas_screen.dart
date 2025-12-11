@@ -12,6 +12,7 @@ import 'package:tobaco/Services/Permisos_Service/permisos_provider.dart';
 import 'package:tobaco/Theme/app_theme.dart';
 import 'package:tobaco/Theme/dialogs.dart';
 import 'package:tobaco/Theme/headers.dart';
+import 'package:tobaco/Services/Connectivity/connectivity_service.dart';
 
 class VentasScreen extends StatefulWidget {
   const VentasScreen({super.key});
@@ -637,7 +638,7 @@ class _VentasScreenState extends State<VentasScreen> {
         AppTheme.showSnackBar(
           context,
           AppTheme.warningSnackBar(
-            '$sincronizadas ventas sincronizadas. $fallidas fallaron.',
+            '$sincronizadas venta(s) sincronizada(s). $fallidas fallaron. Los datos siguen guardados localmente.',
           ),
         );
       } else if (sincronizadas == 0 && fallidas == 0) {
@@ -648,28 +649,47 @@ class _VentasScreenState extends State<VentasScreen> {
       } else {
         AppTheme.showSnackBar(
           context,
-          AppTheme.warningSnackBar(message.isNotEmpty
+          AppTheme.warningSnackBar(message.isNotEmpty && message.contains('siguen guardados')
               ? message
-              : 'Sincronización completada con advertencias'),
+              : 'Sincronización completada con advertencias. Los datos siguen guardados localmente.'),
         );
       }
     } else {
-      if (fallidas > 0) {
-        final warning = message.toLowerCase().contains('conexión') ||
-                message.toLowerCase().contains('backend')
-            ? AppTheme.warningSnackBar(
-                '$sincronizadas ventas sincronizadas. $fallidas fallaron.',
-              )
-            : AppTheme.errorSnackBar(
-                '$sincronizadas ventas sincronizadas. $fallidas fallaron. Revisa los datos de las ventas.',
-              );
-        AppTheme.showSnackBar(context, warning);
-      } else {
+      // Verificar si fue por falta de conexión
+      final noConnection = result['noConnection'] == true || 
+          message.toLowerCase().contains('sin conexión') ||
+          message.toLowerCase().contains('no hay conexión') ||
+          message.toLowerCase().contains('se perdió la conexión');
+      
+      if (noConnection) {
+        // Mensaje específico para falta de conexión
         AppTheme.showSnackBar(
           context,
-          AppTheme.errorSnackBar(
-            message.isNotEmpty ? message : 'Error al sincronizar ventas',
+          AppTheme.warningSnackBar(
+            'Sin conexión. No se puede sincronizar en este momento. Los datos siguen guardados localmente.',
           ),
+        );
+      } else if (fallidas > 0) {
+        // Si hay fallidas, asegurar que el mensaje indique que los datos están guardados
+        final mensajeFinal = message.isNotEmpty && message.contains('siguen guardados')
+            ? message
+            : sincronizadas > 0
+                ? '$sincronizadas venta(s) sincronizada(s). $fallidas fallaron. Los datos siguen guardados localmente.'
+                : 'Error al sincronizar. Los datos siguen guardados localmente. Puedes reintentar más tarde.';
+        
+        AppTheme.showSnackBar(
+          context,
+          AppTheme.errorSnackBar(mensajeFinal),
+        );
+      } else {
+        // Error general - siempre indicar que los datos están guardados
+        final mensajeFinal = message.isNotEmpty && message.contains('siguen guardados')
+            ? message
+            : 'Error al sincronizar. Los datos siguen guardados localmente. Puedes reintentar más tarde.';
+        
+        AppTheme.showSnackBar(
+          context,
+          AppTheme.errorSnackBar(mensajeFinal),
         );
       }
     }
@@ -779,11 +799,32 @@ class _SincronizarButton extends StatefulWidget {
 class _SincronizarButtonState extends State<_SincronizarButton> {
   int? _pendientes;
   bool _isLoading = false;
+  bool _tieneConexion = true;
 
   @override
   void initState() {
     super.initState();
     _cargarPendientes();
+    _verificarConexion();
+  }
+
+  Future<void> _verificarConexion() async {
+    try {
+      final connectivityService = ConnectivityService();
+      final isConnected = await connectivityService.checkFullConnectivity();
+      if (mounted) {
+        setState(() {
+          _tieneConexion = isConnected;
+        });
+      }
+    } catch (e) {
+      // Si falla la verificación, asumir que no hay conexión por seguridad
+      if (mounted) {
+        setState(() {
+          _tieneConexion = false;
+        });
+      }
+    }
   }
 
   // Método público para recargar pendientes (llamado desde el padre)
@@ -824,12 +865,13 @@ class _SincronizarButtonState extends State<_SincronizarButton> {
   @override
   void didUpdateWidget(_SincronizarButton oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // Si terminó de sincronizar (exitosa o fallida), SIEMPRE recargar el contador
+    // Si terminó de sincronizar (exitosa o fallida), SIEMPRE recargar el contador y verificar conexión
     if (oldWidget.isSincronizando && !widget.isSincronizando) {
       // Esperar un momento para asegurar que la BD se actualizó
       Future.delayed(const Duration(milliseconds: 300), () {
         if (mounted) {
           _cargarPendientes();
+          _verificarConexion();
         }
       });
     }
@@ -864,13 +906,31 @@ class _SincronizarButtonState extends State<_SincronizarButton> {
                 )
               : Badge(
                   label: Text('$_pendientes'),
-                  backgroundColor: Colors.red,
-                  child: const Icon(Icons.cloud_upload),
+                  backgroundColor: _tieneConexion ? Colors.red : Colors.grey,
+                  child: Icon(
+                    Icons.cloud_upload,
+                    color: _tieneConexion ? null : Colors.grey,
+                  ),
                 ),
           tooltip: widget.isSincronizando
               ? 'Sincronizando...'
-              : '$_pendientes ventas pendientes',
-          onPressed: widget.isSincronizando ? null : widget.onSincronizar,
+              : !_tieneConexion
+                  ? 'Sin conexión. No se puede sincronizar en este momento.'
+                  : '$_pendientes ventas pendientes',
+          onPressed: (widget.isSincronizando || !_tieneConexion) 
+              ? () {
+                  // Si no hay conexión, mostrar mensaje al usuario
+                  if (!_tieneConexion) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: const Text('Sin conexión. No se puede sincronizar en este momento.'),
+                        backgroundColor: Colors.orange,
+                        duration: const Duration(seconds: 3),
+                      ),
+                    );
+                  }
+                }
+              : widget.onSincronizar,
         ),
       );
     }
@@ -892,13 +952,30 @@ class _SincronizarButtonState extends State<_SincronizarButton> {
                 )
               : Badge(
                   label: const Text('?'),
-                  backgroundColor: Colors.red,
-                  child: const Icon(Icons.cloud_upload),
+                  backgroundColor: _tieneConexion ? Colors.red : Colors.grey,
+                  child: Icon(
+                    Icons.cloud_upload,
+                    color: _tieneConexion ? null : Colors.grey,
+                  ),
                 ),
           tooltip: widget.isSincronizando
               ? 'Sincronizando...'
-              : 'Verificando ventas pendientes...',
-          onPressed: widget.isSincronizando ? null : widget.onSincronizar,
+              : !_tieneConexion
+                  ? 'Sin conexión. No se puede sincronizar en este momento.'
+                  : 'Verificando ventas pendientes...',
+          onPressed: (widget.isSincronizando || !_tieneConexion)
+              ? () {
+                  if (!_tieneConexion) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: const Text('Sin conexión. No se puede sincronizar en este momento.'),
+                        backgroundColor: Colors.orange,
+                        duration: const Duration(seconds: 3),
+                      ),
+                    );
+                  }
+                }
+              : widget.onSincronizar,
         ),
       );
     }

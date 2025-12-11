@@ -17,8 +17,11 @@ class AuthProvider extends ChangeNotifier {
 
   // Initialize authentication state
   Future<void> initializeAuth() async {
+    // Evitar múltiples inicializaciones simultáneas
+    if (_isLoading) return;
+    
     _isLoading = true;
-    notifyListeners();
+    // No notificar inmediatamente - esperar hasta que termine la operación
 
     try {
       final isAuth = await AuthService.isAuthenticated();
@@ -38,12 +41,15 @@ class AuthProvider extends ChangeNotifier {
         _errorMessage = 'Error initializing authentication: $e';
       }
       
-      // Relanzar la excepción para que la UI la maneje
-      rethrow;
+      // No relanzar la excepción para evitar bucles - solo loguear
+      debugPrint('AuthProvider.initializeAuth: Error: $e');
+    } finally {
+      _isLoading = false;
+      // Usar Future.microtask para asegurar que notifyListeners se llame después del build actual
+      Future.microtask(() {
+        notifyListeners();
+      });
     }
-
-    _isLoading = false;
-    notifyListeners();
   }
 
   // Login user
