@@ -73,6 +73,7 @@ class VentasProvider with ChangeNotifier {
   Future<void> cargarVentas({bool usarTimeoutNormal = false}) async {
     _isLoading = true;
     _errorMessage = null;
+    // IMPORTANTE: Inicializar como online, solo cambiar a offline si realmente no hay conexión
     _isOffline = false;
     _currentPage = 1;
     _hasMoreData = true;
@@ -82,7 +83,16 @@ class VentasProvider with ChangeNotifier {
       // Primero verificamos conectividad completa (internet + backend).
       // Si no hay, evitamos hacer la llamada HTTP (que demoraría por timeout)
       // y vamos directo al modo offline usando SQLite/caché.
-      final tieneConexion = await _connectivityService.checkFullConnectivity();
+      // Usar timeout razonable para evitar falsos negativos
+      bool tieneConexion = false;
+      try {
+        tieneConexion = await _connectivityService.checkFullConnectivity()
+            .timeout(const Duration(seconds: 2), onTimeout: () => false);
+      } catch (e) {
+        debugPrint('Error verificando conectividad: $e');
+        tieneConexion = false;
+      }
+      
       if (!tieneConexion) {
         await _cargarVentasOffline();
         _isOffline = true;
@@ -178,20 +188,49 @@ class VentasProvider with ChangeNotifier {
       };
     }
 
+    // CRÍTICO: Validar conexión ANTES de iniciar sincronización
+    // Si no hay conexión, NO intentar sincronizar y NO modificar las ventas
+    final tieneConexion = await _connectivityService.checkFullConnectivity();
+    if (!tieneConexion) {
+      debugPrint('⚠️ VentasProvider: Sin conexión - ABORTANDO sincronización');
+      final stats = await _db.getStats();
+      final cantidadPendientes = stats['pending'] ?? 0;
+      
+      return {
+        'success': false,
+        'sincronizadas': 0,
+        'fallidas': 0,
+        'message': 'Sin conexión. No se puede sincronizar en este momento. Los datos siguen guardados localmente.',
+        'noConnection': true, // Flag para identificar que fue por falta de conexión
+        'ventasPendientes': cantidadPendientes,
+      };
+    }
+
     _isSincronizando = true;
     notifyListeners();
 
     Map<String, dynamic> resultado;
     try {
+      // El servicio SimpleSyncService también valida conexión, pero hacerlo aquí
+      // evita cualquier intento de sincronización si no hay conexión
       resultado = await _syncService.sincronizarAhora();
-      await cargarVentas(usarTimeoutNormal: true);
+      
+      // CRÍTICO: Solo recargar ventas si la sincronización fue exitosa
+      // Si falló, NO recargar para no perder las ventas pendientes de la vista
+      if (resultado['success'] == true || (resultado['sincronizadas'] as int? ?? 0) > 0) {
+        await cargarVentas(usarTimeoutNormal: true);
+      }
     } catch (e) {
+      debugPrint('❌ VentasProvider: Error en sincronización: $e');
+      debugPrint('⚠️ VentasProvider: NINGUNA venta fue borrada - todas permanecen en la BD local');
+      
       _errorMessage = _limpiarMensajeError(e.toString());
       resultado = {
         'success': false,
-        'message': _errorMessage,
+        'message': 'Error al sincronizar. Los datos siguen guardados localmente.',
         'sincronizadas': 0,
         'fallidas': 0,
+        'error': _errorMessage,
       };
     } finally {
       _isSincronizando = false;
@@ -288,18 +327,35 @@ class VentasProvider with ChangeNotifier {
 
   Future<Map<String, dynamic>> crearVenta(Ventas venta) async {
     try {
-      // Verificación rápida de conectividad (timeout corto para respuesta instantánea)
-      final tieneConexion = await _connectivityService.checkFullConnectivity()
-          .timeout(const Duration(milliseconds: 300), onTimeout: () => false);
+      // Verificación rápida: solo verificar si hay internet básico (sin verificar backend)
+      // Esto permite que el mensaje aparezca inmediatamente si no hay internet
+      bool tieneConexion = false;
+      try {
+        // Verificar solo conectividad básica (muy rápido)
+        final hasInternet = _connectivityService.hasInternetConnection;
+        
+        // Si no hay internet básico, retornar inmediatamente sin verificar backend
+        if (!hasInternet) {
+          tieneConexion = false;
+        } else {
+          // Si hay internet, verificar backend con timeout razonable (no tan corto para evitar falsos negativos)
+          tieneConexion = await _connectivityService.checkFullConnectivity()
+              .timeout(const Duration(milliseconds: 500), onTimeout: () => false);
+        }
+      } catch (e) {
+        // Si hay error en la verificación, asumir offline para respuesta inmediata
+        tieneConexion = false;
+      }
       
       if (!tieneConexion) {
-        // Retornar INMEDIATAMENTE y guardar en background para que el popup aparezca al instante
+        // Retornar INMEDIATAMENTE sin esperar nada más para que el popup aparezca al instante
         _ventas.insert(0, venta);
         _isOffline = true;
-        notifyListeners();
+        // Notificar de forma asíncrona para no bloquear
+        Future.microtask(() => notifyListeners());
 
-        // Guardar en SQLite en background sin bloquear
-        Future.microtask(() async {
+        // Guardar en SQLite en background sin bloquear (no esperar)
+        Future(() async {
           try {
             final localId = await _db.saveVentaOffline(venta);
             _ventaLocalIds[venta] = localId;
@@ -328,6 +384,7 @@ class VentasProvider with ChangeNotifier {
         };
       }
 
+      // Si hay conexión, intentar crear la venta en el servidor
       final response = await _ventasService.crearVenta(
         venta,
         customTimeout: const Duration(seconds: 10),
@@ -347,6 +404,8 @@ class VentasProvider with ChangeNotifier {
             'servidor_temp_${DateTime.now().millisecondsSinceEpoch}_${Random().nextInt(1000)}';
       }
 
+      // IMPORTANTE: Actualizar estado a online cuando la venta se crea exitosamente
+      _isOffline = false;
       await _actualizarCacheDesdeVentasActuales();
       notifyListeners();
 

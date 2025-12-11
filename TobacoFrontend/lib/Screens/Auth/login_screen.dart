@@ -21,11 +21,8 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   void initState() {
     super.initState();
-    
-    // Check if user is already authenticated
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _checkExistingAuth();
-    });
+    // No necesitamos verificar autenticación aquí porque AuthWrapper ya lo hace
+    // Esto evita doble inicialización y bucles
   }
 
   @override
@@ -515,23 +512,4 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  Future<void> _checkExistingAuth() async {
-    try {
-      final authProvider = context.read<AuthProvider>();
-      await authProvider.initializeAuth();
-      
-      if (authProvider.isAuthenticated && mounted) {
-        // User is already authenticated, navigate to menu
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const MenuScreen()),
-        );
-      }
-    } catch (e) {
-      // If there's an error checking auth, just stay on login screen
-      // Show server error if needed
-      if (mounted && Apihandler.isConnectionError(e)) {
-        await Apihandler.handleConnectionError(context, e);
-      }
-    }
-  }
 }

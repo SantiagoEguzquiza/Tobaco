@@ -21,6 +21,7 @@ import 'package:tobaco/Models/Ventas.dart';
 import 'package:tobaco/Theme/confirmAnimation.dart';
 import 'package:tobaco/Screens/Ventas/resumenVenta_screen.dart';
 import 'package:tobaco/Services/Auth_Service/auth_service.dart';
+import 'package:tobaco/Services/Connectivity/connectivity_service.dart';
 
 // Nuevos widgets modulares
 import 'NuevaVenta/widgets/widgets.dart';
@@ -624,13 +625,49 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
 
     try {
       final provider = Provider.of<ClienteProvider>(context, listen: false);
-      final clientes = await provider.obtenerClientes();
-      if (mounted) {
-        setState(() {
-          // Filtrar "Consumidor Final" de la lista inicial
-          clientesIniciales = clientes.where((c) => !_esConsumidorFinal(c)).toList();
-          isLoadingClientesIniciales = false;
-        });
+      
+      // Cargar primero del caché inmediatamente para mostrar UI rápido
+      try {
+        final clientesCache = await provider.obtenerClientesDelCache();
+        if (mounted && clientesCache.isNotEmpty) {
+          setState(() {
+            // Filtrar "Consumidor Final" de la lista inicial
+            clientesIniciales = clientesCache.where((c) => !_esConsumidorFinal(c)).toList();
+            isLoadingClientesIniciales = false;
+          });
+        }
+      } catch (e) {
+        debugPrint('Error cargando clientes del caché: $e');
+      }
+      
+      // Actualizar desde el servidor en background (sin bloquear UI)
+      provider.obtenerClientes().then((clientes) {
+        if (mounted) {
+          setState(() {
+            // Filtrar "Consumidor Final" de la lista inicial
+            clientesIniciales = clientes.where((c) => !_esConsumidorFinal(c)).toList();
+            isLoadingClientesIniciales = false;
+          });
+        }
+      }).catchError((e) {
+        debugPrint('Error actualizando clientes desde servidor: $e');
+        // Si falla la actualización, mantener los del caché que ya se mostraron
+        if (mounted && clientesIniciales.isEmpty) {
+          setState(() {
+            isLoadingClientesIniciales = false;
+          });
+        }
+      });
+      
+      // Si no había caché, esperar a que cargue del servidor
+      if (clientesIniciales.isEmpty) {
+        final clientes = await provider.obtenerClientes();
+        if (mounted) {
+          setState(() {
+            clientesIniciales = clientes.where((c) => !_esConsumidorFinal(c)).toList();
+            isLoadingClientesIniciales = false;
+          });
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -1583,6 +1620,36 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
       // Crear la venta
       final ventasProvider =
           Provider.of<VentasProvider>(context, listen: false);
+      
+      // Verificar conectividad básica ANTES de crear la venta para mostrar mensaje inmediato
+      final connectivityService = ConnectivityService();
+      final tieneInternetBasico = connectivityService.hasInternetConnection;
+      
+      // Si no hay internet básico, mostrar mensaje inmediatamente y crear venta en background
+      if (!tieneInternetBasico) {
+        // Crear venta en background (no esperar) - se guardará en SQLite
+        ventasProvider.crearVenta(ventaConPagos).catchError((e) {
+          debugPrint('Error creando venta offline: $e');
+        });
+        
+        // Mostrar mensaje INMEDIATAMENTE usando SnackBar (más rápido que diálogo)
+        if (mounted) {
+          AppTheme.showSnackBar(
+            context,
+            AppTheme.warningSnackBar(
+              'Venta guardada localmente. Se sincronizará cuando haya conexión.',
+            ),
+          );
+        }
+        
+        // Cerrar la pantalla inmediatamente
+        if (mounted) {
+          Navigator.of(context).pop();
+        }
+        return;
+      }
+      
+      // Si hay internet, crear venta normalmente
       final result = await ventasProvider.crearVenta(ventaConPagos);
 
       if (mounted) {
@@ -1590,16 +1657,14 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
           throw Exception(result['message']);
         }
 
-        // Mostrar mensaje offline INMEDIATAMENTE (sin Future.microtask que añade delay)
+        // Mostrar mensaje offline si es necesario (usar SnackBar para respuesta inmediata)
         if (result['isOffline']) {
           if (mounted) {
-            await AppDialogs.showWarningDialog(
-              context: context,
-              title: 'Venta guardada offline',
-              message:
-                  'Venta guardada localmente. Se sincronizará cuando haya conexión.',
-              buttonText: 'Entendido',
-              icon: Icons.cloud_off,
+            AppTheme.showSnackBar(
+              context,
+              AppTheme.warningSnackBar(
+                'Venta guardada localmente. Se sincronizará cuando haya conexión.',
+              ),
             );
           }
         }

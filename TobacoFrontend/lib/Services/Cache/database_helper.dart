@@ -584,16 +584,22 @@ class DatabaseHelper {
   }
 
   /// Limpia ventas sincronizadas antiguas (más de 30 días)
+  /// CRÍTICO: Solo borra ventas que fueron realmente sincronizadas (sync_status = 'synced')
+  /// y que tienen más de 30 días. NUNCA borra ventas pendientes o fallidas.
   Future<int> cleanOldSyncedVentas({int daysOld = 30}) async {
     final db = await database;
     final cutoffDate = DateTime.now().subtract(Duration(days: daysOld)).toIso8601String();
     
+    // CRÍTICO: Solo borrar ventas con sync_status = 'synced' y que tengan más de 30 días
+    // NUNCA borrar ventas con sync_status = 'pending' o 'failed'
     final deleted = await db.delete(
       _ventasTable,
       where: 'sync_status = ? AND updated_at < ?',
       whereArgs: ['synced', cutoffDate],
     );
 
+    debugPrint('🧹 DatabaseHelper: Limpiadas $deleted ventas sincronizadas antiguas (más de $daysOld días)');
+    debugPrint('✅ DatabaseHelper: Las ventas pendientes y fallidas NO fueron borradas');
     
     return deleted;
   }

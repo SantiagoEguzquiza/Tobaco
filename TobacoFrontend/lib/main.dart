@@ -4,6 +4,7 @@ import 'package:tobaco/Screens/menu_screen.dart';
 import 'package:tobaco/Screens/Auth/login_screen.dart';
 import 'package:tobaco/Screens/SuperAdmin/super_admin_menu_screen.dart';
 import 'package:provider/provider.dart';
+import 'package:tobaco/Services/Auth_Service/auth_service.dart';
 import 'package:tobaco/Services/Categoria_Service/categoria_provider.dart';
 import 'package:tobaco/Services/Clientes_Service/clientes_provider.dart';
 import 'package:tobaco/Services/Cotizaciones_Service/cotizaciones_provider.dart';
@@ -23,6 +24,7 @@ import 'package:tobaco/Services/Connectivity/connectivity_service.dart';
 import 'package:tobaco/Services/RecorridosProgramados_Service/recorridos_programados_provider.dart';
 import 'package:tobaco/Services/Permisos_Service/permisos_provider.dart';
 import 'package:tobaco/Services/Tenant_Service/tenant_provider.dart';
+import 'package:tobaco/Helpers/app_lifecycle_observer.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -108,33 +110,70 @@ class AuthWrapper extends StatefulWidget {
   State<AuthWrapper> createState() => _AuthWrapperState();
 }
 
-class _AuthWrapperState extends State<AuthWrapper> {
+class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
+  final AppLifecycleObserver _lifecycleObserver = AppLifecycleObserver();
+  bool _isInitializing = false;
+
   @override
   void initState() {
     super.initState();
-    // Initialize authentication state
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
+    // Registrar observer del lifecycle
+    WidgetsBinding.instance.addObserver(_lifecycleObserver);
+    
+    // Initialize authentication state después del primer frame (evita setState durante build)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initializeAuth();
+    });
+  }
+
+  Future<void> _initializeAuth() async {
+    if (_isInitializing || !mounted) return;
+    _isInitializing = true;
+
+    try {
       final authProvider = context.read<AuthProvider>();
       await authProvider.initializeAuth();
       
-      // Si el usuario está autenticado y NO es SuperAdmin, cargar permisos
-      // El SuperAdmin no necesita permisos de empleado porque no gestiona datos de clientes
-      if (authProvider.isAuthenticated && mounted) {
-        final user = authProvider.currentUser;
-        if (user != null && !user.isSuperAdmin) {
-          final permisosProvider = context.read<PermisosProvider>();
-          await permisosProvider.loadPermisos(authProvider, forceReload: true);
+      // Validar y refrescar token al iniciar (solo si hay token y está autenticado)
+      if (mounted && authProvider.isAuthenticated) {
+        try {
+          await AuthService.validateAndRefreshToken();
+        } catch (e) {
+          // Si falla el refresh, no hacer nada - el usuario seguirá autenticado
+          debugPrint('AuthWrapper: Error al validar token: $e');
+        }
+        
+        // Si el usuario está autenticado y NO es SuperAdmin, cargar permisos
+        if (mounted) {
+          final user = authProvider.currentUser;
+          if (user != null && !user.isSuperAdmin) {
+            final permisosProvider = context.read<PermisosProvider>();
+            await permisosProvider.loadPermisos(authProvider, forceReload: true);
+          }
         }
       }
-    });
+    } catch (e) {
+      debugPrint('AuthWrapper: Error en inicialización: $e');
+    } finally {
+      if (mounted) {
+        _isInitializing = false;
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    // Remover observer del lifecycle
+    WidgetsBinding.instance.removeObserver(_lifecycleObserver);
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Consumer<AuthProvider>(
       builder: (context, authProvider, child) {
-        // Si está cargando, mostrar pantalla de carga
-        if (authProvider.isLoading) {
+        // Si está cargando (inicializando), mostrar pantalla de carga
+        if (authProvider.isLoading && !authProvider.isAuthenticated) {
           return const Scaffold(
             body: Center(
               child: CircularProgressIndicator(),

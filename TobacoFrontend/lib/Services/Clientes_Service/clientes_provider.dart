@@ -37,6 +37,11 @@ class ClienteProvider with ChangeNotifier {
   String? get errorMessage => _errorMessage;
   bool get isOffline => _isOffline;
 
+  // Obtiene clientes del caché inmediatamente (sin llamar al servidor)
+  Future<List<Cliente>> obtenerClientesDelCache() async {
+    return await _cacheService.obtenerClientesDelCache();
+  }
+
   // Obtiene clientes: intenta del servidor, si falla usa caché
   Future<List<Cliente>> obtenerClientes() async {
     print('📡 ClienteProvider: Intentando obtener clientes del servidor...');

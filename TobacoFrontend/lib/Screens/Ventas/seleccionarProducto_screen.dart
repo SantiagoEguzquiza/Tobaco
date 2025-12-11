@@ -254,29 +254,106 @@ class _SeleccionarProductosScreenState
       final categoriasProvider =
           Provider.of<CategoriasProvider>(context, listen: false);
 
-      final List<Producto> fetchedProductos =
-          await productoProvider.obtenerProductos();
-      final List<Categoria> fetchedCategorias =
-          await categoriasProvider.obtenerCategorias();
+      // Cargar primero del caché local inmediatamente para mostrar UI rápido
+      try {
+        final productosCache = await productoProvider.obtenerProductosDelCache();
+        final categoriasCache = await categoriasProvider.obtenerCategoriasDelCache();
+        
+        if (mounted && productosCache.isNotEmpty) {
+          setState(() {
+            categorias = categoriasCache;
+            productos = productosCache;
+            for (var ps in widget.productosYaSeleccionados) {
+              cantidades[ps.id] = ps.cantidad;
+            }
 
-      setState(() {
-        categorias = fetchedCategorias;
-        productos = fetchedProductos;
-        for (var ps in widget.productosYaSeleccionados) {
-          cantidades[ps.id] = ps.cantidad;
+            // Si hay un producto al que hacer scroll, seleccionar su categoría
+            if (widget.scrollToProductId != null && productosCache.isNotEmpty) {
+              try {
+                final producto = productosCache.firstWhere(
+                  (p) => p.id == widget.scrollToProductId,
+                );
+                selectedCategory = producto.categoriaNombre;
+              } catch (e) {
+                // Si no se encuentra, usar el primero disponible
+                selectedCategory = productosCache.first.categoriaNombre;
+              }
+            }
+
+            isLoading = false;
+          });
         }
+      } catch (e) {
+        debugPrint('Error cargando productos del caché: $e');
+      }
 
-        // Si hay un producto al que hacer scroll, seleccionar su categoría
-        if (widget.scrollToProductId != null) {
-          final producto = fetchedProductos.firstWhere(
-            (p) => p.id == widget.scrollToProductId,
-            orElse: () => fetchedProductos.first,
-          );
-          selectedCategory = producto.categoriaNombre;
+      // Actualizar desde el servidor en background (sin bloquear UI)
+      Future.wait([
+        productoProvider.obtenerProductos(),
+        categoriasProvider.obtenerCategorias(),
+      ]).then((results) {
+        if (mounted) {
+          final fetchedProductos = results[0] as List<Producto>;
+          final fetchedCategorias = results[1] as List<Categoria>;
+          
+          setState(() {
+            categorias = fetchedCategorias;
+            productos = fetchedProductos;
+            for (var ps in widget.productosYaSeleccionados) {
+              cantidades[ps.id] = ps.cantidad;
+            }
+
+            // Si hay un producto al que hacer scroll, seleccionar su categoría
+            if (widget.scrollToProductId != null) {
+              final producto = fetchedProductos.firstWhere(
+                (p) => p.id == widget.scrollToProductId,
+                orElse: () => fetchedProductos.first,
+              );
+              selectedCategory = producto.categoriaNombre;
+            }
+
+            isLoading = false;
+          });
         }
-
-        isLoading = false;
+      }).catchError((e) {
+        debugPrint('Error actualizando productos desde servidor: $e');
+        // Si falla la actualización, mantener los del caché que ya se mostraron
+        if (mounted && productos.isEmpty) {
+          setState(() {
+            isLoading = false;
+            errorMessage = 'Error al cargar productos';
+          });
+        }
       });
+
+      // Si no había caché, esperar a que cargue del servidor
+      if (productos.isEmpty) {
+        final List<Producto> fetchedProductos =
+            await productoProvider.obtenerProductos();
+        final List<Categoria> fetchedCategorias =
+            await categoriasProvider.obtenerCategorias();
+
+        if (mounted) {
+          setState(() {
+            categorias = fetchedCategorias;
+            productos = fetchedProductos;
+            for (var ps in widget.productosYaSeleccionados) {
+              cantidades[ps.id] = ps.cantidad;
+            }
+
+            // Si hay un producto al que hacer scroll, seleccionar su categoría
+            if (widget.scrollToProductId != null) {
+              final producto = fetchedProductos.firstWhere(
+                (p) => p.id == widget.scrollToProductId,
+                orElse: () => fetchedProductos.first,
+              );
+              selectedCategory = producto.categoriaNombre;
+            }
+
+            isLoading = false;
+          });
+        }
+      }
 
       // Cargar precios especiales si hay un cliente seleccionado
       if (widget.cliente != null) {
