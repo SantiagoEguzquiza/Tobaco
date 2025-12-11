@@ -78,9 +78,6 @@ class TicketBuilder {
     if (venta.cliente.direccion != null && venta.cliente.direccion!.isNotEmpty) {
       lines.add(venta.cliente.direccion!);
     }
-    if (venta.cliente.telefono != null) {
-      lines.add('TEL: ${venta.cliente.telefono}');
-    }
     lines.add(_createSeparator('-'));
     lines.add('');
     

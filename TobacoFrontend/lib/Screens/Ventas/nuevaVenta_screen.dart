@@ -612,6 +612,11 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
     });
   }
 
+  /// Verifica si un cliente es "Consumidor Final"
+  bool _esConsumidorFinal(Cliente cliente) {
+    return cliente.nombre.trim().toLowerCase() == 'consumidor final';
+  }
+
   Future<void> _cargarClientesIniciales() async {
     setState(() {
       isLoadingClientesIniciales = true;
@@ -622,7 +627,8 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
       final clientes = await provider.obtenerClientes();
       if (mounted) {
         setState(() {
-          clientesIniciales = clientes;
+          // Filtrar "Consumidor Final" de la lista inicial
+          clientesIniciales = clientes.where((c) => !_esConsumidorFinal(c)).toList();
           isLoadingClientesIniciales = false;
         });
       }
@@ -648,6 +654,8 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
     }
 
     final filtrados = clientesIniciales.where((cliente) {
+      // Excluir "Consumidor Final" de los resultados de búsqueda
+      if (_esConsumidorFinal(cliente)) return false;
       return cliente.nombre.toLowerCase().contains(trimmedQuery.toLowerCase());
     }).toList();
 
@@ -668,13 +676,16 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
           double.parse(deuda.toString()) > 0;
     }
 
+    // Filtrar "Consumidor Final" de la lista antes de mostrar
+    final clientesFiltrados = clientes.where((c) => !_esConsumidorFinal(c)).toList();
+
     return ListView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       padding: const EdgeInsets.all(16),
-      itemCount: clientes.length.clamp(0, 4),
+      itemCount: clientesFiltrados.length.clamp(0, 4),
       itemBuilder: (context, index) {
-        final cliente = clientes[index];
+        final cliente = clientesFiltrados[index];
         final tieneDeudaCliente = tieneDeuda(cliente.deuda);
 
         return Container(
@@ -1369,9 +1380,10 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
       final clientes = provider.clientes;
 
       setState(() {
-        clientesFiltrados = clientes;
+        // Filtrar "Consumidor Final" de los resultados de búsqueda
+        clientesFiltrados = clientes.where((c) => !_esConsumidorFinal(c)).toList();
         isLoadingClientes = false;
-        if (clientes.isEmpty) {
+        if (clientesFiltrados.isEmpty) {
           errorMessage = 'No se encontraron clientes con ese nombre';
         }
       });
@@ -1809,8 +1821,10 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                                           errorMessage = null;
 
                                           if (clientesActualizados.isNotEmpty) {
-                                            clientesIniciales =
-                                                List.from(clientesActualizados);
+                                            // Filtrar "Consumidor Final" de la lista
+                                            clientesIniciales = List.from(
+                                              clientesActualizados.where((c) => !_esConsumidorFinal(c))
+                                            );
                                           } else if (!clientesIniciales
                                               .any((c) => c.id == cliente.id)) {
                                             clientesIniciales = [
@@ -1928,8 +1942,10 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
 
                                               if (clientesActualizados
                                                   .isNotEmpty) {
+                                                // Filtrar "Consumidor Final" de la lista
                                                 clientesIniciales = List.from(
-                                                    clientesActualizados);
+                                                  clientesActualizados.where((c) => !_esConsumidorFinal(c))
+                                                );
                                               } else if (!clientesIniciales.any(
                                                   (c) => c.id == cliente.id)) {
                                                 clientesIniciales = [

@@ -146,10 +146,7 @@ class _ProductosScreenState extends State<ProductosScreen> {
   Widget build(BuildContext context) {
     // Observar el Provider para obtener el estado actual
     final prov = context.watch<ProductoProvider>();
-    final filteredProductos = prov.productosFiltrados;
     final categorias = prov.categorias;
-    final isLoading = prov.isLoading;
-    final isLoadingMore = prov.isLoadingMore;
     final searchQuery = prov.searchQuery;
     final selectedCategory = prov.selectedCategory;
 
@@ -250,279 +247,213 @@ class _ProductosScreenState extends State<ProductosScreen> {
           )
         ],
       ),
-      body: isLoading
-          ? const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CircularProgressIndicator(
-                    valueColor:
-                        AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
-                  ),
-                  SizedBox(height: 16),
-                  Text(
-                    'Cargando productos...',
-                    style: TextStyle(
-                      color: Colors.grey,
-                      fontSize: 16,
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            children: [
+              // Header con buscador y controles - SIEMPRE VISIBLE
+              _buildHeaderSection(prov, categorias, searchQuery, selectedCategory),
+              const SizedBox(height: 20),
+              // Lista con estados dentro
+              Expanded(child: _buildProductosList(prov, categorias)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeaderSection(ProductoProvider prov, List<Categoria> categorias, String searchQuery, String? selectedCategory) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        HeaderConBuscador(
+          leadingIcon: Icons.inventory_2,
+          title: 'Gestión de Productos',
+          subtitle: '${prov.productos.length} productos • ${categorias.length} categorías',
+          controller: _searchController,
+          hintText: 'Buscar productos...',
+          onChanged: (value) {
+            prov.filtrarPorBusqueda(value);
+          },
+          onClear: () {
+            prov.limpiarBusqueda();
+            _searchController.clear();
+          },
+        ),
+        const SizedBox(height: 15),
+        // Botón de crear producto - Solo mostrar si tiene permiso
+        Consumer<PermisosProvider>(
+          builder: (context, permisosProvider, child) {
+            if (permisosProvider.canCreateProductos || permisosProvider.isAdmin) {
+              return SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () async {
+                    if (categorias.isEmpty) {
+                      AppTheme.showSnackBar(
+                        context,
+                        AppTheme.warningSnackBar('Primero debes crear una categoría'),
+                      );
+                      return;
+                    }
+                    final result = await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const NuevoProductoScreen(),
+                      ),
+                    );
+                    if (result == true) {
+                      final categoriasProvider = context.read<CategoriasProvider>();
+                      prov.recargarProductos(categoriasProvider);
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryColor,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
                     ),
+                    elevation: 2,
                   ),
-                ],
-              ),
-            )
-          : Column(
-              children: [
-                // Header con buscador y controles fijos
-                Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      HeaderConBuscador(
-                        leadingIcon: Icons.inventory_2,
-                        title: 'Gestión de Productos',
-                        subtitle:
-                            '${prov.productos.length} productos • ${categorias.length} categorías',
-                        controller: _searchController,
-                        hintText: 'Buscar productos...',
-                        onChanged: (value) {
-                          prov.filtrarPorBusqueda(value);
-                        },
-                        onClear: () {
-                          prov.limpiarBusqueda();
-                          _searchController.clear();
-                        },
-                      ),
-
-                      const SizedBox(height: 15),
-
-                      // Botón de crear producto - Solo mostrar si tiene permiso
-                      Consumer<PermisosProvider>(
-                        builder: (context, permisosProvider, child) {
-                          if (permisosProvider.canCreateProductos || permisosProvider.isAdmin) {
-                            return SizedBox(
-                              width: double.infinity,
-                              child: ElevatedButton.icon(
-                                onPressed: () async {
-                                  if (categorias.isEmpty) {
-                                    AppTheme.showSnackBar(
-                                      context,
-                                      AppTheme.warningSnackBar(
-                                          'Primero debes crear una categoría'),
-                                    );
-                                    return;
-                                  }
-                                  final result = await Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) =>
-                                          const NuevoProductoScreen(),
-                                    ),
-                                  );
-                                  if (result == true) {
-                                    final categoriasProvider = context.read<CategoriasProvider>();
-                                    prov.recargarProductos(categoriasProvider);
-                                  }
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppTheme.primaryColor,
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(vertical: 16),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(
-                                        AppTheme.borderRadiusMainButtons),
-                                  ),
-                                  elevation: 2,
-                                ),
-                                icon: const Icon(Icons.add_circle_outline, size: 20),
-                                label: const Text(
-                                  'Crear Nuevo Producto',
-                                  style: TextStyle(
-                                      fontSize: 16, fontWeight: FontWeight.w600),
-                                ),
-                              ),
-                            );
-                          }
-                          return const SizedBox.shrink();
-                        },
-                      ),
-
-                      const SizedBox(height: 15),
-
-                      // Filtros de categoría (solo mostrar cuando NO hay búsqueda activa)
-                      if (categorias.isNotEmpty && searchQuery.isEmpty) ...[
-                        SizedBox(
-                          height: 45,
-                          child: ListView.builder(
-                            controller: _categoriesScrollController,
-                            scrollDirection: Axis.horizontal,
-                            itemCount: categorias.length,
-                            itemBuilder: (context, index) {
-                              final categoria = categorias[index];
-                              final isSelected =
-                                  selectedCategory == categoria.nombre;
-                              final categoriaColor = _parseColor(categoria.colorHex);
-                              return Padding(
-                                padding: const EdgeInsets.only(right: 10),
-                                child: GestureDetector(
-                                  onTap: () {
-                                    prov.seleccionarCategoria(categoria.nombre);
-                                    // Centrar el botón en la pantalla
-                                    _centerCategoryButton(index, categorias);
-                                  },
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 12, vertical: 12),
-                                    decoration: BoxDecoration(
-                                      color: isSelected
-                                          ? categoriaColor
-                                          : Theme.of(context).cardTheme.color,
-                                      borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(
-                                        color: isSelected
-                                            ? categoriaColor
-                                            : Colors.grey.shade300,
-                                        width: 1,
-                                      ),
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [                                      
-                                        Text(
-                                          categoria.nombre[0].toUpperCase() +
-                                              categoria.nombre.substring(1),
-                                          style: TextStyle(
-                                            fontSize: 14,
-                                            fontWeight: isSelected
-                                                ? FontWeight.w600
-                                                : FontWeight.normal,
-                                            color: isSelected
-                                                ? Colors.white
-                                                : Theme.of(context)
-                                                    .textTheme
-                                                    .bodyLarge
-                                                    ?.color,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                        ),                      
-                      ],
-
-                      // Indicador de búsqueda global o título normal (solo cuando hay productos)
-                      if (filteredProductos.isNotEmpty) ...[
-                        Row(
-                          children: [
-                            if (searchQuery.isNotEmpty) ...[
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 12, vertical: 6),
-                                decoration: BoxDecoration(
-                                  color: AppTheme.primaryColor.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(
-                                    color:
-                                        AppTheme.primaryColor.withOpacity(0.3),
-                                    width: 1,
-                                  ),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      Icons.search,
-                                      size: 16,
-                                      color: AppTheme.primaryColor,
-                                    ),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      'Búsqueda global',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w600,
-                                        color: AppTheme.primaryColor,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Text(
-                                  '${filteredProductos.length} resultado${filteredProductos.length == 1 ? '' : 's'}',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w500,
-                                    color: Colors.grey.shade600,
-                                  ),
-                                ),
-                              ),
-                            ]
-                          ],
-                        ),                       
-                      ],
-                    ],
+                  icon: const Icon(Icons.add_circle_outline, size: 20),
+                  label: const Text(
+                    'Crear Nuevo Producto',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                   ),
                 ),
+              );
+            }
+            return const SizedBox.shrink();
+          },
+        ),
+        const SizedBox(height: 15),
+        // Filtros de categoría (solo mostrar cuando NO hay búsqueda activa)
+        if (categorias.isNotEmpty && searchQuery.isEmpty) ...[
+          SizedBox(
+            height: 45,
+            child: ListView.builder(
+              controller: _categoriesScrollController,
+              scrollDirection: Axis.horizontal,
+              itemCount: categorias.length,
+              itemBuilder: (context, index) {
+                final categoria = categorias[index];
+                final isSelected = selectedCategory == categoria.nombre;
+                final categoriaColor = _parseColor(categoria.colorHex);
+                return Padding(
+                  padding: const EdgeInsets.only(right: 10),
+                  child: GestureDetector(
+                    onTap: () {
+                      prov.seleccionarCategoria(categoria.nombre);
+                      _centerCategoryButton(index, categorias);
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: isSelected ? categoriaColor : Theme.of(context).cardTheme.color,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: isSelected ? categoriaColor : Colors.grey.shade300,
+                          width: 1,
+                        ),
+                      ),
+                      child: Text(
+                        categoria.nombre[0].toUpperCase() + categoria.nombre.substring(1),
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                          color: isSelected ? Colors.white : Theme.of(context).textTheme.bodyLarge?.color,
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+        // Indicador de búsqueda global (solo cuando hay productos)
+        if (prov.productosFiltrados.isNotEmpty && searchQuery.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: AppTheme.primaryColor.withOpacity(0.3),
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.search, size: 16, color: AppTheme.primaryColor),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Búsqueda global',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.primaryColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  '${prov.productosFiltrados.length} resultado${prov.productosFiltrados.length == 1 ? '' : 's'}',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.grey.shade600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ],
+    );
+  }
 
-                // Lista scrolleable de productos
-                Expanded(
-                  child: filteredProductos.isEmpty
-                      ? Center(
-                          child: SingleChildScrollView(
-                            child: Padding(
-                              padding: const EdgeInsets.all(40),
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.inventory_2_outlined,
-                                    size: 80,
-                                    color: Colors.grey.shade400,
-                                  ),
-                                  const SizedBox(height: 16),
-                                  Text(
-                                    searchQuery.isNotEmpty
-                                        ? 'Sin resultados'
-                                        : 'No hay productos disponibles',
-                                    style: TextStyle(
-                                      fontSize: 18,
-                                      color: Colors.grey.shade600,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    searchQuery.isNotEmpty
-                                        ? 'No se encontraron productos que coincidan con "$searchQuery"'
-                                        : 'Crea tu primer producto para comenzar',
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      color: Colors.grey.shade500,
-                                    ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        )
-                      : ListView.builder(
-                          controller: _scrollController,
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          itemCount: filteredProductos.length +
-                              (isLoadingMore ? 1 : 0),
-                          itemBuilder: (context, index) {
-                            if (index == filteredProductos.length) {
-                              return _buildLoadingIndicator();
-                            }
-                            final producto = filteredProductos[index];
-                            return Container(
+  Widget _buildProductosList(ProductoProvider prov, List<Categoria> categorias) {
+    final filteredProductos = prov.productosFiltrados;
+    final isLoading = prov.isLoading;
+    final isLoadingMore = prov.isLoadingMore;
+    final searchQuery = prov.searchQuery;
+
+    if (isLoading && filteredProductos.isEmpty) {
+      return _buildLoadingState();
+    }
+
+    if (filteredProductos.isEmpty) {
+      return _buildEmptyState(searchQuery);
+    }
+
+    return RefreshIndicator(
+      color: AppTheme.primaryColor,
+      onRefresh: () async {
+        final categoriasProvider = context.read<CategoriasProvider>();
+        final productoProvider = context.read<ProductoProvider>();
+        await productoProvider.recargarProductos(categoriasProvider);
+      },
+      child: ListView.builder(
+        controller: _scrollController,
+        physics: const AlwaysScrollableScrollPhysics(),
+        itemCount: filteredProductos.length + (isLoadingMore ? 1 : 0),
+        itemBuilder: (context, index) {
+          if (index == filteredProductos.length) {
+            return _buildLoadingIndicator();
+          }
+          final producto = filteredProductos[index];
+          return Container(
                               margin: const EdgeInsets.only(bottom: 12),
                               decoration: BoxDecoration(
                                 color: Theme.of(context).brightness ==
@@ -721,11 +652,8 @@ class _ProductosScreenState extends State<ProductosScreen> {
                                 ),
                               ),
                             );
-                          },
-                        ),
-                ),
-              ],
-            ),
+        },
+      ),
     );
   }
 
@@ -790,6 +718,97 @@ class _ProductosScreenState extends State<ProductosScreen> {
       child: const Center(
         child: CircularProgressIndicator(
           valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLoadingState() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).brightness == Brightness.dark
+            ? const Color(0xFF1A1A1A)
+            : Colors.white,
+        borderRadius: BorderRadius.circular(15),
+        boxShadow: [
+          BoxShadow(
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.black.withOpacity(0.3)
+                : Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
+            ),
+            SizedBox(height: 16),
+            Text(
+              'Cargando productos...',
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(String searchQuery) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).brightness == Brightness.dark
+            ? const Color(0xFF1A1A1A)
+            : Colors.white,
+        borderRadius: BorderRadius.circular(15),
+        boxShadow: [
+          BoxShadow(
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.black.withOpacity(0.3)
+                : Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Center(
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(40),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.inventory_2_outlined, size: 80, color: Colors.grey.shade400),
+                const SizedBox(height: 16),
+                Text(
+                  searchQuery.isNotEmpty ? 'Sin resultados' : 'No hay productos disponibles',
+                  style: TextStyle(
+                    fontSize: 18,
+                    color: Colors.grey.shade600,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  searchQuery.isNotEmpty
+                      ? 'No se encontraron productos que coincidan con "$searchQuery"'
+                      : 'Crea tu primer producto para comenzar',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey.shade500,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
