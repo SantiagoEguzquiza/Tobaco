@@ -250,6 +250,17 @@ class ProductoProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  /// Obtiene productos del caché inmediatamente (sin llamar al servidor)
+  Future<List<Producto>> obtenerProductosDelCache() async {
+    try {
+      final cacheService = DatosCacheService();
+      return await cacheService.obtenerProductosDelCache();
+    } catch (e) {
+      // Si falla el caché, intentar desde SQLite local
+      return await _catalogoLocal.obtenerProductos();
+    }
+  }
+
   /// Obtiene productos: intenta del servidor, si falla usa SQLite local
   Future<List<Producto>> obtenerProductos() async {
     print('📡 ProductoProvider: Intentando obtener productos del servidor...');

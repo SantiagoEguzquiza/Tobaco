@@ -232,13 +232,16 @@ class AuthService {
         
         debugPrint('AuthService.refreshToken: Token renovado exitosamente');
         return newAccessToken;
-      } else if (response.statusCode == 401) {
-        // Refresh token inválido o expirado
-        debugPrint('AuthService.refreshToken: Refresh token inválido, haciendo logout');
+      } else if (response.statusCode == 401 || response.statusCode == 400) {
+        // Refresh token inválido o expirado (400 también puede ser refresh token inválido)
+        final responseBody = response.body;
+        debugPrint('AuthService.refreshToken: Refresh token inválido (${response.statusCode}), haciendo logout');
+        debugPrint('AuthService.refreshToken: Respuesta del servidor: $responseBody');
         await logout();
         return null;
       } else {
         debugPrint('AuthService.refreshToken: Error del servidor: ${response.statusCode}');
+        debugPrint('AuthService.refreshToken: Respuesta: ${response.body}');
         return null;
       }
     } catch (e) {
@@ -256,10 +259,36 @@ class AuthService {
       final token = await getToken();
       if (token == null) {
         // No hay token, esto es normal si el usuario no está autenticado
+        debugPrint('AuthService.validateAndRefreshToken: No hay token disponible');
         return false;
       }
 
-      // Verificar expiración del token desde SharedPreferences primero
+      // Verificar expiración desde el JWT primero (más confiable)
+      final jwtExpiry = getTokenExpirationFromJWT(token);
+      if (jwtExpiry != null) {
+        final now = DateTime.now();
+        final timeUntilExpiry = jwtExpiry.difference(now);
+        
+        debugPrint('AuthService.validateAndRefreshToken: Token expira en ${timeUntilExpiry.inSeconds} segundos');
+        
+        // Si el token ya expiró o expira en menos de 1 minuto, refrescar
+        if (timeUntilExpiry.inSeconds < 60) {
+          debugPrint('AuthService.validateAndRefreshToken: Token expirado o por expirar, refrescando');
+          final newToken = await refreshToken();
+          if (newToken != null) {
+            debugPrint('AuthService.validateAndRefreshToken: Token refrescado exitosamente');
+            return true;
+          } else {
+            debugPrint('AuthService.validateAndRefreshToken: No se pudo refrescar el token');
+            return false;
+          }
+        }
+        
+        debugPrint('AuthService.validateAndRefreshToken: Token aún válido');
+        return true;
+      }
+
+      // Si no se puede leer del JWT, usar SharedPreferences como respaldo
       final prefs = await SharedPreferences.getInstance();
       final tokenExpiryStr = prefs.getString(_tokenExpiryKey);
       
@@ -267,6 +296,9 @@ class AuthService {
         try {
           final tokenExpiry = DateTime.parse(tokenExpiryStr);
           final now = DateTime.now();
+          final timeUntilExpiry = tokenExpiry.difference(now);
+          
+          debugPrint('AuthService.validateAndRefreshToken: Token expira en ${timeUntilExpiry.inSeconds} segundos (desde SharedPreferences)');
           
           // Si el token ya expiró, intentar refrescar
           if (now.isAfter(tokenExpiry)) {
@@ -276,28 +308,20 @@ class AuthService {
           }
           
           // Si el token expira en menos de 1 minuto, refrescar preventivamente
-          final timeUntilExpiry = tokenExpiry.difference(now);
           if (timeUntilExpiry.inSeconds < 60) {
             debugPrint('AuthService.validateAndRefreshToken: Token por expirar, refrescando preventivamente');
             final newToken = await refreshToken();
             return newToken != null;
           }
+          
+          return true;
         } catch (e) {
           debugPrint('AuthService.validateAndRefreshToken: Error al parsear expiración: $e');
         }
       }
 
-      // Verificar expiración desde el JWT mismo como respaldo
-      final jwtExpiry = getTokenExpirationFromJWT(token);
-      if (jwtExpiry != null) {
-        final now = DateTime.now();
-        if (now.isAfter(jwtExpiry.subtract(Duration(minutes: 1)))) {
-          debugPrint('AuthService.validateAndRefreshToken: Token por expirar (JWT), refrescando');
-          final newToken = await refreshToken();
-          return newToken != null;
-        }
-      }
-
+      // Si no hay información de expiración, asumir que es válido
+      debugPrint('AuthService.validateAndRefreshToken: No se pudo determinar expiración, asumiendo válido');
       return true;
     } catch (e) {
       debugPrint('AuthService.validateAndRefreshToken: Error: $e');

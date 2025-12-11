@@ -344,6 +344,16 @@ class CategoriasProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  /// Obtiene categorías del caché inmediatamente (sin llamar al servidor)
+  Future<List<Categoria>> obtenerCategoriasDelCache() async {
+    try {
+      return await _datosCacheService.obtenerCategoriasDelCache();
+    } catch (e) {
+      // Si falla el caché, intentar desde SQLite local
+      return await _catalogoLocal.obtenerCategorias();
+    }
+  }
+
   Future<List<Categoria>> obtenerCategorias({bool silent = false}) async {
     await cargarCategorias(silent: silent);
     return _categorias;

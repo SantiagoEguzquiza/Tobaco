@@ -928,11 +928,10 @@ class _SincronizarButtonState extends State<_SincronizarButton> {
               ? () {
                   // Si no hay conexión, mostrar mensaje al usuario
                   if (!_tieneConexion) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: const Text('Sin conexión. No se puede sincronizar en este momento.'),
-                        backgroundColor: Colors.orange,
-                        duration: const Duration(seconds: 3),
+                    AppTheme.showSnackBar(
+                      context,
+                      AppTheme.warningSnackBar(
+                        'Sin conexión. No se puede sincronizar en este momento. Los datos siguen guardados localmente.',
                       ),
                     );
                   }
@@ -973,11 +972,10 @@ class _SincronizarButtonState extends State<_SincronizarButton> {
           onPressed: (widget.isSincronizando || !_tieneConexion)
               ? () {
                   if (!_tieneConexion) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: const Text('Sin conexión. No se puede sincronizar en este momento.'),
-                        backgroundColor: Colors.orange,
-                        duration: const Duration(seconds: 3),
+                    AppTheme.showSnackBar(
+                      context,
+                      AppTheme.warningSnackBar(
+                        'Sin conexión. No se puede sincronizar en este momento. Los datos siguen guardados localmente.',
                       ),
                     );
                   }

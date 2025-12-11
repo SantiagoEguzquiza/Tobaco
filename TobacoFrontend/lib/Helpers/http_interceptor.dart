@@ -17,15 +17,21 @@ class HttpInterceptor {
     // Solo si hay token disponible
     final token = await AuthService.getToken();
     if (token != null) {
-      await AuthService.validateAndRefreshToken();
+      debugPrint('HttpInterceptor: Validando token antes de la petición...');
+      final isValid = await AuthService.validateAndRefreshToken();
+      debugPrint('HttpInterceptor: Token válido: $isValid');
+    } else {
+      debugPrint('HttpInterceptor: No hay token disponible');
     }
 
     try {
+      debugPrint('HttpInterceptor: Ejecutando petición...');
       final response = await request();
+      debugPrint('HttpInterceptor: Respuesta recibida con statusCode: ${response.statusCode}');
 
-      // Si recibimos un 403, intentar refrescar el token y reintentar
-      if (response.statusCode == 403) {
-        debugPrint('HttpInterceptor: Recibido 403, intentando refrescar token');
+      // Si recibimos un 401 o 403, intentar refrescar el token y reintentar
+      if (response.statusCode == 401 || response.statusCode == 403) {
+        debugPrint('HttpInterceptor: Recibido ${response.statusCode}, intentando refrescar token');
         
         // Si ya estamos refrescando, esperar a que termine
         if (_isRefreshing) {
@@ -39,7 +45,7 @@ class HttpInterceptor {
           
           if (newToken != null) {
             debugPrint('HttpInterceptor: Token refrescado exitosamente, reintentando petición');
-            // Reintentar la petición original
+            // Reintentar la petición original con el nuevo token
             final retryResponse = await request();
             
             // Resolver todas las peticiones pendientes
@@ -65,21 +71,35 @@ class HttpInterceptor {
         rethrow;
       }
       
-      // Si es un error 401 o 403 y no estamos refrescando, intentar refresh
-      if (e.toString().contains('403') || e.toString().contains('401')) {
+      // Si es un error 401 o 403 (en el mensaje o en la excepción), intentar refresh
+      final errorString = e.toString().toLowerCase();
+      debugPrint('HttpInterceptor: Excepción capturada: $errorString');
+      
+      if (errorString.contains('401') || errorString.contains('403') || 
+          errorString.contains('unauthorized') || errorString.contains('forbidden') ||
+          errorString.contains('código de estado: 401') || errorString.contains('código de estado: 403')) {
         if (!_isRefreshing) {
+          debugPrint('HttpInterceptor: Error 401/403 detectado en excepción, intentando refrescar token');
           _isRefreshing = true;
           try {
             final newToken = await AuthService.refreshToken();
             if (newToken != null) {
-              return await request();
+              debugPrint('HttpInterceptor: Token refrescado exitosamente, reintentando petición');
+              // Reintentar la petición con el nuevo token
+              final retryResponse = await request();
+              debugPrint('HttpInterceptor: Petición reintentada exitosamente con statusCode: ${retryResponse.statusCode}');
+              return retryResponse;
             } else {
+              debugPrint('HttpInterceptor: No se pudo refrescar el token, haciendo logout');
               await AuthService.logout();
               throw Exception('Sesión expirada. Por favor, inicia sesión nuevamente.');
             }
           } finally {
             _isRefreshing = false;
           }
+        } else {
+          debugPrint('HttpInterceptor: Ya se está refrescando el token, esperando...');
+          return await _waitForRefreshAndRetry(request);
         }
       }
       

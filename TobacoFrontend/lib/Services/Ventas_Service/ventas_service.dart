@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:tobaco/Helpers/api_handler.dart';
+import 'package:tobaco/Helpers/http_interceptor.dart';
 import 'package:tobaco/Models/Ventas.dart';
 import 'package:tobaco/Models/VentasProductos.dart';
 import 'package:tobaco/Services/Auth_Service/auth_service.dart';
@@ -12,22 +13,29 @@ class VentasService {
 
   Future<List<Ventas>> obtenerVentas({bool timeoutRapido = false, bool timeoutNormal = false}) async {
     try {
-      
-      
-      final headers = await AuthService.getAuthHeaders();
-      
       Duration timeout = timeoutNormal ? _timeoutDuration : (timeoutRapido ? _timeoutRapidoDuration : _timeoutDuration);
-      final response = await Apihandler.client.get(
-        Uri.parse('$baseUrl/Ventas'),
-        headers: headers,
-      ).timeout(timeout);
+      
+      // Usar HttpInterceptor para manejar automáticamente refresh de token en caso de 401/403
+      final response = await HttpInterceptor.interceptRequest(() async {
+        final headers = await AuthService.getAuthHeaders();
+        return await Apihandler.client.get(
+          Uri.parse('$baseUrl/Ventas'),
+          headers: headers,
+        ).timeout(timeout);
+      });
 
       
 
+      // El interceptor debería haber manejado 401/403 antes de llegar aquí
+      // Si llegamos aquí con 401/403, significa que el refresh falló
+      if (response.statusCode == 401 || response.statusCode == 403) {
+        debugPrint('⚠️ VentasService: Recibido ${response.statusCode} después del interceptor - refresh falló');
+        // El interceptor ya debería haber hecho logout, pero por si acaso
+        throw Exception('Sesión expirada. Por favor, inicia sesión nuevamente.');
+      }
+      
       if (response.statusCode == 200) {
         final List<dynamic> ventasJson = jsonDecode(response.body);
-        
-        
         
         if (ventasJson.isEmpty) {
         }
@@ -36,10 +44,8 @@ class VentasService {
           return Ventas.fromJson(json);
         }).toList();
         
-        
         return ventas;
       } else {
-        
         throw Exception(
           'Error al obtener las ventas. Código de estado: ${response.statusCode}',
         );
