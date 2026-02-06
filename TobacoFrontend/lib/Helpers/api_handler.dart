@@ -13,7 +13,7 @@ class Apihandler {
   static final IOClient client = IOClient(httpClient);
 
   // Emulador Android: 10.0.2.2 es el host de tu PC. Puerto según launchSettings (HTTPS: 7148).
-  static final baseUrl = Uri.parse('https://10.0.2.2:7148');
+  static final baseUrl = Uri.parse('https://tobaco-api-e4f7adesh0dfakcc.brazilsouth-01.azurewebsites.net');
   // URL del servidor en Azure: 'https://tobaco-api-e4f7adesh0dfakcc.brazilsouth-01.azurewebsites.net'    
 
   static Future<bool> checkTokenAndFetchData(BuildContext context) async {
