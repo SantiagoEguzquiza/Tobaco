@@ -27,10 +27,9 @@ class CuentaCorrienteDetalleScreen extends StatefulWidget {
   State<CuentaCorrienteDetalleScreen> createState() => _CuentaCorrienteDetalleScreenState();
 }
 
-class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScreen> 
-    with SingleTickerProviderStateMixin {
+class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScreen> {
   
-  late TabController _tabController;
+  int _selectedTabIndex = 0;
   bool isLoadingVentas = true;
   bool isLoadingAbonos = true;
   bool isLoadingDetalle = true;
@@ -59,14 +58,7 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
     _loadData();
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
   }
 
   Future<void> _loadData() async {
@@ -371,10 +363,14 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
                               ),
                             ),
                             Text(
-                              'Saldo actual: \$${_formatearPrecio(_parsearDeuda(widget.cliente.deuda))}',
+                              _parsearDeuda(widget.cliente.deuda) > 0
+                                  ? 'Saldo actual: \$${_formatearPrecio(_parsearDeuda(widget.cliente.deuda))}'
+                                  : 'Sin deuda actualmente',
                               style: TextStyle(
                                 fontSize: 14,
-                                color: Colors.red.shade600,
+                                color: _parsearDeuda(widget.cliente.deuda) > 0 
+                                    ? Colors.red.shade600 
+                                    : Colors.green.shade600,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -595,31 +591,20 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
         final nuevaDeuda = deudaActual - monto;
         widget.cliente.deuda = nuevaDeuda.toStringAsFixed(2);
         
-        // Recargar los datos
+        // Recargar los datos para que ventas y abonos queden como historial (no se borran)
         await _loadData();
         
-        // Mostrar mensaje de éxito
+        if (!mounted) return;
         AppTheme.showSnackBar(
           context,
-          AppTheme.successSnackBar('Abono registrado exitosamente'),
+          AppTheme.successSnackBar(
+            nuevaDeuda <= 0
+                ? 'Abono registrado. Cuenta corriente al día.'
+                : 'Abono registrado exitosamente',
+          ),
         );
-        
-        // Si el saldo quedó en 0 o menos, navegar de vuelta a la pantalla principal
-        if (nuevaDeuda <= 0) {
-          // Esperar un poco para que el usuario vea el mensaje de éxito
-          await Future.delayed(const Duration(milliseconds: 1500));
-          
-          // Navegar de vuelta a la pantalla de cuenta corriente con indicación de refrescar
-          if (mounted) {
-            Navigator.of(context).pop(true); // true indica que debe refrescar
-            
-            // Mostrar mensaje de saldo saldado
-        AppTheme.showSnackBar(
-          context,
-          AppTheme.successSnackBar('¡Cuenta corriente al día!'),
-        );
-          }
-        }
+        // No hacer pop al saldar: el usuario se queda en el detalle y ve el historial
+        // (ventas y abonos saldados siguen visibles como registro).
       }
     } catch (e) {
       AppTheme.showSnackBar(
@@ -673,102 +658,28 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
                 // Header con información del cliente
                 _buildHeaderSection(isDarkMode),
                 
-                // Tabs
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
-                      borderRadius: BorderRadius.circular(15),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(isDarkMode ? 0.3 : 0.05),
-                          blurRadius: 10,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                      child: TabBar(
-                        controller: _tabController,
-                        isScrollable: true,
-                        indicator: BoxDecoration(
-                          color: AppTheme.primaryColor,
-                          borderRadius: BorderRadius.circular(15),
-                        ),
-                        labelColor: Colors.white,
-                        unselectedLabelColor: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
-                        tabs: [
-                          Tab(
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 6),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  const Icon(Icons.receipt_long, size: 18),
-                                  const SizedBox(width: 10),
-                                  Text('Ventas CC (${ventasCC.length})'),
-                                ],
-                              ),
-                            ),
-                          ),
-                          Tab(
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 6),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  const Icon(Icons.payment, size: 18),
-                                  const SizedBox(width: 10),
-                                  Text('Abonos (${abonos.length})'),
-                                ],
-                              ),
-                            ),
-                          ),
-                          Tab(
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 6),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  const Icon(Icons.receipt, size: 18),
-                                  const SizedBox(width: 10),
-                                  Text('Notas (${notasCredito.length})'),
-                                ],
-                              ),
-                            ),
-                          ),
-                          Tab(
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 6),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  const Icon(Icons.inventory_2, size: 18),
-                                  const SizedBox(width: 10),
-                                  Text('Prod. a favor (${productosAFavor.length})'),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
+                // Tabs custom (chips + animación)
+                _buildCustomTabRow(isDarkMode),
                 
-                // Contenido de los tabs
+                // Contenido con animación fade/slide
                 Expanded(
-                  child: TabBarView(
-                    controller: _tabController,
-                    children: [
-                      _buildVentasTab(isDarkMode),
-                      _buildAbonosTab(isDarkMode),
-                      _buildNotasCreditoTab(isDarkMode),
-                      _buildProductosAFavorTab(isDarkMode),
-                    ],
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 220),
+                    switchInCurve: Curves.easeOutCubic,
+                    switchOutCurve: Curves.easeInCubic,
+                    transitionBuilder: (Widget child, Animation<double> animation) {
+                      return FadeTransition(
+                        opacity: animation,
+                        child: SlideTransition(
+                          position: Tween<Offset>(
+                            begin: const Offset(0.04, 0),
+                            end: Offset.zero,
+                          ).animate(animation),
+                          child: child,
+                        ),
+                      );
+                    },
+                    child: _buildTabContent(isDarkMode),
                   ),
                 ),
               ],
@@ -789,7 +700,7 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
   Widget _buildHeaderSection(bool isDarkMode) {
     final saldoActual = _saldoDetalle ?? _parsearDeuda(widget.cliente.deuda);
     return Container(
-      margin: const EdgeInsets.all(16),
+      margin: const EdgeInsets.fromLTRB(16, 16, 16, 12),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -848,10 +759,12 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
                       ),
                     ),
                     Text(
-                      'Saldo actual: \$${_formatearPrecio(saldoActual)}',
+                      saldoActual > 0
+                          ? 'Saldo actual: \$${_formatearPrecio(saldoActual)}'
+                          : 'Sin deuda actualmente',
                       style: TextStyle(
                         fontSize: 16,
-                        color: Colors.red.shade600,
+                        color: saldoActual > 0 ? Colors.red.shade600 : Colors.green.shade600,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -887,6 +800,107 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
           ),
         ],
       ),
+    );
+  }
+
+  static const List<({String label, IconData icon})> _tabItems = [
+    (label: 'Ventas CC', icon: Icons.receipt_long),
+    (label: 'Abonos', icon: Icons.payment),
+    (label: 'Notas', icon: Icons.receipt),
+    (label: 'Prod. a favor', icon: Icons.inventory_2),
+  ];
+
+  Widget _buildCustomTabRow(bool isDarkMode) {
+    final counts = [ventasCC.length, abonos.length, notasCredito.length, productosAFavor.length];
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: List.generate(4, (i) {
+            final selected = _selectedTabIndex == i;
+            final item = _tabItems[i];
+            return Padding(
+              padding: EdgeInsets.only(right: i < 3 ? 10 : 0),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () => setState(() => _selectedTabIndex = i),
+                  borderRadius: BorderRadius.circular(12),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    curve: Curves.easeOutCubic,
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: selected
+                          ? AppTheme.primaryColor
+                          : (isDarkMode ? const Color(0xFF2A2A2A) : Colors.grey.shade100),
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: selected
+                          ? [
+                              BoxShadow(
+                                color: AppTheme.primaryColor.withOpacity(0.35),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ]
+                          : null,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          item.icon,
+                          size: 18,
+                          color: selected
+                              ? Colors.white
+                              : (isDarkMode ? Colors.grey.shade400 : Colors.grey.shade700),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          '${item.label} (${counts[i]})',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                            color: selected
+                                ? Colors.white
+                                : (isDarkMode ? Colors.grey.shade400 : Colors.grey.shade700),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            );
+          }),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTabContent(bool isDarkMode) {
+    final Widget body;
+    switch (_selectedTabIndex) {
+      case 0:
+        body = _buildVentasTab(isDarkMode);
+        break;
+      case 1:
+        body = _buildAbonosTab(isDarkMode);
+        break;
+      case 2:
+        body = _buildNotasCreditoTab(isDarkMode);
+        break;
+      case 3:
+        body = _buildProductosAFavorTab(isDarkMode);
+        break;
+      default:
+        body = _buildVentasTab(isDarkMode);
+    }
+    return KeyedSubtree(
+      key: ValueKey<int>(_selectedTabIndex),
+      child: body,
     );
   }
 

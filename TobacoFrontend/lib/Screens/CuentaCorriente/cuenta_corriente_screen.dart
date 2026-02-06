@@ -229,9 +229,9 @@ class _CuentaCorrienteScreenState extends State<CuentaCorrienteScreen> {
                   HeaderConBuscador(
                     leadingIcon: Icons.account_balance_wallet,
                     title: 'Cuenta Corriente',
-                    subtitle: '${clientes.length} cliente${clientes.length != 1 ? 's' : ''} con saldo pendiente',
+                    subtitle: '${clientes.length} cliente${clientes.length != 1 ? 's' : ''} con cuenta corriente',
                     controller: _searchController,
-                    hintText: 'Buscar clientes con saldo...',
+                    hintText: 'Buscar clientes...',
                     onChanged: (value) {
                       setState(() {
                         _searchText = value;
@@ -259,40 +259,61 @@ class _CuentaCorrienteScreenState extends State<CuentaCorrienteScreen> {
 
 
 
-  // Estado vacío
+  // Estado vacío: igual que pantalla Clientes (fondo gris oscuro + icono + dos líneas cortas)
   Widget _buildEmptyState() {
     return Container(
-      padding: const EdgeInsets.all(40),
-      child: Column(
-        children: [
-          Icon(
-            Icons.search_off,
-            size: 80,
-            color: Colors.grey.shade300,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            _searchText.isEmpty
-                ? 'No hay clientes con cuenta corriente'
-                : 'No se encontraron clientes',
-            style: TextStyle(
-              fontSize: 18,
-              color: Colors.grey.shade600,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            _searchText.isEmpty
-                ? 'Todos los clientes están al día con sus pagos'
-                : 'Intenta con otro término de búsqueda',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey.shade400,
-            ),
-            textAlign: TextAlign.center,
+      decoration: BoxDecoration(
+        color: Theme.of(context).brightness == Brightness.dark
+            ? const Color(0xFF1A1A1A)
+            : Colors.white,
+        borderRadius: BorderRadius.circular(15),
+        boxShadow: [
+          BoxShadow(
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.black.withOpacity(0.3)
+                : Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
           ),
         ],
+      ),
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(40),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.people_outline,
+                size: 80,
+                color: Colors.grey.shade400,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                _searchText.isEmpty
+                    ? 'No hay clientes con cuenta corriente'
+                    : 'No se encontraron clientes',
+                style: TextStyle(
+                  fontSize: 18,
+                  color: Colors.grey.shade600,
+                  fontWeight: FontWeight.w500,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                _searchText.isEmpty
+                    ? 'Aparecerán aquí al tener ventas o abonos'
+                    : 'Intenta con otro término de búsqueda',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey.shade500,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -363,7 +384,7 @@ class _CuentaCorrienteScreenState extends State<CuentaCorrienteScreen> {
                   width: 4,
                   height: 60,
                   decoration: BoxDecoration(
-                    color: Colors.red,
+                    color: _parsearDeuda(cliente.deuda) > 0 ? Colors.red : Colors.green,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -385,7 +406,7 @@ class _CuentaCorrienteScreenState extends State<CuentaCorrienteScreen> {
                         ),
                       ),
                       const SizedBox(height: 4),
-                      Row(
+                        Row(
                         children: [
                           Icon(
                             Icons.attach_money,
@@ -396,12 +417,17 @@ class _CuentaCorrienteScreenState extends State<CuentaCorrienteScreen> {
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            'Saldo CC: \$${_formatearPrecio(_parsearDeuda(cliente.deuda))}',
+                            _parsearDeuda(cliente.deuda) > 0
+                                ? 'Saldo CC: \$${_formatearPrecio(_parsearDeuda(cliente.deuda))}'
+                                : 'Sin deuda actualmente',
                             style: TextStyle(
                               fontSize: 14,
-                              color: Theme.of(context).brightness == Brightness.dark
-                                  ? Colors.grey.shade400
-                                  : Colors.grey.shade600,
+                              color: _parsearDeuda(cliente.deuda) > 0
+                                  ? (Theme.of(context).brightness == Brightness.dark
+                                      ? Colors.grey.shade400
+                                      : Colors.grey.shade600)
+                                  : Colors.green.shade600,
+                              fontWeight: _parsearDeuda(cliente.deuda) > 0 ? FontWeight.normal : FontWeight.w500,
                             ),
                           ),
                         ],

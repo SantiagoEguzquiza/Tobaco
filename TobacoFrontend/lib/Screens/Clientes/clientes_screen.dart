@@ -96,9 +96,14 @@ class _ClientesScreenState extends State<ClientesScreen> {
         if (mounted && Apihandler.isConnectionError(e)) {
           await Apihandler.handleConnectionError(context, e);
         } else if (mounted) {
+          final backendMsg =
+              e.toString().replaceFirst('Exception: ', '').trim();
           await AppDialogs.showErrorDialog(
             context: context,
-            message: 'Error al eliminar cliente: ${e.toString().replaceFirst('Exception: ', '')}',
+            // Mostrar solo el mensaje que viene del backend
+            message: backendMsg.isNotEmpty
+                ? backendMsg
+                : 'Ocurrió un error al eliminar el cliente.',
           );
         }
       }

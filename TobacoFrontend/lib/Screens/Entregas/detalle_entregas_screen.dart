@@ -175,7 +175,7 @@ class _DetalleEntregasScreenState extends State<DetalleEntregasScreen> {
                   _buildInfoSection(context),
                   const SizedBox(height: 20),
                   _buildProductosSection(context),
-                  const SizedBox(height: 120),
+                  const SizedBox(height: 24),
                 ],
               ),
             ),
@@ -612,17 +612,20 @@ class _DetalleEntregasScreenState extends State<DetalleEntregasScreen> {
               itemBuilder: (context, index) {
                 final unidad = _unidades[index];
                 final isEntregado = unidad.entregado;
+                final isLast = index == _unidades.length - 1;
                 return Container(
                   decoration: BoxDecoration(
                     color: Colors.transparent,
-                    border: Border(
-                      bottom: BorderSide(
-                        color: Theme.of(context).brightness == Brightness.dark
-                            ? Colors.grey.shade800
-                            : Colors.grey.shade200,
-                        width: 1,
-                      ),
-                    ),
+                    border: isLast
+                        ? null
+                        : Border(
+                            bottom: BorderSide(
+                              color: Theme.of(context).brightness == Brightness.dark
+                                  ? Colors.grey.shade800
+                                  : Colors.grey.shade200,
+                              width: 1,
+                            ),
+                          ),
                   ),
                   child: _buildUnidadItemInList(
                     context,

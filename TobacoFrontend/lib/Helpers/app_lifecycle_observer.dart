@@ -15,33 +15,12 @@ class AppLifecycleObserver extends WidgetsBindingObserver {
 
   Future<void> _validateAndRefreshToken() async {
     try {
-      // Verificar si el token está expirado o por expirar
-      final isExpired = await AuthService.isTokenExpired();
-      
-      if (isExpired) {
-        debugPrint('AppLifecycleObserver: Token expirado, refrescando...');
-        final newToken = await AuthService.refreshToken();
-        
-        if (newToken == null) {
-          debugPrint('AppLifecycleObserver: No se pudo refrescar el token');
-          // El logout se maneja dentro de refreshToken si falla
-        } else {
-          debugPrint('AppLifecycleObserver: Token refrescado exitosamente');
-        }
-      } else {
-        // Verificar si el token está por expirar (menos de 5 minutos)
-        final token = await AuthService.getToken();
-        if (token != null) {
-          final jwtExpiry = AuthService.getTokenExpirationFromJWT(token);
-          if (jwtExpiry != null) {
-            final timeUntilExpiry = jwtExpiry.difference(DateTime.now());
-            if (timeUntilExpiry.inMinutes < 5) {
-              debugPrint('AppLifecycleObserver: Token por expirar, refrescando preventivamente...');
-              await AuthService.refreshToken();
-            }
-          }
-        }
-      }
+      final hasToken = await AuthService.getToken() != null;
+      if (!hasToken) return;
+
+      // Un solo camino: validar y refrescar si hace falta. Si el refresh falla (401/400),
+      // AuthService.refreshToken() hace logout y dispara onSessionInvalidated → vuelta al login.
+      await AuthService.validateAndRefreshToken();
     } catch (e) {
       debugPrint('AppLifecycleObserver: Error al validar token: $e');
       // No hacer nada si hay error de conexión, la app seguirá funcionando

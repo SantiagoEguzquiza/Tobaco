@@ -339,17 +339,20 @@ class _DetalleVentaScreenState extends State<DetalleVentaScreen> {
             itemCount: widget.venta.ventasProductos.length,
             itemBuilder: (context, index) {
               final producto = widget.venta.ventasProductos[index];
+              final isLast = index == widget.venta.ventasProductos.length - 1;
               return Container(
                 decoration: BoxDecoration(
                   color: Colors.transparent,
-                  border: Border(
-                    bottom: BorderSide(
-                      color: Theme.of(context).brightness == Brightness.dark
-                          ? Colors.grey.shade800
-                          : Colors.grey.shade200,
-                      width: 1,
-                    ),
-                  ),
+                  border: isLast
+                      ? null
+                      : Border(
+                          bottom: BorderSide(
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? Colors.grey.shade800
+                                : Colors.grey.shade200,
+                            width: 1,
+                          ),
+                        ),
                 ),
                 child: Container(
                   padding: const EdgeInsets.symmetric(
@@ -959,9 +962,10 @@ class _DetalleVentaScreenState extends State<DetalleVentaScreen> {
     }
   }
 
-  // Widget para mostrar el estado de entrega
+  // Widget para mostrar el estado de entrega (misma estructura que _buildInfoRow: valor alineado con los de arriba)
   Widget _buildEstadoEntregaRow() {
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Icon(
           Icons.local_shipping,
@@ -969,19 +973,36 @@ class _DetalleVentaScreenState extends State<DetalleVentaScreen> {
           size: 20,
         ),
         const SizedBox(width: 12),
-        const Expanded(
+        Expanded(
           flex: 2,
-          child: Text(
-            'Estado de Entrega',
-            style: TextStyle(
-              color: Colors.grey,
-              fontSize: 14,
-            ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                'Estado de',
+                style: TextStyle(
+                  color: Colors.grey.shade600,
+                  fontSize: 14,
+                ),
+              ),
+              Text(
+                'Entrega',
+                style: TextStyle(
+                  color: Colors.grey.shade600,
+                  fontSize: 14,
+                ),
+              ),
+            ],
           ),
         ),
         Expanded(
           flex: 3,
-          child: _buildEstadoEntregaBadge(widget.venta.estadoEntrega),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: _buildEstadoEntregaBadge(widget.venta.estadoEntrega),
+          ),
         ),
       ],
     );
@@ -1012,25 +1033,27 @@ class _DetalleVentaScreenState extends State<DetalleVentaScreen> {
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
         color: bgColor,
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 16, color: textColor),
-          const SizedBox(width: 6),
-          Text(
-            estado.displayName,
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: textColor,
+      child: Center(
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 16, color: textColor),
+            const SizedBox(width: 6),
+            Text(
+              estado.displayName,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: textColor,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

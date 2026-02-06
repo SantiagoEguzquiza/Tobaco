@@ -7,21 +7,22 @@ import 'auth_service.dart';
 class AuthProvider extends ChangeNotifier {
   User? _currentUser;
   bool _isLoading = false;
+  bool _isInitializing = false;
   String? _errorMessage;
   bool _isAuthenticated = false;
 
   User? get currentUser => _currentUser;
   bool get isLoading => _isLoading;
+  bool get isInitializing => _isInitializing;
   String? get errorMessage => _errorMessage;
   bool get isAuthenticated => _isAuthenticated;
 
-  // Initialize authentication state
+  // Initialize authentication state (app startup only)
   Future<void> initializeAuth() async {
-    // Evitar múltiples inicializaciones simultáneas
-    if (_isLoading) return;
-    
-    _isLoading = true;
-    // No notificar inmediatamente - esperar hasta que termine la operación
+    if (_isInitializing) return;
+
+    _isInitializing = true;
+    notifyListeners();
 
     try {
       final isAuth = await AuthService.isAuthenticated();
@@ -44,8 +45,7 @@ class AuthProvider extends ChangeNotifier {
       // No relanzar la excepción para evitar bucles - solo loguear
       debugPrint('AuthProvider.initializeAuth: Error: $e');
     } finally {
-      _isLoading = false;
-      // Usar Future.microtask para asegurar que notifyListeners se llame después del build actual
+      _isInitializing = false;
       Future.microtask(() {
         notifyListeners();
       });
@@ -120,6 +120,16 @@ class AuthProvider extends ChangeNotifier {
     }
 
     _isLoading = false;
+    notifyListeners();
+  }
+
+  /// Clears in-memory auth state only (no storage). Used when the session
+  /// is invalidated elsewhere (e.g. refresh failed on app resume or 401).
+  /// [sessionExpiredMessage] se muestra en la pantalla de login para explicar por qué volvió.
+  void clearSession({String? sessionExpiredMessage}) {
+    _currentUser = null;
+    _isAuthenticated = false;
+    _errorMessage = sessionExpiredMessage;
     notifyListeners();
   }
 

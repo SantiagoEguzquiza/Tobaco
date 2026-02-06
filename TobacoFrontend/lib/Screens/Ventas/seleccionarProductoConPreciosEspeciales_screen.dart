@@ -732,27 +732,80 @@ class _SeleccionarProductosConPreciosEspecialesScreenState
 
   Widget _buildCategoryChip(String label, String? value) {
     final isSelected = selectedCategory == value;
+    final bool isAll = value == null;
+    final baseColor =
+        isAll ? Colors.grey.shade500 : _getCategoryColor(value ?? '');
+
     return GestureDetector(
       onTap: () {
         setState(() {
           selectedCategory = value;
         });
       },
-      child: Container(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOutCubic,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? AppTheme.primaryColor : Colors.grey.shade200,
+          color: isSelected
+              ? baseColor
+              : baseColor.withOpacity(
+                  Theme.of(context).brightness == Brightness.dark ? 0.22 : 0.14,
+                ),
           borderRadius: BorderRadius.circular(20),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: isSelected ? Colors.white : Colors.grey.shade700,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-            fontSize: 14,
+          border: Border.all(
+            color: baseColor.withOpacity(0.7),
+            width: 1.4,
           ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (isAll) ...[
+              Icon(
+                Icons.check,
+                size: 16,
+                color: isSelected ? Colors.white : Colors.grey.shade300,
+              ),
+              const SizedBox(width: 6),
+            ],
+            if (!isAll) ...[
+              Icon(
+                Icons.label_rounded,
+                size: 14,
+                color: isSelected ? Colors.white : baseColor,
+              ),
+              const SizedBox(width: 6),
+            ],
+            Text(
+              label,
+              style: TextStyle(
+                color: isSelected ? Colors.white : baseColor,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                fontSize: 14,
+              ),
+            ),
+          ],
         ),
       ),
     );
+  }
+
+  Color _getCategoryColor(String categoriaNombre) {
+    if (categoriaNombre.trim().isEmpty) {
+      return Colors.blueGrey;
+    }
+
+    const palette = [
+      Color(0xFF0EA5E9), // sky
+      Color(0xFFF97316), // orange
+      Color(0xFF22C55E), // green
+      Color(0xFFA855F7), // purple
+      Color(0xFFE11D48), // rose
+      Color(0xFF14B8A6), // teal
+    ];
+
+    final index = categoriaNombre.hashCode.abs() % palette.length;
+    return palette[index];
   }
 }

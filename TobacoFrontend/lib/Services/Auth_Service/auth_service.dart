@@ -330,6 +330,11 @@ class AuthService {
     }
   }
 
+  /// Callback invoked whenever the session is invalidated (tokens cleared).
+  /// Used so the UI (AuthProvider) can sync state and show login again when
+  /// refresh fails on app resume or after 401/403.
+  static void Function()? onSessionInvalidated;
+
   // Logout user
   static Future<void> logout() async {
     try {
@@ -343,8 +348,11 @@ class AuthService {
       await prefs.remove(_userKey);
       
       debugPrint('AuthService.logout: Logout completado');
+      // Notificar a la UI para que actualice (ej. volver a pantalla de login)
+      onSessionInvalidated?.call();
     } catch (e) {
       debugPrint('AuthService.logout: Error al hacer logout: $e');
+      onSessionInvalidated?.call();
     }
   }
 
@@ -376,17 +384,26 @@ class AuthService {
     }
   }
 
-  // Get headers with authorization token
+  // Get headers with authorization token (validando/refrescando antes)
   static Future<Map<String, String>> getAuthHeaders() async {
-    final token = await getToken();
-    
-    if (token == null) {
-      // No lanzar excepción inmediatamente, permitir que el código que llama maneje el caso
-      // Esto es útil cuando se está en login y aún no hay token
-      debugPrint('AuthService.getAuthHeaders: No hay token disponible');
-      throw Exception('No hay token de autenticación. Por favor, inicia sesión nuevamente.');
+    // Primero intentamos validar y refrescar el token si hace falta
+    final isValid = await validateAndRefreshToken();
+
+    if (!isValid) {
+      debugPrint(
+          'AuthService.getAuthHeaders: Token inválido o expirado. Se requiere login nuevamente.');
+      throw Exception(
+          'Tu sesión ha expirado. Por favor, inicia sesión nuevamente.');
     }
-    
+
+    final token = await getToken();
+
+    if (token == null) {
+      debugPrint('AuthService.getAuthHeaders: No hay token disponible');
+      throw Exception(
+          'No hay token de autenticación. Por favor, inicia sesión nuevamente.');
+    }
+
     return {
       'Content-Type': 'application/json',
       'Authorization': 'Bearer $token',
