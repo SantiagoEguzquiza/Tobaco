@@ -31,6 +31,9 @@ class MyApp extends StatelessWidget {
 class MenuScreen extends StatelessWidget {
   const MenuScreen({super.key});
 
+  /// Oculto para MVP. Cambiar a true para mostrar de nuevo el mapa de entregas.
+  static const bool _showMapaEntregas = false;
+
   @override
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.of(context).size;
@@ -392,49 +395,51 @@ class MenuScreen extends StatelessWidget {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Expanded(
-                              child: ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF2563EB), // Blue
-                                  foregroundColor: Colors.white,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(20),
+                            if (_showMapaEntregas) ...[
+                              Expanded(
+                                child: ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF2563EB), // Blue
+                                    foregroundColor: Colors.white,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    minimumSize: Size(buttonSize, buttonSize),
+                                    elevation: 10,
+                                    shadowColor: Colors.black,
                                   ),
-                                  minimumSize: Size(buttonSize, buttonSize),
-                                  elevation: 10,
-                                  shadowColor: Colors.black,
-                                ),
-                                onPressed: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) =>
-                                          const MapaEntregasScreen(),
-                                    ),
-                                  );
-                                },
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      Icons.map,
-                                      size: iconSize,
-                                      color: Colors.white,
-                                    ),
-                                    const SizedBox(height: 10),
-                                    Text(
-                                      'Mapa entregas',
-                                      style: TextStyle(
-                                        fontSize: fontSize,
-                                        fontWeight: FontWeight.bold,
+                                  onPressed: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            const MapaEntregasScreen(),
                                       ),
-                                      textAlign: TextAlign.center,
-                                    ),
-                                  ],
+                                    );
+                                  },
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.map,
+                                        size: iconSize,
+                                        color: Colors.white,
+                                      ),
+                                      const SizedBox(height: 10),
+                                      Text(
+                                        'Mapa entregas',
+                                        style: TextStyle(
+                                          fontSize: fontSize,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
-                            ),
-                            SizedBox(width: spacing),
+                              SizedBox(width: spacing),
+                            ],
                             Expanded(
                               child: ElevatedButton(
                                 style: ElevatedButton.styleFrom(

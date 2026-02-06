@@ -594,7 +594,7 @@ class _ProductosScreenState extends State<ProductosScreen> {
                                                       color: AppTheme.primaryColor
                                                           .withOpacity(0.1),
                                                       borderRadius:
-                                                          BorderRadius.circular(15),
+                                                          BorderRadius.circular(8),
                                                     ),
                                                     child: IconButton(
                                                       icon: Icon(
@@ -629,7 +629,7 @@ class _ProductosScreenState extends State<ProductosScreen> {
                                                       color:
                                                           Colors.red.withOpacity(0.1),
                                                       borderRadius:
-                                                          BorderRadius.circular(15),
+                                                          BorderRadius.circular(8),
                                                     ),
                                                     child: IconButton(
                                                       icon: Icon(

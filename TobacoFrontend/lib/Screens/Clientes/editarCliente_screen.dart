@@ -566,25 +566,37 @@ class _EditarClienteScreenState extends State<EditarClienteScreen> {
             SizedBox(
               width: double.infinity,
               height: 50,
-              child: OutlinedButton.icon(
-                onPressed: _isLoading ? null : _editarPreciosEspeciales,
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.white,
-                  backgroundColor: Theme.of(context).brightness == Brightness.dark
-                      ? const Color(0xFF333333)
-                      : Colors.transparent,
-                  side: const BorderSide(color: Colors.white, width: 2),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(8),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.25),
+                      blurRadius: 6,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
                 ),
-                icon: const Icon(Icons.local_offer, color: Colors.white),
-                label: const Text(
-                  'Precios Especiales',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                child: OutlinedButton.icon(
+                  onPressed: _isLoading ? null : _editarPreciosEspeciales,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    backgroundColor: Theme.of(context).brightness == Brightness.dark
+                        ? const Color(0xFF333333)
+                        : Colors.transparent,
+                    side: BorderSide.none, // sin borde blanco
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  icon: const Icon(Icons.local_offer, color: Colors.white),
+                  label: const Text(
+                    'Precios Especiales',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
               ),

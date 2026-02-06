@@ -8,6 +8,7 @@ import '../../Services/Productos_Service/productos_provider.dart';
 import '../../Services/PrecioEspecialService.dart';
 import '../../Theme/app_theme.dart';
 import '../../Helpers/api_handler.dart';
+import '../../Theme/headers.dart';
 
 class EditarPreciosEspecialesScreen extends StatefulWidget {
   final Cliente cliente;
@@ -40,6 +41,19 @@ class _EditarPreciosEspecialesScreenState
   String searchQuery = '';
   final ProductoProvider productoProvider = ProductoProvider();
   final CategoriasProvider categoriasProvider = CategoriasProvider();
+  final TextEditingController _searchController = TextEditingController();
+
+  // Mismo helper que en productos_screen para usar el color de cada categoría
+  Color _parseColor(String colorHex) {
+    try {
+      if (colorHex.isEmpty || colorHex.length < 7) {
+        return const Color(0xFF9E9E9E); // Gris por defecto
+      }
+      return Color(int.parse(colorHex.substring(1), radix: 16) + 0xFF000000);
+    } catch (_) {
+      return const Color(0xFF9E9E9E);
+    }
+  }
 
   @override
   void initState() {
@@ -52,6 +66,7 @@ class _EditarPreciosEspecialesScreenState
     for (var controller in precioControllers.values) {
       controller.dispose();
     }
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -337,227 +352,90 @@ class _EditarPreciosEspecialesScreenState
   Widget _buildContent() {
     return Column(
       children: [
-        // Header
-        Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: Theme.of(context).brightness == Brightness.dark
-                ? const Color(0xFF1A1A1A)
-                : Colors.white,
-            boxShadow: [
-              BoxShadow(
-                color: Theme.of(context).brightness == Brightness.dark
-                    ? Colors.black.withOpacity(0.3)
-                    : Colors.black.withOpacity(0.05),
-                blurRadius: 10,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
+        // Header (alineado visualmente a productos_screen)
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: AppTheme.primaryColor,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(
-                      Icons.price_change,
-                      color: Colors.white,
-                      size: 24,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Precios Especiales',
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: Theme.of(context).brightness == Brightness.dark
-                                ? Colors.white
-                                : AppTheme.primaryColor,
-                          ),
-                        ),
-                        Text(
-                          'Configura precios especiales para ${widget.cliente.nombre}',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Theme.of(context).brightness == Brightness.dark
-                                ? Colors.grey.shade400
-                                : Colors.grey.shade600,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: Colors.blue.shade50,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.blue.shade200),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.person,
-                                  size: 12, color: Colors.blue.shade700),
-                              const SizedBox(width: 4),
-                              Text(
-                                'Cliente: ${widget.cliente.nombre}',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.blue.shade700,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+              HeaderConBuscador(
+                leadingIcon: Icons.price_change,
+                title: 'Precios Especiales',
+                subtitle:
+                    'Cliente: ${widget.cliente.nombre} • ${filteredProductos.length} productos',
+                controller: _searchController,
+                hintText: 'Buscar productos...',
+                onChanged: (value) {
+                  setState(() {
+                    searchQuery = value;
+                  });
+                },
+                onClear: () {
+                  setState(() {
+                    searchQuery = '';
+                  });
+                  _searchController.clear();
+                },
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 15),
+              // Filtros de categoría - mismo estilo que en productos_screen
+              if (categorias.isNotEmpty)
+                SizedBox(
+                  height: 45,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: categorias.length,
+                    itemBuilder: (context, index) {
+                      final categoria = categorias[index];
+                      final isSelected = selectedCategory == categoria.nombre;
+                      final categoriaColor = _parseColor(categoria.colorHex);
 
-              // Barra de búsqueda
-              Container(
-                decoration: BoxDecoration(
-                  color: Theme.of(context).brightness == Brightness.dark
-                      ? Colors.transparent
-                      : Colors.white,
-                  borderRadius: BorderRadius.circular(15),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Theme.of(context).brightness == Brightness.dark
-                          ? Colors.transparent
-                          : Colors.black.withOpacity(0.05),
-                      blurRadius: 10,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Theme(
-                  data: Theme.of(context).copyWith(
-                    textSelectionTheme: TextSelectionThemeData(
-                      selectionColor: AppTheme.primaryColor.withOpacity(0.3),
-                      selectionHandleColor: AppTheme.primaryColor,
-                      cursorColor: AppTheme.primaryColor,
-                    ),
-                  ),
-                  child: TextField(
-                    style: TextStyle(
-                      color: Theme.of(context).brightness == Brightness.dark
-                          ? Colors.white
-                          : Colors.black,
-                    ),
-                    decoration: InputDecoration(
-                      hintText: 'Buscar productos por nombre...',
-                      hintStyle: TextStyle(
-                        color: Theme.of(context).brightness == Brightness.dark
-                            ? Colors.grey.shade400
-                            : Colors.grey.shade400,
-                        fontSize: 16,
-                      ),
-                      prefixIcon: Icon(
-                        Icons.search,
-                        color: AppTheme.primaryColor,
-                        size: 24,
-                      ),
-                      suffixIcon: searchQuery.isNotEmpty
-                          ? IconButton(
-                              icon: Icon(
-                                Icons.clear,
-                                color: Theme.of(context).brightness == Brightness.dark
-                                    ? Colors.grey.shade400
-                                    : Colors.grey.shade400,
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 10),
+                        child: GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              selectedCategory =
+                                  isSelected ? null : categoria.nombre;
+                            });
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 12),
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? categoriaColor
+                                  : Theme.of(context).cardTheme.color,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: isSelected
+                                    ? categoriaColor
+                                    : Colors.grey.shade300,
+                                width: 1,
                               ),
-                              onPressed: () {
-                                setState(() {
-                                  searchQuery = '';
-                                });
-                              },
-                            )
-                          : null,
-                      border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 16,
-                      ),
-                    ),
-                    onChanged: (value) {
-                      setState(() {
-                        searchQuery = value;
-                      });
+                            ),
+                            child: Text(
+                              categoria.nombre[0].toUpperCase() +
+                                  categoria.nombre.substring(1),
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: isSelected
+                                    ? FontWeight.w600
+                                    : FontWeight.normal,
+                                color: isSelected
+                                    ? Colors.white
+                                    : Theme.of(context)
+                                        .textTheme
+                                        .bodyLarge
+                                        ?.color,
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
                     },
                   ),
                 ),
-              ),
-
-              const SizedBox(height: 16),
-
-              // Filtros de categoría
-              SizedBox(
-                height: 40,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: categorias.length + 1,
-                  itemBuilder: (context, index) {
-                    if (index == 0) {
-                      final isSelected = selectedCategory == null;
-                      return Container(
-                        margin: const EdgeInsets.only(right: 8),
-                        child: FilterChip(
-                          label: Text(
-                            'Todas',
-                            style: TextStyle(
-                              color: isSelected ? Colors.white : null,
-                            ),
-                          ),
-                          selected: isSelected,
-                          onSelected: (selected) {
-                            setState(() {
-                              selectedCategory = null;
-                            });
-                          },
-                          selectedColor: AppTheme.primaryColor.withOpacity(0.2),
-                          checkmarkColor: Colors.white,
-                        ),
-                      );
-                    }
-
-                    final categoria = categorias[index - 1];
-                    final isSelected = selectedCategory == categoria.nombre;
-                    return Container(
-                      margin: const EdgeInsets.only(right: 8),
-                      child: FilterChip(
-                        label: Text(
-                          categoria.nombre,
-                          style: TextStyle(
-                            color: isSelected ? Colors.white : null,
-                          ),
-                        ),
-                        selected: isSelected,
-                        onSelected: (selected) {
-                          setState(() {
-                            selectedCategory =
-                                selected ? categoria.nombre : null;
-                          });
-                        },
-                        selectedColor: AppTheme.primaryColor.withOpacity(0.2),
-                        checkmarkColor: Colors.white,
-                      ),
-                    );
-                  },
-                ),
-              ),
             ],
           ),
         ),
@@ -633,12 +511,25 @@ class _EditarPreciosEspecialesScreenState
                           ),
                         )
                       : ListView.builder(
-                          padding: const EdgeInsets.all(16),
+                          // Padding extra abajo para que el último producto
+                          // no quede tapado por la barra de "Guardar Todos"
+                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
                           itemCount: filteredProductos.length,
                           itemBuilder: (context, index) {
                             final producto = filteredProductos[index];
                             final tieneEspecial =
                                 tienePrecioEspecial[producto.id!] ?? false;
+
+                            // Color de la categoría para estilizar el texto
+                            final categoria = categorias.firstWhere(
+                              (c) => c.nombre == producto.categoriaNombre,
+                              orElse: () => Categoria(
+                                nombre: 'Sin categoría',
+                                colorHex: '#9E9E9E',
+                              ),
+                            );
+                            final categoriaColor =
+                                _parseColor(categoria.colorHex);
 
                             return Container(
                               margin: const EdgeInsets.only(bottom: 12),
@@ -647,12 +538,6 @@ class _EditarPreciosEspecialesScreenState
                                     ? const Color(0xFF1A1A1A)
                                     : Colors.white,
                                 borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: tieneEspecial
-                                      ? Colors.green.shade200
-                                      : AppTheme.primaryColor.withOpacity(0.2),
-                                  width: tieneEspecial ? 2 : 1,
-                                ),
                                 boxShadow: [
                                   BoxShadow(
                                     color: Colors.black.withOpacity(0.05),
@@ -661,141 +546,195 @@ class _EditarPreciosEspecialesScreenState
                                   ),
                                 ],
                               ),
-                              child: Padding(
-                                padding: const EdgeInsets.all(16),
-                                child: Column(
-                                  children: [
-                                    Row(
-                                      children: [
-                                        // Información del producto
-                                        Expanded(
-                                          flex: 4,
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Row(
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  // Pequeño espacio para separar la línea del borde izquierdo
+                                  const SizedBox(width: 12),
+                                  // Línea de color de la categoría (igual que en productos_screen)
+                                  Container(
+                                    width: 4,
+                                    height: 60,
+                                    decoration: BoxDecoration(
+                                      color: categoriaColor,
+                                      borderRadius: BorderRadius.circular(2),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(16),
+                                        child: Row(
+                                          children: [
+                                            // Información del producto
+                                            Expanded(
+                                              flex: 4,
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
                                                 children: [
-                                                  Expanded(
-                                                    child: Text(
-                                                      producto.nombre,
-                                                      style: TextStyle(
-                                                        fontSize: 16,
-                                                        fontWeight:
-                                                            FontWeight.bold,
-                                                        color: Theme.of(context).brightness == Brightness.dark
-                                                            ? Colors.white
-                                                            : AppTheme.primaryColor,
-                                                      ),
-                                                      overflow:
-                                                          TextOverflow.ellipsis,
-                                                    ),
-                                                  ),
-                                                  if (tieneEspecial)
-                                                    Container(
-                                                      padding: const EdgeInsets
-                                                          .symmetric(
-                                                        horizontal: 6,
-                                                        vertical: 2,
-                                                      ),
-                                                      decoration: BoxDecoration(
-                                                        color: Colors.green,
-                                                        borderRadius:
-                                                            BorderRadius
-                                                                .circular(8),
-                                                      ),
-                                                      child: const Text(
-                                                        'ESPECIAL',
-                                                        style: TextStyle(
-                                                          color: Colors.white,
-                                                          fontSize: 10,
-                                                          fontWeight:
-                                                              FontWeight.bold,
+                                                  Row(
+                                                    children: [
+                                                      Expanded(
+                                                        child: Text(
+                                                          producto.nombre,
+                                                          style: TextStyle(
+                                                            fontSize: 16,
+                                                            fontWeight:
+                                                                FontWeight.bold,
+                                                            color: Theme.of(context).brightness ==
+                                                                    Brightness.dark
+                                                                ? Colors.white
+                                                                : AppTheme
+                                                                    .primaryColor,
+                                                          ),
+                                                          overflow: TextOverflow
+                                                              .ellipsis,
                                                         ),
                                                       ),
+                                                    ],
+                                                  ),
+                                                  const SizedBox(height: 4),
+                                                  Container(
+                                                    padding:
+                                                        const EdgeInsets.symmetric(
+                                                      horizontal: 8,
+                                                      vertical: 4,
                                                     ),
+                                                    decoration: BoxDecoration(
+                                                      color: categoriaColor,
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              12),
+                                                    ),
+                                                    child: Text(
+                                                      'Categoría: ${producto.categoriaNombre ?? 'Sin categoría'}',
+                                                      style: const TextStyle(
+                                                        fontSize: 12,
+                                                        fontWeight:
+                                                            FontWeight.w500,
+                                                        color: Colors.white,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  const SizedBox(height: 6),
+                                                  _buildPrecioInfo(producto),
                                                 ],
                                               ),
-                                              const SizedBox(height: 4),
-                                              _buildPrecioInfo(producto),
-                                              const SizedBox(height: 4),
-                                              Text(
-                                                'Categoría: ${producto.categoriaNombre ?? 'Sin categoría'}',
-                                                style: TextStyle(
-                                                  fontSize: 12,
-                                                  color: Theme.of(context).brightness == Brightness.dark
-                                                      ? Colors.grey.shade400
-                                                      : Colors.grey.shade600,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
+                                            ),
 
-                                        // Campo de precio
-                                        Container(
-                                          width: 100,
-                                          height: 40,
-                                          decoration: BoxDecoration(
-                                            border: Border.all(
-                                                color: Colors.grey.shade300),
-                                            borderRadius:
-                                                BorderRadius.circular(8),
-                                          ),
-                                          child: Theme(
-                                            data: Theme.of(context).copyWith(
-                                              inputDecorationTheme: const InputDecorationTheme(
-                                                border: InputBorder.none,
-                                                enabledBorder: InputBorder.none,
-                                                focusedBorder: InputBorder.none,
-                                                errorBorder: InputBorder.none,
-                                                focusedErrorBorder: InputBorder.none,
-                                                disabledBorder: InputBorder.none,
+                                            // Campo de precio
+                                            Container(
+                                              width: 100,
+                                              height: 42,
+                                              decoration: BoxDecoration(
+                                                color: Theme.of(context).brightness ==
+                                                        Brightness.dark
+                                                    ? const Color(0xFF121212)
+                                                    : Colors.grey.shade50,
+                                                border: Border.all(
+                                                  color: tieneEspecial
+                                                      ? Colors.green.shade400
+                                                      : Colors.grey.shade300,
+                                                ),
+                                                borderRadius:
+                                                    BorderRadius.circular(10),
                                               ),
-                                            ),
-                                            child: Center(
                                               child: Theme(
-                                                data: Theme.of(context).copyWith(
-                                                  textSelectionTheme: TextSelectionThemeData(
-                                                    selectionColor: AppTheme.primaryColor.withOpacity(0.3),
-                                                    selectionHandleColor: AppTheme.primaryColor,
-                                                    cursorColor: AppTheme.primaryColor,
+                                                data: Theme.of(context)
+                                                    .copyWith(
+                                                  inputDecorationTheme:
+                                                      const InputDecorationTheme(
+                                                    border: InputBorder.none,
+                                                    enabledBorder:
+                                                        InputBorder.none,
+                                                    focusedBorder:
+                                                        InputBorder.none,
+                                                    errorBorder:
+                                                        InputBorder.none,
+                                                    focusedErrorBorder:
+                                                        InputBorder.none,
+                                                    disabledBorder:
+                                                        InputBorder.none,
                                                   ),
                                                 ),
-                                                child: TextField(
-                                                  controller:
-                                                      precioControllers[producto.id!],
-                                                  keyboardType: const TextInputType
-                                                      .numberWithOptions(
-                                                      decimal: true),
-                                                  textAlign: TextAlign.center,
-                                                  style: const TextStyle(
-                                                    fontSize: 14,
-                                                    fontWeight: FontWeight.w500,
+                                                child: Center(
+                                                  child: Theme(
+                                                    data: Theme.of(context)
+                                                        .copyWith(
+                                                      textSelectionTheme:
+                                                          TextSelectionThemeData(
+                                                        selectionColor:
+                                                            AppTheme
+                                                                .primaryColor
+                                                                .withOpacity(
+                                                                    0.3),
+                                                        selectionHandleColor:
+                                                            AppTheme
+                                                                .primaryColor,
+                                                        cursorColor: AppTheme
+                                                            .primaryColor,
+                                                      ),
+                                                    ),
+                                                    child: TextField(
+                                                      controller:
+                                                          precioControllers[
+                                                              producto.id!],
+                                                      keyboardType:
+                                                          const TextInputType
+                                                                  .numberWithOptions(
+                                                              decimal: true),
+                                                      textAlign:
+                                                          TextAlign.center,
+                                                      style: TextStyle(
+                                                        fontSize: 14,
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                        color: Theme.of(context)
+                                                                    .brightness ==
+                                                                Brightness.dark
+                                                            ? Colors.white
+                                                            : AppTheme
+                                                                .textColor,
+                                                      ),
+                                                      decoration:
+                                                          const InputDecoration(
+                                                        hintText: '0.00',
+                                                        border:
+                                                            InputBorder.none,
+                                                        enabledBorder:
+                                                            InputBorder.none,
+                                                        focusedBorder:
+                                                            InputBorder.none,
+                                                        errorBorder:
+                                                            InputBorder.none,
+                                                        focusedErrorBorder:
+                                                            InputBorder.none,
+                                                        disabledBorder:
+                                                            InputBorder.none,
+                                                        contentPadding:
+                                                            EdgeInsets.zero,
+                                                        isDense: true,
+                                                      ),
+                                                      onChanged: (value) =>
+                                                          _onPrecioChanged(
+                                                              producto.id!,
+                                                              value),
+                                                    ),
                                                   ),
-                                                  decoration: const InputDecoration(
-                                                    hintText: '0.00',
-                                                    border: InputBorder.none,
-                                                    enabledBorder: InputBorder.none,
-                                                    focusedBorder: InputBorder.none,
-                                                    errorBorder: InputBorder.none,
-                                                    focusedErrorBorder: InputBorder.none,
-                                                    disabledBorder: InputBorder.none,
-                                                    contentPadding: EdgeInsets.zero,
-                                                    isDense: true,
-                                                  ),
-                                                  onChanged: (value) =>
-                                                      _onPrecioChanged(
-                                                          producto.id!, value),
                                                 ),
                                               ),
                                             ),
-                                          ),
+                                          ],
                                         ),
-                                      ],
+                                      ),
                                     ),
-                                  ],
-                                ),
+                                  ),
+                                ],
                               ),
                             );
                           },

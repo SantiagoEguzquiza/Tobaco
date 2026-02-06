@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import '../../Models/Cliente.dart';
 import '../../Models/Producto.dart';
 import '../../Models/PrecioEspecial.dart';
+import '../../Models/Categoria.dart';
 import '../../Services/PrecioEspecialService.dart';
 import '../../Services/Productos_Service/productos_provider.dart';
+import '../../Services/Categoria_Service/categoria_provider.dart';
 import '../../Theme/app_theme.dart';
 import '../../Theme/dialogs.dart';
 import '../../Helpers/api_handler.dart';
+import '../../Theme/headers.dart';
 import 'editarPreciosEspeciales_screen.dart';
 
 class PreciosEspecialesScreen extends StatefulWidget {
@@ -21,9 +24,25 @@ class PreciosEspecialesScreen extends StatefulWidget {
 class _PreciosEspecialesScreenState extends State<PreciosEspecialesScreen> {
   List<PrecioEspecial> preciosEspeciales = [];
   List<Producto> productos = [];
+  List<Categoria> categorias = [];
   bool isLoading = true;
   String errorMessage = '';
   final ProductoProvider productoProvider = ProductoProvider();
+  final CategoriasProvider categoriasProvider = CategoriasProvider();
+  String? _selectedCategory;
+  List<String> _availableCategories = [];
+
+  // Mismo helper que en productos_screen para usar el color de cada categoría
+  Color _parseColor(String colorHex) {
+    try {
+      if (colorHex.isEmpty || colorHex.length < 7) {
+        return const Color(0xFF9E9E9E); // Gris por defecto
+      }
+      return Color(int.parse(colorHex.substring(1), radix: 16) + 0xFF000000);
+    } catch (_) {
+      return const Color(0xFF9E9E9E);
+    }
+  }
 
   @override
   void initState() {
@@ -40,14 +59,27 @@ class _PreciosEspecialesScreenState extends State<PreciosEspecialesScreen> {
     });
 
     try {
-      final precios = await PrecioEspecialService.getPreciosEspecialesByCliente(widget.cliente.id!);
-      final productosData = await productoProvider.obtenerProductos();
-      
+      // Obtener precios especiales, productos y categorías en paralelo
+      final results = await Future.wait([
+        PrecioEspecialService.getPreciosEspecialesByCliente(widget.cliente.id!),
+        productoProvider.obtenerProductos(),
+        categoriasProvider.obtenerCategorias(),
+      ]);
+
+      final precios =
+          results[0] as List<PrecioEspecial>;
+      final productosData =
+          results[1] as List<Producto>;
+      final categoriasData =
+          results[2] as List<Categoria>;
+
       if (!mounted) return;
       
       setState(() {
         preciosEspeciales = precios;
         productos = productosData;
+        categorias = categoriasData;
+        _availableCategories = _buildAvailableCategories();
         isLoading = false;
       });
     } catch (e) {
@@ -155,6 +187,8 @@ class _PreciosEspecialesScreenState extends State<PreciosEspecialesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final totalPrecios = preciosEspeciales.length;
+
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
@@ -172,53 +206,19 @@ class _PreciosEspecialesScreenState extends State<PreciosEspecialesScreen> {
       ),
       body: Column(
         children: [
-          // Información del cliente
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Theme.of(context).brightness == Brightness.dark
-                  ? const Color(0xFF1A1A1A)
-                  : Colors.white,
-              boxShadow: [
-                BoxShadow(
-                  color: Theme.of(context).brightness == Brightness.dark
-                      ? Colors.black.withOpacity(0.3)
-                      : Colors.black.withOpacity(0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: AppTheme.primaryColor,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(
-                    Icons.person,
-                    color: Colors.white,
-                    size: 24,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Text(
-                    widget.cliente.nombre,
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).brightness == Brightness.dark
-                          ? Colors.white
-                          : AppTheme.primaryColor,
-                    ),
-                  ),
-                ),
-              ],
+          // Header estilo ProductosScreen (sin buscador)
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: HeaderSimple(
+              leadingIcon: Icons.price_change,
+              title: 'Precios Especiales',
+              subtitle:
+                  'Cliente: ${widget.cliente.nombre} • $totalPrecios precios especiales',
             ),
           ),
+
+          // Filtro por categoría (similar a chips de productos)
+          _buildCategoryFilter(),
 
           // Contenido principal
           Expanded(
@@ -426,23 +426,37 @@ class _PreciosEspecialesScreenState extends State<PreciosEspecialesScreen> {
   }
 
   Widget _buildPreciosList() {
+    final filtered = _getFilteredPrecios();
+
+    if (filtered.isEmpty) {
+      return _buildFilteredEmptyState();
+    }
+
     return ListView.builder(
       padding: const EdgeInsets.all(16),
-      itemCount: preciosEspeciales.length,
+      itemCount: filtered.length,
       itemBuilder: (context, index) {
-        final precioEspecial = preciosEspeciales[index];
+        final precioEspecial = filtered[index];
         return _buildPrecioCard(precioEspecial, index);
       },
     );
   }
 
   Widget _buildPrecioCard(PrecioEspecial precioEspecial, int index) {
-    final tieneDescuento = precioEspecial.precioEstandar != null && 
-                          precioEspecial.precio < precioEspecial.precioEstandar!;
-    final porcentajeDescuento = precioEspecial.precioEstandar != null 
-        ? ((precioEspecial.precioEstandar! - precioEspecial.precio) / precioEspecial.precioEstandar! * 100)
+    final tieneDescuento = precioEspecial.precioEstandar != null &&
+        precioEspecial.precio < precioEspecial.precioEstandar!;
+    final porcentajeDescuento = precioEspecial.precioEstandar != null
+        ? ((precioEspecial.precioEstandar! - precioEspecial.precio) /
+                precioEspecial.precioEstandar! *
+            100)
         : 0.0;
-    final indicatorColor = tieneDescuento ? Colors.green : Colors.orange;
+
+    final producto = _findProducto(precioEspecial.productoId);
+    final categoriaNombre = producto?.categoriaNombre?.isNotEmpty == true
+        ? producto!.categoriaNombre!
+        : 'Sin categoría';
+    final categoriaColor =
+        _getCategoryColor(producto?.categoriaNombre ?? '');
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -464,21 +478,21 @@ class _PreciosEspecialesScreenState extends State<PreciosEspecialesScreen> {
       child: Material(
         color: Colors.transparent,
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
           child: Row(
             children: [
-              // Indicador lateral
+              // Indicador lateral (como en ProductosScreen)
               Container(
                 width: 4,
                 height: 60,
                 decoration: BoxDecoration(
-                  color: indicatorColor,
+                  color: categoriaColor,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
               const SizedBox(width: 16),
 
-              // Información del producto
+              // Información del producto (alineado al diseño de ProductosScreen)
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -495,6 +509,16 @@ class _PreciosEspecialesScreenState extends State<PreciosEspecialesScreen> {
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 4),
+                    Text(
+                      'Categoría: $categoriaNombre',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.grey.shade400
+                            : Colors.grey.shade600,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
                     Row(
                       children: [
                         Icon(
@@ -505,24 +529,37 @@ class _PreciosEspecialesScreenState extends State<PreciosEspecialesScreen> {
                               : Colors.grey.shade600,
                         ),
                         const SizedBox(width: 4),
-                        Text(
-                          'Precio: \$${precioEspecial.precio.toStringAsFixed(2)}',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: Theme.of(context).brightness == Brightness.dark
-                                ? Colors.grey.shade400
-                                : Colors.grey.shade600,
-                          ),
-                        ),
-                        if (precioEspecial.precioEstandar != null) ...[
-                          const SizedBox(width: 8),
+                        if (tieneDescuento && precioEspecial.precioEstandar != null) ...[
+                          // Precio original tachado
                           Text(
-                            '\$${precioEspecial.precioEstandar!.toStringAsFixed(2)}',
+                            precioEspecial.precioEstandar!.toStringAsFixed(2),
                             style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey.shade500,
+                              fontSize: 14,
                               decoration: TextDecoration.lineThrough,
+                              color: Theme.of(context).brightness == Brightness.dark
+                                  ? Colors.grey.shade500
+                                  : Colors.grey.shade400,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          // Precio con descuento (especial)
+                          Text(
+                            precioEspecial.precio.toStringAsFixed(2),
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: AppTheme.primaryColor,
+                            ),
+                          ),
+                        ] else ...[
+                          // Sin descuento: solo el precio especial
+                          Text(
+                            precioEspecial.precio.toStringAsFixed(2),
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Theme.of(context).brightness == Brightness.dark
+                                  ? Colors.grey.shade400
+                                  : Colors.grey.shade600,
                             ),
                           ),
                         ],
@@ -532,30 +569,21 @@ class _PreciosEspecialesScreenState extends State<PreciosEspecialesScreen> {
                       const SizedBox(height: 2),
                       Row(
                         children: [
-                          Icon(
-                            Icons.local_offer_outlined,
-                            size: 16,
-                            color: Theme.of(context).brightness == Brightness.dark
-                                ? Colors.grey.shade400
-                                : Colors.grey.shade600,
-                          ),
-                          const SizedBox(width: 4),
                           Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 6,
                               vertical: 2,
                             ),
                             decoration: BoxDecoration(
-                              color: Colors.green.shade50,
+                              color: Colors.green.shade100,
                               borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: Colors.green.shade200),
                             ),
                             child: Text(
-                              'Descuento: ${porcentajeDescuento.toStringAsFixed(0)}%',
+                              '-${porcentajeDescuento.toStringAsFixed(0)}%',
                               style: TextStyle(
                                 fontSize: 10,
+                                fontWeight: FontWeight.w600,
                                 color: Colors.green.shade700,
-                                fontWeight: FontWeight.w500,
                               ),
                             ),
                           ),
@@ -603,6 +631,243 @@ class _PreciosEspecialesScreenState extends State<PreciosEspecialesScreen> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  // Helpers de categorías
+
+  List<String> _buildAvailableCategories() {
+    final seen = <String>{};
+    final ordered = <String>[];
+
+    // Usar la lista de categorías oficial y respetar su orden (creación)
+    for (final c in categorias) {
+      final name = c.nombre.trim();
+      if (name.isNotEmpty && !seen.contains(name)) {
+        seen.add(name);
+        ordered.add(name);
+      }
+    }
+
+    return ordered;
+  }
+
+  List<PrecioEspecial> _getFilteredPrecios() {
+    if (_selectedCategory == null) {
+      return preciosEspeciales;
+    }
+
+    return preciosEspeciales.where((precio) {
+      final prod = _findProducto(precio.productoId);
+      return prod?.categoriaNombre == _selectedCategory;
+    }).toList();
+  }
+
+  Producto? _findProducto(int productoId) {
+    try {
+      return productos.firstWhere((p) => p.id == productoId);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Color _getCategoryColor(String categoriaNombre) {
+    if (categoriaNombre.trim().isEmpty) {
+      return const Color(0xFF9E9E9E);
+    }
+
+    final cat = categorias.firstWhere(
+      (c) => c.nombre == categoriaNombre,
+      orElse: () => Categoria(
+        nombre: '',
+        colorHex: '#9E9E9E',
+      ),
+    );
+
+    return _parseColor(cat.colorHex);
+  }
+
+  Widget _buildCategoryFilter() {
+    if (isLoading ||
+        preciosEspeciales.isEmpty ||
+        _availableCategories.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardColor = Theme.of(context).cardTheme.color ??
+        (isDark ? const Color(0xFF1A1A1A) : Colors.white);
+
+    // Construimos una lista que incluye "Todas" + categorías disponibles
+    final categories = ['Todas', ..._availableCategories];
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: SizedBox(
+        height: 45,
+        child: ListView.builder(
+          scrollDirection: Axis.horizontal,
+          itemCount: categories.length,
+          itemBuilder: (context, index) {
+            final name = categories[index];
+            final isAll = index == 0;
+            final isSelected =
+                isAll ? _selectedCategory == null : _selectedCategory == name;
+
+            final baseColor =
+                isAll ? AppTheme.primaryColor : _getCategoryColor(name);
+
+            return Padding(
+              padding: const EdgeInsets.only(right: 10),
+              child: GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _selectedCategory = isAll ? null : name;
+                  });
+                },
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: isSelected ? baseColor : cardColor,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: isSelected
+                          ? baseColor
+                          : (isDark
+                              ? Colors.grey.shade700
+                              : Colors.grey.shade300),
+                      width: 1,
+                    ),
+                  ),
+                  child: Text(
+                    name,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight:
+                          isSelected ? FontWeight.w600 : FontWeight.normal,
+                      color: isSelected
+                          ? Colors.white
+                          : Theme.of(context).textTheme.bodyLarge?.color,
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCategoryChip(String label, String? value) {
+    final isSelected = _selectedCategory == value;
+    final baseColor =
+        value == null ? AppTheme.primaryColor : _getCategoryColor(value);
+
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _selectedCategory = value;
+        });
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOutCubic,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? baseColor
+              : baseColor.withOpacity(
+                  Theme.of(context).brightness == Brightness.dark ? 0.22 : 0.14,
+                ),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: baseColor.withOpacity(0.6),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (value != null) ...[
+              Icon(
+                Icons.label_rounded,
+                size: 14,
+                color: isSelected ? Colors.white : baseColor,
+              ),
+              const SizedBox(width: 6),
+            ],
+            Text(
+              label,
+              style: TextStyle(
+                color: isSelected ? Colors.white : baseColor,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                fontSize: 13,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFilteredEmptyState() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final categoryLabel = _selectedCategory ?? 'Todas';
+
+    return Center(
+      child: Container(
+        margin: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: isDark
+                  ? Colors.black.withOpacity(0.3)
+                  : Colors.black.withOpacity(0.05),
+              blurRadius: 15,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                color: AppTheme.secondaryColor,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.category_outlined,
+                size: 42,
+                color: AppTheme.primaryColor,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Sin precios en esta categoría',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: isDark ? Colors.white : AppTheme.primaryColor,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'No hay precios especiales configurados para\nla categoría "$categoryLabel".',
+              style: TextStyle(
+                fontSize: 14,
+                color: isDark ? Colors.grey.shade300 : Colors.grey.shade700,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
         ),
       ),
     );

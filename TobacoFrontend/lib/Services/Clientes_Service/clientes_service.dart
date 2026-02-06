@@ -107,12 +107,19 @@ class ClienteService {
         headers: headers,
       ).timeout(_timeoutDuration);
 
-      if (response.statusCode != 200) {
-        throw Exception(
-            'Error al eliminar el cliente. Código de estado: ${response.statusCode}');
-      } else {
+      if (response.statusCode == 200) {
         debugPrint('Cliente eliminado exitosamente');
+        return;
       }
+      // Leer mensaje del backend (400/404 suelen traer { "message": "..." })
+      String message = 'Error al eliminar el cliente. Código de estado: ${response.statusCode}';
+      try {
+        final body = jsonDecode(response.body);
+        if (body is Map && body['message'] != null) {
+          message = body['message'] as String;
+        }
+      } catch (_) {}
+      throw Exception(message);
     } catch (e) {
       debugPrint('Error al eliminar el cliente: $e');
       rethrow;

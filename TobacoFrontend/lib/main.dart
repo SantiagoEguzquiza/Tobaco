@@ -119,7 +119,15 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
     super.initState();
     // Registrar observer del lifecycle
     WidgetsBinding.instance.addObserver(_lifecycleObserver);
-    
+    // Cuando la sesión se invalida (ej. refresh falla al volver del background),
+    // AuthService limpia tokens y llama este callback para que la UI vuelva al login.
+    AuthService.onSessionInvalidated = () {
+      if (mounted) {
+        context.read<AuthProvider>().clearSession(
+          sessionExpiredMessage: 'Tu sesión ha expirado. Por favor, inicia sesión nuevamente.',
+        );
+      }
+    };
     // Initialize authentication state después del primer frame (evita setState durante build)
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initializeAuth();
@@ -163,8 +171,8 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
 
   @override
   void dispose() {
-    // Remover observer del lifecycle
     WidgetsBinding.instance.removeObserver(_lifecycleObserver);
+    AuthService.onSessionInvalidated = null;
     super.dispose();
   }
 
@@ -172,8 +180,9 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     return Consumer<AuthProvider>(
       builder: (context, authProvider, child) {
-        // Si está cargando (inicializando), mostrar pantalla de carga
-        if (authProvider.isLoading && !authProvider.isAuthenticated) {
+        // Solo mostrar pantalla de carga durante la verificación inicial (app startup).
+        // El login en sí muestra el loading en el botón de la pantalla de login.
+        if (authProvider.isInitializing) {
           return const Scaffold(
             body: Center(
               child: CircularProgressIndicator(),
