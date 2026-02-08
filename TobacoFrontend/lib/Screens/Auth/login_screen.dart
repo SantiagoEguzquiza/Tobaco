@@ -494,13 +494,32 @@ class _LoginScreenState extends State<LoginScreen> {
         );
 
         if (success && mounted) {
-          // Cargar permisos después del login exitoso, forzando recarga
-          await permisosProvider.loadPermisos(authProvider, forceReload: true);
-          
-          // Navigate to main menu using direct navigation instead of named routes
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (context) => const MenuScreen()),
-          );
+          // Dar un momento al almacenamiento para que el token esté disponible (evita fallos al reingresar con el mismo usuario)
+          await Future.delayed(const Duration(milliseconds: 150));
+          if (!mounted) return;
+
+          // Cargar permisos después del login exitoso; reintentar una vez si falla por conexión
+          bool permisosLoaded = false;
+          for (int attempt = 0; attempt < 2 && mounted && !permisosLoaded; attempt++) {
+            try {
+              await permisosProvider.loadPermisos(authProvider, forceReload: true);
+              permisosLoaded = true;
+            } catch (e) {
+              final isConnectionError = Apihandler.isConnectionError(e);
+              if (isConnectionError && attempt == 0) {
+                await Future.delayed(const Duration(milliseconds: 1500));
+                if (!mounted) return;
+              } else {
+                rethrow;
+              }
+            }
+          }
+
+          if (mounted && permisosLoaded) {
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(builder: (context) => const MenuScreen()),
+            );
+          }
         }
       } catch (e) {
         // Mostrar diálogo de error de servidor si corresponde

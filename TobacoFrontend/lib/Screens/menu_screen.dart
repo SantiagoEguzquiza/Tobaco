@@ -285,10 +285,15 @@ class MenuScreen extends StatelessWidget {
                                     color: Colors.white,
                                   ),
                                   const SizedBox(height: 10),
-                                  Text(
-                                    'Cuenta Corriente',
-                                    style: TextStyle(
-                                      fontSize: fontSize,
+                                  FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    child: Text(
+                                      'Cuenta Corriente',
+                                      style: TextStyle(
+                                        fontSize: fontSize,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                      maxLines: 1,
                                     ),
                                   ),
                                 ],

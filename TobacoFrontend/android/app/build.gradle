@@ -74,10 +74,8 @@ android {
             // Usa el archivo predeterminado de ProGuard para optimización
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             
-            // Aplicar configuración de firma si existe
-            if (keystorePropertiesFile.exists()) {
-                signingConfig signingConfigs.release
-            }
+            // Siempre firmar: release keystore si existe key.properties, si no firma debug (evita INSTALL_PARSE_FAILED_NO_CERTIFICATES)
+            signingConfig keystorePropertiesFile.exists() ? signingConfigs.release : signingConfigs.debug
         }
     }
 }
