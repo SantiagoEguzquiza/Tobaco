@@ -72,6 +72,11 @@ class ProductoProvider with ChangeNotifier {
 
   /// Carga productos y categorías iniciales (primera página)
   Future<void> cargarProductosInicial(CategoriasProvider categoriasProvider) async {
+    // Guardar copia de estado actual para fallback en caso de error/offline
+    final previousProductos = List<Producto>.from(_productos);
+    final previousCategorias = List<Categoria>.from(_categorias);
+    final previousSelectedCategory = _selectedCategory;
+
     _isLoading = true;
     _errorMessage = null;
     _currentPage = 1;
@@ -147,12 +152,25 @@ class ProductoProvider with ChangeNotifier {
           final isEmptyMarked = await productosCache.isEmptyMarked();
           
           if (isEmptyMarked) {
-            // Está marcado como vacío, no intentar cargar
-            _productos = [];
-            _hasMoreData = false;
-            _isOffline = true;
-            _isLoading = false;
-            debugPrint('📝 ProductoProvider: Caché marcado como vacío, mostrando lista vacía');
+            // Está marcado como vacío, no intentar cargar.
+            // Si ya teníamos productos antes, mantener la última lista conocida.
+            if (previousProductos.isNotEmpty) {
+              _productos = previousProductos;
+              _categorias = previousCategorias;
+              _selectedCategory = previousSelectedCategory;
+              _hasMoreData = false;
+              _isOffline = true;
+              _isLoading = false;
+              debugPrint('📝 ProductoProvider: Caché marcado como vacío, manteniendo lista previa (${_productos.length} productos)');
+            } else {
+              _productos = [];
+              _categorias = [];
+              _selectedCategory = null;
+              _hasMoreData = false;
+              _isOffline = true;
+              _isLoading = false;
+              debugPrint('📝 ProductoProvider: Caché marcado como vacío y sin datos previos, mostrando lista vacía');
+            }
             notifyListeners();
             return;
           }
@@ -170,17 +188,43 @@ class ProductoProvider with ChangeNotifier {
             notifyListeners();
             return;
           } else {
-            // No hay datos en caché
-            _productos = [];
-            _hasMoreData = false;
-            _isOffline = true;
-            _isLoading = false;
+            // No hay datos en caché. Si teníamos datos previos en memoria,
+            // mantenerlos para no dejar al usuario sin productos.
+            if (previousProductos.isNotEmpty) {
+              _productos = previousProductos;
+              _categorias = previousCategorias;
+              _selectedCategory = previousSelectedCategory;
+              _hasMoreData = false;
+              _isOffline = true;
+              _isLoading = false;
+              debugPrint('📝 ProductoProvider: Caché vacío, manteniendo lista previa (${_productos.length} productos)');
+            } else {
+              _productos = [];
+              _categorias = [];
+              _selectedCategory = null;
+              _hasMoreData = false;
+              _isOffline = true;
+              _isLoading = false;
+              debugPrint('📝 ProductoProvider: Caché vacío y sin datos previos, mostrando lista vacía');
+            }
             notifyListeners();
             return;
           }
         } catch (cacheError) {
           // Si falla el caché, continuar con el error normal
         }
+      }
+
+      // Si no es error de conexión y teníamos datos previos, mantenerlos
+      if (previousProductos.isNotEmpty) {
+        _productos = previousProductos;
+        _categorias = previousCategorias;
+        _selectedCategory = previousSelectedCategory;
+        _hasMoreData = false;
+        _isLoading = false;
+        _errorMessage = e.toString();
+        notifyListeners();
+        return;
       }
 
       _isLoading = false;

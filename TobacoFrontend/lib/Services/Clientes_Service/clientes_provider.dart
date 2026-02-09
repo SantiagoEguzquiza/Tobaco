@@ -143,6 +143,9 @@ class ClienteProvider with ChangeNotifier {
   Future<void> cargarClientes() async {
     if (_isLoading) return;
 
+    // Guardar una copia de la lista actual para fallback en caso de error/offline
+    final previousClientes = List<Cliente>.from(_clientes);
+
     _isLoading = true;
     _errorMessage = null;
     _currentPage = 1;
@@ -198,9 +201,17 @@ class ClienteProvider with ChangeNotifier {
             _hasMoreData = end < clientesDelCache.length;
             debugPrint('✅ ClienteProvider: ${_clientes.length} clientes cargados del caché (página $_currentPage)');
           } else {
-            _clientes = [];
-            _hasMoreData = false;
-            debugPrint('📝 ClienteProvider: Caché vacío, mostrando lista vacía');
+            // Si no hay nada en caché pero ya teníamos datos antes,
+            // mantener la última lista conocida para no dejar al usuario sin datos.
+            if (previousClientes.isNotEmpty) {
+              _clientes = previousClientes;
+              _hasMoreData = false;
+              debugPrint('📝 ClienteProvider: Caché vacío, manteniendo lista previa (${_clientes.length} clientes)');
+            } else {
+              _clientes = [];
+              _hasMoreData = false;
+              debugPrint('📝 ClienteProvider: Caché vacío y sin datos previos, mostrando lista vacía');
+            }
           }
           // No relanzar el error si se pudo cargar del caché
           notifyListeners();
@@ -208,12 +219,27 @@ class ClienteProvider with ChangeNotifier {
         } catch (cacheError) {
           debugPrint(
               '❌ ClienteProvider: Error cargando del caché: $cacheError');
-          // Si hay error cargando del caché, mostrar lista vacía
-          _clientes = [];
-          _hasMoreData = false;
+          // Si hay error cargando del caché pero teníamos datos previos, mantenerlos
+          if (previousClientes.isNotEmpty) {
+            _clientes = previousClientes;
+            _hasMoreData = false;
+            debugPrint('📝 ClienteProvider: Error de caché, manteniendo lista previa (${_clientes.length} clientes)');
+          } else {
+            _clientes = [];
+            _hasMoreData = false;
+            debugPrint('📝 ClienteProvider: Error de caché y sin datos previos, mostrando lista vacía');
+          }
           notifyListeners();
           return;
         }
+      }
+
+      // Si no es un error de conexión y teníamos datos previos, mantenerlos
+      if (previousClientes.isNotEmpty) {
+        _clientes = previousClientes;
+        _hasMoreData = _clientes.length >= _pageSize;
+        notifyListeners();
+        return;
       }
 
       notifyListeners();

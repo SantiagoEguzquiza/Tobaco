@@ -16,7 +16,11 @@ class AuthService {
   static const String _refreshTokenKey = 'refresh_token';
   static const String _tokenExpiryKey = 'token_expiry';
   static const String _userKey = 'user_data';
-  static const Duration _timeoutDuration = Duration(seconds: 10);
+  /// Timeout más generoso para login: tras horas en segundo plano la primera petición puede tardar.
+  static const Duration _timeoutDuration = Duration(seconds: 15);
+  /// Reintentos automáticos cuando falla por conexión/timeout (evita tener que tocar 5-6 veces).
+  static const int _loginMaxAttempts = 3;
+  static const Duration _loginRetryDelay = Duration(seconds: 2);
   static const Duration _refreshTimeoutDuration = Duration(seconds: 30);
   /// Solo refrescar cuando al token le queden menos de estos segundos (evita refrescos innecesarios y timeouts).
   static const int _refreshWhenSecondsLeft = 30;
@@ -31,42 +35,54 @@ class AuthService {
     ),
   );
 
-  // Login user
+  // Login user (con reintentos automáticos si falla por conexión/timeout tras estar la app en segundo plano)
   static Future<LoginResponse?> login(LoginRequest loginRequest) async {
-    try {
-      final response = await Apihandler.client.post(
-        Apihandler.baseUrl.resolve(_loginEndpoint),
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode(loginRequest.toJson()),
-      ).timeout(_timeoutDuration);
+    int attempt = 0;
 
-      if (response.statusCode == 200) {
-        final loginResponse = LoginResponse.fromJson(jsonDecode(response.body));
-        
-        // Save token and user data to secure storage
-        await _saveAuthData(loginResponse);
-        
-        return loginResponse;
-      } else if (response.statusCode == 401) {
-        // Unauthorized - invalid credentials
-        final errorData = jsonDecode(response.body);
-        throw Exception(errorData['message'] ?? 'Usuario o contraseña incorrectos');
-      } else if (response.statusCode == 400) {
-        // Bad request - validation errors
-        final errorData = jsonDecode(response.body);
-        throw Exception(errorData['message'] ?? 'Datos de login inválidos');
-      } else {
-        throw Exception('Error del servidor. Intenta nuevamente más tarde.');
+    while (true) {
+      attempt++;
+      try {
+        final response = await Apihandler.client.post(
+          Apihandler.baseUrl.resolve(_loginEndpoint),
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: jsonEncode(loginRequest.toJson()),
+        ).timeout(_timeoutDuration);
+
+        if (response.statusCode == 200) {
+          final loginResponse = LoginResponse.fromJson(jsonDecode(response.body));
+
+          // Save token and user data to secure storage
+          await _saveAuthData(loginResponse);
+
+          return loginResponse;
+        } else if (response.statusCode == 401) {
+          // Unauthorized - invalid credentials (no reintentar)
+          final errorData = jsonDecode(response.body);
+          throw Exception(errorData['message'] ?? 'Usuario o contraseña incorrectos');
+        } else if (response.statusCode == 400) {
+          // Bad request - validation errors (no reintentar)
+          final errorData = jsonDecode(response.body);
+          throw Exception(errorData['message'] ?? 'Datos de login inválidos');
+        } else {
+          throw Exception('Error del servidor. Intenta nuevamente más tarde.');
+        }
+      } catch (e) {
+        // Reintentar solo si es error de conexión/timeout y quedan intentos
+        final isConnectionError = Apihandler.isConnectionError(e);
+        if (isConnectionError && attempt < _loginMaxAttempts) {
+          debugPrint('AuthService.login: Intento $attempt falló por conexión, reintentando en ${_loginRetryDelay.inSeconds}s...');
+          await Future.delayed(_loginRetryDelay);
+          continue;
+        }
+        // Clean up the error message to remove "Exception" prefix
+        String errorMessage = e.toString();
+        if (errorMessage.contains('Exception: ')) {
+          errorMessage = errorMessage.replaceFirst('Exception: ', '');
+        }
+        throw Exception(errorMessage);
       }
-    } catch (e) {
-      // Clean up the error message to remove "Exception" prefix
-      String errorMessage = e.toString();
-      if (errorMessage.contains('Exception: ')) {
-        errorMessage = errorMessage.replaceFirst('Exception: ', '');
-      }
-      throw Exception(errorMessage);
     }
   }
 
