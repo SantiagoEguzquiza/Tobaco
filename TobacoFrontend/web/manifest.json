@@ -1,6 +1,6 @@
 {
-    "name": "tobaco",
-    "short_name": "tobaco",
+    "name": "Provider",
+    "short_name": "Provider",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

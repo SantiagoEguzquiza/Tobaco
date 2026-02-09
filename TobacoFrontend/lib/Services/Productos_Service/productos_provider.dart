@@ -7,6 +7,7 @@ import 'package:tobaco/Services/Categoria_Service/categoria_provider.dart';
 import 'package:tobaco/Services/Cache/datos_cache_service.dart';
 import 'package:tobaco/Services/Cache/data/productos_cache_service.dart';
 import 'package:tobaco/Helpers/api_handler.dart';
+import 'package:tobaco/Services/Auth_Service/auth_service.dart';
 import 'dart:developer';
 
 class ProductoProvider with ChangeNotifier {
@@ -132,7 +133,12 @@ class ProductoProvider with ChangeNotifier {
       notifyListeners();
     } catch (e) {
       log('Error al cargar los Productos: $e', level: 1000);
-
+      if (AuthService.isSessionExpiredException(e)) {
+        await AuthService.logout();
+        _isLoading = false;
+        notifyListeners();
+        return;
+      }
       // Verificar si hay datos del caché disponibles
       if (Apihandler.isConnectionError(e)) {
         try {
@@ -201,6 +207,11 @@ class ProductoProvider with ChangeNotifier {
       notifyListeners();
     } catch (e) {
       _isLoadingMore = false;
+      if (AuthService.isSessionExpiredException(e)) {
+        await AuthService.logout();
+        notifyListeners();
+        return;
+      }
       _errorMessage = e.toString();
       notifyListeners();
       log('Error al cargar más productos: $e', level: 1000);
@@ -230,6 +241,33 @@ class ProductoProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  /// Limpia listas, caché y catálogo local al cambiar de usuario (logout).
+  /// Evita mostrar productos/categorías de otro tenant.
+  Future<void> clearForNewUser() async {
+    _productos = [];
+    _categorias = [];
+    _selectedCategory = null;
+    _searchQuery = '';
+    _currentPage = 1;
+    _hasMoreData = true;
+    _errorMessage = null;
+    _isOffline = false;
+    _isLoading = false;
+    _isLoadingMore = false;
+    notifyListeners();
+
+    try {
+      final cacheService = DatosCacheService();
+      await cacheService.limpiarCache();
+      await _catalogoLocal.limpiarClientes();
+      await _catalogoLocal.limpiarProductos();
+      await _catalogoLocal.limpiarCategorias();
+      debugPrint('✅ ProductoProvider: caché y catálogo local limpiados para nuevo usuario/tenant');
+    } catch (e) {
+      debugPrint('⚠️ ProductoProvider: error limpiando caché para nuevo usuario: $e');
+    }
+  }
+
   /// Recarga los productos iniciales (usado después de crear/editar/eliminar)
   Future<void> recargarProductos(CategoriasProvider categoriasProvider) async {
     await cargarProductosInicial(categoriasProvider);
@@ -250,13 +288,16 @@ class ProductoProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  /// Obtiene productos del caché inmediatamente (sin llamar al servidor)
+  /// Obtiene productos del caché inmediatamente (sin llamar al servidor).
+  /// Si la caché está vacía (p. ej. tras logout), intenta CatalogoLocal para modo offline.
   Future<List<Producto>> obtenerProductosDelCache() async {
     try {
       final cacheService = DatosCacheService();
-      return await cacheService.obtenerProductosDelCache();
+      final list = await cacheService.obtenerProductosDelCache();
+      if (list.isNotEmpty) return list;
+      // Caché vacía: usar catálogo local (modo offline)
+      return await _catalogoLocal.obtenerProductos();
     } catch (e) {
-      // Si falla el caché, intentar desde SQLite local
       return await _catalogoLocal.obtenerProductos();
     }
   }
@@ -272,19 +313,19 @@ class ProductoProvider with ChangeNotifier {
       
       print('✅ ProductoProvider: ${_productos.length} productos obtenidos del servidor');
       
-      // Guardar localmente para uso offline (siempre, incluso si está vacío para limpiar caché)
+      // Guardar en ambos almacenamientos para uso offline
       final cacheService = DatosCacheService();
       await cacheService.guardarProductosEnCache(_productos);
+      await _catalogoLocal.guardarProductos(_productos);
       if (_productos.isEmpty) {
         print('✅ ProductoProvider: Caché limpiado (servidor devolvió lista vacía)');
       } else {
-        print('✅ ProductoProvider: ${_productos.length} productos guardados en caché');
+        print('✅ ProductoProvider: ${_productos.length} productos guardados en caché y catálogo local');
       }
       
     } catch (e) {
       print('⚠️ ProductoProvider: Error obteniendo del servidor: $e');
       print('📦 ProductoProvider: Cargando productos locales (SQLite)...');
-      // Si falla, cargar desde SQLite local
       _productos = await _catalogoLocal.obtenerProductos();
       
       if (_productos.isEmpty) {
@@ -292,6 +333,9 @@ class ProductoProvider with ChangeNotifier {
         throw Exception('No hay productos disponibles offline. Conecta para sincronizar.');
       } else {
         print('✅ ProductoProvider: ${_productos.length} productos cargados de SQLite');
+        // Sincronizar a caché para que obtenerProductosDelCache() tenga datos la próxima vez
+        final cacheService = DatosCacheService();
+        await cacheService.guardarProductosEnCache(_productos);
       }
     }
 

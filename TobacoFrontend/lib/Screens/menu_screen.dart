@@ -11,7 +11,11 @@ import 'package:tobaco/Screens/Config/config_screen.dart';
 import 'package:tobaco/Screens/Entregas/mapa_entregas_screen.dart';
 import 'package:tobaco/Screens/Entregas/entregas_screen.dart';
 import 'package:tobaco/Services/Auth_Service/auth_provider.dart';
+import 'package:tobaco/Services/Categoria_Service/categoria_provider.dart';
+import 'package:tobaco/Services/Clientes_Service/clientes_provider.dart';
 import 'package:tobaco/Services/Permisos_Service/permisos_provider.dart';
+import 'package:tobaco/Services/Productos_Service/productos_provider.dart';
+import 'package:tobaco/Services/Ventas_Service/ventas_provider.dart';
 import 'package:tobaco/Theme/app_theme.dart';
 import 'package:tobaco/Theme/dialogs.dart';
 
@@ -592,12 +596,16 @@ class MenuScreen extends StatelessWidget {
   }
 
   void _showLogoutDialog(BuildContext context) async {
-    final confirmado = await AppDialogs. showLogoutConfirmationDialog(
+    final confirmado = await AppDialogs.showLogoutConfirmationDialog(
       context: context,
     );
 
     if (confirmado) {
-      // Limpiar permisos antes de hacer logout
+      // Limpiar datos del usuario anterior para no mostrarlos al siguiente (incl. caché productos/tenant)
+      context.read<ClienteProvider>().clearForNewUser();
+      context.read<VentasProvider>().clearForNewUser();
+      await context.read<ProductoProvider>().clearForNewUser();
+      context.read<CategoriasProvider>().clearForNewUser();
       context.read<PermisosProvider>().clearPermisos();
       await context.read<AuthProvider>().logout();
       if (context.mounted) {

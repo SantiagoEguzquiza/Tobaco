@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../Services/Auth_Service/auth_provider.dart';
 import '../../Services/Permisos_Service/permisos_provider.dart';
+import '../../Services/Productos_Service/productos_provider.dart';
+import '../../Services/Clientes_Service/clientes_provider.dart';
+import '../../Services/Categoria_Service/categoria_provider.dart';
 import '../../Helpers/api_handler.dart';
 import '../menu_screen.dart';
 
@@ -494,11 +497,17 @@ class _LoginScreenState extends State<LoginScreen> {
         );
 
         if (success && mounted) {
+          // Limpiar caché y estado de otro usuario para no mostrar sus clientes/productos al ir offline
+          context.read<ClienteProvider>().clearForNewUser();
+          context.read<CategoriasProvider>().clearForNewUser();
+          await context.read<ProductoProvider>().clearForNewUser();
+          if (!mounted) return;
           // Dar un momento al almacenamiento para que el token esté disponible (evita fallos al reingresar con el mismo usuario)
           await Future.delayed(const Duration(milliseconds: 150));
           if (!mounted) return;
 
-          // Cargar permisos después del login exitoso; reintentar una vez si falla por conexión
+          // Cargar permisos después del login; reintentar una vez si falla por conexión.
+          // Si falla o hace timeout, ir al menú igual (permisos se recargan al reabrir).
           bool permisosLoaded = false;
           for (int attempt = 0; attempt < 2 && mounted && !permisosLoaded; attempt++) {
             try {
@@ -510,12 +519,13 @@ class _LoginScreenState extends State<LoginScreen> {
                 await Future.delayed(const Duration(milliseconds: 1500));
                 if (!mounted) return;
               } else {
-                rethrow;
+                // No rethrow: ir al menú para no dejar colgado (p. ej. primera vez tras instalar)
+                break;
               }
             }
           }
 
-          if (mounted && permisosLoaded) {
+          if (mounted) {
             Navigator.of(context).pushReplacement(
               MaterialPageRoute(builder: (context) => const MenuScreen()),
             );

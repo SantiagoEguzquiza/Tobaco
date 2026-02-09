@@ -1625,27 +1625,50 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
       final connectivityService = ConnectivityService();
       final tieneInternetBasico = connectivityService.hasInternetConnection;
       
-      // Si no hay internet básico, mostrar mensaje inmediatamente y crear venta en background
+      // Si no hay internet básico, crear venta offline y mostrar la misma animación de éxito
       if (!tieneInternetBasico) {
-        // Crear venta en background (no esperar) - se guardará en SQLite
-        ventasProvider.crearVenta(ventaConPagos).catchError((e) {
-          debugPrint('Error creando venta offline: $e');
-        });
-        
-        // Mostrar mensaje INMEDIATAMENTE usando SnackBar (más rápido que diálogo)
-        if (mounted) {
+        final result = await ventasProvider.crearVenta(ventaConPagos);
+        if (!mounted) return;
+        if (!result['success']) {
           AppTheme.showSnackBar(
             context,
-            AppTheme.warningSnackBar(
-              'Venta guardada localmente. Se sincronizará cuando haya conexión.',
-            ),
+            AppTheme.errorSnackBar(result['message'] ?? 'Error al guardar la venta'),
           );
+          return;
         }
-        
-        // Cerrar la pantalla inmediatamente
-        if (mounted) {
-          Navigator.of(context).pop();
-        }
+        AppTheme.showSnackBar(
+          context,
+          AppTheme.warningSnackBar(
+            'Venta guardada localmente. Se sincronizará cuando haya conexión.',
+          ),
+        );
+        _ventaCompletada = true;
+        _eliminarBorradorDeFormaSegura();
+        showGeneralDialog(
+          context: context,
+          barrierDismissible: false,
+          barrierColor: Colors.transparent,
+          transitionDuration: const Duration(milliseconds: 0),
+          pageBuilder: (context, animation, secondaryAnimation) {
+            return AnnotatedRegion<SystemUiOverlayStyle>(
+              value: SystemUiOverlayStyle.light.copyWith(
+                statusBarColor: Colors.green,
+                systemNavigationBarColor: Colors.green,
+              ),
+              child: Scaffold(
+                backgroundColor: Colors.transparent,
+                body: VentaConfirmadaAnimacion(
+                  onFinish: () {
+                    Navigator.of(context).pop();
+                    if (context.mounted) {
+                      Navigator.of(context).pop();
+                    }
+                  },
+                ),
+              ),
+            );
+          },
+        );
         return;
       }
       

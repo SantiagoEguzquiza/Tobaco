@@ -15,7 +15,7 @@
     <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
     
     <application
-        android:label="tobaco"
+        android:label="Provider"
         android:name="${applicationName}"
          android:enableOnBackInvokedCallback="true"
         android:icon="@mipmap/ic_launcher"

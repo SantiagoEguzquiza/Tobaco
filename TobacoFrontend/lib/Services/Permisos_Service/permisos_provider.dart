@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../Models/PermisosEmpleado.dart';
 import 'permisos_service.dart';
@@ -98,52 +99,77 @@ class PermisosProvider with ChangeNotifier {
     debugPrint('PermisosProvider.loadPermisos: Llamando al endpoint mis-permisos');
     _isLoading = true;
     _errorMessage = null;
-    _hasAttemptedLoad = true; // Marcar como intentado antes de la llamada
+    _hasAttemptedLoad = true;
     notifyListeners();
 
     try {
-      final permisos = await PermisosService.getMisPermisos();
-      debugPrint('PermisosProvider.loadPermisos: Permisos recibidos correctamente');
-      debugPrint('PermisosProvider.loadPermisos: productosVisualizar = ${permisos.productosVisualizar}');
-      debugPrint('PermisosProvider.loadPermisos: canViewProductos = ${permisos.productosVisualizar || _isAdmin}');
-      _permisos = permisos;
+      // Timeout 8s para fallar rápido; no usar permisos por defecto, dejar error para Reintentar
+      final permisosResult = await PermisosService.getMisPermisos()
+          .timeout(const Duration(seconds: 8));
+      _permisos = permisosResult;
+      _errorMessage = null;
       _isLoading = false;
       notifyListeners();
-      debugPrint('PermisosProvider.loadPermisos: Permisos cargados y notificados. canViewProductos getter = $canViewProductos');
+      debugPrint('PermisosProvider.loadPermisos: Permisos cargados correctamente');
     } catch (e) {
       debugPrint('PermisosProvider.loadPermisos: Error al cargar permisos: $e');
-      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      _permisos = null;
       _isLoading = false;
-      // No resetear _hasAttemptedLoad en caso de error para evitar bucles
-      // Si es un error de rate limiting, crear permisos por defecto (todos false)
-      if (_errorMessage != null && 
-          (_errorMessage!.contains('quota exceeded') || _errorMessage!.contains('Demasiadas solicitudes'))) {
-        debugPrint('PermisosService: Rate limit alcanzado, usando permisos por defecto');
-        // Crear permisos por defecto (todos desactivados) para evitar que la app se rompa
-        _permisos = PermisosEmpleado(
-          id: 0,
-          userId: authProvider.currentUser?.id ?? 0,
-          productosVisualizar: false,
-          productosCrear: false,
-          productosEditar: false,
-          productosEliminar: false,
-          clientesVisualizar: false,
-          clientesCrear: false,
-          clientesEditar: false,
-          clientesEliminar: false,
-          ventasVisualizar: false,
-          ventasCrear: false,
-          ventasEditarBorrador: false,
-          ventasEliminar: false,
-          cuentaCorrienteVisualizar: false,
-          cuentaCorrienteRegistrarAbonos: false,
-          entregasVisualizar: false,
-          entregasActualizarEstado: false,
-        );
-        _errorMessage = null; // Limpiar el error ya que tenemos permisos por defecto
+      if (e is TimeoutException) {
+        _errorMessage = 'La carga tardó demasiado. Comprueba la conexión y toca Reintentar.';
+      } else {
+        final msg = e.toString().replaceAll('Exception: ', '');
+        if (msg.contains('quota exceeded') || msg.contains('Demasiadas solicitudes')) {
+          _permisos = _permisosPorDefecto(authProvider);
+          _errorMessage = null;
+        } else {
+          _errorMessage = msg.isEmpty ? 'Error al cargar permisos.' : msg;
+        }
       }
       notifyListeners();
     }
+  }
+
+  /// Para mostrar pantalla de error con Reintentar: permite volver a intentar la carga.
+  Future<void> reintentarPermisos(AuthProvider authProvider) async {
+    _errorMessage = null;
+    _hasAttemptedLoad = false;
+    _isLoading = false;
+    notifyListeners();
+    await loadPermisos(authProvider, forceReload: true);
+  }
+
+  /// Si la carga se quedó colgada (ej. 15s), marcar como error para mostrar Reintentar.
+  void marcarTimeoutPermisos() {
+    if (_isLoading) {
+      debugPrint('PermisosProvider.marcarTimeoutPermisos: Carga colgada, mostrando Reintentar');
+      _isLoading = false;
+      _errorMessage = 'La carga tardó demasiado. Toca Reintentar.';
+      notifyListeners();
+    }
+  }
+
+  static PermisosEmpleado _permisosPorDefecto(AuthProvider authProvider) {
+    return PermisosEmpleado(
+      id: 0,
+      userId: authProvider.currentUser?.id ?? 0,
+      productosVisualizar: false,
+      productosCrear: false,
+      productosEditar: false,
+      productosEliminar: false,
+      clientesVisualizar: false,
+      clientesCrear: false,
+      clientesEditar: false,
+      clientesEliminar: false,
+      ventasVisualizar: false,
+      ventasCrear: false,
+      ventasEditarBorrador: false,
+      ventasEliminar: false,
+      cuentaCorrienteVisualizar: false,
+      cuentaCorrienteRegistrarAbonos: false,
+      entregasVisualizar: false,
+      entregasActualizarEstado: false,
+    );
   }
 
   void clearPermisos() {

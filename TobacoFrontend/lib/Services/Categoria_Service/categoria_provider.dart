@@ -344,14 +344,25 @@ class CategoriasProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  /// Obtiene categorías del caché inmediatamente (sin llamar al servidor)
+  /// Obtiene categorías del caché inmediatamente (sin llamar al servidor).
+  /// Si la caché está vacía, intenta CatalogoLocal para modo offline.
+  /// Siempre devuelve la lista ordenada de primera a última (por sortOrder).
   Future<List<Categoria>> obtenerCategoriasDelCache() async {
     try {
-      return await _datosCacheService.obtenerCategoriasDelCache();
+      final list = await _datosCacheService.obtenerCategoriasDelCache();
+      if (list.isNotEmpty) return _sortCategoriasFirstToLast(list);
+      final locales = await _catalogoLocal.obtenerCategorias();
+      return _sortCategoriasFirstToLast(locales);
     } catch (e) {
-      // Si falla el caché, intentar desde SQLite local
-      return await _catalogoLocal.obtenerCategorias();
+      final locales = await _catalogoLocal.obtenerCategorias();
+      return _sortCategoriasFirstToLast(locales);
     }
+  }
+
+  /// Ordena categorías de primera a última por sortOrder (ascendente).
+  List<Categoria> _sortCategoriasFirstToLast(List<Categoria> list) {
+    if (list.isEmpty) return list;
+    return List<Categoria>.from(list)..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
   }
 
   Future<List<Categoria>> obtenerCategorias({bool silent = false}) async {
@@ -397,6 +408,17 @@ class CategoriasProvider with ChangeNotifier {
         _errorMessage = _limpiarMensajeError(e.toString());
       }
     }
+  }
+
+  /// Limpia listas y estado al cambiar de usuario (logout). Evita mostrar datos del usuario anterior.
+  void clearForNewUser() {
+    _categorias = [];
+    _isLoading = false;
+    _isOffline = false;
+    _errorMessage = null;
+    _loadedFromCache = false;
+    _pendingReorderDtos = null;
+    notifyListeners();
   }
 }
 

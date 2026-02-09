@@ -9,7 +9,7 @@ import 'package:tobaco/Services/Auth_Service/auth_service.dart';
 class VentasService {
   final Uri baseUrl = Apihandler.baseUrl;
   static const Duration _timeoutDuration = Duration(seconds: 30); // Timeout normal para operaciones (aumentado para sincronización)
-  static const Duration _timeoutRapidoDuration = Duration(milliseconds: 500); // Timeout rápido para detección offline
+  static const Duration _timeoutRapidoDuration = Duration(seconds: 5); // Timeout más corto para refrescos rápidos (pull-to-refresh)
 
   Future<List<Ventas>> obtenerVentas({bool timeoutRapido = false, bool timeoutNormal = false}) async {
     try {

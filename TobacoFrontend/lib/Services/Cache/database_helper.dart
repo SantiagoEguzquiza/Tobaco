@@ -357,10 +357,12 @@ class DatabaseHelper {
         return [];
       }
       
+      // Incluir tanto ventas pendientes como fallidas, para que sigan
+      // apareciendo en el listado y puedan reintentarse en la sincronización.
       final ventas = await db.query(
         _ventasTable,
-        where: 'sync_status = ?',
-        whereArgs: ['pending'],
+        where: 'sync_status IN (?, ?)',
+        whereArgs: ['pending', 'failed'],
         orderBy: 'created_at ASC',
       );
 

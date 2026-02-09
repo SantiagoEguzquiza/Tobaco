@@ -5,6 +5,7 @@ import 'package:tobaco/Theme/app_theme.dart';
 import 'package:tobaco/Theme/dialogs.dart';
 import 'package:tobaco/Theme/headers.dart';
 import 'package:tobaco/Helpers/api_handler.dart';
+import 'package:tobaco/Services/Auth_Service/auth_service.dart';
 import 'package:tobaco/Screens/CuentaCorriente/cuenta_corriente_detalle_screen.dart';
 import 'dart:developer';
 
@@ -119,6 +120,11 @@ class _CuentaCorrienteScreenState extends State<CuentaCorrienteScreen> {
       
       log('Error al cargar los clientes: $e', level: 1000);
       
+      if (AuthService.isSessionExpiredException(e)) {
+        await AuthService.logout();
+        setState(() => isLoading = false);
+        return;
+      }
       if (Apihandler.isConnectionError(e)) {
         setState(() {
           isLoading = false;
@@ -165,6 +171,10 @@ class _CuentaCorrienteScreenState extends State<CuentaCorrienteScreen> {
       });
       log('Error al cargar más clientes: $e', level: 1000);
       
+      if (AuthService.isSessionExpiredException(e)) {
+        await AuthService.logout();
+        return;
+      }
       if (Apihandler.isConnectionError(e)) {
         await Apihandler.handleConnectionError(context, e);
       } else {

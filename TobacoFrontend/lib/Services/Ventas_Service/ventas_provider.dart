@@ -22,6 +22,7 @@ import 'package:tobaco/Services/Sync/simple_sync_service.dart';
 import 'package:tobaco/Services/Ventas_Service/ventas_service.dart';
 import 'package:tobaco/Theme/app_theme.dart';
 import 'package:tobaco/Services/Connectivity/connectivity_service.dart';
+import 'package:tobaco/Services/Auth_Service/auth_service.dart';
 
 class VentasProvider with ChangeNotifier {
   final VentasService _ventasService = VentasService();
@@ -70,6 +71,28 @@ class VentasProvider with ChangeNotifier {
     }).toList(growable: false);
   }
 
+  /// Ordena _ventas: primero las pendientes offline (local_*), luego por fecha más reciente.
+  /// Dentro de las ventas del servidor, se ordena por ID de base de datos (más nuevo primero),
+  /// para que el orden coincida exactamente con el backend.
+  void _ordenarVentasRecientesPrimero() {
+    if (_ventas.isEmpty) return;
+    _ventas.sort((a, b) {
+      final idA = _ventaLocalIds[a] ?? '';
+      final idB = _ventaLocalIds[b] ?? '';
+      final aEsOffline = idA.startsWith('local_');
+      final bEsOffline = idB.startsWith('local_');
+      if (aEsOffline && !bEsOffline) return -1; // offline primero
+      if (!aEsOffline && bEsOffline) return 1;
+      // Ambos mismo tipo:
+      // - Si ambos tienen ID de servidor, ordenar por ID desc (más nuevo primero).
+      // - Si no, usar fecha como fallback.
+      if (a.id != null && b.id != null) {
+        return b.id!.compareTo(a.id!);
+      }
+      return b.fecha.compareTo(a.fecha);
+    });
+  }
+
   Future<void> cargarVentas({bool usarTimeoutNormal = false}) async {
     _isLoading = true;
     _errorMessage = null;
@@ -80,33 +103,14 @@ class VentasProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      // Primero verificamos conectividad completa (internet + backend).
-      // Si no hay, evitamos hacer la llamada HTTP (que demoraría por timeout)
-      // y vamos directo al modo offline usando SQLite/caché.
-      // Usar timeout razonable para evitar falsos negativos
-      bool tieneConexion = false;
-      try {
-        tieneConexion = await _connectivityService.checkFullConnectivity()
-            .timeout(const Duration(seconds: 2), onTimeout: () => false);
-      } catch (e) {
-        debugPrint('Error verificando conectividad: $e');
-        tieneConexion = false;
-      }
-      
-      if (!tieneConexion) {
-        await _cargarVentasOffline();
-        _isOffline = true;
-        _isLoading = false;
-        _errorMessage = null;
-        notifyListeners();
-        return;
-      }
-
+      // Intentar siempre la API real primero. No usar checkFullConnectivity() para decidir
+      // offline: justo después del login puede fallar (health check lento/timeout) y mostrar
+      // "Modo offline" por error. Solo marcar offline cuando la llamada a ventas falle.
+      // - En primera carga / después de sincronizar: usar timeout normal (más largo).
+      // - En pull-to-refresh: usar timeout rápido para no quedar 30s cargando si hay problemas.
       final ventasDelServidor = await _ventasService.obtenerVentas(
-        // Usamos siempre el timeout "normal" para evitar falsos positivos de modo offline
-        // cuando el backend tarda un poco más en responder.
-        timeoutRapido: false,
-        timeoutNormal: true,
+        timeoutRapido: !usarTimeoutNormal,
+        timeoutNormal: usarTimeoutNormal,
       );
 
       // En modo online: borrar solo las ventas SINCRONIZADAS de SQLite (preservar las pendientes)
@@ -138,7 +142,8 @@ class VentasProvider with ChangeNotifier {
         incluirPendientesOffline: true, // Incluir pendientes para que aparezcan
       );
 
-      _ventas = combinadas..sort((a, b) => b.fecha.compareTo(a.fecha));
+      _ventas = combinadas;
+      _ordenarVentasRecientesPrimero();
       _isOffline = false;
       _hasMoreData = false;
       _offlineMessageShown = false;
@@ -154,11 +159,18 @@ class VentasProvider with ChangeNotifier {
           _errorMessage = _limpiarMensajeError(e.toString());
         }
       } else {
+        if (AuthService.isSessionExpiredException(e)) {
+          await AuthService.logout();
+          _isLoading = false;
+          notifyListeners();
+          return;
+        }
         _ventas = [];
         _errorMessage = _limpiarMensajeError(e.toString());
       }
     } finally {
       _isLoading = false;
+      _ordenarVentasRecientesPrimero();
       notifyListeners();
     }
   }
@@ -517,6 +529,33 @@ class VentasProvider with ChangeNotifier {
     return stats['pending'] ?? 0;
   }
 
+  /// Limpia listas y estado al cambiar de usuario (logout). Evita mostrar datos del usuario anterior.
+  void clearForNewUser() {
+    _ventas = [];
+    _ventaLocalIds.clear();
+    _currentPage = 1;
+    _hasMoreData = true;
+    _searchQuery = '';
+    _errorMessage = null;
+    _isOffline = false;
+    _isLoading = false;
+    _isLoadingMore = false;
+    _offlineMessageShown = false;
+    notifyListeners();
+  }
+
+  /// Deja la lista vacía y activa loading para que al abrir Ventas se muestre carga y no la lista anterior.
+  void prepararParaCargaInicial() {
+    _ventas = [];
+    _ventaLocalIds.clear();
+    _currentPage = 1;
+    _hasMoreData = true;
+    _errorMessage = null;
+    _isLoading = true;
+    _isLoadingMore = false;
+    notifyListeners();
+  }
+
   /// Borra todas las ventas pendientes de sincronizar (útil para limpiar ventas bugeadas)
   Future<int> borrarTodasLasVentasPendientes() async {
     try {
@@ -873,6 +912,19 @@ class VentasProvider with ChangeNotifier {
       }
     }
 
+    // Ordenar: pendientes offline primero, luego por ID de base de datos (más nuevo primero)
+    resultado.sort((a, b) {
+      final idA = _ventaLocalIds[a] ?? '';
+      final idB = _ventaLocalIds[b] ?? '';
+      final aEsOffline = idA.startsWith('local_');
+      final bEsOffline = idB.startsWith('local_');
+      if (aEsOffline && !bEsOffline) return -1;
+      if (!aEsOffline && bEsOffline) return 1;
+      if (a.id != null && b.id != null) {
+        return b.id!.compareTo(a.id!);
+      }
+      return b.fecha.compareTo(a.fecha);
+    });
     return resultado;
   }
 
@@ -882,54 +934,59 @@ class VentasProvider with ChangeNotifier {
 
     _ventaLocalIds.clear();
 
-    // En modo offline, SOLO cargar ventas offline pendientes de sincronizar
-    // NO cargar ventas del servidor cacheadas
-    debugPrint('📦 VentasProvider: Cargando solo ventas offline pendientes...');
+    debugPrint('📦 VentasProvider: Cargando ventas en modo offline (caché + pendientes)...');
 
+    // 1) Cargar ventas del servidor desde caché (última carga online)
     try {
-      final db = await _db.database;
-      
-      // Verificar que la base de datos esté abierta
-      if (!db.isOpen) {
-        debugPrint('⚠️ VentasProvider: Base de datos cerrada al cargar ventas offline');
-        _ventas = resultado..sort((a, b) => b.fecha.compareTo(a.fecha));
-        _isOffline = true;
-        _hasMoreData = false;
-        _errorMessage = null;
-        return;
-      }
-      
-      final ventasRows = await db.query(
-        'ventas_offline',
-        orderBy: 'created_at DESC',
-      );
-
-      for (final ventaRow in ventasRows) {
-        try {
-          final localId = ventaRow['local_id'] as String;
-          final ventaId = ventaRow['id'] as int?;
-
-          if (ventaId != null && idsAgregados.contains(ventaId)) {
-            continue;
-          }
-
-          final venta = await _buildVentaFromRow(ventaRow);
+      final cacheadas = await _cacheService.obtenerVentasDelCache();
+      for (final venta in cacheadas) {
+        if (venta.id != null && !idsAgregados.contains(venta.id!)) {
           resultado.add(venta);
-          _ventaLocalIds[venta] = localId;
-          if (ventaId != null) {
-            idsAgregados.add(ventaId);
-          }
-        } catch (e) {
-          debugPrint('⚠️ VentasProvider: Error procesando venta offline: $e');
-          // Continuar con la siguiente venta
+          idsAgregados.add(venta.id!);
+          _ventaLocalIds[venta] = 'servidor_${venta.id}';
         }
       }
     } catch (e) {
-      debugPrint('⚠️ VentasProvider: Error obteniendo ventas offline: $e');
-      // Si hay error, usar solo las ventas del caché
+      debugPrint('⚠️ VentasProvider: Error leyendo caché de ventas: $e');
     }
 
-    _ventas = resultado..sort((a, b) => b.fecha.compareTo(a.fecha));
+    // 2) Cargar ventas pendientes de sincronizar (ventas_offline)
+    try {
+      final db = await _db.database;
+      if (db.isOpen) {
+        final ventasRows = await db.query(
+          'ventas_offline',
+          orderBy: 'created_at DESC',
+        );
+
+        for (final ventaRow in ventasRows) {
+          try {
+            final localId = ventaRow['local_id'] as String;
+            final ventaId = ventaRow['id'] as int?;
+
+            if (ventaId != null && idsAgregados.contains(ventaId)) {
+              continue;
+            }
+
+            final venta = await _buildVentaFromRow(ventaRow);
+            resultado.add(venta);
+            _ventaLocalIds[venta] = localId;
+            if (ventaId != null) {
+              idsAgregados.add(ventaId);
+            }
+          } catch (e) {
+            debugPrint('⚠️ VentasProvider: Error procesando venta offline: $e');
+          }
+        }
+      } else {
+        debugPrint('⚠️ VentasProvider: Base de datos cerrada al cargar ventas offline');
+      }
+    } catch (e) {
+      debugPrint('⚠️ VentasProvider: Error obteniendo ventas offline: $e');
+    }
+
+    _ventas = resultado;
+    _ordenarVentasRecientesPrimero();
     _isOffline = true;
     _hasMoreData = false;
     _errorMessage = null;
@@ -1184,6 +1241,13 @@ class VentasProvider with ChangeNotifier {
       return clienteConsumidor;
     }
 
+    // Buscar en caché de clientes (por si estamos offline o antes de llamar al servidor)
+    try {
+      final clientesCache = await clienteProvider.obtenerClientesDelCache();
+      clienteConsumidor = _buscarConsumidorFinalEnColecciones([clientesCache]);
+      if (clienteConsumidor != null) return clienteConsumidor;
+    } catch (_) {}
+
     // Si no se encuentra localmente, usar el endpoint del backend que garantiza un único Consumidor Final compartido
     try {
       final clienteService = ClienteService();
@@ -1196,19 +1260,61 @@ class VentasProvider with ChangeNotifier {
       }
     } catch (e) {
       debugPrint('Error al obtener o crear Consumidor Final desde el servidor: $e');
-      AppTheme.showSnackBar(
-        context,
-        AppTheme.errorSnackBar('Error al obtener Consumidor Final: $e'),
-      );
+      // Sin conexión (Failed host lookup, SocketException, etc.): usar Consumidor Final local para venta offline
+      if (Apihandler.isConnectionError(e)) {
+        try {
+          final clientesCache = await clienteProvider.obtenerClientesDelCache();
+          clienteConsumidor = _buscarConsumidorFinalEnColecciones([clientesCache]);
+        } catch (_) {}
+        if (clienteConsumidor != null) {
+          if (context.mounted) {
+            AppTheme.showSnackBar(
+              context,
+              const SnackBar(
+                content: Text('Usando Consumidor Final en modo offline'),
+                backgroundColor: Colors.orange,
+              ),
+            );
+          }
+          return clienteConsumidor;
+        }
+        // Placeholder local para poder continuar la venta sin conexión
+        clienteConsumidor = Cliente(
+          id: 0,
+          nombre: 'Consumidor Final',
+          direccion: null,
+          descuentoGlobal: 0.0,
+          preciosEspeciales: const [],
+          visible: true,
+        );
+        if (context.mounted) {
+          AppTheme.showSnackBar(
+            context,
+            const SnackBar(
+              content: Text('Modo offline: usando Consumidor Final local. Se sincronizará al conectar.'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+        return clienteConsumidor;
+      }
+      if (context.mounted) {
+        AppTheme.showSnackBar(
+          context,
+          AppTheme.errorSnackBar('Error al obtener Consumidor Final: $e'),
+        );
+      }
       return null;
     }
 
-    AppTheme.showSnackBar(
-      context,
-      AppTheme.errorSnackBar(
-        'No se pudo asegurar el cliente "Consumidor Final". Intenta nuevamente.',
-      ),
-    );
+    if (context.mounted) {
+      AppTheme.showSnackBar(
+        context,
+        AppTheme.errorSnackBar(
+          'No se pudo asegurar el cliente "Consumidor Final". Intenta nuevamente.',
+        ),
+      );
+    }
 
     return null;
   }
