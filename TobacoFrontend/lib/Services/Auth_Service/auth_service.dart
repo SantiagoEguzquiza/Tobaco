@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
@@ -16,6 +17,9 @@ class AuthService {
   static const String _tokenExpiryKey = 'token_expiry';
   static const String _userKey = 'user_data';
   static const Duration _timeoutDuration = Duration(seconds: 10);
+  static const Duration _refreshTimeoutDuration = Duration(seconds: 30);
+  /// Solo refrescar cuando al token le queden menos de estos segundos (evita refrescos innecesarios y timeouts).
+  static const int _refreshWhenSecondsLeft = 30;
   
   // Secure storage para tokens sensibles
   static const FlutterSecureStorage _secureStorage = FlutterSecureStorage(
@@ -193,12 +197,23 @@ class AuthService {
     }
   }
 
-  // Refresh access token using refresh token
+  /// Si ya hay un refresh en curso, otros llamadores esperan al mismo resultado (evita race al volver de segundo plano).
+  static Completer<String?>? _refreshCompleter;
+
+  // Refresh access token using refresh token (serializado: solo uno a la vez)
   static Future<String?> refreshToken() async {
+    if (_refreshCompleter != null) {
+      debugPrint('AuthService.refreshToken: Refresh ya en curso, esperando resultado...');
+      return _refreshCompleter!.future;
+    }
+
+    _refreshCompleter = Completer<String?>();
+
     try {
-      final refreshToken = await getRefreshToken();
-      if (refreshToken == null) {
+      final refreshTokenValue = await getRefreshToken();
+      if (refreshTokenValue == null) {
         debugPrint('AuthService.refreshToken: No hay refresh token disponible');
+        _refreshCompleter!.complete(null);
         return null;
       }
 
@@ -207,49 +222,51 @@ class AuthService {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: jsonEncode({'refreshToken': refreshToken}),
-      ).timeout(_timeoutDuration);
+        body: jsonEncode({'refreshToken': refreshTokenValue}),
+      ).timeout(_refreshTimeoutDuration);
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final newAccessToken = data['accessToken'] as String;
         final expiresIn = data['expiresIn'] as int;
         final newRefreshToken = data['refreshToken'] as String?;
-        
-        // Actualizar access token y expiración
+
         await _secureStorage.write(key: _tokenKey, value: newAccessToken);
-        
-        // Si se devolvió un nuevo refresh token, actualizarlo también
         if (newRefreshToken != null && newRefreshToken.isNotEmpty) {
           await _secureStorage.write(key: _refreshTokenKey, value: newRefreshToken);
           debugPrint('AuthService.refreshToken: Refresh token rotado');
         }
-        
-        // Calcular nueva expiración
         final newExpiry = DateTime.now().add(Duration(seconds: expiresIn));
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString(_tokenExpiryKey, newExpiry.toIso8601String());
-        
+
         debugPrint('AuthService.refreshToken: Token renovado exitosamente');
+        _refreshCompleter!.complete(newAccessToken);
         return newAccessToken;
       } else if (response.statusCode == 401 || response.statusCode == 400) {
-        // Refresh token inválido o expirado (400 también puede ser refresh token inválido)
         final responseBody = response.body;
         debugPrint('AuthService.refreshToken: Refresh token inválido (${response.statusCode}), haciendo logout');
         debugPrint('AuthService.refreshToken: Respuesta del servidor: $responseBody');
         await logout();
+        _refreshCompleter!.complete(null);
         return null;
       } else {
         debugPrint('AuthService.refreshToken: Error del servidor: ${response.statusCode}');
         debugPrint('AuthService.refreshToken: Respuesta: ${response.body}');
+        _refreshCompleter!.complete(null);
         return null;
       }
     } catch (e) {
       debugPrint('AuthService.refreshToken: Error: $e');
-      if (Apihandler.isConnectionError(e)) {
-        rethrow;
+      // Timeout/red: no hacer logout; el llamador puede seguir usando el token actual si aún es válido
+      if (Apihandler.isConnectionError(e) || e is TimeoutException) {
+        _refreshCompleter!.complete(null);
+        return null;
       }
+      _refreshCompleter!.complete(null);
       return null;
+    } finally {
+      _refreshCompleter = null;
     }
   }
 
@@ -271,17 +288,21 @@ class AuthService {
         
         debugPrint('AuthService.validateAndRefreshToken: Token expira en ${timeUntilExpiry.inSeconds} segundos');
         
-        // Si el token ya expiró o expira en menos de 1 minuto, refrescar
-        if (timeUntilExpiry.inSeconds < 60) {
+        // Solo refrescar cuando falten _refreshWhenSecondsLeft segundos o menos (evita refrescos con red lenta)
+        if (timeUntilExpiry.inSeconds < _refreshWhenSecondsLeft) {
           debugPrint('AuthService.validateAndRefreshToken: Token expirado o por expirar, refrescando');
           final newToken = await refreshToken();
           if (newToken != null) {
             debugPrint('AuthService.validateAndRefreshToken: Token refrescado exitosamente');
             return true;
-          } else {
-            debugPrint('AuthService.validateAndRefreshToken: No se pudo refrescar el token');
-            return false;
           }
+          // Refresh falló (timeout/red): si aún tenemos token, usarlo para esta petición
+          if (await getToken() != null) {
+            debugPrint('AuthService.validateAndRefreshToken: Refresh falló pero token actual aún disponible, usándolo');
+            return true;
+          }
+          debugPrint('AuthService.validateAndRefreshToken: No se pudo refrescar el token');
+          return false;
         }
         
         debugPrint('AuthService.validateAndRefreshToken: Token aún válido');
@@ -300,18 +321,20 @@ class AuthService {
           
           debugPrint('AuthService.validateAndRefreshToken: Token expira en ${timeUntilExpiry.inSeconds} segundos (desde SharedPreferences)');
           
-          // Si el token ya expiró, intentar refrescar
           if (now.isAfter(tokenExpiry)) {
             debugPrint('AuthService.validateAndRefreshToken: Token expirado, intentando refrescar');
             final newToken = await refreshToken();
-            return newToken != null;
+            if (newToken != null) return true;
+            if (await getToken() != null) return true;
+            return false;
           }
           
-          // Si el token expira en menos de 1 minuto, refrescar preventivamente
-          if (timeUntilExpiry.inSeconds < 60) {
+          if (timeUntilExpiry.inSeconds < _refreshWhenSecondsLeft) {
             debugPrint('AuthService.validateAndRefreshToken: Token por expirar, refrescando preventivamente');
             final newToken = await refreshToken();
-            return newToken != null;
+            if (newToken != null) return true;
+            if (await getToken() != null) return true;
+            return false;
           }
           
           return true;
@@ -334,6 +357,12 @@ class AuthService {
   /// Used so the UI (AuthProvider) can sync state and show login again when
   /// refresh fails on app resume or after 401/403.
   static void Function()? onSessionInvalidated;
+
+  /// Detecta si la excepción es "sesión expirada". Usar en catch: si true, llamar logout() y no mostrar error en pantalla.
+  static bool isSessionExpiredException(dynamic e) {
+    final s = e.toString().toLowerCase();
+    return s.contains('sesión') && (s.contains('expirad') || s.contains('inicia sesión'));
+  }
 
   // Logout user
   static Future<void> logout() async {
@@ -386,20 +415,22 @@ class AuthService {
 
   // Get headers with authorization token (validando/refrescando antes)
   static Future<Map<String, String>> getAuthHeaders() async {
-    // Primero intentamos validar y refrescar el token si hace falta
-    final isValid = await validateAndRefreshToken();
+    final hadToken = await getToken() != null;
 
+    final isValid = await validateAndRefreshToken();
     if (!isValid) {
       debugPrint(
           'AuthService.getAuthHeaders: Token inválido o expirado. Se requiere login nuevamente.');
+      // Solo hacer logout si había sesión (evita mensaje "sesión expirada" al escribir usuario sin haber entrado)
+      if (hadToken) await logout();
       throw Exception(
           'Tu sesión ha expirado. Por favor, inicia sesión nuevamente.');
     }
 
     final token = await getToken();
-
     if (token == null) {
       debugPrint('AuthService.getAuthHeaders: No hay token disponible');
+      if (hadToken) await logout();
       throw Exception(
           'No hay token de autenticación. Por favor, inicia sesión nuevamente.');
     }

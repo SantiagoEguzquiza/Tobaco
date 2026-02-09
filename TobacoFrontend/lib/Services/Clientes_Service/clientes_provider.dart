@@ -7,6 +7,7 @@ import 'package:tobaco/Services/Cache/cuenta_corriente_cache_service.dart';
 import 'package:tobaco/Services/Cache/data/clientes_cache_service.dart';
 import 'package:tobaco/Helpers/api_handler.dart';
 import 'package:tobaco/Services/Connectivity/connectivity_service.dart';
+import 'package:tobaco/Services/Auth_Service/auth_service.dart';
 
 class ClienteProvider with ChangeNotifier {
   final ClienteService _clienteService = ClienteService();
@@ -169,6 +170,11 @@ class ClienteProvider with ChangeNotifier {
       notifyListeners();
     } catch (e) {
       _isLoading = false;
+      if (AuthService.isSessionExpiredException(e)) {
+        await AuthService.logout();
+        notifyListeners();
+        return;
+      }
       _isOffline = Apihandler.isConnectionError(e);
       _errorMessage = _isOffline
           ? 'Sin conexión. Usando datos en caché.'
@@ -237,6 +243,11 @@ class ClienteProvider with ChangeNotifier {
       notifyListeners();
     } catch (e) {
       _isLoading = false;
+      if (AuthService.isSessionExpiredException(e)) {
+        await AuthService.logout();
+        notifyListeners();
+        return;
+      }
       _isOffline = Apihandler.isConnectionError(e);
       _errorMessage = 'Error al cargar más clientes';
 
@@ -618,5 +629,18 @@ class ClienteProvider with ChangeNotifier {
       debugPrint('⚠️ ClienteProvider: Error actualizando caché completo en background: $e');
       // Si falla, no hacer nada - el caché se mantendrá con los datos anteriores
     });
+  }
+
+  /// Limpia listas y estado al cambiar de usuario (logout). Evita mostrar datos del usuario anterior.
+  void clearForNewUser() {
+    _clientes = [];
+    _clientesConDeuda = [];
+    _currentPage = 1;
+    _hasMoreData = true;
+    _searchQuery = '';
+    _errorMessage = null;
+    _isOffline = false;
+    _isLoading = false;
+    notifyListeners();
   }
 }

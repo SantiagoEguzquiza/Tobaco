@@ -75,9 +75,15 @@ class HttpInterceptor {
       final errorString = e.toString().toLowerCase();
       debugPrint('HttpInterceptor: Excepción capturada: $errorString');
       
-      if (errorString.contains('401') || errorString.contains('403') || 
+      final isSessionExpired = errorString.contains('sesión') && (errorString.contains('expirad') || errorString.contains('inicia sesión'));
+      if (isSessionExpired || errorString.contains('401') || errorString.contains('403') || 
           errorString.contains('unauthorized') || errorString.contains('forbidden') ||
           errorString.contains('código de estado: 401') || errorString.contains('código de estado: 403')) {
+        if (isSessionExpired) {
+          debugPrint('HttpInterceptor: Sesión expirada detectada, cerrando sesión para redirigir al login');
+          await AuthService.logout();
+          rethrow;
+        }
         if (!_isRefreshing) {
           debugPrint('HttpInterceptor: Error 401/403 detectado en excepción, intentando refrescar token');
           _isRefreshing = true;

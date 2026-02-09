@@ -96,6 +96,12 @@ class CatalogoLocalService {
     return rows.map((r) => Cliente.fromJson(jsonDecode(r['cliente_json'] as String))).toList();
   }
 
+  /// Limpia la tabla de clientes (para evitar mostrar datos de otro tenant al cambiar de usuario).
+  Future<void> limpiarClientes() async {
+    final db = await database;
+    await db.delete('clientes');
+  }
+
   // ===== Productos =====
   Future<void> guardarProductos(List<Producto> productos) async {
     final db = await database;
@@ -130,6 +136,18 @@ class CatalogoLocalService {
     final db = await database;
     final rows = await db.query('productos');
     return rows.map((r) => Producto.fromJson(jsonDecode(r['producto_json'] as String))).toList();
+  }
+
+  /// Limpia la tabla de productos (para evitar mostrar datos de otro tenant al cambiar de usuario).
+  Future<void> limpiarProductos() async {
+    final db = await database;
+    await db.delete('productos');
+  }
+
+  /// Limpia la tabla de categorías (para evitar mostrar datos de otro tenant al cambiar de usuario).
+  Future<void> limpiarCategorias() async {
+    final db = await database;
+    await db.delete('categorias');
   }
 
   Future<List<Producto>> obtenerProductosPorCategoria(int categoriaId) async {

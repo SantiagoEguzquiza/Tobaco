@@ -30,7 +30,9 @@ class _VentasScreenState extends State<VentasScreen> {
   @override
   void initState() {
     super.initState();
-    Future.microtask(() async {
+    // Mostrar loading de entrada y no la lista anterior (evita "listado → carga → listado de nuevo")
+    context.read<VentasProvider>().prepararParaCargaInicial();
+      Future.microtask(() async {
       // Limpiar ventas pendientes bugeadas (solo una vez)
       final prefs = await SharedPreferences.getInstance();
       final yaLimpiado = prefs.getBool('ventas_pendientes_limpiadas') ?? false;
@@ -45,8 +47,8 @@ class _VentasScreenState extends State<VentasScreen> {
           debugPrint('⚠️ VentasScreen: Error al limpiar ventas pendientes: $e');
         }
       }
-      // Cargar ventas normalmente
-      await context.read<VentasProvider>().cargarVentas();
+      // Primera carga: usar timeout normal (más largo) para dar tiempo al backend.
+      await context.read<VentasProvider>().cargarVentas(usarTimeoutNormal: true);
     });
     _scrollController.addListener(_onScroll);
   }
@@ -857,12 +859,10 @@ class _SincronizarButtonState extends State<_SincronizarButton> {
         });
       }
     } catch (e) {
-      // Si falla al cargar, NO cambiar _pendientes a 0
-      // Mantener el valor anterior para que el botón no desaparezca
       if (mounted) {
         setState(() {
-          // Si ya teníamos un valor, mantenerlo; si no, usar 1 como fallback
-          _pendientes ??= 1;
+          // Si ya teníamos un valor, mantenerlo; si no, usar 0 para no mostrar icono por error
+          _pendientes ??= 0;
           _isLoading = false;
         });
       }
@@ -896,8 +896,9 @@ class _SincronizarButtonState extends State<_SincronizarButton> {
 
   @override
   Widget build(BuildContext context) {
-    // Siempre mostrar el botón si hay ventas pendientes o si está cargando
-    // NO ocultar el botón si está cargando, para evitar que desaparezca temporalmente
+    // Mostrar el botón solo cuando hay ventas pendientes (count conocido y > 0)
+    // o cuando está sincronizando. No mostrar icono mientras se obtiene el conteo,
+    // así no aparece nada al entrar a Ventas si no hay pendientes.
     if (_pendientes != null && _pendientes! > 0) {
       return Padding(
         padding: const EdgeInsets.only(right: 8.0),
@@ -924,9 +925,8 @@ class _SincronizarButtonState extends State<_SincronizarButton> {
               : !_tieneConexion
                   ? 'Sin conexión. No se puede sincronizar en este momento.'
                   : '$_pendientes ventas pendientes',
-          onPressed: (widget.isSincronizando || !_tieneConexion) 
+          onPressed: (widget.isSincronizando || !_tieneConexion)
               ? () {
-                  // Si no hay conexión, mostrar mensaje al usuario
                   if (!_tieneConexion) {
                     AppTheme.showSnackBar(
                       context,
@@ -941,46 +941,21 @@ class _SincronizarButtonState extends State<_SincronizarButton> {
       );
     }
 
-    // Si está cargando, mostrar el botón aunque el contador aún no esté listo
-    // Esto evita que el botón desaparezca temporalmente durante la recarga
-    if (_isLoading) {
+    // Mientras sincroniza (y aún no tenemos conteo o es 0), mostrar solo el spinner sin badge
+    if (widget.isSincronizando) {
       return Padding(
         padding: const EdgeInsets.only(right: 8.0),
         child: IconButton(
-          icon: widget.isSincronizando
-              ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.white,
-                  ),
-                )
-              : Badge(
-                  label: const Text('?'),
-                  backgroundColor: _tieneConexion ? Colors.red : Colors.grey,
-                  child: Icon(
-                    Icons.cloud_upload,
-                    color: _tieneConexion ? null : Colors.grey,
-                  ),
-                ),
-          tooltip: widget.isSincronizando
-              ? 'Sincronizando...'
-              : !_tieneConexion
-                  ? 'Sin conexión. No se puede sincronizar en este momento.'
-                  : 'Verificando ventas pendientes...',
-          onPressed: (widget.isSincronizando || !_tieneConexion)
-              ? () {
-                  if (!_tieneConexion) {
-                    AppTheme.showSnackBar(
-                      context,
-                      AppTheme.warningSnackBar(
-                        'Sin conexión. No se puede sincronizar en este momento. Los datos siguen guardados localmente.',
-                      ),
-                    );
-                  }
-                }
-              : widget.onSincronizar,
+          icon: const SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: Colors.white,
+            ),
+          ),
+          tooltip: 'Sincronizando...',
+          onPressed: null,
         ),
       );
     }

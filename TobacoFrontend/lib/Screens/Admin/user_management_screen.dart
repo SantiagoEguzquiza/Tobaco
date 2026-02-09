@@ -11,7 +11,11 @@ import '../../Theme/dialogs.dart';
 import '../../Theme/headers.dart';
 import '../../Helpers/api_handler.dart';
 import 'permisos_empleado_screen.dart';
+import '../../Services/Categoria_Service/categoria_provider.dart';
+import '../../Services/Clientes_Service/clientes_provider.dart';
 import '../../Services/Permisos_Service/permisos_provider.dart';
+import '../../Services/Productos_Service/productos_provider.dart';
+import '../../Services/Ventas_Service/ventas_provider.dart';
 
 // Helper function to check if a user is the last active admin
 bool _isLastAdmin(User user, UserProvider userProvider) {
@@ -24,7 +28,7 @@ bool _isLastAdmin(User user, UserProvider userProvider) {
   return activeAdmins == 0;
 }
 
-// Helper function to get localized role name
+// Helper function to get localized role name-
 String _getRoleDisplayName(String role) {
   switch (role) {
     case 'Admin':
@@ -1204,9 +1208,11 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     if (result['success']) {
       // Check if current user was affected (deactivated themselves)
       if (result['currentUserAffected']) {
-        // Limpiar permisos antes de hacer logout
+        context.read<ClienteProvider>().clearForNewUser();
+        context.read<VentasProvider>().clearForNewUser();
+        await context.read<ProductoProvider>().clearForNewUser();
+        context.read<CategoriasProvider>().clearForNewUser();
         context.read<PermisosProvider>().clearPermisos();
-        // Clear the session first
         await AuthService.logout();
 
         // Show message and redirect to login
@@ -1324,9 +1330,11 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     if (result['success']) {
       // Check if current user was affected (deleted themselves)
       if (result['currentUserAffected']) {
-        // Limpiar permisos antes de hacer logout
+        context.read<ClienteProvider>().clearForNewUser();
+        context.read<VentasProvider>().clearForNewUser();
+        await context.read<ProductoProvider>().clearForNewUser();
+        context.read<CategoriasProvider>().clearForNewUser();
         context.read<PermisosProvider>().clearPermisos();
-        // Clear the session first
         await AuthService.logout();
 
         // Show message and redirect to login
@@ -2950,9 +2958,11 @@ class _EditUserDialogState extends State<_EditUserDialog> {
       if (result['success']) {
         // Check if current user was affected (deactivated themselves)
         if (result['currentUserAffected']) {
-          // Limpiar permisos antes de hacer logout
+          context.read<ClienteProvider>().clearForNewUser();
+          context.read<VentasProvider>().clearForNewUser();
+          await context.read<ProductoProvider>().clearForNewUser();
+          context.read<CategoriasProvider>().clearForNewUser();
           context.read<PermisosProvider>().clearPermisos();
-          // Clear the session first
           await AuthService.logout();
 
           // Show message and redirect to login

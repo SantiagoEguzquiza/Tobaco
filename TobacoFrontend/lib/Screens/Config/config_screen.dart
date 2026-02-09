@@ -6,7 +6,11 @@ import 'package:tobaco/Screens/Admin/user_management_screen.dart';
 import 'package:tobaco/Screens/Auth/login_screen.dart';
 import 'package:tobaco/Services/Asistencia_Service/asistencia_service.dart';
 import 'package:tobaco/Services/Auth_Service/auth_provider.dart';
+import 'package:tobaco/Services/Categoria_Service/categoria_provider.dart';
+import 'package:tobaco/Services/Clientes_Service/clientes_provider.dart';
 import 'package:tobaco/Services/Permisos_Service/permisos_provider.dart';
+import 'package:tobaco/Services/Productos_Service/productos_provider.dart';
+import 'package:tobaco/Services/Ventas_Service/ventas_provider.dart';
 import 'package:tobaco/Theme/app_theme.dart';
 import 'package:tobaco/Theme/dialogs.dart';
 import 'package:tobaco/Theme/theme_provider.dart';
@@ -113,6 +117,9 @@ class _ConfigScreenState extends State<ConfigScreen> {
     final initials = (user?.userName.isNotEmpty ?? false)
         ? user!.userName.substring(0, 1).toUpperCase()
         : 'U';
+    // Mostrar rol en español para el usuario actual
+    final roleLabel =
+        (user?.isAdmin ?? false) ? 'Administrador' : 'Empleado';
 
     return Card(
       shape: RoundedRectangleBorder(
@@ -156,7 +163,7 @@ class _ConfigScreenState extends State<ConfigScreen> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    user?.role ?? 'Empleado',
+                    roleLabel,
                     style: _supportTextStyle,
                   ),
                   if (user?.isAdmin == true) ...[
@@ -209,8 +216,11 @@ class _ConfigScreenState extends State<ConfigScreen> {
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16.0),
         child: Consumer<ThemeProvider>(
-          builder: (_, themeProvider, __) {
-            final isDark = themeProvider.themeMode == ThemeMode.dark;
+          builder: (context, themeProvider, __) {
+            // Reflejar el estado efectivo: oscuro si está en dark o si es system y el dispositivo está en oscuro
+            final isDark = themeProvider.themeMode == ThemeMode.dark ||
+                (themeProvider.themeMode == ThemeMode.system &&
+                    MediaQuery.platformBrightnessOf(context) == Brightness.dark);
             return ListTile(
               contentPadding: EdgeInsets.zero,
               leading: CircleAvatar(
@@ -766,7 +776,11 @@ class _ConfigScreenState extends State<ConfigScreen> {
     );
 
     if (confirmado) {
-      // Limpiar permisos antes de hacer logout
+      // Limpiar datos del usuario anterior para no mostrarlos al siguiente (incl. caché productos/tenant)
+      context.read<ClienteProvider>().clearForNewUser();
+      context.read<VentasProvider>().clearForNewUser();
+      await context.read<ProductoProvider>().clearForNewUser();
+      context.read<CategoriasProvider>().clearForNewUser();
       context.read<PermisosProvider>().clearPermisos();
       await context.read<AuthProvider>().logout();
       if (mounted) {

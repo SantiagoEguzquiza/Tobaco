@@ -36,7 +36,14 @@ class Ventas {
     this.estadoEntrega = EstadoEntrega.noEntregada,
   });
 
-  factory Ventas.fromJson(Map<String, dynamic> json) => Ventas(
+  factory Ventas.fromJson(Map<String, dynamic> json) {
+    // El backend ya está guardando la fecha correctamente.
+    // Regla:
+    // - Si la cadena trae zona horaria (UTC, "Z", offset), convertir a local.
+    // - Si NO trae zona (ej: "2026-02-07T15:00:00"), tomarla tal cual como hora local.
+    final fechaParsed = DateTime.parse(json['fecha'] as String);
+    final fechaLocal = fechaParsed.isUtc ? fechaParsed.toLocal() : fechaParsed;
+    return Ventas(
         id: json['id'],
         clienteId: json['clienteId'] ?? 0,
         cliente: Cliente.fromJson(json['cliente']),
@@ -44,7 +51,7 @@ class Ventas {
             ?.map((e) => VentasProductos.fromJson(e))
             .toList() ?? [],
         total: (json['total'] as num?)?.toDouble() ?? 0.0,
-        fecha: DateTime.parse(json['fecha']),
+        fecha: fechaLocal,
         metodoPago: json['metodoPago'] != null
             ? MetodoPago.values[json['metodoPago'] as int]
             : null,
@@ -61,6 +68,7 @@ class Ventas {
             ? EstadoEntregaExtension.fromJson(json['estadoEntrega'])
             : EstadoEntrega.noEntregada,
       );
+  }
 
   Map<String, dynamic> toJson() => {
         if (id != null) 'id': id,

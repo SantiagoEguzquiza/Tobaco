@@ -16,6 +16,7 @@ import 'package:tobaco/Theme/app_theme.dart';
 import 'package:tobaco/Screens/Ventas/detalleVentas_screen.dart';
 import 'package:tobaco/Theme/dialogs.dart';
 import 'package:tobaco/Helpers/api_handler.dart';
+import 'package:tobaco/Services/Auth_Service/auth_service.dart';
 import 'dart:developer';
 
 class CuentaCorrienteDetalleScreen extends StatefulWidget {
@@ -90,6 +91,11 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
       });
     } catch (e) {
       log('Error al cargar cuenta corriente: $e', level: 1000);
+      if (AuthService.isSessionExpiredException(e)) {
+        await AuthService.logout();
+        _safeSetState(() => isLoadingDetalle = false);
+        return;
+      }
       if (Apihandler.isConnectionError(e)) {
         try {
           final offlineDetalle =
@@ -147,6 +153,11 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
       });
     } catch (e) {
       log('Error al cargar ventas: $e', level: 1000);
+      if (AuthService.isSessionExpiredException(e)) {
+        await AuthService.logout();
+        _safeSetState(() => isLoadingVentas = false);
+        return;
+      }
       if (Apihandler.isConnectionError(e)) {
         final offlineVentas = await _ccCacheService.obtenerVentasOffline(widget.cliente.id!);
         _safeSetState(() {
@@ -172,6 +183,11 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
       });
     } catch (e) {
       log('Error al cargar abonos: $e', level: 1000);
+      if (AuthService.isSessionExpiredException(e)) {
+        await AuthService.logout();
+        _safeSetState(() => isLoadingAbonos = false);
+        return;
+      }
       if (Apihandler.isConnectionError(e)) {
         final offlineAbonos =
             await _ccCacheService.obtenerAbonosOffline(widget.cliente.id!);
@@ -203,6 +219,11 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
       });
     } catch (e) {
       if (!mounted) return;
+      if (AuthService.isSessionExpiredException(e)) {
+        await AuthService.logout();
+        _safeSetState(() => isLoadingProductos = false);
+        return;
+      }
       final esTimeout = e is TimeoutException;
       if (Apihandler.isConnectionError(e) || esTimeout) {
         final productos = await _ccCacheService.obtenerProductosAFavorOffline(widget.cliente.id!);
@@ -233,6 +254,11 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
       });
     } catch (e) {
       if (!mounted) return;
+      if (AuthService.isSessionExpiredException(e)) {
+        await AuthService.logout();
+        _safeSetState(() => isLoadingNotasCredito = false);
+        return;
+      }
       _safeSetState(() {
         isLoadingNotasCredito = false;
       });
@@ -262,6 +288,9 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
         _isLoadingMoreVentas = false;
       });
     } catch (e) {
+      if (AuthService.isSessionExpiredException(e)) {
+        await AuthService.logout();
+      }
       _safeSetState(() {
         _isLoadingMoreVentas = false;
       });

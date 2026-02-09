@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:tobaco/Screens/menu_screen.dart';
@@ -113,6 +114,8 @@ class AuthWrapper extends StatefulWidget {
 class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
   final AppLifecycleObserver _lifecycleObserver = AppLifecycleObserver();
   bool _isInitializing = false;
+  bool _permisosLoadTriggered = false;
+  bool _permisosTimeoutFired = false;
 
   @override
   void initState() {
@@ -123,6 +126,10 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
     // AuthService limpia tokens y llama este callback para que la UI vuelva al login.
     AuthService.onSessionInvalidated = () {
       if (mounted) {
+        context.read<ClienteProvider>().clearForNewUser();
+        context.read<VentasProvider>().clearForNewUser();
+        unawaited(context.read<ProductoProvider>().clearForNewUser());
+        context.read<CategoriasProvider>().clearForNewUser();
         context.read<AuthProvider>().clearSession(
           sessionExpiredMessage: 'Tu sesión ha expirado. Por favor, inicia sesión nuevamente.',
         );
@@ -178,10 +185,8 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<AuthProvider>(
-      builder: (context, authProvider, child) {
-        // Solo mostrar pantalla de carga durante la verificación inicial (app startup).
-        // El login en sí muestra el loading en el botón de la pantalla de login.
+    return Consumer2<AuthProvider, PermisosProvider>(
+      builder: (context, authProvider, permisosProvider, child) {
         if (authProvider.isInitializing) {
           return const Scaffold(
             body: Center(
@@ -189,12 +194,10 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
             ),
           );
         }
-        
-        // Si está autenticado, verificar el rol
+
         if (authProvider.isAuthenticated) {
           final user = authProvider.currentUser;
-          
-          // Si el usuario aún no está cargado, mostrar pantalla de carga
+
           if (user == null) {
             return const Scaffold(
               body: Center(
@@ -202,18 +205,99 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
               ),
             );
           }
-          
-          // Si es SuperAdmin, mostrar su menú especial
+
           if (user.isSuperAdmin) {
             return const SuperAdminMenuScreen();
           }
-          
-          // Si es Admin o Employee, mostrar el menú normal
+
+          final esperandoPermisos = permisosProvider.isLoading ||
+              (!permisosProvider.isAdmin &&
+                  permisosProvider.permisos == null &&
+                  !permisosProvider.hasAttemptedLoad);
+          final errorPermisos = !permisosProvider.isAdmin &&
+              permisosProvider.permisos == null &&
+              permisosProvider.hasAttemptedLoad &&
+              !permisosProvider.isLoading;
+
+          if (esperandoPermisos) {
+            // Disparar carga desde aquí por si login_screen se desmontó (primera vez tras instalar)
+            if (!_permisosLoadTriggered) {
+              _permisosLoadTriggered = true;
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (!mounted) return;
+                context.read<PermisosProvider>().loadPermisos(authProvider, forceReload: true);
+              });
+            }
+            // Si tras 15s sigue cargando, mostrar Reintentar (no menú con permisos por defecto)
+            if (!_permisosTimeoutFired) {
+              _permisosTimeoutFired = true;
+              Future.delayed(const Duration(seconds: 15), () {
+                if (!mounted) return;
+                context.read<PermisosProvider>().marcarTimeoutPermisos();
+              });
+            }
+            return const Scaffold(
+              body: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    CircularProgressIndicator(),
+                    SizedBox(height: 16),
+                    Text('Cargando permisos...', style: TextStyle(fontSize: 14)),
+                  ],
+                ),
+              ),
+            );
+          }
+
+          if (errorPermisos) {
+            final mensaje = permisosProvider.errorMessage ?? 'No se pudieron cargar los permisos.';
+            return Scaffold(
+              body: SafeArea(
+                child: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24.0),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.warning_amber_rounded, size: 56, color: Colors.orange.shade700),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Error al cargar permisos',
+                          style: Theme.of(context).textTheme.titleLarge,
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          mensaje,
+                          style: Theme.of(context).textTheme.bodyMedium,
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 24),
+                        ElevatedButton.icon(
+                          onPressed: () async {
+                            await context.read<PermisosProvider>().reintentarPermisos(authProvider);
+                          },
+                          icon: const Icon(Icons.refresh),
+                          label: const Text('Reintentar'),
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            );
+          }
+
+          _permisosLoadTriggered = false;
+          _permisosTimeoutFired = false;
           return const MenuScreen();
-        } else {
-          // Si no está autenticado, mostrar login
-          return const LoginScreen();
         }
+
+        return const LoginScreen();
       },
     );
   }

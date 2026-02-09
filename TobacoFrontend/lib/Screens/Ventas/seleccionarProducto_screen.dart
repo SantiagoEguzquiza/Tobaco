@@ -288,69 +288,100 @@ class _SeleccionarProductosScreenState
       }
 
       // Actualizar desde el servidor en background (sin bloquear UI)
+      // En modo offline no reemplazar productos por lista vacía: mantener los del caché
       Future.wait([
         productoProvider.obtenerProductos(),
         categoriasProvider.obtenerCategorias(),
       ]).then((results) {
-        if (mounted) {
-          final fetchedProductos = results[0] as List<Producto>;
-          final fetchedCategorias = results[1] as List<Categoria>;
-          
-          setState(() {
-            categorias = fetchedCategorias;
-            productos = fetchedProductos;
-            for (var ps in widget.productosYaSeleccionados) {
-              cantidades[ps.id] = ps.cantidad;
-            }
-
-            // Si hay un producto al que hacer scroll, seleccionar su categoría
-            if (widget.scrollToProductId != null) {
-              final producto = fetchedProductos.firstWhere(
+        if (!mounted) return;
+        final fetchedProductos = results[0] as List<Producto>;
+        final fetchedCategorias = results[1] as List<Categoria>;
+        // No reemplazar con lista vacía si ya teníamos productos (evita que desaparezcan offline)
+        final productosFinal = fetchedProductos.isNotEmpty
+            ? fetchedProductos
+            : productos;
+        final categoriasFinal = fetchedCategorias.isNotEmpty
+            ? fetchedCategorias
+            : categorias;
+        setState(() {
+          categorias = categoriasFinal;
+          productos = productosFinal;
+          for (var ps in widget.productosYaSeleccionados) {
+            cantidades[ps.id] = ps.cantidad;
+          }
+          if (widget.scrollToProductId != null && productosFinal.isNotEmpty) {
+            try {
+              final producto = productosFinal.firstWhere(
                 (p) => p.id == widget.scrollToProductId,
-                orElse: () => fetchedProductos.first,
+                orElse: () => productosFinal.first,
               );
               selectedCategory = producto.categoriaNombre;
-            }
-
-            isLoading = false;
-          });
-        }
-      }).catchError((e) {
+            } catch (_) {}
+          }
+          isLoading = false;
+        });
+      }).catchError((e) async {
         debugPrint('Error actualizando productos desde servidor: $e');
-        // Si falla la actualización, mantener los del caché que ya se mostraron
-        if (mounted && productos.isEmpty) {
+        if (!mounted) return;
+        // Si no teníamos productos, intentar una vez más desde caché/SQLite (modo offline)
+        if (productos.isEmpty) {
+          try {
+            final productosOffline = await productoProvider.obtenerProductosDelCache();
+            final categoriasOffline = await categoriasProvider.obtenerCategoriasDelCache();
+            if (mounted && productosOffline.isNotEmpty) {
+              setState(() {
+                productos = productosOffline;
+                categorias = categoriasOffline;
+                for (var ps in widget.productosYaSeleccionados) {
+                  cantidades[ps.id] = ps.cantidad;
+                }
+                isLoading = false;
+              });
+              return;
+            }
+          } catch (_) {}
           setState(() {
             isLoading = false;
             errorMessage = 'Error al cargar productos';
           });
+        } else {
+          setState(() => isLoading = false);
         }
       });
 
-      // Si no había caché, esperar a que cargue del servidor
+      // Si no había caché, cargar del servidor o (offline) de caché/SQLite
       if (productos.isEmpty) {
-        final List<Producto> fetchedProductos =
-            await productoProvider.obtenerProductos();
-        final List<Categoria> fetchedCategorias =
-            await categoriasProvider.obtenerCategorias();
-
+        List<Producto> fetchedProductos = [];
+        List<Categoria> fetchedCategorias = [];
+        try {
+          fetchedProductos = await productoProvider.obtenerProductos();
+          fetchedCategorias = await categoriasProvider.obtenerCategorias();
+        } catch (e) {
+          debugPrint('Error cargando productos/categorías: $e');
+          // Modo offline: intentar solo desde caché/SQLite (sin llamar al servidor)
+          try {
+            fetchedProductos = await productoProvider.obtenerProductosDelCache();
+            fetchedCategorias = await categoriasProvider.obtenerCategoriasDelCache();
+          } catch (_) {}
+        }
         if (mounted) {
           setState(() {
-            categorias = fetchedCategorias;
-            productos = fetchedProductos;
+            if (fetchedProductos.isNotEmpty) categorias = fetchedCategorias;
+            if (fetchedProductos.isNotEmpty) productos = fetchedProductos;
             for (var ps in widget.productosYaSeleccionados) {
               cantidades[ps.id] = ps.cantidad;
             }
-
-            // Si hay un producto al que hacer scroll, seleccionar su categoría
-            if (widget.scrollToProductId != null) {
-              final producto = fetchedProductos.firstWhere(
-                (p) => p.id == widget.scrollToProductId,
-                orElse: () => fetchedProductos.first,
-              );
-              selectedCategory = producto.categoriaNombre;
+            if (widget.scrollToProductId != null && productos.isNotEmpty) {
+              try {
+                final producto = productos.firstWhere(
+                  (p) => p.id == widget.scrollToProductId,
+                  orElse: () => productos.first,
+                );
+                selectedCategory = producto.categoriaNombre;
+              } catch (_) {}
             }
-
             isLoading = false;
+            if (productos.isEmpty) errorMessage = 'No hay productos. Conecta para sincronizar.';
           });
         }
       }
