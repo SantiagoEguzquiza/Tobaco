@@ -1591,7 +1591,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
         cliente: clienteSeleccionado!,
         ventasProductos: productos,
         total: totalFinal,
-        fecha: DateTime.now().toLocal(), // Asegurar que sea hora local
+        fecha: DateTime.now().toUtc(), // Enviar siempre en UTC al backend
       );
 
       final Ventas? ventaConPagos = await Navigator.push(

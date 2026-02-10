@@ -431,9 +431,8 @@ class VentasProvider with ChangeNotifier {
         'usuarioAsignadoNombre': response['usuarioAsignadoNombre'],
       };
     } catch (e) {
-      if (!_esErrorDeConexion(e)) {
-        rethrow;
-      }
+      // Guardar siempre localmente si falla el servidor (400, 500, timeout, sin conexión)
+      // para que la venta no se pierda; el usuario puede sincronizar después.
       final localId = await _db.saveVentaOffline(venta);
       _ventas.insert(0, venta);
       _ventaLocalIds[venta] = localId;
@@ -451,11 +450,16 @@ class VentasProvider with ChangeNotifier {
       await _actualizarCacheDesdeVentasActuales();
       notifyListeners();
 
+      final bool esErrorConexion = _esErrorDeConexion(e);
+      final String message = esErrorConexion
+          ? 'Venta guardada localmente. Se sincronizará cuando haya conexión.'
+          : 'No se pudo guardar en el servidor. Se guardó localmente. Puedes sincronizar después.';
+
       return {
         'success': true,
         'isOffline': true,
-        'message':
-            'Venta guardada localmente. Se sincronizará cuando haya conexión.',
+        'message': message,
+        'serverError': !esErrorConexion,
       };
     }
   }
@@ -541,7 +545,8 @@ class VentasProvider with ChangeNotifier {
     _isLoading = false;
     _isLoadingMore = false;
     _offlineMessageShown = false;
-    notifyListeners();
+    // Defer to avoid setState/markNeedsBuild during build (e.g. when called from session invalidated callback)
+    Future.microtask(() => notifyListeners());
   }
 
   /// Deja la lista vacía y activa loading para que al abrir Ventas se muestre carga y no la lista anterior.
@@ -553,7 +558,8 @@ class VentasProvider with ChangeNotifier {
     _errorMessage = null;
     _isLoading = true;
     _isLoadingMore = false;
-    notifyListeners();
+    // Defer to avoid setState/markNeedsBuild during build
+    Future.microtask(() => notifyListeners());
   }
 
   /// Borra todas las ventas pendientes de sincronizar (útil para limpiar ventas bugeadas)

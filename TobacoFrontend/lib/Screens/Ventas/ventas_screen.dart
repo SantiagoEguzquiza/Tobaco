@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tobaco/Models/Ventas.dart';
 import 'package:tobaco/Models/EstadoEntrega.dart';
 import 'package:tobaco/Screens/Ventas/nuevaVenta_screen.dart';
@@ -30,27 +29,21 @@ class _VentasScreenState extends State<VentasScreen> {
   @override
   void initState() {
     super.initState();
-    // Mostrar loading de entrada y no la lista anterior (evita "listado → carga → listado de nuevo")
-    context.read<VentasProvider>().prepararParaCargaInicial();
-      Future.microtask(() async {
-      // Limpiar ventas pendientes bugeadas (solo una vez)
-      final prefs = await SharedPreferences.getInstance();
-      final yaLimpiado = prefs.getBool('ventas_pendientes_limpiadas') ?? false;
-      if (!yaLimpiado) {
-        try {
-          final borradas = await context.read<VentasProvider>().borrarTodasLasVentasPendientes();
-          if (borradas > 0) {
-            await prefs.setBool('ventas_pendientes_limpiadas', true);
-            debugPrint('✅ VentasScreen: $borradas ventas pendientes bugeadas eliminadas');
-          }
-        } catch (e) {
-          debugPrint('⚠️ VentasScreen: Error al limpiar ventas pendientes: $e');
-        }
-      }
-      // Primera carga: usar timeout normal (más largo) para dar tiempo al backend.
-      await context.read<VentasProvider>().cargarVentas(usarTimeoutNormal: true);
-    });
     _scrollController.addListener(_onScroll);
+    // Defer to after first frame to avoid setState/markNeedsBuild during build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      // Mostrar loading de entrada y no la lista anterior (evita "listado → carga → listado de nuevo")
+      context.read<VentasProvider>().prepararParaCargaInicial();
+      _inicializarVentas();
+    });
+  }
+
+  Future<void> _inicializarVentas() async {
+    // No borrar ventas pendientes al abrir: se preservan para que el usuario
+    // pueda sincronizar después (p. ej. si el servidor falló al guardar).
+    if (!mounted) return;
+    await context.read<VentasProvider>().cargarVentas(usarTimeoutNormal: true);
   }
 
   @override

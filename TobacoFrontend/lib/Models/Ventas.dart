@@ -76,7 +76,7 @@ class Ventas {
         'cliente': cliente.toJson(),
         'ventaProductos': ventasProductos.map((e) => e.toJson()).toList(),
         'total': total,
-        'fecha': fecha.toIso8601String(),
+        'fecha': fecha.toUtc().toIso8601String(), // Siempre enviar en UTC
         'metodoPago': metodoPago?.index,
         'ventaPagos': pagos?.map((e) => e.toJson()).toList() ?? [],
         'usuarioIdCreador': usuarioIdCreador,
@@ -84,5 +84,26 @@ class Ventas {
         'usuarioIdAsignado': usuarioIdAsignado,
         'usuarioAsignado': usuarioAsignado?.toJson(),
         'estadoEntrega': estadoEntrega.toJson(),
-      };    
+      };
+
+  /// Payload solo con IDs para crear venta; evita enviar entidades anidadas
+  /// que pueden provocar "An error occurred while saving the entity changes" en el backend.
+  Map<String, dynamic> toJsonForCreate() => {
+        'clienteId': clienteId,
+        'ventaProductos': ventasProductos.map((e) => e.toJson()).toList(),
+        'total': total,
+        'fecha': fecha.toUtc().toIso8601String(), // Siempre enviar en UTC
+        if (metodoPago != null) 'metodoPago': metodoPago!.index,
+        'ventaPagos': pagos
+            ?.map((e) => {
+                  'id': 0,
+                  'ventaId': 0,
+                  'metodo': e.metodo.index,
+                  'monto': e.monto,
+                })
+            .toList() ?? [],
+        if (usuarioIdCreador != null) 'usuarioIdCreador': usuarioIdCreador,
+        if (usuarioIdAsignado != null) 'usuarioIdAsignado': usuarioIdAsignado,
+        'estadoEntrega': estadoEntrega.toJson(),
+      };
 }
