@@ -37,7 +37,7 @@ class _RecuperarContrasenaScreenState extends State<RecuperarContrasenaScreen> {
             headers: {'Content-Type': 'application/json'},
             body: jsonEncode({'userName': userName}),
           )
-          .timeout(const Duration(seconds: 15));
+          .timeout(const Duration(seconds: 25));
 
       if (!mounted) return;
       setState(() => _isLoading = false);
