@@ -701,7 +701,7 @@ class AppTheme {
                             child: Text(
                               cancelText,
                               style: TextStyle(
-                                color: Colors.white,
+                                color: isDark ? Colors.white : Colors.black,
                                 fontWeight: FontWeight.w600,
                                 fontSize: 15,
                                 letterSpacing: 0.2,
