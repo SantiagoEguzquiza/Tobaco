@@ -29,6 +29,7 @@ class _EditarClienteScreenState extends State<EditarClienteScreen> {
   final _descuentoGlobalController = TextEditingController();
   double? _latitud;
   double? _longitud;
+  bool _hasCCTE = false;
   
   bool _isLoading = false;
   
@@ -77,6 +78,7 @@ class _EditarClienteScreenState extends State<EditarClienteScreen> {
         : widget.cliente.descuentoGlobal.toString();
     _latitud = widget.cliente.latitud;
     _longitud = widget.cliente.longitud;
+    _hasCCTE = widget.cliente.hasCCTE;
   }
 
   @override
@@ -118,6 +120,7 @@ class _EditarClienteScreenState extends State<EditarClienteScreen> {
         latitud: _latitud,
         longitud: _longitud,
         visible: widget.cliente.visible,
+        hasCCTE: _hasCCTE,
       );
 
       await _clienteProvider.editarCliente(clienteActualizado);
@@ -195,6 +198,7 @@ class _EditarClienteScreenState extends State<EditarClienteScreen> {
           latitud: _latitud,
           longitud: _longitud,
           visible: widget.cliente.visible,
+          hasCCTE: _hasCCTE,
         );
 
         await _clienteProvider.editarCliente(clienteActualizado);
@@ -207,6 +211,7 @@ class _EditarClienteScreenState extends State<EditarClienteScreen> {
         widget.cliente.descuentoGlobal = clienteActualizado.descuentoGlobal;
         widget.cliente.latitud = clienteActualizado.latitud;
         widget.cliente.longitud = clienteActualizado.longitud;
+        widget.cliente.hasCCTE = clienteActualizado.hasCCTE;
       } catch (e) {
         setState(() {
           _isLoading = false;
@@ -270,7 +275,8 @@ class _EditarClienteScreenState extends State<EditarClienteScreen> {
         _normalizarDeuda(_deudaController.text) != (widget.cliente.deuda ?? '0') ||
         (_descuentoGlobalController.text.trim().isEmpty ? 0.0 : double.tryParse(_descuentoGlobalController.text.trim()) ?? 0.0) != widget.cliente.descuentoGlobal ||
         _latitud != widget.cliente.latitud ||
-        _longitud != widget.cliente.longitud;
+        _longitud != widget.cliente.longitud ||
+        _hasCCTE != widget.cliente.hasCCTE;
   }
 
   @override
@@ -519,6 +525,15 @@ class _EditarClienteScreenState extends State<EditarClienteScreen> {
                 }
                 return null;
               },
+            ),
+            const SizedBox(height: 20),
+            // Habilitar Cuenta Corriente
+            SwitchListTile(
+              value: _hasCCTE,
+              onChanged: (value) => setState(() => _hasCCTE = value),
+              title: const Text('Habilitar Cuenta Corriente'),
+              subtitle: const Text('Permite que este cliente pague con cuenta corriente'),
+              activeColor: AppTheme.primaryColor,
             ),
             const SizedBox(height: 30),
             

@@ -603,10 +603,17 @@ class AppTheme {
     return Builder(
       builder: (context) {
         final isDark = Theme.of(context).brightness == Brightness.dark;
+        final mq = MediaQuery.of(context);
+        // Redondear el inset del teclado para evitar que la altura cambie en cada frame
+        // y se produzca el efecto de teclado subiendo/bajando rápido
+        final keyboardInset = (mq.viewInsets.bottom / 60).round() * 60.0;
+        final maxDialogHeight = (mq.size.height - keyboardInset - 32)
+            .clamp(280.0, 560.0);
         return Dialog(
           backgroundColor: Colors.transparent,
           elevation: 0,
           child: Container(
+            constraints: BoxConstraints(maxHeight: maxDialogHeight),
             decoration: BoxDecoration(
               color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
               borderRadius: BorderRadius.circular(24),
@@ -623,8 +630,9 @@ class AppTheme {
               borderRadius: BorderRadius.circular(24),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.start,
                 children: [
-                  // Header con título
+                  // Header con título (tamaño fijo)
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
@@ -652,10 +660,18 @@ class AppTheme {
                     ),
                   ),
                   
-                  // Contenido
+                  // Contenido (altura limitada y scroll si no cabe)
+                  // Sin Key en viewInsets para evitar que el teclado suba/baje rápido (rebuilds por frame)
                   Padding(
                     padding: const EdgeInsets.all(24),
-                    child: content,
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxHeight: maxDialogHeight - 220,
+                      ),
+                      child: SingleChildScrollView(
+                        child: content,
+                      ),
+                    ),
                   ),
                   
                   // Botones

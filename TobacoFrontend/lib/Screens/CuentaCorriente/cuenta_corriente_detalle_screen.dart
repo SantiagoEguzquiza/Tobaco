@@ -946,8 +946,8 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
       return _buildEmptyState(
         isDarkMode: isDarkMode,
         icon: Icons.receipt_long,
-        title: 'No hay ventas con cuenta corriente',
-        subtitle: 'Este cliente no tiene ventas pendientes de pago',
+        title: 'No hay ventas a cuenta corriente',
+        subtitle: 'El historial de ventas a CC aparecerá aquí',
       );
     }
 

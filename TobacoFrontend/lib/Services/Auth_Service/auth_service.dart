@@ -35,6 +35,34 @@ class AuthService {
     ),
   );
 
+  /// Si el almacenamiento seguro falla al desencriptar (reinstalación, cambio de Keystore),
+  /// limpiamos sesión una vez para evitar errores repetidos y dejar estado "no logueado".
+  static bool _corruptionHandled = false;
+
+  static bool _isStorageCorruptionError(dynamic e) {
+    final s = e.toString().toLowerCase();
+    return s.contains('invalidkey') ||
+        s.contains('aeadbadtag') ||
+        s.contains('signature/mac') ||
+        s.contains('unwrap') ||
+        s.contains('keystore') ||
+        s.contains('encryptedsharedpreferences') ||
+        s.contains('mac verification failed');
+  }
+
+  static Future<void> _clearCorruptedAuthStorage() async {
+    if (_corruptionHandled) return;
+    _corruptionHandled = true;
+    debugPrint('AuthService: Almacenamiento seguro corrupto o clave cambiada, limpiando sesión.');
+    try {
+      await _secureStorage.delete(key: _tokenKey);
+      await _secureStorage.delete(key: _refreshTokenKey);
+    } catch (_) {}
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_tokenExpiryKey);
+    await prefs.remove(_userKey);
+  }
+
   // Login user (con reintentos automáticos si falla por conexión/timeout tras estar la app en segundo plano)
   static Future<LoginResponse?> login(LoginRequest loginRequest) async {
     int attempt = 0;
@@ -76,6 +104,12 @@ class AuthService {
           await Future.delayed(_loginRetryDelay);
           continue;
         }
+        // Mensaje claro cuando falla por conexión tras todos los reintentos
+        if (isConnectionError) {
+          throw Exception(
+            'No se pudo conectar al servidor. Verifica que estés en la misma red (Wi‑Fi) '
+            'y que el backend esté en ejecución.');
+        }
         // Clean up the error message to remove "Exception" prefix
         String errorMessage = e.toString();
         if (errorMessage.contains('Exception: ')) {
@@ -114,6 +148,9 @@ class AuthService {
       return token;
     } catch (e) {
       debugPrint('AuthService.getToken: Error al leer token: $e');
+      if (_isStorageCorruptionError(e)) {
+        await _clearCorruptedAuthStorage();
+      }
       return null;
     }
   }
@@ -125,6 +162,9 @@ class AuthService {
       return refreshToken;
     } catch (e) {
       debugPrint('AuthService.getRefreshToken: Error al leer refresh token: $e');
+      if (_isStorageCorruptionError(e)) {
+        await _clearCorruptedAuthStorage();
+      }
       return null;
     }
   }

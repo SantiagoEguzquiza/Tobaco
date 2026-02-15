@@ -29,6 +29,7 @@ class _NuevoClienteScreenState extends State<NuevoClienteScreen> {
   Cliente? _clienteCreado;
   bool _isLoading = false;
   String? _errorMessage;
+  bool _hasCCTE = false;
 
   /// Normaliza el valor de deuda: convierte comas a puntos y formatea correctamente
   String _normalizarDeuda(String? valor) {
@@ -91,6 +92,7 @@ class _NuevoClienteScreenState extends State<NuevoClienteScreen> {
         preciosEspeciales: [],
         latitud: _latitud,
         longitud: _longitud,
+        hasCCTE: _hasCCTE,
       );
 
       final clienteProvider = Provider.of<ClienteProvider>(context, listen: false);
@@ -184,6 +186,7 @@ class _NuevoClienteScreenState extends State<NuevoClienteScreen> {
           preciosEspeciales: [],
           latitud: _latitud,
           longitud: _longitud,
+          hasCCTE: _hasCCTE,
         );
 
         final clienteProvider = Provider.of<ClienteProvider>(context, listen: false);
@@ -500,9 +503,15 @@ class _NuevoClienteScreenState extends State<NuevoClienteScreen> {
                 return null;
               },
             ),
-            const SizedBox(height: 30),
-            
-            
+            const SizedBox(height: 20),
+            // Habilitar Cuenta Corriente
+            SwitchListTile(
+              value: _hasCCTE,
+              onChanged: (value) => setState(() => _hasCCTE = value),
+              title: const Text('Habilitar Cuenta Corriente'),
+              subtitle: const Text('Permite que este cliente pague con cuenta corriente'),
+              activeColor: AppTheme.primaryColor,
+            ),
             const SizedBox(height: 30),
             
             // Botón Crear Cliente

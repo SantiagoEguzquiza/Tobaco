@@ -13,7 +13,8 @@ class Cliente {
   double? latitud;
   double? longitud;
   bool visible;
-
+  /// Indica si el cliente puede operar con cuenta corriente.
+  bool hasCCTE;
 
   Cliente(
       {required this.id,
@@ -26,6 +27,7 @@ class Cliente {
       this.latitud,
       this.longitud,
       this.visible = true,
+      this.hasCCTE = false,
       });
 
   factory Cliente.fromJson(Map<String, dynamic> json) {
@@ -49,6 +51,7 @@ class Cliente {
       latitud: (json['latitud'] as num?)?.toDouble(),
       longitud: (json['longitud'] as num?)?.toDouble(),
       visible: json['visible'] as bool? ?? true,
+      hasCCTE: json['hasCCTE'] as bool? ?? false,
     );
   }
 
@@ -74,6 +77,7 @@ class Cliente {
       'latitud': latitud,
       'longitud': longitud,
       'visible': visible,
+      'hasCCTE': hasCCTE,
     };
     
     // Solo incluir el id si no es null (para actualizaciones)
@@ -95,6 +99,7 @@ class Cliente {
       'latitud': latitud,
       'longitud': longitud,
       'visible': visible,
+      'hasCCTE': hasCCTE,
     };
   }
 }
