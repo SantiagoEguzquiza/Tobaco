@@ -41,12 +41,18 @@ class _FormaPagoScreenState extends State<FormaPagoScreen> {
   final List<PagoParcial> pagosParciales = [];
   final TextEditingController _montoController = TextEditingController();
 
-  final List<_MetodoPago> metodos = [
-    _MetodoPago(MetodoPago.efectivo, 'Efectivo', Icons.payments),
-    _MetodoPago(MetodoPago.transferencia, 'Transferencia', Icons.swap_horiz),
-    //_MetodoPago(MetodoPago.tarjeta, 'Tarjeta', Icons.credit_card), Cuando tenga posnet lo agrego, un shotout al developer que lo haga :D
-    _MetodoPago(MetodoPago.cuentaCorriente, 'Cuenta corriente', Icons.receipt_long),
-  ];
+  /// Métodos de pago disponibles. Cuenta Corriente solo si el cliente tiene hasCCTE.
+  List<_MetodoPago> get metodos {
+    final base = [
+      _MetodoPago(MetodoPago.efectivo, 'Efectivo', Icons.payments),
+      _MetodoPago(MetodoPago.transferencia, 'Transferencia', Icons.swap_horiz),
+      //_MetodoPago(MetodoPago.tarjeta, 'Tarjeta', Icons.credit_card), Cuando tenga posnet lo agrego, un shotout al developer que lo haga :D
+    ];
+    if (widget.venta.cliente.hasCCTE) {
+      base.add(_MetodoPago(MetodoPago.cuentaCorriente, 'Cuenta corriente', Icons.receipt_long));
+    }
+    return base;
+  }
 
   @override
   void dispose() {

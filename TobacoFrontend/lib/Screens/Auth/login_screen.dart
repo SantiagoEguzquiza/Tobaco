@@ -7,6 +7,7 @@ import '../../Services/Clientes_Service/clientes_provider.dart';
 import '../../Services/Categoria_Service/categoria_provider.dart';
 import '../../Helpers/api_handler.dart';
 import '../menu_screen.dart';
+import 'recuperar_contrasena_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -259,7 +260,29 @@ class _LoginScreenState extends State<LoginScreen> {
                 return null;
               },
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 8),
+            Center(
+              child: TextButton(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => const RecuperarContrasenaScreen(),
+                    ),
+                  );
+                },
+                style: TextButton.styleFrom(
+                  foregroundColor: const Color(0xFF2E7D32),
+                ),
+                child: const Text(
+                  '¿Olvidaste tu contraseña?',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontFamily: 'Raleway',
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
 
             // Error Message
             Consumer<AuthProvider>(

@@ -313,7 +313,7 @@ class _CuentaCorrienteScreenState extends State<CuentaCorrienteScreen> {
               const SizedBox(height: 8),
               Text(
                 _searchText.isEmpty
-                    ? 'Aparecerán aquí al tener ventas o abonos'
+                    ? 'Habilita la cuenta corriente en un cliente para que aparezca aquí'
                     : 'Intenta con otro término de búsqueda',
                 style: TextStyle(
                   fontSize: 14,

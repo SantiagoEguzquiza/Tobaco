@@ -1,9 +1,18 @@
 import 'dart:io';
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/io_client.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tobaco/Theme/dialogs.dart';
+
+/// URL del backend. Cambia solo aquí según dónde corras la app.
+class ApiConfig {
+  /// Backend en tu PC: celular y PC en la misma Wi‑Fi. Reemplaza por la IP de tu PC (ipconfig).
+  static const String localUrl = 'http://192.168.0.101:5006';
+  /// Backend en producción (Railway).
+  static const String productionUrl = 'https://tobacoapi-production.up.railway.app';
+}
 
 class Apihandler {
   static final HttpClient httpClient = HttpClient()
@@ -12,9 +21,13 @@ class Apihandler {
 
   static final IOClient client = IOClient(httpClient);
 
-  // Emulador Android: 10.0.2.2 es el host de tu PC. Puerto según launchSettings (HTTPS: 7148).
-  static final baseUrl = Uri.parse('https://tobacoapi-production.up.railway.app');
-  // URL del servidor en Azure: 'https://tobaco-api-e4f7adesh0dfakcc.brazilsouth-01.azurewebsites.net'    
+  /// En debug (celular/emulador): usa backend local. En release: producción.
+  /// Para probar en celular: 1) Misma Wi‑Fi. 2) Backend con perfil "http". 3) ApiConfig.localUrl = IP de tu PC.
+  static Uri get baseUrl {
+    final url = kDebugMode ? ApiConfig.localUrl : ApiConfig.productionUrl;
+    debugPrint('ApiHandler: conectando a $url');
+    return Uri.parse(url);
+  }
 
   static Future<bool> checkTokenAndFetchData(BuildContext context) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();

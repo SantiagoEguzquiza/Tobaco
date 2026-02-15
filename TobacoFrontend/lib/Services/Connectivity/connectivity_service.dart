@@ -98,9 +98,14 @@ class ConnectivityService {
     _lastBackendCheck = DateTime.now();
     
     try {
-    
-      
-      final headers = await AuthService.getAuthHeaders();
+      // Health check es público; no usar auth para no fallar en login/recuperar contraseña
+      Map<String, String> headers = Map.from({'Content-Type': 'application/json'});
+      try {
+        final authHeaders = await AuthService.getAuthHeaders();
+        headers.addAll(authHeaders);
+      } catch (_) {
+        // Sin token (ej. pantalla de login o recuperar contraseña), seguir sin Authorization
+      }
       final response = await Apihandler.client.get(
         Apihandler.baseUrl.resolve('/api/health'),
         headers: headers,
