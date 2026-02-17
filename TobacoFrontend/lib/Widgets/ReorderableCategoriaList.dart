@@ -7,10 +7,12 @@ import 'package:tobaco/Theme/app_theme.dart';
 
 class ReorderableCategoriaList extends StatefulWidget {
   final Function(Categoria)? onDelete;
-  
+  final Function(Categoria)? onEdit;
+
   const ReorderableCategoriaList({
     super.key,
     this.onDelete,
+    this.onEdit,
   });
 
   @override
@@ -236,7 +238,32 @@ class _ReorderableCategoriaListState extends State<ReorderableCategoriaList> {
                   return Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      if (widget.onDelete != null && permisosProvider.canDeleteProductos)
+                      if (widget.onEdit != null &&
+                          permisosProvider.canEditProductos &&
+                          categoria.id != null)
+                        Container(
+                          decoration: BoxDecoration(
+                            color: AppTheme.primaryColor.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: IconButton(
+                            icon: Icon(
+                              Icons.edit_outlined,
+                              color: AppTheme.primaryColor,
+                              size: 20,
+                            ),
+                            onPressed: () {
+                              widget.onEdit!(categoria);
+                            },
+                            tooltip: 'Editar',
+                          ),
+                        ),
+                      if (widget.onEdit != null &&
+                          permisosProvider.canEditProductos &&
+                          categoria.id != null)
+                        const SizedBox(width: 8),
+                      if (widget.onDelete != null &&
+                          permisosProvider.canDeleteProductos)
                         Container(
                           decoration: BoxDecoration(
                             color: Colors.red.withOpacity(0.1),
@@ -254,7 +281,9 @@ class _ReorderableCategoriaListState extends State<ReorderableCategoriaList> {
                             tooltip: 'Eliminar',
                           ),
                         ),
-                      const SizedBox(width: 8),
+                      if (widget.onDelete != null &&
+                          permisosProvider.canDeleteProductos)
+                        const SizedBox(width: 8),
                       Icon(
                         Icons.drag_handle,
                         color: Theme.of(context).brightness == Brightness.dark

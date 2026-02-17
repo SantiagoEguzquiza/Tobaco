@@ -17,6 +17,7 @@ class CategoriasScreen extends StatefulWidget {
 
 class _CategoriasScreenState extends State<CategoriasScreen> {
   final TextEditingController _nombreController = TextEditingController();
+  final TextEditingController _editNombreController = TextEditingController();
 
   @override
   void initState() {
@@ -27,6 +28,7 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
   @override
   void dispose() {
     _nombreController.dispose();
+    _editNombreController.dispose();
     super.dispose();
   }
 
@@ -96,6 +98,142 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
         );
       }
     }
+  }
+
+  Future<void> _editarCategoria(Categoria categoria) async {
+    final provider = context.read<CategoriasProvider>();
+    final nombre = _editNombreController.text.trim();
+    if (nombre.isEmpty) {
+      AppTheme.showSnackBar(
+        context,
+        AppTheme.warningSnackBar('El nombre de la categoría es requerido'),
+      );
+      return;
+    }
+
+    try {
+      await provider.editarCategoria(
+        categoria.id!,
+        nombre,
+        provider.selectedColor,
+      );
+
+      if (mounted) {
+        AppTheme.showSnackBar(
+          context,
+          AppTheme.successSnackBar('Categoría actualizada exitosamente'),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      final errorStr = e.toString().toLowerCase();
+      final mensaje = errorStr.contains('ya existe') || errorStr.contains('duplicad')
+          ? 'El nombre seleccionado ya existe, pruebe con otro.'
+          : e.toString().replaceFirst('Exception: ', '');
+      AppTheme.showSnackBar(
+        context,
+        AppTheme.errorSnackBar(mensaje),
+      );
+    }
+  }
+
+  void _showEditCategoriaDialog(Categoria categoria) {
+    _editNombreController.text = categoria.nombre;
+    _editNombreController.selection = TextSelection.collapsed(
+      offset: _editNombreController.text.length,
+    );
+    context.read<CategoriasProvider>().seleccionarColor(categoria.colorHex);
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => Consumer<CategoriasProvider>(
+        builder: (context, provider, _) => AppTheme.customAlertDialog(
+          title: 'Editar Categoría',
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const SizedBox(height: 4),
+              Theme(
+                data: Theme.of(context).copyWith(
+                  textSelectionTheme: TextSelectionThemeData(
+                    cursorColor: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white
+                        : Colors.black,
+                    selectionColor: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white.withOpacity(0.3)
+                        : Colors.black.withOpacity(0.2),
+                  ),
+                  inputDecorationTheme: InputDecorationTheme(
+                    labelStyle: TextStyle(
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white
+                          : Colors.black,
+                    ),
+                    hintStyle: TextStyle(
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.grey.shade400
+                          : Colors.grey.shade600,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.grey.shade600
+                            : Colors.grey.shade300,
+                      ),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.grey.shade600
+                            : Colors.grey.shade300,
+                      ),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(
+                        color: AppTheme.primaryColor,
+                        width: 2,
+                      ),
+                    ),
+                    filled: true,
+                    fillColor: Theme.of(context).brightness == Brightness.dark
+                        ? const Color(0xFF2A2A2A)
+                        : Colors.white,
+                  ),
+                ),
+                child: TextField(
+                  controller: _editNombreController,
+                  style: TextStyle(
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white
+                        : Colors.black,
+                  ),
+                  autofocus: true,
+                  decoration: const InputDecoration(
+                    labelText: 'Nombre de la categoría',
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              ColorPicker(
+                selectedColor: provider.selectedColor,
+                onColorSelected: provider.seleccionarColor,
+              ),
+            ],
+          ),
+          onCancel: () => Navigator.of(dialogContext).pop(),
+          onConfirm: () {
+            Navigator.of(dialogContext).pop();
+            _editarCategoria(categoria);
+          },
+          confirmText: 'Guardar',
+          cancelText: 'Cancelar',
+        ),
+      ),
+    );
   }
 
   void _showAddCategoriaDialog() {
@@ -388,6 +526,8 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
                         : ReorderableCategoriaList(
                             onDelete: (categoria) =>
                                 _eliminarCategoria(categoria),
+                            onEdit: (categoria) =>
+                                _showEditCategoriaDialog(categoria),
                           ),
                   ),
                 ],

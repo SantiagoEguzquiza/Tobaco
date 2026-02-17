@@ -517,15 +517,14 @@ class _VentasScreenState extends State<VentasScreen> {
 
   // Estado vacío
   Widget _buildEmptyState(bool hasSearchQuery) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       decoration: BoxDecoration(
-        color: Theme.of(context).brightness == Brightness.dark
-            ? const Color(0xFF1A1A1A)
-            : Colors.white,
+        color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
         borderRadius: BorderRadius.circular(15),
         boxShadow: [
           BoxShadow(
-            color: Theme.of(context).brightness == Brightness.dark
+            color: isDark
                 ? Colors.black.withOpacity(0.3)
                 : Colors.black.withOpacity(0.05),
             blurRadius: 10,
@@ -540,7 +539,9 @@ class _VentasScreenState extends State<VentasScreen> {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: AppTheme.secondaryColor,
+                color: isDark
+                    ? Colors.grey.shade800
+                    : AppTheme.secondaryColor,
                 shape: BoxShape.circle,
               ),
               child: Icon(
@@ -557,7 +558,7 @@ class _VentasScreenState extends State<VentasScreen> {
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w500,
-                color: Colors.grey.shade700,
+                color: isDark ? Colors.grey.shade300 : Colors.grey.shade700,
               ),
             ),
             const SizedBox(height: 8),
@@ -567,7 +568,7 @@ class _VentasScreenState extends State<VentasScreen> {
                   : 'Comienza creando tu primera venta',
               style: TextStyle(
                 fontSize: 14,
-                color: Colors.grey.shade600,
+                color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
               ),
               textAlign: TextAlign.center,
             ),
