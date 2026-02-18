@@ -320,7 +320,8 @@ class ClienteProvider with ChangeNotifier {
 
     _isLoading = true;
     _errorMessage = null;
-    _clientes.clear();
+    // NO limpiar la lista aquí - mantener los clientes actuales mientras se busca
+    // _clientes.clear(); // ❌ Comentado para evitar parpadeo
     _currentPage = 1;
     _hasMoreData = false; // La búsqueda no tiene paginación
     notifyListeners();
@@ -365,7 +366,13 @@ class ClienteProvider with ChangeNotifier {
               c.nombre.toLowerCase().contains(queryLower))
           .toList();
 
-      _clientes = [...empiezaCon, ...contiene];
+      // Solo actualizar si hay resultados o si queremos limpiar la lista
+      final nuevosResultados = [...empiezaCon, ...contiene];
+      if (nuevosResultados.isNotEmpty || _clientes.isEmpty) {
+        _clientes = nuevosResultados;
+      }
+      // Si no hay resultados pero ya hay clientes en la lista, mantenerlos
+      
       _isLoading = false;
       notifyListeners();
       return;
@@ -382,7 +389,13 @@ class ClienteProvider with ChangeNotifier {
             c.nombre.toLowerCase().contains(queryLower))
         .toList();
 
-    _clientes = [...empiezaCon, ...contiene];
+    // Solo actualizar si hay resultados o si queremos limpiar la lista
+    final nuevosResultados = [...empiezaCon, ...contiene];
+    if (nuevosResultados.isNotEmpty) {
+      _clientes = nuevosResultados;
+    }
+    // Si no hay resultados del servidor, mantener la lista actual (puede tener resultados del filtro local)
+    
     _isLoading = false;
     notifyListeners();
   }

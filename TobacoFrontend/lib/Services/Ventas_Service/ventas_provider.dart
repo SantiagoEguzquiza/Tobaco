@@ -338,70 +338,18 @@ class VentasProvider with ChangeNotifier {
   }
 
   Future<Map<String, dynamic>> crearVenta(Ventas venta) async {
+    // PRIORIDAD: Intentar guardar en el servidor primero
     try {
-      // Verificación rápida: solo verificar si hay internet básico (sin verificar backend)
-      // Esto permite que el mensaje aparezca inmediatamente si no hay internet
-      bool tieneConexion = false;
-      try {
-        // Verificar solo conectividad básica (muy rápido)
-        final hasInternet = _connectivityService.hasInternetConnection;
-        
-        // Si no hay internet básico, retornar inmediatamente sin verificar backend
-        if (!hasInternet) {
-          tieneConexion = false;
-        } else {
-          // Si hay internet, verificar backend con timeout razonable (no tan corto para evitar falsos negativos)
-          tieneConexion = await _connectivityService.checkFullConnectivity()
-              .timeout(const Duration(milliseconds: 500), onTimeout: () => false);
-        }
-      } catch (e) {
-        // Si hay error en la verificación, asumir offline para respuesta inmediata
-        tieneConexion = false;
-      }
+      debugPrint('📤 VentasProvider: Intentando guardar venta en el servidor...');
       
-      if (!tieneConexion) {
-        // Retornar INMEDIATAMENTE sin esperar nada más para que el popup aparezca al instante
-        _ventas.insert(0, venta);
-        _isOffline = true;
-        // Notificar de forma asíncrona para no bloquear
-        Future.microtask(() => notifyListeners());
-
-        // Guardar en SQLite en background sin bloquear (no esperar)
-        Future(() async {
-          try {
-            final localId = await _db.saveVentaOffline(venta);
-            _ventaLocalIds[venta] = localId;
-            final deudaGenerada = _calcularMontoCuentaCorriente(venta);
-            if (deudaGenerada > 0) {
-              await _ccCacheService.registrarVentaOffline(
-                clienteId: venta.clienteId,
-                clienteNombre: venta.cliente.nombre,
-                ventaLocalId: localId,
-                deudaGenerada: deudaGenerada,
-                venta: venta,
-              );
-            }
-            await _actualizarCacheDesdeVentasActuales();
-            notifyListeners();
-          } catch (e) {
-            debugPrint('Error guardando venta offline en background: $e');
-          }
-        });
-
-        return {
-          'success': true,
-          'isOffline': true,
-          'message':
-              'Venta guardada localmente. Se sincronizará cuando haya conexión.',
-        };
-      }
-
-      // Si hay conexión, intentar crear la venta en el servidor
       final response = await _ventasService.crearVenta(
         venta,
         customTimeout: const Duration(seconds: 10),
       );
 
+      // Éxito: la venta se guardó en el servidor
+      debugPrint('✅ VentasProvider: Venta guardada exitosamente en el servidor');
+      
       if (response['ventaId'] != null) {
         venta.id = response['ventaId'];
       }
@@ -431,36 +379,55 @@ class VentasProvider with ChangeNotifier {
         'usuarioAsignadoNombre': response['usuarioAsignadoNombre'],
       };
     } catch (e) {
-      // Guardar siempre localmente si falla el servidor (400, 500, timeout, sin conexión)
-      // para que la venta no se pierda; el usuario puede sincronizar después.
-      final localId = await _db.saveVentaOffline(venta);
-      _ventas.insert(0, venta);
-      _ventaLocalIds[venta] = localId;
-      _isOffline = true;
-      final deudaGenerada = _calcularMontoCuentaCorriente(venta);
-      if (deudaGenerada > 0) {
-        await _ccCacheService.registrarVentaOffline(
-          clienteId: venta.clienteId,
-          clienteNombre: venta.cliente.nombre,
-          ventaLocalId: localId,
-          deudaGenerada: deudaGenerada,
-          venta: venta,
-        );
+      // FALLBACK: Solo si falla el servidor, guardar localmente como excepción
+      debugPrint('⚠️ VentasProvider: Error al guardar en servidor, guardando localmente como fallback...');
+      debugPrint('   Error: $e');
+      
+      try {
+        final localId = await _db.saveVentaOffline(venta);
+        _ventas.insert(0, venta);
+        _ventaLocalIds[venta] = localId;
+        _isOffline = true;
+        
+        final deudaGenerada = _calcularMontoCuentaCorriente(venta);
+        if (deudaGenerada > 0) {
+          await _ccCacheService.registrarVentaOffline(
+            clienteId: venta.clienteId,
+            clienteNombre: venta.cliente.nombre,
+            ventaLocalId: localId,
+            deudaGenerada: deudaGenerada,
+            venta: venta,
+          );
+        }
+        
+        await _actualizarCacheDesdeVentasActuales();
+        notifyListeners();
+
+        final bool esErrorConexion = _esErrorDeConexion(e);
+        final String message = esErrorConexion
+            ? 'Sin conexión. Venta guardada localmente. Se sincronizará cuando haya conexión.'
+            : 'Error del servidor. Venta guardada localmente. Puedes sincronizar después.';
+
+        debugPrint('✅ VentasProvider: Venta guardada localmente como fallback');
+
+        return {
+          'success': true,
+          'isOffline': true,
+          'message': message,
+          'serverError': !esErrorConexion,
+        };
+      } catch (localError) {
+        // Si incluso el guardado local falla, retornar error crítico
+        debugPrint('❌ VentasProvider: Error crítico - no se pudo guardar ni en servidor ni localmente');
+        debugPrint('   Error local: $localError');
+        
+        return {
+          'success': false,
+          'isOffline': false,
+          'message': 'Error crítico: No se pudo guardar la venta. Por favor, intenta nuevamente.',
+          'error': localError.toString(),
+        };
       }
-      await _actualizarCacheDesdeVentasActuales();
-      notifyListeners();
-
-      final bool esErrorConexion = _esErrorDeConexion(e);
-      final String message = esErrorConexion
-          ? 'Venta guardada localmente. Se sincronizará cuando haya conexión.'
-          : 'No se pudo guardar en el servidor. Se guardó localmente. Puedes sincronizar después.';
-
-      return {
-        'success': true,
-        'isOffline': true,
-        'message': message,
-        'serverError': !esErrorConexion,
-      };
     }
   }
 

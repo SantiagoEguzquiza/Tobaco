@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -22,6 +23,7 @@ class ClientesScreen extends StatefulWidget {
 class _ClientesScreenState extends State<ClientesScreen> {
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  Timer? _debounceTimer;
 
   @override
   void initState() {
@@ -33,6 +35,7 @@ class _ClientesScreenState extends State<ClientesScreen> {
 
   @override
   void dispose() {
+    _debounceTimer?.cancel();
     _searchController.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -46,9 +49,12 @@ class _ClientesScreenState extends State<ClientesScreen> {
   }
 
   void _onSearchChanged(String value) {
-    // Debounce para evitar muchas llamadas
-    Future.delayed(const Duration(milliseconds: 500), () {
-      if (mounted && _searchController.text == value) {
+    // Cancelar el timer anterior si existe
+    _debounceTimer?.cancel();
+    
+    // Crear un nuevo timer para hacer debounce
+    _debounceTimer = Timer(const Duration(milliseconds: 500), () {
+      if (mounted) {
         context.read<ClienteProvider>().buscarClientes(value);
       }
     });
@@ -216,6 +222,7 @@ class _ClientesScreenState extends State<ClientesScreen> {
 
     // Filtrar "Consumidor Final" de la lista
     final clientesFiltrados = clientes.where((cliente) => !_esConsumidorFinal(cliente)).toList();
+    clientesFiltrados.sort((a, b) => a.nombre.compareTo(b.nombre));
 
     if (isLoading && clientesFiltrados.isEmpty) {
       return _buildLoadingState();

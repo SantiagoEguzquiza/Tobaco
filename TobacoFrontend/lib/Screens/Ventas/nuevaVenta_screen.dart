@@ -21,7 +21,6 @@ import 'package:tobaco/Models/Ventas.dart';
 import 'package:tobaco/Theme/confirmAnimation.dart';
 import 'package:tobaco/Screens/Ventas/resumenVenta_screen.dart';
 import 'package:tobaco/Services/Auth_Service/auth_service.dart';
-import 'package:tobaco/Services/Connectivity/connectivity_service.dart';
 
 // Nuevos widgets modulares
 import 'NuevaVenta/widgets/widgets.dart';
@@ -1406,6 +1405,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
     setState(() {
       isLoadingClientes = true;
       errorMessage = null;
+      // Mantener los resultados locales mientras se carga del servidor
     });
 
     try {
@@ -1418,20 +1418,31 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
 
       setState(() {
         // Filtrar "Consumidor Final" de los resultados de búsqueda
-        clientesFiltrados = clientes.where((c) => !_esConsumidorFinal(c)).toList();
-        isLoadingClientes = false;
-        if (clientesFiltrados.isEmpty) {
+        final resultadosServidor = clientes.where((c) => !_esConsumidorFinal(c)).toList();
+        
+        // Solo actualizar si hay resultados o si el filtro local también está vacío
+        if (resultadosServidor.isNotEmpty) {
+          clientesFiltrados = resultadosServidor;
+          errorMessage = null;
+        } else if (clientesFiltrados.isEmpty) {
+          // Solo mostrar error si tampoco hay resultados locales
           errorMessage = 'No se encontraron clientes con ese nombre';
         }
+        // Si hay resultados locales y el servidor devuelve vacío, mantener los locales
+        
+        isLoadingClientes = false;
       });
     } catch (e) {
       debugPrint('Error al buscar clientes: $e');
       if (!mounted) return;
 
       setState(() {
-        clientesFiltrados = [];
+        // Mantener los resultados locales en caso de error
+        // Solo limpiar si no hay resultados locales
+        if (clientesFiltrados.isEmpty) {
+          errorMessage = 'Error al buscar clientes. Mostrando resultados locales.';
+        }
         isLoadingClientes = false;
-        errorMessage = 'Error al buscar clientes. Intente nuevamente.';
       });
     }
   }
@@ -1617,62 +1628,10 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
         ventaConPagos.usuarioCreador = usuario;
       }
 
-      // Crear la venta
+      // Crear la venta - el provider se encarga de intentar servidor primero y fallback a local
       final ventasProvider =
           Provider.of<VentasProvider>(context, listen: false);
       
-      // Verificar conectividad básica ANTES de crear la venta para mostrar mensaje inmediato
-      final connectivityService = ConnectivityService();
-      final tieneInternetBasico = connectivityService.hasInternetConnection;
-      
-      // Si no hay internet básico, crear venta offline y mostrar la misma animación de éxito
-      if (!tieneInternetBasico) {
-        final result = await ventasProvider.crearVenta(ventaConPagos);
-        if (!mounted) return;
-        if (!result['success']) {
-          AppTheme.showSnackBar(
-            context,
-            AppTheme.errorSnackBar(result['message'] ?? 'Error al guardar la venta'),
-          );
-          return;
-        }
-        AppTheme.showSnackBar(
-          context,
-          AppTheme.warningSnackBar(
-            'Venta guardada localmente. Se sincronizará cuando haya conexión.',
-          ),
-        );
-        _ventaCompletada = true;
-        _eliminarBorradorDeFormaSegura();
-        showGeneralDialog(
-          context: context,
-          barrierDismissible: false,
-          barrierColor: Colors.transparent,
-          transitionDuration: const Duration(milliseconds: 0),
-          pageBuilder: (context, animation, secondaryAnimation) {
-            return AnnotatedRegion<SystemUiOverlayStyle>(
-              value: SystemUiOverlayStyle.light.copyWith(
-                statusBarColor: Colors.green,
-                systemNavigationBarColor: Colors.green,
-              ),
-              child: Scaffold(
-                backgroundColor: Colors.transparent,
-                body: VentaConfirmadaAnimacion(
-                  onFinish: () {
-                    Navigator.of(context).pop();
-                    if (context.mounted) {
-                      Navigator.of(context).pop();
-                    }
-                  },
-                ),
-              ),
-            );
-          },
-        );
-        return;
-      }
-      
-      // Si hay internet, crear venta normalmente
       final result = await ventasProvider.crearVenta(ventaConPagos);
 
       if (mounted) {
@@ -1712,19 +1671,19 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
             } else if (usuario.isAdmin) {
               // Admin: la venta se crea y queda pendiente de asignación
               // No mostrar ningún diálogo, el admin puede asignarla después desde la pantalla de asignar ventas
-            } else if (usuario.esVendedor) {
-              // Vendedor: mostrar diálogo informativo de que la venta queda pendiente de asignación
-              if (mounted) {
-                await AppDialogs.showWarningDialog(
-                  context: context,
-                  title: 'Venta Creada',
-                  message:
-                      'Queda la venta pendiente de asignación para repartir o entregar',
-                  buttonText: 'Entendido',
-                  icon: Icons.info_outline,
-                );
-              }
-            } else {
+            // } else if (usuario.esVendedor) {
+            //   // Vendedor: mostrar diálogo informativo de que la venta queda pendiente de asignación
+            //   // if (mounted) {
+            //   //   await AppDialogs.showWarningDialog(
+            //   //     context: context,
+            //   //     title: 'Venta Creada',
+            //   //     message:
+            //   //         'Queda la venta pendiente de asignación para repartir o entregar',
+            //   //     buttonText: 'Entendido',
+            //   //     icon: Icons.info_outline,
+            //   //   );
+            //   // } 
+            // } else {
               // Para Repartidor, mostrar el diálogo de asignación
               final opcionAsignacion =
                   await _mostrarDialogoAsignacionVenta(context);
@@ -1850,13 +1809,14 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                   controller: _searchController,
                   hintText: 'Buscar por nombre...',
                   onChanged: (value) {
+                    // Solo actualizar estado local, el debounce se maneja en _onSearchChanged
                     setState(() {
                       if (value.trim().isEmpty) {
                         clientesFiltrados = [];
                         errorMessage = null;
                       } else {
                         _filtrarClientesIniciales(value);
-                        buscarClientes(value);
+                        // NO llamar buscarClientes aquí, se hace en _onSearchChanged con debounce
                       }
                     });
                   },

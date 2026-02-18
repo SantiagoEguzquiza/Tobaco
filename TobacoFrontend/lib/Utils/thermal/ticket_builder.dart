@@ -5,18 +5,6 @@ import 'package:tobaco/Models/metodoPago.dart';
 class TicketBuilder {
   static const int width = 48; // Ancho del ticket en caracteres (GV-8001)
   
-  static String _getMetodoPagoText(MetodoPago metodo) {
-    switch (metodo) {
-      case MetodoPago.efectivo:
-        return 'EFECTIVO';
-      case MetodoPago.transferencia:
-        return 'TRANSFERENCIA';
-      case MetodoPago.tarjeta:
-        return 'TARJETA';
-      case MetodoPago.cuentaCorriente:
-        return 'CTACTE';
-    }
-  }
   
   static String _formatDate(DateTime date) {
     final day = date.day.toString().padLeft(2, '0');
@@ -55,35 +43,45 @@ class TicketBuilder {
     return ' ' * padding + text;
   }
   
+  static String _alignLeftRight(String left, String right) {
+    final totalLength = left.length + right.length;
+    if (totalLength >= width) {
+      // Si no cabe, truncar el texto de la derecha
+      final availableSpace = width - left.length - 3; // -3 para "..."
+      if (availableSpace <= 0) return left.substring(0, width);
+      return left + right.substring(0, availableSpace) + '...';
+    }
+    final padding = width - totalLength;
+    return left + (' ' * padding) + right;
+  }
+  
   static String _createSeparator(String char) => char * width;
   
   static Uint8List buildTicket(Ventas venta) {
     final List<String> lines = [];
     
-    // Encabezado del ticket
-    lines.add(_createSeparator('='));
-    lines.add(_centerText('COMPROBANTE DE VENTA'));
-    lines.add(_createSeparator('='));
-    lines.add('');
+    // // Encabezado del ticket
+    // lines.add(_createSeparator('='));
+    // lines.add(_centerText('COMPROBANTE DE VENTA'));
+    // lines.add(_createSeparator('='));
+    // lines.add('');
     
     // Información de la venta
     lines.add('VENTA #${venta.id ?? 'LOCAL'}');
     lines.add('FECHA: ${_formatDate(venta.fecha)}');
     lines.add(_createSeparator('-'));
-    lines.add('');
     
     // Información del cliente
-    lines.add('CLIENTE:');
-    lines.add(venta.cliente.nombre.toUpperCase());
-    if (venta.cliente.direccion != null && venta.cliente.direccion!.isNotEmpty) {
-      lines.add(venta.cliente.direccion!);
-    }
+    lines.add(_alignLeftRight('CLIENTE:', venta.cliente.nombre.toUpperCase()));
+    // if (venta.cliente.direccion != null && venta.cliente.direccion!.isNotEmpty) {
+    //   lines.add('DIRECCION: ${venta.cliente.direccion!}');
+    // }
     lines.add(_createSeparator('-'));
-    lines.add('');
+    lines.add(_centerText('PRODUCTOS'));
     
-    // Productos
-    lines.add(_centerText('DETALLE DE PRODUCTOS'));
-    lines.add(_createSeparator('-'));
+    // // Productos
+    // lines.add(_centerText('DETALLE DE PRODUCTOS'));
+    // lines.add(_createSeparator('-'));
     
     for (var producto in venta.ventasProductos) {
       final subtotal = producto.precioFinalCalculado > 0 
@@ -104,40 +102,44 @@ class TicketBuilder {
       final precioStr = _formatCurrency(producto.precio);
       final subtotalStr = _formatCurrency(subtotal);
       
-      lines.add('$cantidadStr x $precioStr');
-      lines.add(_alignRight(subtotalStr));
+      lines.add(_alignLeftRight('$cantidadStr x $precioStr', subtotalStr)); 
     }
     
     lines.add('');
     lines.add(_createSeparator('='));
     
     // Total
-    final totalStr = _formatCurrency(venta.total);
-    lines.add('TOTAL:');
-    lines.add(_alignRight(totalStr));
-    lines.add(_createSeparator('='));
+    final totalStr = _formatCurrency(venta.total);   
+    lines.add(_alignLeftRight('TOTAL:', totalStr));
     lines.add('');
-    
-    // Métodos de pago
-    lines.add(_centerText('FORMAS DE PAGO'));
-    lines.add(_createSeparator('-'));
-    
-    if (venta.pagos != null && venta.pagos!.isNotEmpty) {
-      for (var pago in venta.pagos!) {
-        final metodoStr = _getMetodoPagoText(pago.metodo);
-        final montoStr = _formatCurrency(pago.monto);
-        lines.add('$metodoStr: $montoStr');
-      }
+    lines.add(_centerText('Gracias por su compra'));
+    lines.add('');
+
+    if(venta.cliente.deuda != null && venta.cliente.deuda!.isNotEmpty) {
+      lines.add(_centerText('DEUDA: ${venta.cliente.deuda}'));
     }
     
-    lines.add('');
-    lines.add(_createSeparator('='));
-    lines.add('');
-    lines.add(_centerText('GRACIAS POR SU COMPRA'));
-    lines.add('');
-    lines.add(_createSeparator('='));
-    lines.add('');
-    lines.add('');
+    
+    // // Métodos de pago
+    // lines.add(_centerText('FORMAS DE PAGO'));
+    // lines.add(_createSeparator('-'));
+    
+    // if (venta.pagos != null && venta.pagos!.isNotEmpty) {
+    //   for (var pago in venta.pagos!) {
+    //     final metodoStr = _getMetodoPagoText(pago.metodo);
+    //     final montoStr = _formatCurrency(pago.monto);
+    //     lines.add('$metodoStr: $montoStr');
+    //   }
+    // }
+    
+    // lines.add('');
+    // lines.add(_createSeparator('='));
+    // lines.add('');
+    // lines.add(_centerText('GRACIAS POR SU COMPRA'));
+    // lines.add('');
+    // lines.add(_createSeparator('='));
+    // lines.add('');
+    // lines.add('');
     
     // Convertir a bytes ASCII
     final content = lines.join('\n');

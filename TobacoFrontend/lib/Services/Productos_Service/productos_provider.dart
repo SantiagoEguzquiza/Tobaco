@@ -28,6 +28,7 @@ class ProductoProvider with ChangeNotifier {
   List<Categoria> _categorias = [];
   String? _selectedCategory;
   String _searchQuery = '';
+   static const Duration _timeoutDuration = Duration(seconds: 6);
 
 
   // Getters
@@ -353,7 +354,7 @@ class ProductoProvider with ChangeNotifier {
     try {
       // Intentar obtener del servidor con timeout
       _productos = await _productoService.obtenerProductos()
-          .timeout(Duration(seconds: 3));
+          .timeout(_timeoutDuration);
       
       print('✅ ProductoProvider: ${_productos.length} productos obtenidos del servidor');
       
@@ -490,7 +491,7 @@ class ProductoProvider with ChangeNotifier {
     try {
       // Intentar obtener del servidor con timeout
       final result = await _productoService.obtenerProductosPaginados(page, pageSize)
-          .timeout(Duration(seconds: 3));
+          .timeout(_timeoutDuration);
       
       print('✅ ProductoProvider: ${result['productos'].length} productos obtenidos del servidor');
       
@@ -536,7 +537,7 @@ class ProductoProvider with ChangeNotifier {
   void _actualizarCacheCompletoEnBackground() {
     debugPrint('🔄 ProductoProvider: Iniciando actualización completa del caché en background...');
     _productoService.obtenerProductos()
-        .timeout(Duration(seconds: 10)) // Timeout más largo para operación crítica
+        .timeout(_timeoutDuration) // Timeout más largo para operación crítica
         .then((todosLosProductos) async {
       debugPrint('📦 ProductoProvider: ${todosLosProductos.length} productos obtenidos del servidor para actualizar caché');
       
