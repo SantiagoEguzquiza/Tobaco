@@ -488,8 +488,8 @@ class _ProductosScreenState extends State<ProductosScreen> {
                                     );
                                     // If a product was deleted, refresh the list
                                     if (result == true) {
-                                      final categoriasProvider = context.read<CategoriasProvider>();
-                                      prov.recargarProductos(categoriasProvider);
+                                    final categoriasProvider = context.read<CategoriasProvider>();
+                                    prov.recargarProductos(categoriasProvider);
                                     }
                                   },
                                   child: Padding(

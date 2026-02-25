@@ -723,49 +723,6 @@ class VentasProvider with ChangeNotifier {
     }
   }
 
-  Future<void> _sincronizarSQLiteConServidor(
-      List<Ventas> ventasDelServidor) async {
-    try {
-      final idsDelServidor = <int>{};
-      for (final venta in ventasDelServidor) {
-        if (venta.id != null) {
-          idsDelServidor.add(venta.id!);
-          await _guardarVentaDelServidor(venta);
-        }
-      }
-
-      final db = await _db.database;
-      
-      // Verificar que la base de datos esté abierta
-      if (!db.isOpen) {
-        debugPrint('⚠️ VentasProvider: Base de datos cerrada al sincronizar SQLite con servidor');
-        return;
-      }
-      
-      final ventasSincronizadasSQLite = await db.query(
-        'ventas_offline',
-        where: 'sync_status = ? AND id IS NOT NULL',
-        whereArgs: ['synced'],
-      );
-
-      for (var ventaRow in ventasSincronizadasSQLite) {
-        try {
-          final ventaId = ventaRow['id'] as int?;
-          if (ventaId != null && !idsDelServidor.contains(ventaId)) {
-            final localId = ventaRow['local_id'] as String;
-            await _db.deleteVentaOffline(localId);
-          }
-        } catch (e) {
-          debugPrint('⚠️ VentasProvider: Error eliminando venta sincronizada: $e');
-          // Continuar con la siguiente venta
-        }
-      }
-    } catch (e) {
-      debugPrint('⚠️ VentasProvider: Error sincronizando SQLite con servidor: $e');
-      // No rethrow, solo loguear el error
-    }
-  }
-
   Future<List<Ventas>> _combinarConVentasOfflinePendientes(
     List<Ventas> ventasDelServidor, {
     bool incluirPendientesOffline = true,

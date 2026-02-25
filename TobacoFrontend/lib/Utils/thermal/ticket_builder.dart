@@ -1,6 +1,5 @@
 import 'dart:typed_data';
 import 'package:tobaco/Models/Ventas.dart';
-import 'package:tobaco/Models/metodoPago.dart';
 
 class TicketBuilder {
   static const int width = 48; // Ancho del ticket en caracteres (GV-8001)
@@ -37,11 +36,11 @@ class TicketBuilder {
     return ' ' * padding + text;
   }
   
-  static String _alignRight(String text) {
-    if (text.length >= width) return text.substring(0, width);
-    final padding = width - text.length;
-    return ' ' * padding + text;
-  }
+  // static String _alignRight(String text) {
+  //   if (text.length >= width) return text.substring(0, width);
+  //   final padding = width - text.length;
+  //   return ' ' * padding + text;
+  // }
   
   static String _alignLeftRight(String left, String right) {
     final totalLength = left.length + right.length;
@@ -60,15 +59,14 @@ class TicketBuilder {
   static Uint8List buildTicket(Ventas venta) {
     final List<String> lines = [];
     
-    // // Encabezado del ticket
-    // lines.add(_createSeparator('='));
-    // lines.add(_centerText('COMPROBANTE DE VENTA'));
-    // lines.add(_createSeparator('='));
-    // lines.add('');
+    // Encabezado del ticket
+    lines.add(_createSeparator('='));
+    lines.add(_centerText('CIGARROS'));
+    lines.add(_createSeparator('='));
+    lines.add('');
     
     // Información de la venta
-    lines.add('VENTA #${venta.id ?? 'LOCAL'}');
-    lines.add('FECHA: ${_formatDate(venta.fecha)}');
+    lines.add(_alignLeftRight('VENTA #${venta.id ?? 'LOCAL'}', _formatDate(venta.fecha)));
     lines.add(_createSeparator('-'));
     
     // Información del cliente
@@ -115,8 +113,10 @@ class TicketBuilder {
     lines.add(_centerText('Gracias por su compra'));
     lines.add('');
 
-    if(venta.cliente.deuda != null && venta.cliente.deuda!.isNotEmpty) {
+    if(venta.cliente.deuda != null && venta.cliente.deuda!.isNotEmpty && venta.cliente.deuda! != '0') {
       lines.add(_centerText('DEUDA: ${venta.cliente.deuda}'));
+      lines.add('');
+      lines.add('');
     }
     
     

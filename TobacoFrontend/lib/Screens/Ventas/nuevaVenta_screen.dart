@@ -607,8 +607,9 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
 
   void _onSearchChanged() {
     _debounceTimer?.cancel();
-    _debounceTimer = Timer(const Duration(milliseconds: 500), () {
-      buscarClientes(_searchController.text);
+    _debounceTimer = Timer(const Duration(milliseconds: 300), () {
+      // Solo filtrar localmente, sin consultar API
+      buscarClientesLocal(_searchController.text);
     });
   }
 
@@ -625,56 +626,30 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
     try {
       final provider = Provider.of<ClienteProvider>(context, listen: false);
       
-      // Cargar primero del caché inmediatamente para mostrar UI rápido
-      try {
-        final clientesCache = await provider.obtenerClientesDelCache();
-        if (mounted && clientesCache.isNotEmpty) {
-          setState(() {
-            // Filtrar "Consumidor Final" de la lista inicial
-            clientesIniciales = clientesCache.where((c) => !_esConsumidorFinal(c)).toList();
-            isLoadingClientesIniciales = false;
-          });
-        }
-      } catch (e) {
-        debugPrint('Error cargando clientes del caché: $e');
-      }
+      // Cargar SOLO del caché local, sin consultar API
+      final clientesCache = await provider.obtenerClientesDelCache();
       
-      // Actualizar desde el servidor en background (sin bloquear UI)
-      provider.obtenerClientes().then((clientes) {
-        if (mounted) {
-          setState(() {
-            // Filtrar "Consumidor Final" de la lista inicial
-            clientesIniciales = clientes.where((c) => !_esConsumidorFinal(c)).toList();
-            isLoadingClientesIniciales = false;
-          });
-        }
-      }).catchError((e) {
-        debugPrint('Error actualizando clientes desde servidor: $e');
-        // Si falla la actualización, mantener los del caché que ya se mostraron
-        if (mounted && clientesIniciales.isEmpty) {
-          setState(() {
-            isLoadingClientesIniciales = false;
-          });
-        }
-      });
-      
-      // Si no había caché, esperar a que cargue del servidor
-      if (clientesIniciales.isEmpty) {
-        final clientes = await provider.obtenerClientes();
-        if (mounted) {
-          setState(() {
-            clientesIniciales = clientes.where((c) => !_esConsumidorFinal(c)).toList();
-            isLoadingClientesIniciales = false;
-          });
-        }
+      if (mounted) {
+        setState(() {
+          // Filtrar "Consumidor Final" de la lista inicial
+          clientesIniciales = clientesCache.where((c) => !_esConsumidorFinal(c)).toList();
+          
+          // Ordenar alfabéticamente por nombre
+          clientesIniciales.sort((a, b) => a.nombre.toLowerCase().compareTo(b.nombre.toLowerCase()));
+          
+          isLoadingClientesIniciales = false;
+        });
+        
+        debugPrint('✅ Clientes iniciales cargados desde caché: ${clientesIniciales.length}');
       }
     } catch (e) {
       if (mounted) {
         setState(() {
+          clientesIniciales = [];
           isLoadingClientesIniciales = false;
         });
       }
-      debugPrint('Error al cargar clientes iniciales: $e');
+      debugPrint('Error al cargar clientes iniciales desde caché: $e');
     }
   }
 
@@ -719,7 +694,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       padding: const EdgeInsets.all(16),
-      itemCount: clientesFiltrados.length.clamp(0, 4),
+      itemCount: clientesFiltrados.length, // Mostrar TODOS los clientes
       itemBuilder: (context, index) {
         final cliente = clientesFiltrados[index];
         final tieneDeudaCliente = tieneDeuda(cliente.deuda);
@@ -907,6 +882,95 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
               style: TextStyle(
                 color: isDark ? Colors.grey.shade400 : Colors.grey.shade500,
                 fontSize: 14,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyStateConRefresh() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Container(
+      padding: const EdgeInsets.all(40),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF2F2F2F) : Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: [
+          BoxShadow(
+            color: isDark
+                ? Colors.black.withOpacity(0.3)
+                : Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: AppTheme.primaryColor.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.people_outline,
+                size: 48,
+                color: AppTheme.primaryColor,
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              'No hay clientes disponibles',
+              style: TextStyle(
+                color: isDark ? Colors.grey.shade300 : Colors.grey.shade700,
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Carga los clientes desde el servidor',
+              style: TextStyle(
+                color: isDark ? Colors.grey.shade400 : Colors.grey.shade500,
+                fontSize: 14,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: isLoadingClientesIniciales ? null : actualizarClientesDesdeServidor,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryColor,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                elevation: 2,
+              ),
+              icon: isLoadingClientesIniciales
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : const Icon(Icons.refresh, size: 20),
+              label: Text(
+                isLoadingClientesIniciales ? 'Cargando...' : 'Cargar Clientes',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           ],
@@ -1386,6 +1450,99 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
       _guardarBorrador(); // Guardar borrador con precios especiales actualizados
     } catch (e) {
       print('Error cargando precios especiales: $e');
+    }
+  }
+
+  /// Busca clientes solo en la lista local (caché), sin consultar API
+  void buscarClientesLocal(String query) {
+    final trimmedQuery = query.trim();
+
+    if (trimmedQuery.isEmpty) {
+      setState(() {
+        clientesFiltrados = [];
+        errorMessage = null;
+        isLoadingClientes = false;
+      });
+      return;
+    }
+
+    // Filtrar desde clientesIniciales (que ya están cargados del caché)
+    final queryLower = trimmedQuery.toLowerCase();
+    final filtrados = clientesIniciales.where((cliente) {
+      // Excluir "Consumidor Final" de los resultados de búsqueda
+      if (_esConsumidorFinal(cliente)) return false;
+      return cliente.nombre.toLowerCase().contains(queryLower);
+    }).toList();
+
+    // Ordenar: primero los que empiezan con el query, luego los que lo contienen
+    // Cada grupo ordenado alfabéticamente
+    final empiezaCon = filtrados
+        .where((c) => c.nombre.toLowerCase().startsWith(queryLower))
+        .toList();
+    empiezaCon.sort((a, b) => a.nombre.toLowerCase().compareTo(b.nombre.toLowerCase()));
+    
+    final contiene = filtrados
+        .where((c) => !c.nombre.toLowerCase().startsWith(queryLower))
+        .toList();
+    contiene.sort((a, b) => a.nombre.toLowerCase().compareTo(b.nombre.toLowerCase()));
+
+    setState(() {
+      clientesFiltrados = [...empiezaCon, ...contiene];
+      isLoadingClientes = false;
+      
+      if (clientesFiltrados.isEmpty) {
+        errorMessage = 'No se encontraron clientes con ese nombre';
+      } else {
+        errorMessage = null;
+      }
+    });
+  }
+
+  /// Actualiza la lista de clientes desde el servidor (para pull-to-refresh)
+  Future<void> actualizarClientesDesdeServidor() async {
+    setState(() {
+      isLoadingClientesIniciales = true;
+    });
+
+    try {
+      final provider = Provider.of<ClienteProvider>(context, listen: false);
+      
+      // Obtener clientes del servidor y actualizar caché
+      final clientes = await provider.obtenerClientes();
+      
+      if (mounted) {
+        setState(() {
+          // Filtrar "Consumidor Final" de la lista inicial
+          clientesIniciales = clientes.where((c) => !_esConsumidorFinal(c)).toList();
+          
+          // Ordenar alfabéticamente por nombre
+          clientesIniciales.sort((a, b) => a.nombre.toLowerCase().compareTo(b.nombre.toLowerCase()));
+          
+          isLoadingClientesIniciales = false;
+          
+          // Si hay una búsqueda activa, re-filtrar con los nuevos datos
+          if (_searchController.text.trim().isNotEmpty) {
+            buscarClientesLocal(_searchController.text);
+          }
+        });
+        
+        debugPrint('✅ Clientes actualizados desde servidor: ${clientesIniciales.length}');
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          isLoadingClientesIniciales = false;
+        });
+      }
+      debugPrint('Error al actualizar clientes desde servidor: $e');
+      
+      // Mostrar mensaje de error al usuario
+      if (mounted) {
+        AppTheme.showSnackBar(
+          context,
+          AppTheme.errorSnackBar('Error al actualizar clientes'),
+        );
+      }
     }
   }
 
@@ -1949,10 +2106,14 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                             ),
                           ],
                         )
-                      : SingleChildScrollView(
-                          child: Column(
-                            children: [
-                              if (isSearching) ...[
+                      : RefreshIndicator(
+                          color: AppTheme.primaryColor,
+                          onRefresh: actualizarClientesDesdeServidor,
+                          child: SingleChildScrollView(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            child: Column(
+                              children: [
+                                if (isSearching) ...[
                                 Padding(
                                   padding: const EdgeInsets.symmetric(
                                       horizontal: 16.0, vertical: 8.0),
@@ -2047,11 +2208,11 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                                         'No se encontraron clientes con ese nombre'),
                                   )
                                 else
+                                  // Estado vacío con botón de refresh
                                   Padding(
                                     padding: const EdgeInsets.symmetric(
                                         horizontal: 16.0, vertical: 16.0),
-                                    child: _buildEmptyState(
-                                        'No hay clientes disponibles'),
+                                    child: _buildEmptyStateConRefresh(),
                                   ),
                               ] else ...[
                                 // Cliente seleccionado
@@ -2105,7 +2266,8 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                               ],
                             ],
                           ),
-                        );
+                        ),
+                      );
                 },
               ),
             ),
