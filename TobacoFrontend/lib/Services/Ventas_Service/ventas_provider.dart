@@ -1183,11 +1183,9 @@ class VentasProvider with ChangeNotifier {
       final clienteService = ClienteService();
       clienteConsumidor = await clienteService.obtenerOCrearConsumidorFinal();
       
-      if (clienteConsumidor != null) {
-        // Actualizar la lista de clientes para incluir el Consumidor Final
-        await clienteProvider.obtenerClientes();
-        return clienteConsumidor;
-      }
+      // Actualizar la lista de clientes para incluir el Consumidor Final
+      await clienteProvider.obtenerClientes();
+      return clienteConsumidor;
     } catch (e) {
       debugPrint('Error al obtener o crear Consumidor Final desde el servidor: $e');
       // Sin conexión (Failed host lookup, SocketException, etc.): usar Consumidor Final local para venta offline
@@ -1228,6 +1226,7 @@ class VentasProvider with ChangeNotifier {
         }
         return clienteConsumidor;
       }
+      // Para otros errores (no de conexión), mostrar el error y retornar null
       if (context.mounted) {
         AppTheme.showSnackBar(
           context,
@@ -1236,17 +1235,6 @@ class VentasProvider with ChangeNotifier {
       }
       return null;
     }
-
-    if (context.mounted) {
-      AppTheme.showSnackBar(
-        context,
-        AppTheme.errorSnackBar(
-          'No se pudo asegurar el cliente "Consumidor Final". Intenta nuevamente.',
-        ),
-      );
-    }
-
-    return null;
   }
 
   static Cliente? _buscarConsumidorFinalEnColecciones(List<Iterable<Cliente>> colecciones) {

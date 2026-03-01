@@ -1749,7 +1749,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
       if (totalCalculado <= 0) {
         debugPrint('⚠️ ERROR CRÍTICO: El total de la venta es 0 o negativo. Recalculando...');
         // Recalcular sumando los precios finales calculados de cada producto
-        final totalRecalculado = productos.fold(0.0, (sum, p) => sum + (p.precioFinalCalculado ?? 0.0));
+        final totalRecalculado = productos.fold(0.0, (sum, p) => sum + p.precioFinalCalculado);
         debugPrint('💰 Total recalculado: $totalRecalculado');
         totalFinal = totalRecalculado > 0 ? totalRecalculado : totalCalculado;
       }
@@ -2011,32 +2011,12 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                                       );
 
                                       if (cliente != null) {
-                                        final clienteProvider =
-                                            Provider.of<ClienteProvider>(
-                                                context,
-                                                listen: false);
-                                        final clientesActualizados =
-                                            clienteProvider.clientes;
-
                                         _seleccionarCliente(cliente);
 
                                         if (!mounted) return;
                                         setState(() {
                                           clientesFiltrados = [];
                                           errorMessage = null;
-
-                                          if (clientesActualizados.isNotEmpty) {
-                                            // Filtrar "Consumidor Final" de la lista
-                                            clientesIniciales = List.from(
-                                              clientesActualizados.where((c) => !_esConsumidorFinal(c))
-                                            );
-                                          } else if (!clientesIniciales
-                                              .any((c) => c.id == cliente.id)) {
-                                            clientesIniciales = [
-                                              cliente,
-                                              ...clientesIniciales
-                                            ];
-                                          }
                                         });
                                       }
                                     },
@@ -2135,35 +2115,14 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                                           );
 
                                           if (cliente != null) {
-                                            final clienteProvider =
-                                                Provider.of<ClienteProvider>(
-                                                    context,
-                                                    listen: false);
-                                            final clientesActualizados =
-                                                clienteProvider.clientes;
+                                          _seleccionarCliente(cliente);
 
-                                            _seleccionarCliente(cliente);
-
-                                            if (!mounted) return;
-                                            setState(() {
-                                              clientesFiltrados = [];
-                                              errorMessage = null;
-
-                                              if (clientesActualizados
-                                                  .isNotEmpty) {
-                                                // Filtrar "Consumidor Final" de la lista
-                                                clientesIniciales = List.from(
-                                                  clientesActualizados.where((c) => !_esConsumidorFinal(c))
-                                                );
-                                              } else if (!clientesIniciales.any(
-                                                  (c) => c.id == cliente.id)) {
-                                                clientesIniciales = [
-                                                  cliente,
-                                                  ...clientesIniciales
-                                                ];
-                                              }
-                                            });
-                                          }
+                                          if (!mounted) return;
+                                          setState(() {
+                                            clientesFiltrados = [];
+                                            errorMessage = null;
+                                          });
+                                        }
                                         },
                                         style: AppTheme.elevatedButtonStyle(
                                             AppTheme.primaryColor),
