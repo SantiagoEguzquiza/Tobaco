@@ -636,7 +636,7 @@ class _DetalleVentaScreenState extends State<DetalleVentaScreen> {
                         shape: const RoundedRectangleBorder(
                           borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
                         ),
-                        builder: (context) {
+                        builder: (sheetContext) {
                           return SafeArea(
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
@@ -645,12 +645,12 @@ class _DetalleVentaScreenState extends State<DetalleVentaScreen> {
                                   leading: const Icon(Icons.picture_as_pdf, color: AppTheme.primaryColor),
                                   title: const Text('Imprimir PDF'),
                                   onTap: () async {
-                                    Navigator.of(context).pop();
+                                    Navigator.of(sheetContext).pop();
                                     try {
                                       final bytes = await buildVentaPdf(widget.venta);
                                       await Printing.layoutPdf(onLayout: (_) async => bytes);
                                     } catch (e) {
-                                      // ignore: use_build_context_synchronously
+                                      if (!context.mounted) return;
                                       ScaffoldMessenger.of(context).showSnackBar(
                                         SnackBar(content: Text('Error al generar PDF: $e')),
                                       );
@@ -661,7 +661,7 @@ class _DetalleVentaScreenState extends State<DetalleVentaScreen> {
                                   leading: const Icon(Icons.receipt_long, color: AppTheme.primaryColor),
                                   title: const Text('Imprimir ticket'),
                                   onTap: () async {
-                                    Navigator.of(context).pop();
+                                    Navigator.of(sheetContext).pop();
                                     await _imprimirTicketTermico(context);
                                   },
                                 ),
@@ -669,7 +669,7 @@ class _DetalleVentaScreenState extends State<DetalleVentaScreen> {
                                   leading: const Icon(Icons.share, color: AppTheme.primaryColor),
                                   title: const Text('Compartir PDF por WhatsApp'),
                                   onTap: () {
-                                    Navigator.of(context).pop();
+                                    Navigator.of(sheetContext).pop();
                                   },
                                 ),
                                 const SizedBox(height: 8),

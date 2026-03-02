@@ -119,75 +119,6 @@ class _ResumenVentaScreenState extends State<ResumenVentaScreen> {
     }
   }
 
-  Future<void> _cargarVentaPorId(int id) async {
-    try {
-      setState(() {
-        isLoading = true;
-        errorMessage = null;
-      });
-
-      final ventaCargada = await _ventasService.obtenerVentaPorId(id);
-      
-      if (!mounted) return;
-      setState(() {
-        venta = ventaCargada;
-        isLoading = false;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      
-      if (Apihandler.isConnectionError(e)) {
-        setState(() {
-          isLoading = false;
-          // Si falla cargar del servidor, usar la venta local como respaldo
-          venta = widget.venta;
-        });
-        await Apihandler.handleConnectionError(context, e);
-      } else {
-        setState(() {
-          errorMessage = 'Error al cargar la venta: ${e.toString().replaceFirst('Exception: ', '')}';
-          isLoading = false;
-          venta = widget.venta;
-        });
-      }
-    }
-  }
-
-  Future<void> _cargarUltimaVentaConRespaldo(Ventas ventaRespaldo) async {
-    try {
-      setState(() {
-        isLoading = true;
-        errorMessage = null;
-      });
-
-      final ultimaVenta = await _ventasService.obtenerUltimaVenta();
-      
-      if (!mounted) return;
-      setState(() {
-        venta = ultimaVenta;
-        isLoading = false;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      
-      if (Apihandler.isConnectionError(e)) {
-        setState(() {
-          // Si falla cargar del servidor, usar la venta local como respaldo
-          venta = ventaRespaldo;
-          isLoading = false;
-        });
-        await Apihandler.handleConnectionError(context, e);
-      } else {
-        setState(() {
-          errorMessage = 'Error al cargar la venta: ${e.toString().replaceFirst('Exception: ', '')}';
-          // Usar la venta de respaldo
-          venta = ventaRespaldo;
-          isLoading = false;
-        });
-      }
-    }
-  }
-
   Future<void> _cargarUltimaVenta() async {
     try {
       setState(() {
@@ -676,7 +607,7 @@ class _ResumenVentaScreenState extends State<ResumenVentaScreen> {
                     shape: const RoundedRectangleBorder(
                       borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
                     ),
-                    builder: (context) {
+                    builder: (sheetContext) {
                       return SafeArea(
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
@@ -685,14 +616,14 @@ class _ResumenVentaScreenState extends State<ResumenVentaScreen> {
                               leading: const Icon(Icons.picture_as_pdf, color: AppTheme.primaryColor),
                               title: const Text('Imprimir PDF'),
                               onTap: () async {
-                                Navigator.of(context).pop();
+                                Navigator.of(sheetContext).pop();
                                 try {
                                   final ventaParaPdf = ventaCargadaBD ?? venta;
                                   if (ventaParaPdf == null) return;
                                   final bytes = await buildVentaPdf(ventaParaPdf);
                                   await Printing.layoutPdf(onLayout: (_) async => bytes);
                                 } catch (e) {
-                                  // ignore: use_build_context_synchronously
+                                  if (!context.mounted) return;
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(content: Text('Error al generar PDF: $e')),
                                   );
@@ -703,7 +634,7 @@ class _ResumenVentaScreenState extends State<ResumenVentaScreen> {
                               leading: const Icon(Icons.receipt_long, color: AppTheme.primaryColor),
                               title: const Text('Imprimir ticket'),
                               onTap: () async {
-                                Navigator.of(context).pop();
+                                Navigator.of(sheetContext).pop();
                                 await _imprimirTicketTermico(context);
                               },
                             ),
@@ -711,7 +642,7 @@ class _ResumenVentaScreenState extends State<ResumenVentaScreen> {
                               leading: const Icon(Icons.share, color: AppTheme.primaryColor),
                               title: const Text('Compartir PDF por WhatsApp'),
                               onTap: () {
-                                Navigator.of(context).pop();
+                                Navigator.of(sheetContext).pop();
                               },
                             ),
                             const SizedBox(height: 8),
