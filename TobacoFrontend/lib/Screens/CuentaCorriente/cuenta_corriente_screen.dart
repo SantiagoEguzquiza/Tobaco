@@ -428,8 +428,8 @@ class _CuentaCorrienteScreenState extends State<CuentaCorrienteScreen> {
                           const SizedBox(width: 4),
                           Text(
                             _parsearDeuda(cliente.deuda) > 0
-                                ? 'Saldo CC: \$${_formatearPrecio(_parsearDeuda(cliente.deuda))}'
-                                : 'Sin deuda actualmente',
+                                ? 'Deuda: \$ ${_formatearPrecio(_parsearDeuda(cliente.deuda))}'
+                                : 'Sin deuda',
                             style: TextStyle(
                               fontSize: 14,
                               color: _parsearDeuda(cliente.deuda) > 0
@@ -441,63 +441,7 @@ class _CuentaCorrienteScreenState extends State<CuentaCorrienteScreen> {
                             ),
                           ),
                         ],
-                      ),
-                      if (cliente.telefono != null) ...[
-                        const SizedBox(height: 2),
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.phone_outlined,
-                              size: 16,
-                              color: Theme.of(context).brightness == Brightness.dark
-                                  ? Colors.grey.shade400
-                                  : Colors.grey.shade600,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              cliente.telefono!.toString(),
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Theme.of(context).brightness == Brightness.dark
-                                    ? Colors.grey.shade400
-                                    : Colors.grey.shade600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                      const SizedBox(height: 2),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.people_outline,
-                            size: 16,
-                            color: Theme.of(context).brightness == Brightness.dark
-                                ? Colors.grey.shade400
-                                : Colors.grey.shade600,
-                          ),
-                          const SizedBox(width: 4),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.red.shade50,
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: Colors.red.shade200),
-                            ),
-                            child: Text(
-                              'Cuenta Corriente',
-                              style: TextStyle(
-                                fontSize: 10,
-                                color: Colors.red.shade600,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
+                      ),                                                               
                     ],
                   ),
                 ),
