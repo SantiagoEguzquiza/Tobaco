@@ -66,7 +66,7 @@ subprojects {
     afterEvaluate { project ->
         if (project.hasProperty("android")) {
             project.android {
-                if (namespace == null) {1
+                if (namespace == null) {
                     namespace project.group
                 }
 
@@ -74,24 +74,21 @@ subprojects {
                     sourceCompatibility JavaVersion.VERSION_11
                     targetCompatibility JavaVersion.VERSION_11
                 }
-
-                if (this.hasProperty("kotlinOptions")) {
-                    kotlinOptions {
-                        jvmTarget = "11"
-                    }
-                }
                 
-                // Set compileSdk for plugins that need it
                 if (compileSdk == null || compileSdk == 0) {
                     compileSdk rootProject.ext.flutterCompileSdkVersion
                 }
                 
-                // Configure default values for plugins
                 defaultConfig {
                     if (minSdk == null || minSdk == 0) {
                         minSdk rootProject.ext.flutterMinSdkVersion
                     }
                 }
+            }
+        }
+        project.tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+            kotlinOptions {
+                jvmTarget = "11"
             }
         }
     }

@@ -1,4 +1,7 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:tobaco/Models/Ventas.dart';
 import 'package:tobaco/Models/VentasProductos.dart';
 import 'package:tobaco/Models/metodoPago.dart';
@@ -665,9 +668,27 @@ class _DetalleVentaScreenState extends State<DetalleVentaScreen> {
                                 ),
                                 ListTile(
                                   leading: const Icon(Icons.share, color: AppTheme.primaryColor),
-                                  title: const Text('Compartir PDF por WhatsApp'),
-                                  onTap: () {
+                                  title: const Text('Compartir PDF'),
+                                  onTap: () async {
                                     Navigator.of(sheetContext).pop();
+                                    try {
+                                      final bytes = await buildVentaPdf(widget.venta);
+                                      final dir = await getTemporaryDirectory();
+                                      final ventaLabel = widget.venta.id != null
+                                          ? 'Venta_${widget.venta.id}'
+                                          : 'Venta_pendiente';
+                                      final file = File('${dir.path}/$ventaLabel.pdf');
+                                      await file.writeAsBytes(bytes);
+                                      await Share.shareXFiles(
+                                        [XFile(file.path)],
+                                        text: 'Comprobante de $ventaLabel',
+                                      );
+                                    } catch (e) {
+                                      if (!context.mounted) return;
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(content: Text('Error al compartir PDF: $e')),
+                                      );
+                                    }
                                   },
                                 ),
                                 const SizedBox(height: 8),
