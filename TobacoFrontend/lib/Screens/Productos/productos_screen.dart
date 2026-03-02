@@ -49,7 +49,6 @@ class _ProductosScreenState extends State<ProductosScreen> {
   @override
   void initState() {
     super.initState();
-    _scrollController.addListener(_onScroll);
     // Cargar productos iniciales usando el Provider
     Future.microtask(() {
       final productoProvider = context.read<ProductoProvider>();
@@ -80,27 +79,6 @@ class _ProductosScreenState extends State<ProductosScreen> {
     _categoriesScrollController.dispose();
     _searchController.dispose();
     super.dispose();
-  }
-
-  void _onScroll() {
-    if (_scrollController.position.pixels >=
-        _scrollController.position.maxScrollExtent - 200) {
-      final productoProvider = context.read<ProductoProvider>();
-      if (!productoProvider.isLoadingMore && productoProvider.hasMoreData) {
-        productoProvider.cargarMasProductos().catchError((e) {
-          if (mounted) {
-            if (Apihandler.isConnectionError(e)) {
-              Apihandler.handleConnectionError(context, e);
-            } else {
-              AppDialogs.showErrorDialog(
-                context: context,
-                message: 'Error al cargar más productos',
-              );
-            }
-          }
-        });
-      }
-    }
   }
 
   void _centerCategoryButton(int index, List<Categoria> categorias) {
@@ -426,7 +404,6 @@ class _ProductosScreenState extends State<ProductosScreen> {
   Widget _buildProductosList(ProductoProvider prov, List<Categoria> categorias) {
     final filteredProductos = prov.productosFiltrados;
     final isLoading = prov.isLoading;
-    final isLoadingMore = prov.isLoadingMore;
     final searchQuery = prov.searchQuery;
 
     if (isLoading && filteredProductos.isEmpty) {
@@ -447,11 +424,8 @@ class _ProductosScreenState extends State<ProductosScreen> {
       child: ListView.builder(
         controller: _scrollController,
         physics: const AlwaysScrollableScrollPhysics(),
-        itemCount: filteredProductos.length + (isLoadingMore ? 1 : 0),
+        itemCount: filteredProductos.length,
         itemBuilder: (context, index) {
-          if (index == filteredProductos.length) {
-            return _buildLoadingIndicator();
-          }
           final producto = filteredProductos[index];
           return Container(
                               margin: const EdgeInsets.only(bottom: 12),
@@ -710,17 +684,6 @@ class _ProductosScreenState extends State<ProductosScreen> {
         );
       }
     }
-  }
-
-  Widget _buildLoadingIndicator() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      child: const Center(
-        child: CircularProgressIndicator(
-          valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
-        ),
-      ),
-    );
   }
 
   Widget _buildLoadingState() {
