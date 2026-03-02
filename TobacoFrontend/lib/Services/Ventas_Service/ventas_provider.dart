@@ -94,67 +94,66 @@ class VentasProvider with ChangeNotifier {
   }
 
   Future<void> cargarVentas({bool usarTimeoutNormal = false}) async {
-    _isLoading = true;
     _errorMessage = null;
-    // IMPORTANTE: Inicializar como online, solo cambiar a offline si realmente no hay conexión
     _isOffline = false;
     _currentPage = 1;
     _hasMoreData = true;
-    notifyListeners();
 
-    try {
-      // Intentar siempre la API real primero. No usar checkFullConnectivity() para decidir
-      // offline: justo después del login puede fallar (health check lento/timeout) y mostrar
-      // "Modo offline" por error. Solo marcar offline cuando la llamada a ventas falle.
-      // - En primera carga / después de sincronizar: usar timeout normal (más largo).
-      // - En pull-to-refresh: usar timeout rápido para no quedar 30s cargando si hay problemas.
-      final ventasDelServidor = await _ventasService.obtenerVentas(
-        timeoutRapido: !usarTimeoutNormal,
-        timeoutNormal: usarTimeoutNormal,
-      );
+    // PASO 1: Mostrar datos cacheados inmediatamente para que la UI no esté vacía
+    if (_ventas.isEmpty) {
+      _isLoading = true;
+      notifyListeners();
 
-      // En modo online: borrar solo las ventas SINCRONIZADAS de SQLite (preservar las pendientes)
-      // y reemplazarlas con las del servidor
-      await _db.borrarVentasSincronizadas();
-      
-      // Guardar las ventas del servidor en SQLite
-      for (final venta in ventasDelServidor) {
-        if (venta.id != null) {
-          await _guardarVentaDelServidor(venta);
-          _ventaLocalIds[venta] = 'servidor_${venta.id}';
+      try {
+        final cacheadas = await _cacheService.obtenerVentasDelCache();
+        if (cacheadas.isNotEmpty) {
+          final combinadas = await _combinarConVentasOfflinePendientes(
+            cacheadas,
+            incluirPendientesOffline: true,
+          );
+          _ventas = combinadas;
+          _ordenarVentasRecientesPrimero();
+          _isLoading = false;
+          notifyListeners();
         }
+      } catch (e) {
+        debugPrint('⚠️ VentasProvider: Error cargando caché inicial: $e');
       }
+    }
 
-      // Guardar ventas del servidor en caché (incluso si está vacío, para marcar que no hay datos)
+    // PASO 2: Traer página 1 de la API (datos frescos, paginados)
+    try {
+      final resultado = await _ventasService.obtenerVentasPaginadas(1, _pageSize);
+      final ventasDelServidor = resultado['ventas'] as List<Ventas>;
+      _hasMoreData = resultado['hasNextPage'] as bool? ?? false;
+      _currentPage = 1;
+
+      // Reemplazar caché con la página 1 fresca
       await _cacheService.guardarVentasEnCache(
-        ventasDelServidor.where((venta) => venta.id != null).toList(),
+        ventasDelServidor.where((v) => v.id != null).toList(),
+        limpiarAnterior: true,
       );
-      
-      // Si no hay ventas del servidor, limpiar el caché para indicar que no hay datos
-      if (ventasDelServidor.isEmpty) {
-        await _cacheService.limpiarCache();
-        debugPrint('📝 VentasProvider: Sin datos del servidor, caché limpiado');
-      }
 
       // Combinar ventas del servidor con las pendientes de sincronizar
       final combinadas = await _combinarConVentasOfflinePendientes(
         ventasDelServidor,
-        incluirPendientesOffline: true, // Incluir pendientes para que aparezcan
+        incluirPendientesOffline: true,
       );
 
       _ventas = combinadas;
       _ordenarVentasRecientesPrimero();
       _isOffline = false;
-      _hasMoreData = false;
       _offlineMessageShown = false;
     } catch (e) {
       if (Apihandler.isConnectionError(e) ||
           e is TimeoutException ||
           _esErrorServidor(e)) {
-        await _cargarVentasOffline();
-        // Siempre indicamos modo offline si hubo problema de conexión o servidor,
-        // aunque tengamos datos en caché/SQLite.
+        // Si no teníamos datos del caché, cargar modo offline completo
+        if (_ventas.isEmpty) {
+          await _cargarVentasOffline();
+        }
         _isOffline = true;
+        _hasMoreData = false;
         if (_ventas.isEmpty) {
           _errorMessage = _limpiarMensajeError(e.toString());
         }
@@ -165,8 +164,9 @@ class VentasProvider with ChangeNotifier {
           notifyListeners();
           return;
         }
-        _ventas = [];
-        _errorMessage = _limpiarMensajeError(e.toString());
+        if (_ventas.isEmpty) {
+          _errorMessage = _limpiarMensajeError(e.toString());
+        }
       }
     } finally {
       _isLoading = false;
@@ -176,14 +176,38 @@ class VentasProvider with ChangeNotifier {
   }
 
   Future<void> cargarMasVentas() async {
-    if (_isLoadingMore || !_hasMoreData) return;
+    if (_isLoadingMore || !_hasMoreData || _isOffline) return;
 
     _isLoadingMore = true;
     notifyListeners();
 
     try {
-      _currentPage += 1;
-      _hasMoreData = false;
+      final nextPage = _currentPage + 1;
+      final resultado = await _ventasService.obtenerVentasPaginadas(nextPage, _pageSize);
+      final nuevasVentas = resultado['ventas'] as List<Ventas>;
+      _hasMoreData = resultado['hasNextPage'] as bool? ?? false;
+      _currentPage = nextPage;
+
+      final idsExistentes = _ventas
+          .where((v) => v.id != null)
+          .map((v) => v.id!)
+          .toSet();
+
+      for (final venta in nuevasVentas) {
+        if (venta.id != null && !idsExistentes.contains(venta.id!)) {
+          _ventas.add(venta);
+          _ventaLocalIds[venta] = 'servidor_${venta.id}';
+          idsExistentes.add(venta.id!);
+        }
+      }
+
+      // Append al caché (no limpiar, solo agregar la nueva página)
+      await _cacheService.guardarVentasEnCache(
+        nuevasVentas.where((v) => v.id != null).toList(),
+        limpiarAnterior: false,
+      );
+    } catch (e) {
+      debugPrint('⚠️ VentasProvider: Error al cargar más ventas: $e');
     } finally {
       _isLoadingMore = false;
       notifyListeners();
@@ -518,13 +542,14 @@ class VentasProvider with ChangeNotifier {
 
   /// Deja la lista vacía y activa loading para que al abrir Ventas se muestre carga y no la lista anterior.
   void prepararParaCargaInicial() {
-    _ventas = [];
-    _ventaLocalIds.clear();
     _currentPage = 1;
     _hasMoreData = true;
     _errorMessage = null;
-    _isLoading = true;
     _isLoadingMore = false;
+    // Solo mostrar loading si no hay datos previos/cacheados (evita parpadeo)
+    if (_ventas.isEmpty) {
+      _isLoading = true;
+    }
     // Defer to avoid setState/markNeedsBuild during build
     Future.microtask(() => notifyListeners());
   }
@@ -925,6 +950,7 @@ class VentasProvider with ChangeNotifier {
   Future<void> _actualizarCacheDesdeVentasActuales() async {
     await _cacheService.guardarVentasEnCache(
       _ventas.where((venta) => venta.id != null).toList(),
+      limpiarAnterior: true,
     );
   }
 
