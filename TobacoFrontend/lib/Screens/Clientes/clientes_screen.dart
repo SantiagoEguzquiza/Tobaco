@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:tobaco/Models/Cliente.dart';
@@ -28,9 +27,7 @@ class _ClientesScreenState extends State<ClientesScreen> {
   @override
   void initState() {
     super.initState();
-    // Cargar clientes después del primer frame
     Future.microtask(() => context.read<ClienteProvider>().cargarClientes());
-    _scrollController.addListener(_onScroll);
   }
 
   @override
@@ -41,19 +38,9 @@ class _ClientesScreenState extends State<ClientesScreen> {
     super.dispose();
   }
 
-  void _onScroll() {
-    if (_scrollController.position.pixels >= 
-        _scrollController.position.maxScrollExtent - 200) {
-      context.read<ClienteProvider>().cargarMasClientes();
-    }
-  }
-
   void _onSearchChanged(String value) {
-    // Cancelar el timer anterior si existe
     _debounceTimer?.cancel();
-    
-    // Crear un nuevo timer para hacer debounce
-    _debounceTimer = Timer(const Duration(milliseconds: 500), () {
+    _debounceTimer = Timer(const Duration(milliseconds: 300), () {
       if (mounted) {
         context.read<ClienteProvider>().buscarClientes(value);
       }
@@ -63,20 +50,6 @@ class _ClientesScreenState extends State<ClientesScreen> {
   /// Verifica si un cliente es "Consumidor Final"
   bool _esConsumidorFinal(Cliente cliente) {
     return cliente.nombre.trim().toLowerCase() == 'consumidor final';
-  }
-
-  Future<void> _actualizarClienteEnLista(Cliente clienteOriginal) async {
-    if (clienteOriginal.id == null) return;
-    
-    try {
-      await context.read<ClienteProvider>().actualizarClienteEnLista(clienteOriginal.id!);
-    } catch (e) {
-      log('Error al actualizar cliente en lista: $e', level: 1000);
-      
-      if (mounted && Apihandler.isConnectionError(e)) {
-        await Apihandler.handleConnectionError(context, e);
-      }
-    }
   }
 
   Future<void> _eliminarCliente(Cliente cliente) async {
@@ -217,12 +190,9 @@ class _ClientesScreenState extends State<ClientesScreen> {
   Widget _buildClientesList(ClienteProvider provider) {
     final clientes = provider.clientes;
     final isLoading = provider.isLoading;
-    final hasMoreData = provider.hasMoreData;
     final searchQuery = provider.searchQuery;
 
-    // Filtrar "Consumidor Final" de la lista
     final clientesFiltrados = clientes.where((cliente) => !_esConsumidorFinal(cliente)).toList();
-    clientesFiltrados.sort((a, b) => a.nombre.compareTo(b.nombre));
 
     if (isLoading && clientesFiltrados.isEmpty) {
       return _buildLoadingState();
@@ -240,22 +210,8 @@ class _ClientesScreenState extends State<ClientesScreen> {
       child: ListView.builder(
         controller: _scrollController,
         physics: const AlwaysScrollableScrollPhysics(),
-        itemCount: clientesFiltrados.length + (hasMoreData ? 1 : 0),
+        itemCount: clientesFiltrados.length,
         itemBuilder: (context, index) {
-          if (index == clientesFiltrados.length) {
-            // Indicador de carga al final
-            return isLoading
-                ? const Padding(
-                    padding: EdgeInsets.all(16),
-                    child: Center(
-                      child: CircularProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
-                      ),
-                    ),
-                  )
-                : const SizedBox.shrink();
-          }
-
           final cliente = clientesFiltrados[index];
           return _buildClienteCard(cliente);
         },
