@@ -384,17 +384,16 @@ class _VentasScreenState extends State<VentasScreen> {
                                       : Colors.grey.shade600,
                                 ),
                               ),
-                              const SizedBox(width: 8),
-                              _buildEstadoEntregaBadge(venta.estadoEntrega),
-                              // Badge de venta pendiente
-                              if (provider.esVentaPendiente(venta)) ...[
-                                const SizedBox(width: 8),
-                                _buildPendienteBadge(),
-                              ],
                             ],
                           ),
                         ],
                       ),
+                    ),
+                    Icon(
+                      Icons.chevron_right_rounded,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.grey.shade600
+                          : Colors.grey.shade400,
                     ),
                   ],
                 ),
@@ -585,7 +584,7 @@ class _VentasScreenState extends State<VentasScreen> {
     final parteEntera = partes[0].replaceAllMapped(
         RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (match) => '${match[1]}.');
     final parteDecimal = partes[1];
-    return '\$$parteEntera,$parteDecimal';
+    return '$parteEntera,$parteDecimal';
   }
 
   // Función para confirmar eliminación de venta

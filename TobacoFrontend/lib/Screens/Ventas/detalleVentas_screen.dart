@@ -237,8 +237,6 @@ class _DetalleVentaScreenState extends State<DetalleVentaScreen> {
                 _buildInfoRow(Icons.payment, 'Método de Pago', _getAllPaymentMethodsString(widget.venta)),
                 const SizedBox(height: 12),               
                 _buildInfoRow(Icons.person, 'Usuario', widget.venta.usuarioCreador?.userName ?? 'No disponible'),
-                const SizedBox(height: 12),
-                _buildEstadoEntregaRow(),
               ],
             ),
           ),
@@ -321,7 +319,7 @@ class _DetalleVentaScreenState extends State<DetalleVentaScreen> {
             child: Row(
               children: [             
                 Text(
-                  'Productos (${widget.venta.ventasProductos.length})',
+                  'Productos',
                   style:  TextStyle(
                     color: Theme.of(context).brightness == Brightness.dark
                         ? Colors.white
