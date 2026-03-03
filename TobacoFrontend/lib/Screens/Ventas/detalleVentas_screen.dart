@@ -10,7 +10,6 @@ import 'package:tobaco/Theme/app_theme.dart';
 import 'package:printing/printing.dart';
 import 'package:tobaco/Utils/pdf_generator/venta_pdf_builder.dart';
 import 'package:tobaco/Services/Printer_Service/bluetooth_printer_service.dart';
-import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
 class DetalleVentaScreen extends StatefulWidget {
   final Ventas venta;
@@ -1082,9 +1081,7 @@ class _DetalleVentaScreenState extends State<DetalleVentaScreen> {
     try {
       final printerService = BluetoothPrinterService.instance;
 
-      // Verificar si ya está conectada una impresora
-      if (printerService.isConnected) {
-        // Imprimir directamente
+      if (await printerService.isConnected) {
         await printerService.printTicket(widget.venta);
         if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1093,59 +1090,64 @@ class _DetalleVentaScreenState extends State<DetalleVentaScreen> {
         return;
       }
 
-      // Mostrar diálogo de selección de impresora
       if (!context.mounted) return;
-      
+
       final selectedPrinter = await showDialog<BluetoothDevice>(
         context: context,
         barrierDismissible: false,
         builder: (dialogContext) => _PrinterSelectionDialog(),
       );
 
-      if (selectedPrinter == null) {
-        return;
-      }
+      if (selectedPrinter == null) return;
 
-      // Conectar e imprimir
+      if (!context.mounted) return;
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => const Center(child: CircularProgressIndicator()),
+      );
+
       await printerService.connectToDevice(selectedPrinter);
-      
-      if (!context.mounted) return;
-      
       await printerService.printTicket(widget.venta);
-      
+
       if (!context.mounted) return;
-      
+      Navigator.of(context).pop();
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Ticket enviado a la impresora')),
       );
     } catch (e) {
       if (!context.mounted) return;
+      if (Navigator.of(context).canPop()) Navigator.of(context).pop();
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error al imprimir ticket: $e')),
+        SnackBar(
+          content: Text(
+            e.toString().replaceFirst('Exception: ', ''),
+          ),
+        ),
       );
     }
   }
-
 }
 
-// Diálogo para seleccionar impresora
 class _PrinterSelectionDialog extends StatefulWidget {
   @override
-  State<_PrinterSelectionDialog> createState() => _PrinterSelectionDialogState();
+  State<_PrinterSelectionDialog> createState() =>
+      _PrinterSelectionDialogState();
 }
 
 class _PrinterSelectionDialogState extends State<_PrinterSelectionDialog> {
-  List<BluetoothDevice> printers = [];
+  List<BluetoothDevice> devices = [];
   bool isLoading = true;
   String? errorMessage;
 
   @override
   void initState() {
     super.initState();
-    _scanForPrinters();
+    _loadBondedDevices();
   }
 
-  Future<void> _scanForPrinters() async {
+  Future<void> _loadBondedDevices() async {
     try {
       if (!mounted) return;
       setState(() {
@@ -1154,17 +1156,17 @@ class _PrinterSelectionDialogState extends State<_PrinterSelectionDialog> {
       });
 
       final printerService = BluetoothPrinterService.instance;
-      final foundPrinters = await printerService.scanForPrinters();
+      final bonded = await printerService.getBondedDevices();
 
       if (!mounted) return;
       setState(() {
-        printers = foundPrinters;
+        devices = bonded;
         isLoading = false;
       });
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        errorMessage = 'Error al buscar impresoras: $e';
+        errorMessage = e.toString().replaceFirst('Exception: ', '');
         isLoading = false;
       });
     }
@@ -1185,23 +1187,41 @@ class _PrinterSelectionDialogState extends State<_PrinterSelectionDialog> {
                       Text(errorMessage!),
                       const SizedBox(height: 16),
                       ElevatedButton(
-                        onPressed: _scanForPrinters,
+                        onPressed: _loadBondedDevices,
                         child: const Text('Reintentar'),
                       ),
                     ],
                   )
-                : printers.isEmpty
-                    ? const Text('No se encontraron impresoras')
+                : devices.isEmpty
+                    ? const Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.bluetooth_disabled,
+                              size: 48, color: Colors.grey),
+                          SizedBox(height: 12),
+                          Text(
+                            'No hay dispositivos emparejados.\n\n'
+                            'Emparejá la impresora desde:\n'
+                            'Ajustes > Bluetooth > Vincular dispositivo',
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      )
                     : ListView.builder(
                         shrinkWrap: true,
-                        itemCount: printers.length,
+                        itemCount: devices.length,
                         itemBuilder: (context, index) {
-                          final printer = printers[index];
+                          final device = devices[index];
                           return ListTile(
                             leading: const Icon(Icons.print),
-                            title: Text(printer.name.isEmpty ? 'Impresora desconocida' : printer.name),
-                            subtitle: Text(printer.remoteId.toString()),
-                            onTap: () => Navigator.of(context).pop(printer),
+                            title: Text(
+                              (device.name?.isNotEmpty == true)
+                                  ? device.name!
+                                  : 'Dispositivo desconocido',
+                            ),
+                            subtitle: Text(device.address ?? ''),
+                            onTap: () =>
+                                Navigator.of(context).pop(device),
                           );
                         },
                       ),
@@ -1211,10 +1231,10 @@ class _PrinterSelectionDialogState extends State<_PrinterSelectionDialog> {
           onPressed: () => Navigator.of(context).pop(),
           child: const Text('Cancelar'),
         ),
-        if (!isLoading && printers.isEmpty)
+        if (!isLoading)
           TextButton(
-            onPressed: _scanForPrinters,
-            child: const Text('Buscar de nuevo'),
+            onPressed: _loadBondedDevices,
+            child: const Text('Actualizar'),
           ),
       ],
     );
