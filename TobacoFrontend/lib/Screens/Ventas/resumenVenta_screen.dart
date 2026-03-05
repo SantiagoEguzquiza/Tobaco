@@ -27,6 +27,7 @@ class _ResumenVentaScreenState extends State<ResumenVentaScreen> {
   Ventas? ventaCargadaBD;
   bool isLoading = true;
   String? errorMessage;
+  bool _isPrinting = false;
 
   @override
   void initState() {
@@ -600,59 +601,70 @@ class _ResumenVentaScreenState extends State<ResumenVentaScreen> {
           children: [
                         Expanded(
               child: ElevatedButton.icon(
-                onPressed: () {
-                  showModalBottomSheet(
-                    context: context,
-                    shape: const RoundedRectangleBorder(
-                      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-                    ),
-                    builder: (sheetContext) {
-                      return SafeArea(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            ListTile(
-                              leading: const Icon(Icons.picture_as_pdf, color: AppTheme.primaryColor),
-                              title: const Text('Imprimir PDF'),
-                              onTap: () async {
-                                Navigator.of(sheetContext).pop();
-                                try {
-                                  final ventaParaPdf = ventaCargadaBD ?? venta;
-                                  if (ventaParaPdf == null) return;
-                                  final bytes = await buildVentaPdf(ventaParaPdf);
-                                  await Printing.layoutPdf(onLayout: (_) async => bytes);
-                                } catch (e) {
-                                  if (!context.mounted) return;
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text('Error al generar PDF: $e')),
-                                  );
-                                }
-                              },
-                            ),
-                            ListTile(
-                              leading: const Icon(Icons.receipt_long, color: AppTheme.primaryColor),
-                              title: const Text('Imprimir ticket'),
-                              onTap: () async {
-                                Navigator.of(sheetContext).pop();
-                                await _imprimirTicketTermico(context);
-                              },
-                            ),
-                            ListTile(
-                              leading: const Icon(Icons.share, color: AppTheme.primaryColor),
-                              title: const Text('Compartir PDF por WhatsApp'),
-                              onTap: () {
-                                Navigator.of(sheetContext).pop();
-                              },
-                            ),
-                            const SizedBox(height: 8),
-                          ],
+                onPressed: _isPrinting
+                    ? null
+                    : () {
+                        showModalBottomSheet(
+                          context: context,
+                          shape: const RoundedRectangleBorder(
+                            borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                          ),
+                          builder: (sheetContext) {
+                            return SafeArea(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  ListTile(
+                                    leading: const Icon(Icons.picture_as_pdf, color: AppTheme.primaryColor),
+                                    title: const Text('Imprimir PDF'),
+                                    onTap: () async {
+                                      Navigator.of(sheetContext).pop();
+                                      try {
+                                        final ventaParaPdf = ventaCargadaBD ?? venta;
+                                        if (ventaParaPdf == null) return;
+                                        final bytes = await buildVentaPdf(ventaParaPdf);
+                                        await Printing.layoutPdf(onLayout: (_) async => bytes);
+                                      } catch (e) {
+                                        if (!context.mounted) return;
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(content: Text('Error al generar PDF: $e')),
+                                        );
+                                      }
+                                    },
+                                  ),
+                                  ListTile(
+                                    leading: const Icon(Icons.receipt_long, color: AppTheme.primaryColor),
+                                    title: const Text('Imprimir ticket'),
+                                    onTap: () async {
+                                      Navigator.of(sheetContext).pop();
+                                      await _imprimirTicketTermico(context);
+                                    },
+                                  ),
+                                  ListTile(
+                                    leading: const Icon(Icons.share, color: AppTheme.primaryColor),
+                                    title: const Text('Compartir PDF por WhatsApp'),
+                                    onTap: () {
+                                      Navigator.of(sheetContext).pop();
+                                    },
+                                  ),
+                                  const SizedBox(height: 8),
+                                ],
+                              ),
+                            );
+                          },
+                        );
+                      },
+                icon: _isPrinting
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
                         ),
-                      );
-                    },
-                  );
-                },
-                icon: const Icon(Icons.print, size: 20),
-                label: const Text('Imprimir'),
+                      )
+                    : const Icon(Icons.print, size: 20),
+                label: Text(_isPrinting ? 'Imprimiendo...' : 'Imprimir'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.primaryColor,
                   shape: RoundedRectangleBorder(
@@ -825,6 +837,15 @@ class _ResumenVentaScreenState extends State<ResumenVentaScreen> {
   }
 
   Future<void> _imprimirTicketTermico(BuildContext context) async {
+    if (_isPrinting) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Impresión en curso, por favor esperá...')),
+      );
+      return;
+    }
+
+    setState(() => _isPrinting = true);
+
     try {
       final ventaParaImprimir = ventaCargadaBD ?? venta;
       if (ventaParaImprimir == null) {
@@ -837,7 +858,9 @@ class _ResumenVentaScreenState extends State<ResumenVentaScreen> {
 
       final printerService = BluetoothPrinterService.instance;
 
-      if (await printerService.isConnected) {
+      // If connected or has a previously-known device (auto-reconnect handles it)
+      if (await printerService.isConnected ||
+          printerService.connectedDevice != null) {
         await printerService.printTicket(ventaParaImprimir);
         if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
@@ -846,6 +869,7 @@ class _ResumenVentaScreenState extends State<ResumenVentaScreen> {
         return;
       }
 
+      // No known device — show selection dialog
       if (!context.mounted) return;
 
       final selectedPrinter = await showDialog<BluetoothDevice>(
@@ -882,6 +906,8 @@ class _ResumenVentaScreenState extends State<ResumenVentaScreen> {
           ),
         ),
       );
+    } finally {
+      if (mounted) setState(() => _isPrinting = false);
     }
   }
 }
@@ -956,9 +982,7 @@ class _PrinterSelectionDialogState extends State<_PrinterSelectionDialog> {
                               size: 48, color: Colors.grey),
                           SizedBox(height: 12),
                           Text(
-                            'No hay dispositivos emparejados.\n\n'
-                            'Emparejá la impresora desde:\n'
-                            'Ajustes > Bluetooth > Vincular dispositivo',
+                            'No hay dispositivos emparejados.\n\n',
                             textAlign: TextAlign.center,
                           ),
                         ],
