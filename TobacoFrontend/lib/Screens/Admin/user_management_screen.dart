@@ -1208,10 +1208,10 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     if (result['success']) {
       // Check if current user was affected (deactivated themselves)
       if (result['currentUserAffected']) {
-        context.read<ClienteProvider>().clearForNewUser();
-        context.read<VentasProvider>().clearForNewUser();
+        await context.read<ClienteProvider>().clearForNewUser();
+        await context.read<VentasProvider>().clearForNewUser();
         await context.read<ProductoProvider>().clearForNewUser();
-        context.read<CategoriasProvider>().clearForNewUser();
+        await context.read<CategoriasProvider>().clearForNewUser();
         context.read<PermisosProvider>().clearPermisos();
         await AuthService.logout();
 
@@ -1330,10 +1330,10 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     if (result['success']) {
       // Check if current user was affected (deleted themselves)
       if (result['currentUserAffected']) {
-        context.read<ClienteProvider>().clearForNewUser();
-        context.read<VentasProvider>().clearForNewUser();
+        await context.read<ClienteProvider>().clearForNewUser();
+        await context.read<VentasProvider>().clearForNewUser();
         await context.read<ProductoProvider>().clearForNewUser();
-        context.read<CategoriasProvider>().clearForNewUser();
+        await context.read<CategoriasProvider>().clearForNewUser();
         context.read<PermisosProvider>().clearPermisos();
         await AuthService.logout();
 
@@ -2958,10 +2958,10 @@ class _EditUserDialogState extends State<_EditUserDialog> {
       if (result['success']) {
         // Check if current user was affected (deactivated themselves)
         if (result['currentUserAffected']) {
-          context.read<ClienteProvider>().clearForNewUser();
-          context.read<VentasProvider>().clearForNewUser();
+          await context.read<ClienteProvider>().clearForNewUser();
+          await context.read<VentasProvider>().clearForNewUser();
           await context.read<ProductoProvider>().clearForNewUser();
-          context.read<CategoriasProvider>().clearForNewUser();
+          await context.read<CategoriasProvider>().clearForNewUser();
           context.read<PermisosProvider>().clearPermisos();
           await AuthService.logout();
 

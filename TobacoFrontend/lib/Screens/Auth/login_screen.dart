@@ -5,6 +5,7 @@ import '../../Services/Permisos_Service/permisos_provider.dart';
 import '../../Services/Productos_Service/productos_provider.dart';
 import '../../Services/Clientes_Service/clientes_provider.dart';
 import '../../Services/Categoria_Service/categoria_provider.dart';
+import '../../Services/Ventas_Service/ventas_provider.dart';
 import '../../Helpers/api_handler.dart';
 import '../menu_screen.dart';
 import 'recuperar_contrasena_screen.dart';
@@ -520,10 +521,11 @@ class _LoginScreenState extends State<LoginScreen> {
         );
 
         if (success && mounted) {
-          // Limpiar caché y estado de otro usuario para no mostrar sus clientes/productos al ir offline
-          context.read<ClienteProvider>().clearForNewUser();
-          context.read<CategoriasProvider>().clearForNewUser();
+          // Limpiar caché y estado de otro usuario para no mostrar sus datos al abrir pantallas
+          await context.read<ClienteProvider>().clearForNewUser();
+          await context.read<CategoriasProvider>().clearForNewUser();
           await context.read<ProductoProvider>().clearForNewUser();
+          await context.read<VentasProvider>().clearForNewUser();
           if (!mounted) return;
           // Dar un momento al almacenamiento para que el token esté disponible (evita fallos al reingresar con el mismo usuario)
           await Future.delayed(const Duration(milliseconds: 150));

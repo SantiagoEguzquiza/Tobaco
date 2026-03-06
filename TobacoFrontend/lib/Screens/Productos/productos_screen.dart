@@ -26,7 +26,7 @@ class ProductosScreen extends StatefulWidget {
 
 class _ProductosScreenState extends State<ProductosScreen> {
   final TextEditingController _searchController = TextEditingController();
-  
+  bool _categoriesLoadTriggered = false;
 
   // ScrollController para detectar cuando llegar al final
   final ScrollController _scrollController = ScrollController();
@@ -49,13 +49,18 @@ class _ProductosScreenState extends State<ProductosScreen> {
   @override
   void initState() {
     super.initState();
-    // Cargar productos iniciales usando el Provider
+    // Cargar productos y categorías (también si se entra directo a Productos sin haber cargado categorías antes)
     Future.microtask(() {
+      if (!mounted) return;
       final productoProvider = context.read<ProductoProvider>();
       final categoriasProvider = context.read<CategoriasProvider>();
       productoProvider.cargarProductosInicial(categoriasProvider).then((_) {
+        if (!mounted) return;
+        // Si tras cargar no hay categorías (ej. entraste directo y solo se cargaron productos), cargar categorías y sincronizar
+        if (productoProvider.categorias.isEmpty && !productoProvider.isLoading) {
+          _cargarCategoriasYSincronizar();
+        }
       }).catchError((e) {
-        // Manejar errores
         if (mounted) {
           if (Apihandler.isConnectionError(e)) {
             AppTheme.showSnackBar(
@@ -71,6 +76,16 @@ class _ProductosScreenState extends State<ProductosScreen> {
         }
       });
     });
+  }
+
+  Future<void> _cargarCategoriasYSincronizar() async {
+    if (!mounted || _categoriesLoadTriggered) return;
+    _categoriesLoadTriggered = true;
+    try {
+      await context.read<CategoriasProvider>().cargarCategorias(silent: true);
+      if (!mounted) return;
+      context.read<ProductoProvider>().sincronizarCategoriasDesde(context.read<CategoriasProvider>());
+    } catch (_) {}
   }
 
   @override
@@ -127,6 +142,14 @@ class _ProductosScreenState extends State<ProductosScreen> {
     final categorias = prov.categorias;
     final searchQuery = prov.searchQuery;
     final selectedCategory = prov.selectedCategory;
+
+    // Si entramos directo a Productos y aún no hay categorías (ni está cargando), cargarlas una vez
+    if (categorias.isEmpty && !prov.isLoading && !prov.isSyncing && !_categoriesLoadTriggered) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _cargarCategoriasYSincronizar();
+      });
+    }
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -663,8 +686,8 @@ class _ProductosScreenState extends State<ProductosScreen> {
 
       if (!context.mounted) return;
 
-      // Cerrar loading
-      Navigator.pop(context);
+      // Cerrar solo el diálogo de loading (root navigator), no la pantalla Productos
+      Navigator.of(context, rootNavigator: true).pop();
 
       if (errorMessage == null) {
         AppTheme.showSnackBar(
@@ -911,8 +934,8 @@ class _ProductosScreenState extends State<ProductosScreen> {
 
           if (!context.mounted) return;
 
-          // Cerrar loading
-          Navigator.pop(context);
+          // Cerrar solo el diálogo de loading (root navigator), no la pantalla Productos
+          Navigator.of(context, rootNavigator: true).pop();
 
           // Si llegamos aquí, la eliminación fue exitosa (sin ventas vinculadas)
           AppTheme.showSnackBar(
@@ -926,8 +949,8 @@ class _ProductosScreenState extends State<ProductosScreen> {
         } catch (e) {
           if (!context.mounted) return;
 
-          // Cerrar loading
-          Navigator.pop(context);
+          // Cerrar solo el diálogo de loading (root navigator), no la pantalla Productos
+          Navigator.of(context, rootNavigator: true).pop();
 
           // Si es un error 409 (Conflict) - producto con ventas vinculadas
           if (e.toString().contains('ventas vinculadas') ||

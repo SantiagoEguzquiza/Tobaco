@@ -275,39 +275,42 @@ class _ClientesScreenState extends State<ClientesScreen> {
         ],
       ),
       child: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(40),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.people_outline,
-                size: 80,
-                color: Colors.grey.shade400,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                searchQuery.isNotEmpty
-                    ? 'No se encontraron clientes'
-                    : 'No hay clientes registrados',
-                style: TextStyle(
-                  fontSize: 18,
-                  color: Colors.grey.shade600,
-                  fontWeight: FontWeight.w500,
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(40),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.people_outline,
+                  size: 80,
+                  color: Colors.grey.shade400,
                 ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                searchQuery.isNotEmpty
-                    ? 'Intenta con otros términos de búsqueda'
-                    : 'Crea tu primer cliente para comenzar',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey.shade500,
+                const SizedBox(height: 16),
+                Text(
+                  searchQuery.isNotEmpty
+                      ? 'No se encontraron clientes'
+                      : 'No hay clientes registrados',
+                  style: TextStyle(
+                    fontSize: 18,
+                    color: Colors.grey.shade600,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
-                textAlign: TextAlign.center,
-              ),
-            ],
+                const SizedBox(height: 8),
+                Text(
+                  searchQuery.isNotEmpty
+                      ? 'Intenta con otros términos de búsqueda'
+                      : 'Crea tu primer cliente para comenzar',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey.shade500,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
           ),
         ),
       ),

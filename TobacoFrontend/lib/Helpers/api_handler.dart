@@ -9,7 +9,7 @@ import 'package:tobaco/Theme/dialogs.dart';
 /// URL del backend. Cambia solo aquí según dónde corras la app.
 class ApiConfig {
   /// Backend en tu PC: celular y PC en la misma Wi‑Fi. Reemplaza por la IP de tu PC (ipconfig).
-  static const String localUrl = 'http://10.0.2.2:5006';
+  static const String localUrl = 'http://192.168.0.102:5006';
   /// Backend en producción (Railway).
   static const String productionUrl = 'https://tobacoapi-production.up.railway.app';
 }
@@ -25,7 +25,6 @@ class Apihandler {
   /// Para probar en celular: 1) Misma Wi‑Fi. 2) Backend con perfil "http". 3) ApiConfig.localUrl = IP de tu PC.
   static Uri get baseUrl {
     final url = kDebugMode ? ApiConfig.localUrl : ApiConfig.productionUrl;
-    debugPrint('ApiHandler: conectando a $url');
     return Uri.parse(url);
   }
 
@@ -57,12 +56,15 @@ class Apihandler {
     if (error is HandshakeException) {
       return true;
     }
-    if (error.toString().contains('Failed host lookup') ||
-        error.toString().contains('Connection refused') ||
-        error.toString().contains('Connection timed out') ||
-        error.toString().contains('Network is unreachable') ||
-        error.toString().contains('Software caused connection abort') ||
-        error.toString().contains('TimeoutException')) {
+    final msg = error.toString().toLowerCase();
+    if (msg.contains('failed host lookup') ||
+        msg.contains('connection refused') ||
+        msg.contains('connection timed out') ||
+        msg.contains('network is unreachable') ||
+        msg.contains('software caused connection abort') ||
+        msg.contains('timeoutexception') ||
+        msg.contains('no se pudo conectar') ||
+        msg.contains('conectar al servidor')) {
       return true;
     }
     return false;

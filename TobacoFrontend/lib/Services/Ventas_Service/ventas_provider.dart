@@ -45,6 +45,8 @@ class VentasProvider with ChangeNotifier {
   final int _pageSize = 20;
   String _searchQuery = '';
   bool _offlineMessageShown = false;
+  /// Tras clearForNewUser, no mostrar caché en la próxima carga (evita datos de otro usuario).
+  bool _skipCacheOnNextLoad = false;
 
   List<Ventas> get ventas => List.unmodifiable(_ventas);
   bool get isLoading => _isLoading;
@@ -98,9 +100,11 @@ class VentasProvider with ChangeNotifier {
     _isOffline = false;
     _currentPage = 1;
     _hasMoreData = true;
+    final skipCache = _skipCacheOnNextLoad;
+    if (skipCache) _skipCacheOnNextLoad = false;
 
-    // PASO 1: Mostrar datos cacheados inmediatamente para que la UI no esté vacía
-    if (_ventas.isEmpty) {
+    // PASO 1: Mostrar datos cacheados inmediatamente solo si no acabamos de cambiar de usuario
+    if (!skipCache && _ventas.isEmpty) {
       _isLoading = true;
       notifyListeners();
 
@@ -121,7 +125,27 @@ class VentasProvider with ChangeNotifier {
       }
     }
 
-    // PASO 2: Traer página 1 de la API (datos frescos, paginados)
+    // Si saltamos caché, asegurar loading visible hasta que responda la API
+    if (skipCache && _ventas.isEmpty) {
+      _isLoading = true;
+      notifyListeners();
+    }
+
+    // PASO 2: Verificar si el backend está prendido con GET /health (2s). Sin backend → modo offline al instante.
+    final backendOk = await _ventasService.backendDisponible;
+    if (!backendOk) {
+      _isOffline = true;
+      _hasMoreData = false;
+      if (_ventas.isEmpty) {
+        _errorMessage = 'Sin conexión con el servidor.';
+        await _cargarVentasOffline();
+      }
+      _isLoading = false;
+      notifyListeners();
+      return;
+    }
+
+    // PASO 3: Backend disponible → traer página 1 (timeout normal por si responde lento).
     try {
       final resultado = await _ventasService.obtenerVentasPaginadas(1, _pageSize);
       final ventasDelServidor = resultado['ventas'] as List<Ventas>;
@@ -145,28 +169,21 @@ class VentasProvider with ChangeNotifier {
       _isOffline = false;
       _offlineMessageShown = false;
     } catch (e) {
-      if (Apihandler.isConnectionError(e) ||
-          e is TimeoutException ||
-          _esErrorServidor(e)) {
-        // Si no teníamos datos del caché, cargar modo offline completo
-        if (_ventas.isEmpty) {
-          await _cargarVentasOffline();
-        }
-        _isOffline = true;
-        _hasMoreData = false;
-        if (_ventas.isEmpty) {
-          _errorMessage = _limpiarMensajeError(e.toString());
-        }
-      } else {
-        if (AuthService.isSessionExpiredException(e)) {
-          await AuthService.logout();
-          _isLoading = false;
-          notifyListeners();
-          return;
-        }
-        if (_ventas.isEmpty) {
-          _errorMessage = _limpiarMensajeError(e.toString());
-        }
+      if (AuthService.isSessionExpiredException(e)) {
+        await AuthService.logout();
+        _isLoading = false;
+        notifyListeners();
+        return;
+      }
+      // Marcar offline de inmediato para que el banner "Modo Offline" aparezca aunque falle algo después
+      _isOffline = true;
+      _hasMoreData = false;
+      if (_ventas.isEmpty) {
+        _errorMessage = _limpiarMensajeError(e.toString());
+      }
+      notifyListeners(); // Actualizar UI con el banner antes de cargar datos offline
+      if (_ventas.isEmpty) {
+        await _cargarVentasOffline();
       }
     } finally {
       _isLoading = false;
@@ -208,6 +225,9 @@ class VentasProvider with ChangeNotifier {
       );
     } catch (e) {
       debugPrint('⚠️ VentasProvider: Error al cargar más ventas: $e');
+      // Si falla al cargar más (ej. sin backend), marcar offline para que aparezca el banner y no siga intentando
+      _isOffline = true;
+      _hasMoreData = false;
     } finally {
       _isLoadingMore = false;
       notifyListeners();
@@ -403,7 +423,21 @@ class VentasProvider with ChangeNotifier {
         'usuarioAsignadoNombre': response['usuarioAsignadoNombre'],
       };
     } catch (e) {
-      // FALLBACK: Solo si falla el servidor, guardar localmente como excepción
+      final errorStr = e.toString().toLowerCase();
+      final esErrorStock = errorStr.contains('stock insuficiente') ||
+          (errorStr.contains('insuficiente') && errorStr.contains('disponible'));
+
+      if (esErrorStock) {
+        final message = e is Exception ? e.toString().replaceFirst('Exception: ', '') : e.toString();
+        debugPrint('⚠️ VentasProvider: Error de stock, no se guarda offline: $message');
+        return {
+          'success': false,
+          'isOffline': false,
+          'message': message,
+        };
+      }
+
+      // FALLBACK: Solo si falla el servidor (conexión, etc.), guardar localmente como excepción
       debugPrint('⚠️ VentasProvider: Error al guardar en servidor, guardando localmente como fallback...');
       debugPrint('   Error: $e');
       
@@ -519,13 +553,26 @@ class VentasProvider with ChangeNotifier {
     return false;
   }
 
+  /// Cantidad por producto ya "reservada" en ventas pendientes de sincronizar (offline).
+  /// Al hacer otra venta offline, el máximo disponible debe ser stock - esta cantidad.
+  Map<int, double> get cantidadReservadaOfflinePorProducto {
+    final Map<int, double> reservada = {};
+    for (final venta in _ventas) {
+      if (!esVentaPendiente(venta)) continue;
+      for (final vp in venta.ventasProductos) {
+        reservada[vp.productoId] = (reservada[vp.productoId] ?? 0) + vp.cantidad;
+      }
+    }
+    return reservada;
+  }
+
   Future<int> contarVentasPendientes() async {
     final stats = await _db.getStats();
     return stats['pending'] ?? 0;
   }
 
-  /// Limpia listas y estado al cambiar de usuario (logout). Evita mostrar datos del usuario anterior.
-  void clearForNewUser() {
+  /// Limpia listas y caché al cambiar de usuario. Evita mostrar ventas de otro usuario.
+  Future<void> clearForNewUser() async {
     _ventas = [];
     _ventaLocalIds.clear();
     _currentPage = 1;
@@ -536,8 +583,13 @@ class VentasProvider with ChangeNotifier {
     _isLoading = false;
     _isLoadingMore = false;
     _offlineMessageShown = false;
-    // Defer to avoid setState/markNeedsBuild during build (e.g. when called from session invalidated callback)
-    Future.microtask(() => notifyListeners());
+    _skipCacheOnNextLoad = true;
+    notifyListeners();
+    try {
+      await _cacheService.limpiarCache();
+    } catch (e) {
+      debugPrint('⚠️ VentasProvider: error limpiando caché para nuevo usuario: $e');
+    }
   }
 
   /// Deja la lista vacía y activa loading para que al abrir Ventas se muestre carga y no la lista anterior.

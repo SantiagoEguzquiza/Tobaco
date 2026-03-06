@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:connectivity_plus/connectivity_plus.dart';
-import '../Auth_Service/auth_service.dart';
 import '../../Helpers/api_handler.dart';
 
 /// Servicio para manejar el estado de conectividad de la aplicación
@@ -18,7 +17,9 @@ class ConnectivityService {
   bool _isBackendAvailable = false;
   DateTime? _lastBackendCheck;
   
-  static const Duration _backendCheckInterval = Duration(seconds: 30);
+  // Intervalo entre health-checks al backend. Mantenerlo relativamente alto
+  // para no generar demasiadas llamadas en segundo plano.
+  static const Duration _backendCheckInterval = Duration(minutes: 1);
   static const Duration _backendCheckTimeout = Duration(seconds: 2);
 
   /// Stream que emite true cuando hay conexión completa (internet + backend)
@@ -98,17 +99,11 @@ class ConnectivityService {
     _lastBackendCheck = DateTime.now();
     
     try {
-      // Health check es público; no usar auth para no fallar en login/recuperar contraseña
-      Map<String, String> headers = Map.from({'Content-Type': 'application/json'});
-      try {
-        final authHeaders = await AuthService.getAuthHeaders();
-        headers.addAll(authHeaders);
-      } catch (_) {
-        // Sin token (ej. pantalla de login o recuperar contraseña), seguir sin Authorization
-      }
+      // Health check es público; no enviar Authorization para no forzar
+      // validaciones/refrescos de token en cada verificación periódica.
       final response = await Apihandler.client.get(
         Apihandler.baseUrl.resolve('/api/health'),
-        headers: headers,
+        headers: const {'Content-Type': 'application/json'},
       ).timeout(_backendCheckTimeout);
       
       _isBackendAvailable = response.statusCode == 200;

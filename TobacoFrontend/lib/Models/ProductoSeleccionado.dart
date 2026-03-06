@@ -9,6 +9,8 @@ class ProductoSeleccionado {
   double descuento;
   DateTime? fechaExpiracionDescuento;
   bool descuentoIndefinido;
+  /// Stock disponible al momento de agregar (para control en venta: no permitir más que lo disponible).
+  double? stock;
 
   ProductoSeleccionado({
     required this.id,
@@ -21,6 +23,7 @@ class ProductoSeleccionado {
     this.descuento = 0.0,
     this.fechaExpiracionDescuento,
     this.descuentoIndefinido = false,
+    this.stock,
   });
 
   factory ProductoSeleccionado.fromJson(Map<String, dynamic> json) {
@@ -46,6 +49,7 @@ class ProductoSeleccionado {
           : 0.0,
       fechaExpiracionDescuento: parseFecha,
       descuentoIndefinido: json['descuentoIndefinido'] ?? false,
+      stock: json['stock'] != null ? double.tryParse(json['stock'].toString()) : null,
     );
   }
 
@@ -61,6 +65,7 @@ class ProductoSeleccionado {
       'descuento': descuento,
       'fechaExpiracionDescuento': fechaExpiracionDescuento?.toIso8601String(),
       'descuentoIndefinido': descuentoIndefinido,
+      if (stock != null) 'stock': stock,
     };
   }
 }

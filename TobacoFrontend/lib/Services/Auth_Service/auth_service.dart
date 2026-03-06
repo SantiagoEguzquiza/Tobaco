@@ -16,6 +16,8 @@ class AuthService {
   static const String _refreshTokenKey = 'refresh_token';
   static const String _tokenExpiryKey = 'token_expiry';
   static const String _userKey = 'user_data';
+  // Habilita logs verbosos de auth cuando se está depurando un problema específico
+  static const bool _logVerboseAuth = false;
   /// Timeout más generoso para login: tras horas en segundo plano la primera petición puede tardar.
   static const Duration _timeoutDuration = Duration(seconds: 15);
   /// Reintentos automáticos cuando falla por conexión/timeout (evita tener que tocar 5-6 veces).
@@ -25,10 +27,12 @@ class AuthService {
   /// Solo refrescar cuando al token le queden menos de estos segundos (evita refrescos innecesarios y timeouts).
   static const int _refreshWhenSecondsLeft = 30;
   
-  // Secure storage para tokens sensibles
+  // Secure storage para tokens sensibles.
+  // En Android: encryptedSharedPreferences = false evita fallos de Keystore/EncryptedSharedPreferences
+  // en algunos dispositivos (ej. Xiaomi/MIUI). Los datos siguen en almacenamiento privado de la app.
   static const FlutterSecureStorage _secureStorage = FlutterSecureStorage(
     aOptions: AndroidOptions(
-      encryptedSharedPreferences: true,
+      encryptedSharedPreferences: false,
     ),
     iOptions: IOSOptions(
       accessibility: KeychainAccessibility.first_unlock_this_device,
@@ -43,24 +47,34 @@ class AuthService {
     final s = e.toString().toLowerCase();
     return s.contains('invalidkey') ||
         s.contains('aeadbadtag') ||
+        s.contains('bad tag') ||
         s.contains('signature/mac') ||
+        s.contains('verification failed') ||
         s.contains('unwrap') ||
         s.contains('keystore') ||
         s.contains('encryptedsharedpreferences') ||
+        s.contains('initialization failed') ||
         s.contains('mac verification failed');
   }
 
+  /// Limpia datos de sesión cuando el almacenamiento seguro está corrupto
+  /// (p. ej. tras reinstalar app o actualizar el dispositivo). No llamamos a
+  /// _secureStorage.delete() porque en ese estado también falla; solo limpiamos
+  /// SharedPreferences para que isAuthenticated sea false y se muestre el login.
   static Future<void> _clearCorruptedAuthStorage() async {
     if (_corruptionHandled) return;
     _corruptionHandled = true;
-    debugPrint('AuthService: Almacenamiento seguro corrupto o clave cambiada, limpiando sesión.');
+    debugPrint('AuthService: Almacenamiento seguro corrupto o clave cambiada. Limpiando sesión (SharedPreferences).');
     try {
-      await _secureStorage.delete(key: _tokenKey);
-      await _secureStorage.delete(key: _refreshTokenKey);
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_tokenExpiryKey);
+      await prefs.remove(_userKey);
     } catch (_) {}
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_tokenExpiryKey);
-    await prefs.remove(_userKey);
+    onSessionInvalidated?.call();
+    // No llamar a _secureStorage.delete() aquí: con EncryptedSharedPreferences
+    // roto, delete() también lanza. El token en secure storage queda inaccesible;
+    // al volver a iniciar sesión se guardará uno nuevo (si el almacenamiento
+    // ya se recuperó) o el usuario tendrá que desinstalar/reinstalar si sigue fallando.
   }
 
   // Login user (con reintentos automáticos si falla por conexión/timeout tras estar la app en segundo plano)
@@ -122,8 +136,10 @@ class AuthService {
 
   // Save authentication data to secure storage
   static Future<void> _saveAuthData(LoginResponse loginResponse) async {
-    debugPrint('AuthService._saveAuthData: Guardando tokens');
-    debugPrint('AuthService._saveAuthData: Token expira en: ${loginResponse.expiresAt}');
+    if (_logVerboseAuth) {
+      debugPrint('AuthService._saveAuthData: Guardando tokens');
+      debugPrint('AuthService._saveAuthData: Token expira en: ${loginResponse.expiresAt}');
+    }
     
     // Guardar tokens en secure storage
     await _secureStorage.write(key: _tokenKey, value: loginResponse.token);
@@ -134,15 +150,16 @@ class AuthService {
     await prefs.setString(_tokenExpiryKey, loginResponse.expiresAt.toIso8601String());
     await prefs.setString(_userKey, jsonEncode(loginResponse.user.toJson()));
     
-    debugPrint('AuthService._saveAuthData: Tokens guardados correctamente');
+    if (_logVerboseAuth) {
+      debugPrint('AuthService._saveAuthData: Tokens guardados correctamente');
+    }
   }
 
   // Get stored access token
   static Future<String?> getToken() async {
     try {
       final token = await _secureStorage.read(key: _tokenKey);
-      // Solo imprimir si hay token (evitar spam en login)
-      if (token != null) {
+      if (_logVerboseAuth && token != null) {
         debugPrint('AuthService.getToken: Token encontrado');
       }
       return token;
@@ -332,7 +349,9 @@ class AuthService {
       final token = await getToken();
       if (token == null) {
         // No hay token, esto es normal si el usuario no está autenticado
-        debugPrint('AuthService.validateAndRefreshToken: No hay token disponible');
+        if (_logVerboseAuth) {
+          debugPrint('AuthService.validateAndRefreshToken: No hay token disponible');
+        }
         return false;
       }
 
@@ -342,26 +361,38 @@ class AuthService {
         final now = DateTime.now();
         final timeUntilExpiry = jwtExpiry.difference(now);
         
-        debugPrint('AuthService.validateAndRefreshToken: Token expira en ${timeUntilExpiry.inSeconds} segundos');
+        if (_logVerboseAuth) {
+          debugPrint('AuthService.validateAndRefreshToken: Token expira en ${timeUntilExpiry.inSeconds} segundos');
+        }
         
         // Solo refrescar cuando falten _refreshWhenSecondsLeft segundos o menos (evita refrescos con red lenta)
         if (timeUntilExpiry.inSeconds < _refreshWhenSecondsLeft) {
-          debugPrint('AuthService.validateAndRefreshToken: Token expirado o por expirar, refrescando');
+          if (_logVerboseAuth) {
+            debugPrint('AuthService.validateAndRefreshToken: Token expirado o por expirar, refrescando');
+          }
           final newToken = await refreshToken();
           if (newToken != null) {
-            debugPrint('AuthService.validateAndRefreshToken: Token refrescado exitosamente');
+            if (_logVerboseAuth) {
+              debugPrint('AuthService.validateAndRefreshToken: Token refrescado exitosamente');
+            }
             return true;
           }
           // Refresh falló (timeout/red): si aún tenemos token, usarlo para esta petición
           if (await getToken() != null) {
-            debugPrint('AuthService.validateAndRefreshToken: Refresh falló pero token actual aún disponible, usándolo');
+            if (_logVerboseAuth) {
+              debugPrint('AuthService.validateAndRefreshToken: Refresh falló pero token actual aún disponible, usándolo');
+            }
             return true;
           }
-          debugPrint('AuthService.validateAndRefreshToken: No se pudo refrescar el token');
+          if (_logVerboseAuth) {
+            debugPrint('AuthService.validateAndRefreshToken: No se pudo refrescar el token');
+          }
           return false;
         }
         
-        debugPrint('AuthService.validateAndRefreshToken: Token aún válido');
+        if (_logVerboseAuth) {
+          debugPrint('AuthService.validateAndRefreshToken: Token aún válido');
+        }
         return true;
       }
 
@@ -375,10 +406,14 @@ class AuthService {
           final now = DateTime.now();
           final timeUntilExpiry = tokenExpiry.difference(now);
           
-          debugPrint('AuthService.validateAndRefreshToken: Token expira en ${timeUntilExpiry.inSeconds} segundos (desde SharedPreferences)');
+          if (_logVerboseAuth) {
+            debugPrint('AuthService.validateAndRefreshToken: Token expira en ${timeUntilExpiry.inSeconds} segundos (desde SharedPreferences)');
+          }
           
           if (now.isAfter(tokenExpiry)) {
-            debugPrint('AuthService.validateAndRefreshToken: Token expirado, intentando refrescar');
+            if (_logVerboseAuth) {
+              debugPrint('AuthService.validateAndRefreshToken: Token expirado, intentando refrescar');
+            }
             final newToken = await refreshToken();
             if (newToken != null) return true;
             if (await getToken() != null) return true;
@@ -386,7 +421,9 @@ class AuthService {
           }
           
           if (timeUntilExpiry.inSeconds < _refreshWhenSecondsLeft) {
-            debugPrint('AuthService.validateAndRefreshToken: Token por expirar, refrescando preventivamente');
+            if (_logVerboseAuth) {
+              debugPrint('AuthService.validateAndRefreshToken: Token por expirar, refrescando preventivamente');
+            }
             final newToken = await refreshToken();
             if (newToken != null) return true;
             if (await getToken() != null) return true;
@@ -395,12 +432,16 @@ class AuthService {
           
           return true;
         } catch (e) {
-          debugPrint('AuthService.validateAndRefreshToken: Error al parsear expiración: $e');
+          if (_logVerboseAuth) {
+            debugPrint('AuthService.validateAndRefreshToken: Error al parsear expiración: $e');
+          }
         }
       }
 
       // Si no hay información de expiración, asumir que es válido
-      debugPrint('AuthService.validateAndRefreshToken: No se pudo determinar expiración, asumiendo válido');
+      if (_logVerboseAuth) {
+        debugPrint('AuthService.validateAndRefreshToken: No se pudo determinar expiración, asumiendo válido');
+      }
       return true;
     } catch (e) {
       debugPrint('AuthService.validateAndRefreshToken: Error: $e');

@@ -663,7 +663,7 @@ class AppTheme {
                   // Contenido (altura limitada y scroll si no cabe)
                   // Sin Key en viewInsets para evitar que el teclado suba/baje rápido (rebuilds por frame)
                   Padding(
-                    padding: const EdgeInsets.all(24),
+                    padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
                     child: ConstrainedBox(
                       constraints: BoxConstraints(
                         maxHeight: maxDialogHeight - 220,
@@ -674,61 +674,48 @@ class AppTheme {
                     ),
                   ),
                   
-                  // Botones
-                  Container(
-                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                  // Botones (mismo estilo que popup fecha de expiración: sin borde, border radius 8)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 4, 24, 16),
                     child: Row(
                       children: [
                         Expanded(
-                          child: OutlinedButton(
+                          child: TextButton(
                             onPressed: onCancel,
-                            style: OutlinedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              backgroundColor: isDark 
-                                  ? const Color(0xFF2A2A2A) 
-                                  : Colors.transparent,
-                              side: BorderSide(
-                                color: isDark 
-                                    ? Colors.grey.shade700 
-                                    : Colors.grey.shade300,
-                                width: 1.5,
-                              ),
+                            style: TextButton.styleFrom(
+                              backgroundColor: isDark ? const Color(0xFF2A2A2A) : Colors.grey.shade200,
+                              foregroundColor: isDark ? Colors.white : Colors.black87,
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(borderRadiusMainButtons),
                               ),
-                              elevation: 0,
+                              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                             ),
                             child: Text(
                               cancelText,
-                              style: TextStyle(
-                                color: isDark ? Colors.white : Colors.black,
+                              style: const TextStyle(
                                 fontWeight: FontWeight.w600,
                                 fontSize: 15,
-                                letterSpacing: 0.2,
                               ),
                             ),
                           ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
-                          child: ElevatedButton(
+                          child: TextButton(
                             onPressed: onConfirm,
-                            style: ElevatedButton.styleFrom(
+                            style: TextButton.styleFrom(
                               backgroundColor: AppTheme.primaryColor,
-                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              foregroundColor: Colors.white,
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(borderRadiusMainButtons),
                               ),
-                              elevation: 0,
-                              shadowColor: AppTheme.primaryColor.withOpacity(0.3),
+                              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                             ),
                             child: Text(
                               confirmText,
                               style: const TextStyle(
-                                color: Colors.white,
                                 fontWeight: FontWeight.w600,
                                 fontSize: 15,
-                                letterSpacing: 0.2,
                               ),
                             ),
                           ),

@@ -137,6 +137,57 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
     }
   }
 
+  Widget _buildCategoryNameField({
+    required TextEditingController controller,
+    required bool isDark,
+    bool autofocus = false,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Nombre de la categoría',
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: isDark ? Colors.grey.shade300 : Colors.grey.shade700,
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: controller,
+          autofocus: autofocus,
+          style: TextStyle(
+            color: isDark ? Colors.white : Colors.black87,
+            fontSize: 16,
+          ),
+          decoration: InputDecoration(
+            hintText: 'Ingresa el nombre de la categoría',
+            hintStyle: TextStyle(
+              color: isDark ? Colors.grey.shade600 : Colors.grey.shade400,
+            ),
+            prefixIcon: Icon(Icons.category_outlined, color: AppTheme.primaryColor, size: 20),
+            filled: true,
+            fillColor: isDark ? const Color(0xFF2A2A2A) : Colors.white,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: isDark ? const Color(0xFF404040) : Colors.grey.shade300),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: isDark ? const Color(0xFF404040) : Colors.grey.shade300),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: AppTheme.primaryColor, width: 2),
+            ),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          ),
+        ),
+      ],
+    );
+  }
+
   void _showEditCategoriaDialog(Categoria categoria) {
     _editNombreController.text = categoria.nombre;
     _editNombreController.selection = TextSelection.collapsed(
@@ -146,91 +197,54 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
 
     showDialog(
       context: context,
-      builder: (dialogContext) => Consumer<CategoriasProvider>(
-        builder: (context, provider, _) => AppTheme.customAlertDialog(
-          title: 'Editar Categoría',
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SizedBox(height: 4),
-              Theme(
-                data: Theme.of(context).copyWith(
-                  textSelectionTheme: TextSelectionThemeData(
-                    cursorColor: Theme.of(context).brightness == Brightness.dark
-                        ? Colors.white
-                        : Colors.black,
-                    selectionColor: Theme.of(context).brightness == Brightness.dark
-                        ? Colors.white.withOpacity(0.3)
-                        : Colors.black.withOpacity(0.2),
-                  ),
-                  inputDecorationTheme: InputDecorationTheme(
-                    labelStyle: TextStyle(
-                      color: Theme.of(context).brightness == Brightness.dark
-                          ? Colors.white
-                          : Colors.black,
-                    ),
-                    hintStyle: TextStyle(
-                      color: Theme.of(context).brightness == Brightness.dark
-                          ? Colors.grey.shade400
-                          : Colors.grey.shade600,
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(
-                        color: Theme.of(context).brightness == Brightness.dark
-                            ? Colors.grey.shade600
-                            : Colors.grey.shade300,
-                      ),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(
-                        color: Theme.of(context).brightness == Brightness.dark
-                            ? Colors.grey.shade600
-                            : Colors.grey.shade300,
-                      ),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(
-                        color: AppTheme.primaryColor,
-                        width: 2,
-                      ),
-                    ),
-                    filled: true,
-                    fillColor: Theme.of(context).brightness == Brightness.dark
-                        ? const Color(0xFF2A2A2A)
-                        : Colors.white,
-                  ),
-                ),
-                child: TextField(
-                  controller: _editNombreController,
-                  style: TextStyle(
-                    color: Theme.of(context).brightness == Brightness.dark
-                        ? Colors.white
-                        : Colors.black,
-                  ),
-                  autofocus: true,
-                  decoration: const InputDecoration(
-                    labelText: 'Nombre de la categoría',
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              ColorPicker(
-                selectedColor: provider.selectedColor,
-                onColorSelected: provider.seleccionarColor,
-              ),
-            ],
+      builder: (dialogContext) => Theme(
+        data: Theme.of(dialogContext).copyWith(
+          textSelectionTheme: TextSelectionThemeData(
+            cursorColor: AppTheme.primaryColor,
+            selectionColor: AppTheme.primaryColor.withOpacity(0.3),
+            selectionHandleColor: AppTheme.primaryColor,
           ),
-          onCancel: () => Navigator.of(dialogContext).pop(),
-          onConfirm: () {
-            Navigator.of(dialogContext).pop();
-            _editarCategoria(categoria);
+        ),
+        child: Consumer<CategoriasProvider>(
+          builder: (context, provider, _) {
+            final isDark = Theme.of(context).brightness == Brightness.dark;
+            return AppTheme.customAlertDialog(
+              title: 'Editar Categoría',
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const SizedBox(height: 4),
+                  _buildCategoryNameField(
+                    controller: _editNombreController,
+                    isDark: isDark,
+                    autofocus: true,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Color',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: isDark ? Colors.grey.shade300 : Colors.grey.shade700,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  ColorPicker(
+                    selectedColor: provider.selectedColor,
+                    onColorSelected: provider.seleccionarColor,
+                  ),
+                ],
+              ),
+              onCancel: () => Navigator.of(dialogContext).pop(),
+              onConfirm: () {
+                Navigator.of(dialogContext).pop();
+                _editarCategoria(categoria);
+              },
+              confirmText: 'Guardar',
+              cancelText: 'Cancelar',
+            );
           },
-          confirmText: 'Guardar',
-          cancelText: 'Cancelar',
         ),
       ),
     );
@@ -240,91 +254,54 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
     context.read<CategoriasProvider>().seleccionarColor('#9E9E9E');
     showDialog(
       context: context,
-      builder: (dialogContext) => Consumer<CategoriasProvider>(
-        builder: (context, provider, _) => AppTheme.customAlertDialog(
-          title: 'Nueva Categoría',
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SizedBox(height: 4),
-              Theme(
-                data: Theme.of(context).copyWith(
-                  textSelectionTheme: TextSelectionThemeData(
-                    cursorColor: Theme.of(context).brightness == Brightness.dark
-                        ? Colors.white
-                        : Colors.black,
-                    selectionColor: Theme.of(context).brightness == Brightness.dark
-                        ? Colors.white.withOpacity(0.3)
-                        : Colors.black.withOpacity(0.2),
-                  ),
-                  inputDecorationTheme: InputDecorationTheme(
-                    labelStyle: TextStyle(
-                      color: Theme.of(context).brightness == Brightness.dark
-                          ? Colors.white
-                          : Colors.black,
-                    ),
-                    hintStyle: TextStyle(
-                      color: Theme.of(context).brightness == Brightness.dark
-                          ? Colors.grey.shade400
-                          : Colors.grey.shade600,
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(
-                        color: Theme.of(context).brightness == Brightness.dark
-                            ? Colors.grey.shade600
-                            : Colors.grey.shade300,
-                      ),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(
-                        color: Theme.of(context).brightness == Brightness.dark
-                            ? Colors.grey.shade600
-                            : Colors.grey.shade300,
-                      ),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(
-                        color: AppTheme.primaryColor,
-                        width: 2,
-                      ),
-                    ),
-                    filled: true,
-                    fillColor: Theme.of(context).brightness == Brightness.dark
-                        ? const Color(0xFF2A2A2A)
-                        : Colors.white,
-                  ),
-                ),
-                child: TextField(
-                  controller: _nombreController,
-                  style: TextStyle(
-                    color: Theme.of(context).brightness == Brightness.dark
-                        ? Colors.white
-                        : Colors.black,
-                  ),
-                  autofocus: true,
-                  decoration: const InputDecoration(
-                    labelText: 'Nombre de la categoría',
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              ColorPicker(
-                selectedColor: provider.selectedColor,
-                onColorSelected: provider.seleccionarColor,
-              ),
-            ],
+      builder: (dialogContext) => Theme(
+        data: Theme.of(dialogContext).copyWith(
+          textSelectionTheme: TextSelectionThemeData(
+            cursorColor: AppTheme.primaryColor,
+            selectionColor: AppTheme.primaryColor.withOpacity(0.3),
+            selectionHandleColor: AppTheme.primaryColor,
           ),
-          onCancel: () => Navigator.of(dialogContext).pop(),
-          onConfirm: () {
-            Navigator.of(dialogContext).pop();
-            _agregarCategoria();
+        ),
+        child: Consumer<CategoriasProvider>(
+          builder: (context, provider, _) {
+            final isDark = Theme.of(context).brightness == Brightness.dark;
+            return AppTheme.customAlertDialog(
+              title: 'Nueva Categoría',
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const SizedBox(height: 4),
+                  _buildCategoryNameField(
+                    controller: _nombreController,
+                    isDark: isDark,
+                    autofocus: true,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Color',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: isDark ? Colors.grey.shade300 : Colors.grey.shade700,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  ColorPicker(
+                    selectedColor: provider.selectedColor,
+                    onColorSelected: provider.seleccionarColor,
+                  ),
+                ],
+              ),
+              onCancel: () => Navigator.of(dialogContext).pop(),
+              onConfirm: () {
+                Navigator.of(dialogContext).pop();
+                _agregarCategoria();
+              },
+              confirmText: 'Agregar',
+              cancelText: 'Cancelar',
+            );
           },
-          confirmText: 'Agregar',
-          cancelText: 'Cancelar',
         ),
       ),
     );
@@ -429,7 +406,7 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
                                   backgroundColor: AppTheme.primaryColor,
                                   foregroundColor: Colors.white,
                                   shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(15),
+                                    borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
                                   ),
                                   padding: const EdgeInsets.symmetric(
                                     horizontal: 24,

@@ -63,8 +63,38 @@ class ClienteService {
       ).timeout(_timeoutDuration);
 
       if (response.statusCode != 200 && response.statusCode != 201) {
-        throw Exception(
-            'Error al guardar el cliente. Código de estado: ${response.statusCode}, Respuesta: ${response.body}');
+        debugPrint('ClienteService.crearCliente: ${response.statusCode} body=${response.body}');
+        String message = 'Error al guardar el cliente.';
+        final bodyStr = response.body.trim();
+        if (bodyStr.isNotEmpty) {
+          try {
+            final body = jsonDecode(bodyStr);
+            if (body is Map) {
+              final msg = body['message'] ?? body['Message'];
+              if (msg != null && msg.toString().trim().isNotEmpty) {
+                message = msg.toString().trim();
+              } else if (body['errors'] is Map) {
+                final errors = body['errors'] as Map;
+                // Preferir mensaje de Direccion, luego Nombre, luego el primero que venga
+                final dirList = errors['Direccion'];
+                final nomList = errors['Nombre'];
+                if (dirList is List && dirList.isNotEmpty) {
+                  message = dirList.first.toString().trim();
+                } else if (nomList is List && nomList.isNotEmpty) {
+                  message = nomList.first.toString().trim();
+                } else {
+                  for (final entry in errors.entries) {
+                    if (entry.value is List && (entry.value as List).isNotEmpty) {
+                      message = (entry.value as List).first.toString().trim();
+                      break;
+                    }
+                  }
+                }
+              }
+            }
+          } catch (_) {}
+        }
+        throw Exception(message);
       } else {
         debugPrint('Cliente guardado exitosamente');
         // Parsear la respuesta para obtener el cliente creado con el ID
@@ -88,8 +118,35 @@ class ClienteService {
       ).timeout(_timeoutDuration);
 
       if (response.statusCode != 200) {
-        throw Exception(
-            'Error al editar el cliente. Código de estado: ${response.statusCode}');
+        String message = 'Revisa los datos del cliente.';
+        if (response.statusCode == 403) message = 'No tienes permiso para editar clientes.';
+        if (response.statusCode == 401) message = 'Sesión expirada. Vuelve a iniciar sesión.';
+        final bodyStr = response.body.trim();
+        if (bodyStr.isNotEmpty) {
+          try {
+            final body = jsonDecode(bodyStr);
+            if (body is Map) {
+              var msg = body['message'] ?? body['Message'] ?? body['detail'] ?? body['title'];
+              if (msg != null && msg.toString().trim().isNotEmpty) {
+                message = msg.toString().trim();
+              }
+              if (message.toLowerCase().contains('one or more validation') && body['errors'] is Map) {
+                final errors = body['errors'] as Map;
+                for (final entry in errors.entries) {
+                  if (entry.value is List && (entry.value as List).isNotEmpty) {
+                    message = (entry.value as List).first.toString().trim();
+                    break;
+                  }
+                }
+              }
+            }
+          } catch (_) {
+            if (bodyStr.length < 200 && !bodyStr.startsWith('{')) {
+              message = bodyStr;
+            }
+          }
+        }
+        throw Exception(message);
       } else {
         debugPrint('Cliente editado exitosamente');
       }
