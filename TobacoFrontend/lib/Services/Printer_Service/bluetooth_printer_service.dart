@@ -162,34 +162,83 @@ class BluetoothPrinterService {
     _isProcessing = false;
   }
 
-  /// Verifies the BT connection is alive. If it dropped but we still know the
-  /// device, attempts a transparent reconnect. Throws if unrecoverable.
+  /// Forces a fresh Bluetooth connection **and verifies it** before printing.
+  ///
+  /// Android's BT stack can cache a stale "connected" state and even let
+  /// [connect] succeed against a powered-off printer (RFCOMM socket opens from
+  /// cached bonding info). To detect this we send a probe byte after connecting
+  /// and wait for the radio to confirm or break the link.
   Future<void> _ensureConnection() async {
-    final connected = await isConnected;
-    if (connected) return;
-
     if (_connectedDevice == null) {
       throw Exception(
-        'Impresora desconectada. Verificá que esté encendida y volvé a conectar.',
+        'No hay impresora configurada. Seleccioná una impresora.',
       );
     }
 
     debugPrint(
-      '[BT] Connection lost. Reconnecting to '
+      '[BT] Verifying connection to '
       '${_connectedDevice!.name} (${_connectedDevice!.address})...',
     );
 
+    // 1. Tear down any stale socket
     try {
-      await _bt.connect(_connectedDevice!);
-      await Future.delayed(const Duration(milliseconds: 300));
-      debugPrint('[BT] Reconnected successfully');
-    } catch (e) {
-      _connectedDevice = null;
+      await _bt.disconnect();
+    } catch (_) {}
+
+    // 2. Open a fresh RFCOMM link
+    try {
+      await _bt.connect(_connectedDevice!).timeout(
+            const Duration(seconds: 5),
+          );
+    } on TimeoutException {
+      debugPrint('[BT] connect() timeout');
+      try {
+        await _bt.disconnect();
+      } catch (_) {}
       throw Exception(
-        'No se pudo reconectar con la impresora. '
-        'Verificá que esté encendida y volvé a conectar.',
+        'No se pudo conectar con la impresora. '
+        'Verificá que esté encendida y cerca del dispositivo.',
+      );
+    } catch (e) {
+      debugPrint('[BT] connect() failed: $e');
+      throw Exception(
+        'No se pudo conectar con la impresora. '
+        'Verificá que esté encendida y cerca del dispositivo.',
       );
     }
+
+    // 3. Probe: push a harmless ESC @ (printer init) through the radio.
+    //    If the physical device is off, the socket will break once Android
+    //    detects the dead link (~1-2 s).
+    try {
+      await _bt.writeBytes(Uint8List.fromList([0x1B, 0x40]));
+    } catch (e) {
+      debugPrint('[BT] Probe write failed immediately: $e');
+      try {
+        await _bt.disconnect();
+      } catch (_) {}
+      throw Exception(
+        'La impresora no responde. '
+        'Verificá que esté encendida y cerca del dispositivo.',
+      );
+    }
+
+    // 4. Wait for Android to flush the write and detect a broken link
+    await Future.delayed(const Duration(seconds: 2));
+
+    final alive = await isConnected;
+    if (!alive) {
+      debugPrint('[BT] Connection dropped after probe — printer unreachable');
+      try {
+        await _bt.disconnect();
+      } catch (_) {}
+      throw Exception(
+        'La impresora no responde. '
+        'Verificá que esté encendida y cerca del dispositivo.',
+      );
+    }
+
+    debugPrint('[BT] Connection verified (probe OK)');
   }
 
   Future<void> _executePrint(Ventas venta) async {

@@ -861,47 +861,54 @@ class _ResumenVentaScreenState extends State<ResumenVentaScreen> {
 
       final printerService = BluetoothPrinterService.instance;
 
-      // If connected or has a previously-known device (auto-reconnect handles it)
-      if (await printerService.isConnected ||
-          printerService.connectedDevice != null) {
-        await printerService.printTicket(ventaParaImprimir);
-        if (!context.mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Ticket enviado a la impresora')),
-        );
-        return;
+      // Try the previously-known device first (probe verifies it's alive).
+      if (printerService.connectedDevice != null) {
+        try {
+          await printerService.printTicket(ventaParaImprimir);
+          if (!context.mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Ticket enviado a la impresora')),
+          );
+          return;
+        } catch (_) {
+          // Known device unreachable — fall through to device selection
+        }
       }
 
-      // No known device — show selection dialog
-      if (!context.mounted) return;
+      // Show printer selection in a loop until success or cancel.
+      while (true) {
+        if (!context.mounted) return;
 
-      final selectedPrinter = await showDialog<BluetoothDevice>(
-        context: context,
-        barrierDismissible: false,
-        builder: (dialogContext) => _PrinterSelectionDialog(),
-      );
+        final selectedPrinter = await showDialog<BluetoothDevice>(
+          context: context,
+          barrierDismissible: false,
+          builder: (dialogContext) => _PrinterSelectionDialog(),
+        );
 
-      if (selectedPrinter == null) return;
+        if (selectedPrinter == null) return;
 
-      if (!context.mounted) return;
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (_) => const Center(child: CircularProgressIndicator()),
-      );
+        try {
+          await printerService.connectToDevice(selectedPrinter);
+          await printerService.printTicket(ventaParaImprimir);
 
-      await printerService.connectToDevice(selectedPrinter);
-      await printerService.printTicket(ventaParaImprimir);
-
-      if (!context.mounted) return;
-      Navigator.of(context).pop();
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Ticket enviado a la impresora')),
-      );
+          if (!context.mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Ticket enviado a la impresora')),
+          );
+          return;
+        } catch (_) {
+          if (!context.mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'No se pudo conectar. Verificá que la impresora esté encendida.',
+              ),
+            ),
+          );
+        }
+      }
     } catch (e) {
       if (!context.mounted) return;
-      if (Navigator.of(context).canPop()) Navigator.of(context).pop();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -963,51 +970,75 @@ class _PrinterSelectionDialogState extends State<_PrinterSelectionDialog> {
       title: const Text('Seleccionar Impresora'),
       content: SizedBox(
         width: double.maxFinite,
-        child: isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : errorMessage != null
-                ? Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(errorMessage!),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: _loadBondedDevices,
-                        child: const Text('Reintentar'),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Asegurate de que la impresora esté encendida',
+              style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+            ),
+            const SizedBox(height: 12),
+            if (isLoading)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 24),
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else if (errorMessage != null)
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(errorMessage!),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: _loadBondedDevices,
+                    child: const Text('Reintentar'),
+                  ),
+                ],
+              )
+            else if (devices.isEmpty)
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.bluetooth_disabled, size: 48, color: Colors.grey),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'No hay dispositivos emparejados.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Para vincular la impresora:\n'
+                    '1. Andá a Ajustes > Bluetooth\n'
+                    '2. Buscá y vinculá la impresora\n'
+                    '3. Volvé a la app y tocá "Actualizar"',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+                  ),
+                ],
+              )
+            else
+              Flexible(
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: devices.length,
+                  itemBuilder: (context, index) {
+                    final device = devices[index];
+                    return ListTile(
+                      leading: const Icon(Icons.print),
+                      title: Text(
+                        (device.name?.isNotEmpty == true)
+                            ? device.name!
+                            : 'Dispositivo desconocido',
                       ),
-                    ],
-                  )
-                : devices.isEmpty
-                    ? const Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.bluetooth_disabled,
-                              size: 48, color: Colors.grey),
-                          SizedBox(height: 12),
-                          Text(
-                            'No hay dispositivos emparejados.\n\n',
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
-                      )
-                    : ListView.builder(
-                        shrinkWrap: true,
-                        itemCount: devices.length,
-                        itemBuilder: (context, index) {
-                          final device = devices[index];
-                          return ListTile(
-                            leading: const Icon(Icons.print),
-                            title: Text(
-                              (device.name?.isNotEmpty == true)
-                                  ? device.name!
-                                  : 'Dispositivo desconocido',
-                            ),
-                            subtitle: Text(device.address ?? ''),
-                            onTap: () =>
-                                Navigator.of(context).pop(device),
-                          );
-                        },
-                      ),
+                      subtitle: Text(device.address ?? ''),
+                      onTap: () => Navigator.of(context).pop(device),
+                    );
+                  },
+                ),
+              ),
+          ],
+        ),
       ),
       actions: [
         TextButton(
