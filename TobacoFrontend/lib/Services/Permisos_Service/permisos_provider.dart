@@ -126,9 +126,9 @@ class PermisosProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      // Timeout 8s para fallar rápido; no usar permisos por defecto, dejar error para Reintentar
+      // Timeout 10s (incluye getToken + request) para no quedar colgado
       final permisosResult = await PermisosService.getMisPermisos()
-          .timeout(const Duration(seconds: 8));
+          .timeout(const Duration(seconds: 10));
       _permisos = permisosResult;
       _errorMessage = null;
       _isLoading = false;
@@ -144,6 +144,7 @@ class PermisosProvider with ChangeNotifier {
       _isLoading = false;
       if (e is TimeoutException) {
         _errorMessage = 'La carga tardó demasiado. Comprueba la conexión y toca Reintentar.';
+        _hasAttemptedLoad = true;
       } else {
         final msg = e.toString().replaceAll('Exception: ', '');
         if (msg.contains('quota exceeded') || msg.contains('Demasiadas solicitudes')) {
@@ -166,7 +167,7 @@ class PermisosProvider with ChangeNotifier {
     await loadPermisos(authProvider, forceReload: true);
   }
 
-  /// Si la carga se quedó colgada (ej. 15s), marcar como error para mostrar Reintentar.
+  /// Si la carga se quedó colgada (ej. 12s), marcar como error para mostrar Reintentar.
   void marcarTimeoutPermisos() {
     if (_isLoading) {
       if (_logVerbosePermisos) {
@@ -176,6 +177,20 @@ class PermisosProvider with ChangeNotifier {
       _errorMessage = 'La carga tardó demasiado. Toca Reintentar.';
       notifyListeners();
     }
+  }
+
+  /// Tras timeout, permitir entrar al menú con permisos por defecto (sin bloquear la app).
+  void marcarTimeoutYPermitirEntrada(AuthProvider authProvider) {
+    if (_logVerbosePermisos) {
+      debugPrint('PermisosProvider.marcarTimeoutYPermitirEntrada: Timeout, entrando con permisos por defecto');
+    }
+    _isLoading = false;
+    _hasAttemptedLoad = true;
+    _errorMessage = null;
+    if (_permisos == null) {
+      _permisos = _permisosPorDefecto(authProvider);
+    }
+    notifyListeners();
   }
 
   static PermisosEmpleado _permisosPorDefecto(AuthProvider authProvider) {

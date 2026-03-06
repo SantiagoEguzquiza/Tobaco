@@ -110,9 +110,10 @@ class VentasProvider with ChangeNotifier {
 
       try {
         final cacheadas = await _cacheService.obtenerVentasDelCache();
-        if (cacheadas.isNotEmpty) {
+        final soloDelUsuario = await _filtrarVentasPorUsuarioActual(cacheadas);
+        if (soloDelUsuario.isNotEmpty) {
           final combinadas = await _combinarConVentasOfflinePendientes(
-            cacheadas,
+            soloDelUsuario,
             incluirPendientesOffline: true,
           );
           _ventas = combinadas;
@@ -318,27 +319,27 @@ class VentasProvider with ChangeNotifier {
 
     try {
       await _ventasService.eliminarVenta(id);
-      _ventas.remove(venta);
-      _ventaLocalIds.remove(venta);
+      _ventas.removeWhere((v) => v.id == id);
+      _ventaLocalIds.removeWhere((v, _) => v.id == id);
       await _db.deleteVentaOffline(localId);
-      // Eliminar también de la caché de cuenta corriente
       await _ccCacheService.eliminarMovimientosPorVenta(
         ventaId: id,
         ventaLocalId: localId.startsWith('local_') ? localId : null,
       );
+      await _cacheService.eliminarVentaDelCache(id);
       await _actualizarCacheDesdeVentasActuales();
       notifyListeners();
     } catch (e) {
       if (Apihandler.isConnectionError(e)) {
-        _ventas.remove(venta);
-        _ventaLocalIds.remove(venta);
+        _ventas.removeWhere((v) => v.id == id);
+        _ventaLocalIds.removeWhere((v, _) => v.id == id);
         _isOffline = true;
         await _db.deleteVentaOffline(localId);
-        // Eliminar también de la caché de cuenta corriente
         await _ccCacheService.eliminarMovimientosPorVenta(
           ventaId: id,
           ventaLocalId: localId.startsWith('local_') ? localId : null,
         );
+        await _cacheService.eliminarVentaDelCache(id);
         await _actualizarCacheDesdeVentasActuales();
         notifyListeners();
       } else {
@@ -349,31 +350,55 @@ class VentasProvider with ChangeNotifier {
   }
 
   Future<void> eliminarVentaLocal(Ventas venta) async {
-    final localId = _ventaLocalIds[venta];
-    _ventas.remove(venta);
-    _ventaLocalIds.remove(venta);
-    if (localId != null) {
+    // Obtener localId de la venta que está en _ventas (por referencia o por id) para borrarla de la BD
+    Ventas? ventaEnLista = _ventas.where((v) => v == venta).firstOrNull;
+    if (ventaEnLista == null && venta.id != null) {
+      ventaEnLista = _ventas.where((v) => v.id == venta.id).firstOrNull;
+    }
+    final localId = ventaEnLista != null ? _ventaLocalIds[ventaEnLista] : null;
+
+    // Quitar por id o por referencia para que el listado se actualice siempre
+    if (venta.id != null) {
+      _ventas.removeWhere((v) => v.id == venta.id);
+      _ventaLocalIds.removeWhere((v, _) => v.id == venta.id);
+    } else {
+      _ventas.remove(venta);
+      _ventaLocalIds.remove(venta);
+    }
+
+    // Borrar siempre de la BD offline para que no vuelva a aparecer al reabrir
+    if (localId != null && localId.startsWith('local_')) {
       await _db.deleteVentaOffline(localId);
-      // Eliminar también de la caché de cuenta corriente
       await _ccCacheService.eliminarMovimientosPorVenta(
         ventaId: venta.id,
-        ventaLocalId: localId.startsWith('local_') ? localId : null,
+        ventaLocalId: localId,
       );
+    }
+    // Quitar también del caché de ventas (por si estaba guardada ahí) para que no reaparezca en modo offline
+    if (venta.id != null) {
+      await _cacheService.eliminarVentaDelCache(venta.id!);
     }
     await _actualizarCacheDesdeVentasActuales();
     notifyListeners();
   }
 
   Future<void> eliminarVentaDeLista(Ventas venta) async {
-    final localId = _ventaLocalIds[venta];
+    // Resolver la venta que está en _ventas (misma referencia o mismo id) para que remove/notifyListeners actualice la UI
+    Ventas? enLista = _ventas.where((v) => v == venta).firstOrNull;
+    if (enLista == null && venta.id != null) {
+      enLista = _ventas.where((v) => v.id == venta.id).firstOrNull;
+    }
+    final ventaAUsar = enLista ?? venta;
+
+    final localId = _ventaLocalIds[ventaAUsar];
     final esVentaLocal = localId != null && localId.startsWith('local_');
 
-    if (venta.id != null && !esVentaLocal) {
-      await eliminarVenta(venta.id!);
+    if (ventaAUsar.id != null && !esVentaLocal) {
+      await eliminarVenta(ventaAUsar.id!);
       return;
     }
 
-    await eliminarVentaLocal(venta);
+    await eliminarVentaLocal(ventaAUsar);
   }
 
   Future<List<Ventas>> obtenerVentas({bool usarTimeoutNormal = false}) async {
@@ -829,9 +854,18 @@ class VentasProvider with ChangeNotifier {
       // Si hay error, retornar solo las ventas del servidor
       return resultado;
     }
-    
+
+    final currentUser = await AuthService.getCurrentUser();
+    final currentUserId = currentUser?.id;
+
     for (var ventaData in ventasOffline) {
       final ventaRow = ventaData['venta'] as Map<String, dynamic>;
+      // Solo incluir ventas del usuario actual (evitar mostrar ventas de otros en modo offline)
+      final creadorId = ventaRow['usuario_id_creador'] as int?;
+      if (currentUserId == null || creadorId != currentUserId) {
+        continue;
+      }
+
       final localId = ventaRow['local_id'] as String;
       final ventaId = ventaRow['id'] as int?;
 
@@ -935,18 +969,30 @@ class VentasProvider with ChangeNotifier {
     return resultado;
   }
 
+  /// Solo ventas del usuario actual (evita mostrar datos de otro usuario en offline/caché).
+  Future<List<Ventas>> _filtrarVentasPorUsuarioActual(List<Ventas> ventas) async {
+    final user = await AuthService.getCurrentUser();
+    if (user == null) return [];
+    final userId = user.id;
+    return ventas.where((v) => v.usuarioIdCreador == userId).toList();
+  }
+
   Future<void> _cargarVentasOffline() async {
     final resultado = <Ventas>[];
     final idsAgregados = <int>{};
 
     _ventaLocalIds.clear();
 
-    debugPrint('📦 VentasProvider: Cargando ventas en modo offline (caché + pendientes)...');
+    final user = await AuthService.getCurrentUser();
+    final currentUserId = user?.id;
 
-    // 1) Cargar ventas del servidor desde caché (última carga online)
+    debugPrint('📦 VentasProvider: Cargando ventas en modo offline (solo usuario actual)...');
+
+    // 1) Cargar ventas del servidor desde caché (solo del usuario actual)
     try {
       final cacheadas = await _cacheService.obtenerVentasDelCache();
-      for (final venta in cacheadas) {
+      final soloDelUsuario = await _filtrarVentasPorUsuarioActual(cacheadas);
+      for (final venta in soloDelUsuario) {
         if (venta.id != null && !idsAgregados.contains(venta.id!)) {
           resultado.add(venta);
           idsAgregados.add(venta.id!);
@@ -957,14 +1003,18 @@ class VentasProvider with ChangeNotifier {
       debugPrint('⚠️ VentasProvider: Error leyendo caché de ventas: $e');
     }
 
-    // 2) Cargar ventas pendientes de sincronizar (ventas_offline)
+    // 2) Cargar ventas pendientes de sincronizar (ventas_offline) solo del usuario actual
     try {
       final db = await _db.database;
       if (db.isOpen) {
-        final ventasRows = await db.query(
-          'ventas_offline',
-          orderBy: 'created_at DESC',
-        );
+        final ventasRows = currentUserId != null
+            ? await db.query(
+                'ventas_offline',
+                where: 'usuario_id_creador = ?',
+                whereArgs: [currentUserId],
+                orderBy: 'created_at DESC',
+              )
+            : <Map<String, dynamic>>[]; // Sin usuario no mostrar ventas offline de nadie
 
         for (final ventaRow in ventasRows) {
           try {

@@ -308,10 +308,12 @@ class VentasService {
           'hasNextPage': data['hasNextPage'],
           'hasPreviousPage': data['hasPreviousPage'],
         };
-      } else {
-        throw Exception(
-            'Error al obtener las ventas paginadas. Código de estado: ${response.statusCode}');
       }
+      if (response.statusCode == 401 || response.statusCode == 403) {
+        throw Exception('Sesión expirada. Por favor, inicia sesión nuevamente.');
+      }
+      throw Exception(
+          'Error al obtener las ventas paginadas. Código de estado: ${response.statusCode}');
     } catch (e) {
       debugPrint('Error al obtener las ventas paginadas: $e');
       rethrow;

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:tobaco/Services/Cotizaciones_Service/cotizaciones_provider.dart';
 import 'package:tobaco/Theme/app_theme.dart';
+import 'package:tobaco/Theme/headers.dart';
 import 'package:tobaco/Models/Cotizacion.dart';
 
 // Widget de Shimmer para efecto de carga
@@ -295,7 +296,7 @@ class _CotizacionesScreenState extends State<CotizacionesScreen> with SingleTick
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: isDarkMode ? const Color(0xFF1A1A1A) : Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppTheme.borderRadiusCards),
         boxShadow: [
           BoxShadow(
             color: isDarkMode
@@ -563,7 +564,7 @@ class _CotizacionesScreenState extends State<CotizacionesScreen> with SingleTick
           margin: const EdgeInsets.only(bottom: 12),
           decoration: BoxDecoration(
             color: isDarkMode ? const Color(0xFF1A1A1A) : Colors.white,
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(AppTheme.borderRadiusCards),
             boxShadow: [
               BoxShadow(
                 color: isDarkMode
@@ -671,47 +672,56 @@ class _CotizacionesScreenState extends State<CotizacionesScreen> with SingleTick
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     
     return Scaffold(
-      backgroundColor: isDarkMode ? Colors.black : Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         centerTitle: true,
+        elevation: 0,
+        backgroundColor: null,
         title: const Text(
-          'Cotizaciones de Monedas',
+          'Cotizaciones',
           style: AppTheme.appBarTitleStyle,
         ),
-        backgroundColor: null, // Usar el tema
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
       ),
-      body: Column(
-        children: [
-          // Panel de configuración
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: isDarkMode ? const Color(0xFF1A1A1A) : Colors.white,
-              boxShadow: [
-                BoxShadow(
-                  color: isDarkMode 
-                      ? Colors.black.withOpacity(0.3)
-                      : Colors.grey.withOpacity(0.1),
-                  spreadRadius: 1,
-                  blurRadius: 3,
-                  offset: const Offset(0, 2),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              HeaderSimple(
+                leadingIcon: Icons.currency_exchange,
+                title: 'Cotizaciones de Monedas',
+                subtitle: 'Tipos de cambio BCU',
+              ),
+              const SizedBox(height: 20),
+              // Panel de configuración
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: isDarkMode ? const Color(0xFF1A1A1A) : Colors.white,
+                  borderRadius: BorderRadius.circular(AppTheme.borderRadiusCards),
+                  boxShadow: [
+                    BoxShadow(
+                      color: isDarkMode
+                          ? Colors.black.withOpacity(0.3)
+                          : Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Configuración de Consulta',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: isDarkMode ? Colors.white : AppTheme.textColor,
-                  ),
-                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Configuración de Consulta',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: isDarkMode ? Colors.white : AppTheme.textColor,
+                      ),
+                    ),
                 const SizedBox(height: 16),
                 
                 // Selector de grupo
@@ -851,7 +861,7 @@ class _CotizacionesScreenState extends State<CotizacionesScreen> with SingleTick
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
                       ),
                     ),
                   ),
@@ -860,9 +870,8 @@ class _CotizacionesScreenState extends State<CotizacionesScreen> with SingleTick
                 const SizedBox(height: 8),
                 
                 // Información adicional
-        if (vm.items.isNotEmpty)
-          if (vm.items.isNotEmpty)
-            Container(
+                if (vm.items.isNotEmpty)
+                  Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
                 color: isDarkMode
@@ -919,30 +928,29 @@ class _CotizacionesScreenState extends State<CotizacionesScreen> with SingleTick
                 ],
               ),
             ),
-              ],
-            ),
-          ),
-          
-          const SizedBox(height: 16),
-          
-          // Resultados
-          Expanded(
-            child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 16),
-              decoration: BoxDecoration(
-                color: isDarkMode ? Colors.black : Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: isDarkMode
-                        ? Colors.black.withOpacity(0.3)
-                        : Colors.grey.withOpacity(0.1),
-                    spreadRadius: 1,
-                    blurRadius: 3,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
+                  ],
+                ),
               ),
+              
+              const SizedBox(height: 16),
+              
+              // Resultados
+              Expanded(
+                child: Container(
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: isDarkMode ? const Color(0xFF1A1A1A) : Colors.white,
+                    borderRadius: BorderRadius.circular(AppTheme.borderRadiusCards),
+                    boxShadow: [
+                      BoxShadow(
+                        color: isDarkMode
+                            ? Colors.black.withOpacity(0.3)
+                            : Colors.black.withOpacity(0.05),
+                        blurRadius: 10,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
               child: vm.isLoading
                         ? _buildSkeletonLoader(isDarkMode)
                         : vm.error != null
@@ -984,6 +992,9 @@ class _CotizacionesScreenState extends State<CotizacionesScreen> with SingleTick
                                       style: ElevatedButton.styleFrom(
                                         backgroundColor: AppTheme.primaryColor,
                                         foregroundColor: Colors.white,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
+                                        ),
                                       ),
                                     ),
                                   ],
@@ -1024,6 +1035,9 @@ class _CotizacionesScreenState extends State<CotizacionesScreen> with SingleTick
                                           style: ElevatedButton.styleFrom(
                                             backgroundColor: AppTheme.primaryColor,
                                             foregroundColor: Colors.white,
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
+                                            ),
                                           ),
                                         ),
                                       ],
@@ -1045,11 +1059,11 @@ class _CotizacionesScreenState extends State<CotizacionesScreen> with SingleTick
                                       );
                                     },
                                   ),
-            ),
+                ),
+              ),
+            ],
           ),
-          
-          const SizedBox(height: 16),
-        ],
+        ),
       ),
     );
   }

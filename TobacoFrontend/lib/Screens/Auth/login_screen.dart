@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../Services/Auth_Service/auth_provider.dart';
@@ -531,23 +532,29 @@ class _LoginScreenState extends State<LoginScreen> {
           await Future.delayed(const Duration(milliseconds: 150));
           if (!mounted) return;
 
-          // Cargar permisos después del login; reintentar una vez si falla por conexión.
-          // Si falla o hace timeout, ir al menú igual (permisos se recargan al reabrir).
+          // Cargar permisos después del login; timeout 12s para no quedar colgado.
           bool permisosLoaded = false;
           for (int attempt = 0; attempt < 2 && mounted && !permisosLoaded; attempt++) {
             try {
-              await permisosProvider.loadPermisos(authProvider, forceReload: true);
+              await permisosProvider
+                  .loadPermisos(authProvider, forceReload: true)
+                  .timeout(const Duration(seconds: 12));
               permisosLoaded = true;
+            } on TimeoutException {
+              permisosProvider.marcarTimeoutPermisos();
+              break;
             } catch (e) {
               final isConnectionError = Apihandler.isConnectionError(e);
               if (isConnectionError && attempt == 0) {
                 await Future.delayed(const Duration(milliseconds: 1500));
                 if (!mounted) return;
               } else {
-                // No rethrow: ir al menú para no dejar colgado (p. ej. primera vez tras instalar)
                 break;
               }
             }
+          }
+          if (!permisosLoaded && mounted && permisosProvider.isLoading) {
+            permisosProvider.marcarTimeoutPermisos();
           }
 
           if (mounted) {

@@ -229,30 +229,42 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
               !permisosProvider.isLoading;
 
           if (esperandoPermisos) {
-            // Disparar carga desde aquí por si login_screen se desmontó (primera vez tras instalar)
+            // Cerrar teclado al mostrar esta pantalla (evita showSoftInput en bucle y scroll raro)
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!mounted) return;
+              FocusManager.instance.primaryFocus?.unfocus();
+            });
+            // Disparar carga solo una vez (evita bucles por rebuilds)
             if (!_permisosLoadTriggered) {
               _permisosLoadTriggered = true;
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 if (!mounted) return;
-                context.read<PermisosProvider>().loadPermisos(authProvider, forceReload: true);
+                final perm = context.read<PermisosProvider>();
+                if (!perm.isLoading && perm.permisos == null) {
+                  perm.loadPermisos(authProvider, forceReload: true);
+                }
               });
             }
-            // Si tras 15s sigue cargando, mostrar Reintentar (no menú con permisos por defecto)
+            // Timeout 8s: si la carga no termina, entrar al menú con permisos por defecto (no bloquear app)
             if (!_permisosTimeoutFired) {
               _permisosTimeoutFired = true;
-              Future.delayed(const Duration(seconds: 15), () {
+              final perm = permisosProvider;
+              final auth = authProvider;
+              Future.delayed(const Duration(seconds: 8), () {
                 if (!mounted) return;
-                context.read<PermisosProvider>().marcarTimeoutPermisos();
+                perm.marcarTimeoutYPermitirEntrada(auth);
               });
             }
-            return const Scaffold(
+            return Scaffold(
+              resizeToAvoidBottomInset: false,
               body: Center(
                 child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    CircularProgressIndicator(),
-                    SizedBox(height: 16),
-                    Text('Cargando permisos...', style: TextStyle(fontSize: 14)),
+                    const CircularProgressIndicator(),
+                    const SizedBox(height: 16),
+                    const Text('Cargando permisos...', style: TextStyle(fontSize: 14)),
                   ],
                 ),
               ),

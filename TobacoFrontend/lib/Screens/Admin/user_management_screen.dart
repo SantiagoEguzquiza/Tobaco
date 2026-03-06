@@ -1617,28 +1617,22 @@ class _CreateUserDialogState extends State<_CreateUserDialog> {
       child: Row(
         children: [
           Expanded(
-            child: OutlinedButton(
+            child: TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              style: OutlinedButton.styleFrom(
+              style: TextButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 backgroundColor: isDark 
                     ? const Color(0xFF2A2A2A) 
-                    : Colors.transparent,
-                side: BorderSide(
-                  color: isDark 
-                      ? Colors.grey.shade700 
-                      : Colors.grey.shade300,
-                  width: 1.5,
-                ),
+                    : Colors.grey.shade200,
+                foregroundColor: isDark ? Colors.white : Colors.black87,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
                 ),
                 elevation: 0,
               ),
-              child: Text(
+              child: const Text(
                 'Cancelar',
                 style: TextStyle(
-                  color: Theme.of(context).textTheme.bodyLarge?.color,
                   fontWeight: FontWeight.w600,
                   fontSize: 15,
                   letterSpacing: 0.2,
@@ -1659,7 +1653,7 @@ class _CreateUserDialogState extends State<_CreateUserDialog> {
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
                     ),
                     elevation: 0,
                     shadowColor: AppTheme.primaryColor.withOpacity(0.3),
@@ -2820,28 +2814,22 @@ class _EditUserDialogState extends State<_EditUserDialog> {
                         child: Row(
                           children: [
                             Expanded(
-                              child: OutlinedButton(
+                              child: TextButton(
                                 onPressed: () => Navigator.of(context).pop(),
-                                style: OutlinedButton.styleFrom(
+                                style: TextButton.styleFrom(
                                   padding: const EdgeInsets.symmetric(vertical: 14),
                                   backgroundColor: isDark 
                                       ? const Color(0xFF2A2A2A) 
-                                      : Colors.transparent,
-                                  side: BorderSide(
-                                    color: isDark 
-                                        ? Colors.grey.shade700 
-                                        : Colors.grey.shade300,
-                                    width: 1.5,
-                                  ),
+                                      : Colors.grey.shade200,
+                                  foregroundColor: isDark ? Colors.white : Colors.black87,
                                   shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
+                                    borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
                                   ),
                                   elevation: 0,
                                 ),
-                                child: Text(
+                                child: const Text(
                                   'Cancelar',
                                   style: TextStyle(
-                                    color: Theme.of(context).textTheme.bodyLarge?.color,
                                     fontWeight: FontWeight.w600,
                                     fontSize: 15,
                                     letterSpacing: 0.2,
@@ -2862,7 +2850,7 @@ class _EditUserDialogState extends State<_EditUserDialog> {
                                       foregroundColor: Colors.white,
                                       padding: const EdgeInsets.symmetric(vertical: 14),
                                       shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(12),
+                                        borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
                                       ),
                                       elevation: 0,
                                       shadowColor: AppTheme.primaryColor.withOpacity(0.3),

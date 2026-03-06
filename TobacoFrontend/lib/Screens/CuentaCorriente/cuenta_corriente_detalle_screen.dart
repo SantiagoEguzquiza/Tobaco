@@ -518,24 +518,20 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
                 Row(
                   children: [
                     Expanded(
-                      child: OutlinedButton(
+                      child: TextButton(
                         onPressed: () => Navigator.of(context).pop(),
-                        style: OutlinedButton.styleFrom(
-                          backgroundColor: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
-                          side: BorderSide(
-                            color: isDarkMode ? Colors.grey.shade700 : Colors.grey.shade400, 
-                            width: 1.5
-                          ),
+                        style: TextButton.styleFrom(
+                          backgroundColor: isDarkMode ? const Color(0xFF2A2A2A) : Colors.grey.shade200,
+                          foregroundColor: isDarkMode ? Colors.white : Colors.black87,
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
                           ),
                           padding: const EdgeInsets.symmetric(vertical: 14),
                         ),
-                        child: Text(
+                        child: const Text(
                           'Cancelar',
                           style: TextStyle(
-                            color: isDarkMode ? Colors.white : Colors.black,
-                            fontWeight: FontWeight.w400,
+                            fontWeight: FontWeight.w600,
                             fontSize: 16,
                           ),
                         ),
@@ -573,7 +569,7 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppTheme.primaryColor,
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
                           ),
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           elevation: 2,

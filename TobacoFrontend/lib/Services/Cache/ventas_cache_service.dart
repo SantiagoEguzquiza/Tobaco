@@ -121,6 +121,16 @@ class VentasCacheService {
     }
   }
 
+  /// Elimina una venta del caché por id (para que no vuelva a aparecer al cargar offline).
+  Future<void> eliminarVentaDelCache(int id) async {
+    try {
+      final db = await database;
+      await db.delete('ventas_cache', where: 'id = ?', whereArgs: [id]);
+    } catch (e) {
+      // Error silencioso
+    }
+  }
+
   /// Limpia todo el caché
   Future<void> limpiarCache() async {
     try {
