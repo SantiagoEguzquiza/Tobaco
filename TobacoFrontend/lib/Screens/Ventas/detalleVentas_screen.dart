@@ -21,6 +21,7 @@ class DetalleVentaScreen extends StatefulWidget {
 }
 
 class _DetalleVentaScreenState extends State<DetalleVentaScreen> {
+  bool _isPrinting = false;
 
   @override
   Widget build(BuildContext context) {
@@ -625,75 +626,86 @@ class _DetalleVentaScreenState extends State<DetalleVentaScreen> {
               children: [
                 Expanded(
                   child: ElevatedButton.icon(
-                    onPressed: () {
-                      showModalBottomSheet(
-                        context: context,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.vertical(top: Radius.circular(AppTheme.borderRadiusMainButtons)),
-                        ),
-                        builder: (sheetContext) {
-                          return SafeArea(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                ListTile(
-                                  leading: const Icon(Icons.picture_as_pdf, color: AppTheme.primaryColor),
-                                  title: const Text('Imprimir PDF'),
-                                  onTap: () async {
-                                    Navigator.of(sheetContext).pop();
-                                    try {
-                                      final bytes = await buildVentaPdf(widget.venta);
-                                      await Printing.layoutPdf(onLayout: (_) async => bytes);
-                                    } catch (e) {
-                                      if (!context.mounted) return;
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(content: Text('Error al generar PDF: $e')),
-                                      );
-                                    }
-                                  },
-                                ),
-                                ListTile(
-                                  leading: const Icon(Icons.receipt_long, color: AppTheme.primaryColor),
-                                  title: const Text('Imprimir ticket'),
-                                  onTap: () async {
-                                    Navigator.of(sheetContext).pop();
-                                    await _imprimirTicketTermico(context);
-                                  },
-                                ),
-                                ListTile(
-                                  leading: const Icon(Icons.share, color: AppTheme.primaryColor),
-                                  title: const Text('Compartir PDF'),
-                                  onTap: () async {
-                                    Navigator.of(sheetContext).pop();
-                                    try {
-                                      final bytes = await buildVentaPdf(widget.venta);
-                                      final dir = await getTemporaryDirectory();
-                                      final ventaLabel = widget.venta.id != null
-                                          ? 'Venta_${widget.venta.id}'
-                                          : 'Venta_pendiente';
-                                      final file = File('${dir.path}/$ventaLabel.pdf');
-                                      await file.writeAsBytes(bytes);
-                                      await Share.shareXFiles(
-                                        [XFile(file.path)],
-                                        text: 'Comprobante de $ventaLabel',
-                                      );
-                                    } catch (e) {
-                                      if (!context.mounted) return;
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(content: Text('Error al compartir PDF: $e')),
-                                      );
-                                    }
-                                  },
-                                ),
-                                const SizedBox(height: 8),
-                              ],
+                    onPressed: _isPrinting
+                        ? null
+                        : () {
+                            showModalBottomSheet(
+                              context: context,
+                              shape: const RoundedRectangleBorder(
+                                borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                              ),
+                              builder: (sheetContext) {
+                                return SafeArea(
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      ListTile(
+                                        leading: const Icon(Icons.picture_as_pdf, color: AppTheme.primaryColor),
+                                        title: const Text('Imprimir PDF'),
+                                        onTap: () async {
+                                          Navigator.of(sheetContext).pop();
+                                          try {
+                                            final bytes = await buildVentaPdf(widget.venta);
+                                            await Printing.layoutPdf(onLayout: (_) async => bytes);
+                                          } catch (e) {
+                                            if (!context.mounted) return;
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              SnackBar(content: Text('Error al generar PDF: $e')),
+                                            );
+                                          }
+                                        },
+                                      ),
+                                      ListTile(
+                                        leading: const Icon(Icons.receipt_long, color: AppTheme.primaryColor),
+                                        title: const Text('Imprimir ticket'),
+                                        onTap: () async {
+                                          Navigator.of(sheetContext).pop();
+                                          await _imprimirTicketTermico(context);
+                                        },
+                                      ),
+                                      ListTile(
+                                        leading: const Icon(Icons.share, color: AppTheme.primaryColor),
+                                        title: const Text('Compartir PDF'),
+                                        onTap: () async {
+                                          Navigator.of(sheetContext).pop();
+                                          try {
+                                            final bytes = await buildVentaPdf(widget.venta);
+                                            final dir = await getTemporaryDirectory();
+                                            final ventaLabel = widget.venta.id != null
+                                                ? 'Venta_${widget.venta.id}'
+                                                : 'Venta_pendiente';
+                                            final file = File('${dir.path}/$ventaLabel.pdf');
+                                            await file.writeAsBytes(bytes);
+                                            await Share.shareXFiles(
+                                              [XFile(file.path)],
+                                              text: 'Comprobante de $ventaLabel',
+                                            );
+                                          } catch (e) {
+                                            if (!context.mounted) return;
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              SnackBar(content: Text('Error al compartir PDF: $e')),
+                                            );
+                                          }
+                                        },
+                                      ),
+                                      const SizedBox(height: 8),
+                                    ],
+                                  ),
+                                );
+                              },
+                            );
+                          },
+                    icon: _isPrinting
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
                             ),
-                          );
-                        },
-                      );
-                    },
-                    icon: const Icon(Icons.print, size: 20),
-                    label: const Text('Imprimir'),
+                          )
+                        : const Icon(Icons.print, size: 20),
+                    label: Text(_isPrinting ? 'Imprimiendo...' : 'Imprimir'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppTheme.primaryColor,
                       shape: RoundedRectangleBorder(
@@ -1073,10 +1085,21 @@ class _DetalleVentaScreenState extends State<DetalleVentaScreen> {
 
 
   Future<void> _imprimirTicketTermico(BuildContext context) async {
+    if (_isPrinting) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Impresión en curso, por favor esperá...')),
+      );
+      return;
+    }
+
+    setState(() => _isPrinting = true);
+
     try {
       final printerService = BluetoothPrinterService.instance;
 
-      if (await printerService.isConnected) {
+      // If connected or has a previously-known device (auto-reconnect handles it)
+      if (await printerService.isConnected ||
+          printerService.connectedDevice != null) {
         await printerService.printTicket(widget.venta);
         if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1085,6 +1108,7 @@ class _DetalleVentaScreenState extends State<DetalleVentaScreen> {
         return;
       }
 
+      // No known device — show selection dialog
       if (!context.mounted) return;
 
       final selectedPrinter = await showDialog<BluetoothDevice>(
@@ -1121,6 +1145,8 @@ class _DetalleVentaScreenState extends State<DetalleVentaScreen> {
           ),
         ),
       );
+    } finally {
+      if (mounted) setState(() => _isPrinting = false);
     }
   }
 }
