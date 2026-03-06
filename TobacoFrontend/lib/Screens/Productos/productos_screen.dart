@@ -49,18 +49,22 @@ class _ProductosScreenState extends State<ProductosScreen> {
   @override
   void initState() {
     super.initState();
-    // Cargar productos y categorías (también si se entra directo a Productos sin haber cargado categorías antes)
-    Future.microtask(() {
+    // Cargar categorías y productos al entrar (importante en app recién instalada o sin caché)
+    Future.microtask(() async {
       if (!mounted) return;
       final productoProvider = context.read<ProductoProvider>();
       final categoriasProvider = context.read<CategoriasProvider>();
-      productoProvider.cargarProductosInicial(categoriasProvider).then((_) {
+      try {
+        // Cargar categorías primero para que estén disponibles al cargar productos
+        await categoriasProvider.cargarCategorias(silent: true);
         if (!mounted) return;
-        // Si tras cargar no hay categorías (ej. entraste directo y solo se cargaron productos), cargar categorías y sincronizar
-        if (productoProvider.categorias.isEmpty && !productoProvider.isLoading) {
-          _cargarCategoriasYSincronizar();
+        await productoProvider.cargarProductosInicial(categoriasProvider);
+        if (!mounted) return;
+        // Si ProductoProvider no tiene categorías pero CategoriasProvider sí (ej. falló la copia interna), sincronizar
+        if (productoProvider.categorias.isEmpty && categoriasProvider.categorias.isNotEmpty) {
+          productoProvider.sincronizarCategoriasDesde(categoriasProvider);
         }
-      }).catchError((e) {
+      } catch (e) {
         if (mounted) {
           if (Apihandler.isConnectionError(e)) {
             AppTheme.showSnackBar(
@@ -74,7 +78,7 @@ class _ProductosScreenState extends State<ProductosScreen> {
             );
           }
         }
-      });
+      }
     });
   }
 

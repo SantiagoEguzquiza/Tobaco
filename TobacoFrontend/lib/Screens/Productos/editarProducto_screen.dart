@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:tobaco/Helpers/api_handler.dart';
 import 'package:tobaco/Models/Producto.dart';
 import 'package:tobaco/Models/ProductQuantityPrice.dart';
 import 'package:tobaco/Services/Categoria_Service/categoria_provider.dart';
@@ -876,10 +877,14 @@ class EditarProductoScreenState extends State<EditarProductoScreen> {
       }
     } catch (e) {
       if (mounted) {
-        AppTheme.showSnackBar(
-          context,
-          AppTheme.errorSnackBar(e.toString()),
-        );
+        if (Apihandler.isConnectionError(e)) {
+          await Apihandler.handleConnectionError(context, e);
+        } else {
+          AppTheme.showSnackBar(
+            context,
+            AppTheme.errorSnackBar(e.toString().replaceFirst('Exception: ', '')),
+          );
+        }
       }
     } finally {
       if (mounted) {
@@ -911,10 +916,14 @@ class EditarProductoScreenState extends State<EditarProductoScreen> {
       }
     } catch (e) {
       if (mounted) {
-        AppTheme.showSnackBar(
-          context,
-          AppTheme.errorSnackBar(e.toString()),
-        );
+        if (Apihandler.isConnectionError(e)) {
+          await Apihandler.handleConnectionError(context, e);
+        } else {
+          AppTheme.showSnackBar(
+            context,
+            AppTheme.errorSnackBar(e.toString().replaceFirst('Exception: ', '')),
+          );
+        }
       }
       } finally {
         if (mounted) {

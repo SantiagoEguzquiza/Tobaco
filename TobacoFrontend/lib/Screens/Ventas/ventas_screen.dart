@@ -147,7 +147,11 @@ class _VentasScreenState extends State<VentasScreen> {
                     if (!mounted) return;
                     if (result != null) {
                       await context.read<VentasProvider>().cargarVentas();
-                      Future.delayed(const Duration(milliseconds: 500), () {
+                      if (!mounted) return;
+                      // Actualizar botón de sincronizar al volver (p. ej. venta creada en offline)
+                      _syncButtonKey.currentState?.recargarPendientes();
+                      Future.delayed(const Duration(milliseconds: 400), () {
+                        if (!mounted) return;
                         _syncButtonKey.currentState?.recargarPendientes();
                       });
                     }
@@ -829,13 +833,13 @@ class _SincronizarButtonState extends State<_SincronizarButton> {
     }
   }
 
-  // Método público para recargar pendientes (llamado desde el padre)
+  // Método público para recargar pendientes (llamado al volver de nueva venta, etc.)
   void recargarPendientes() {
-    _cargarPendientes();
+    _cargarPendientes(forzar: true);
   }
 
-  Future<void> _cargarPendientes() async {
-    if (_isLoading) return; // Evitar cargas simultáneas
+  Future<void> _cargarPendientes({bool forzar = false}) async {
+    if (!forzar && _isLoading) return; // Evitar cargas simultáneas (salvo cuando se fuerza al volver)
 
     setState(() {
       _isLoading = true;

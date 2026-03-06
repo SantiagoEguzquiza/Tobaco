@@ -64,7 +64,9 @@ class Apihandler {
         msg.contains('software caused connection abort') ||
         msg.contains('timeoutexception') ||
         msg.contains('no se pudo conectar') ||
-        msg.contains('conectar al servidor')) {
+        msg.contains('conectar al servidor') ||
+        msg.contains('disponibles offline') ||
+        msg.contains('conecta para sincronizar')) {
       return true;
     }
     return false;

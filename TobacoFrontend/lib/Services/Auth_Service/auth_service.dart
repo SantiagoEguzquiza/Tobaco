@@ -455,10 +455,12 @@ class AuthService {
   /// refresh fails on app resume or after 401/403.
   static void Function()? onSessionInvalidated;
 
-  /// Detecta si la excepción es "sesión expirada". Usar en catch: si true, llamar logout() y no mostrar error en pantalla.
+  /// Detecta si la excepción es "sesión expirada" o no autorizado (401/403). Usar en catch: si true, llamar logout() y no marcar offline.
   static bool isSessionExpiredException(dynamic e) {
     final s = e.toString().toLowerCase();
-    return s.contains('sesión') && (s.contains('expirad') || s.contains('inicia sesión'));
+    if (s.contains('sesión') && (s.contains('expirad') || s.contains('inicia sesión'))) return true;
+    if (s.contains('401') || s.contains('403')) return true; // Código de estado 401/403 → token inválido
+    return false;
   }
 
   // Logout user

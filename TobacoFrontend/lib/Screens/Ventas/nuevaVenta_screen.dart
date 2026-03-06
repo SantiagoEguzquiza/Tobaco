@@ -21,6 +21,7 @@ import 'package:tobaco/Models/Ventas.dart';
 import 'package:tobaco/Theme/confirmAnimation.dart';
 import 'package:tobaco/Screens/Ventas/resumenVenta_screen.dart';
 import 'package:tobaco/Services/Auth_Service/auth_service.dart';
+import 'package:tobaco/Helpers/api_handler.dart';
 
 // Nuevos widgets modulares
 import 'NuevaVenta/widgets/widgets.dart';
@@ -1052,15 +1053,24 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                                       ),
                                       if (producto.stock != null) ...[
                                         const SizedBox(width: 8),
-                                        Text(
-                                          'Disponible: ${_maxCantidadDisponible(producto).toStringAsFixed(0)}',
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            color: isDark
-                                                ? Colors.grey.shade500
-                                                : Colors.grey.shade600,
-                                          ),
-                                        ),
+                                        _maxCantidadDisponible(producto) == 0
+                                            ? Text(
+                                                'Sin stock',
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: Colors.orange.shade700,
+                                                ),
+                                              )
+                                            : Text(
+                                                'Disponible: ${_maxCantidadDisponible(producto).toStringAsFixed(0)}',
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  color: isDark
+                                                      ? Colors.grey.shade500
+                                                      : Colors.grey.shade600,
+                                                ),
+                                              ),
                                         if (producto.stock != null && producto.cantidad > _maxCantidadDisponible(producto)) ...[
                                           const SizedBox(width: 6),
                                           Icon(Icons.warning_amber_rounded,
@@ -1461,9 +1471,11 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
         });
       }
       debugPrint('Error al actualizar clientes desde servidor: $e');
-      
-      // Mostrar mensaje de error al usuario
-      if (mounted) {
+
+      if (!mounted) return;
+      if (Apihandler.isConnectionError(e)) {
+        await Apihandler.handleConnectionError(context, e);
+      } else {
         AppTheme.showSnackBar(
           context,
           AppTheme.errorSnackBar('Error al actualizar clientes'),
@@ -1519,14 +1531,17 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
       debugPrint('Error al buscar clientes: $e');
       if (!mounted) return;
 
-      setState(() {
-        // Mantener los resultados locales en caso de error
-        // Solo limpiar si no hay resultados locales
-        if (clientesFiltrados.isEmpty) {
-          errorMessage = 'Error al buscar clientes. Mostrando resultados locales.';
-        }
-        isLoadingClientes = false;
-      });
+      setState(() => isLoadingClientes = false);
+
+      if (Apihandler.isConnectionError(e)) {
+        await Apihandler.handleConnectionError(context, e);
+      } else {
+        setState(() {
+          if (clientesFiltrados.isEmpty) {
+            errorMessage = 'Error al buscar clientes. Mostrando resultados locales.';
+          }
+        });
+      }
     }
   }
 
