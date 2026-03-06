@@ -8,6 +8,7 @@ import 'package:tobaco/Models/Cliente.dart';
 import 'package:tobaco/Models/PricingResult.dart';
 import 'package:tobaco/Services/Categoria_Service/categoria_provider.dart';
 import 'package:tobaco/Services/Productos_Service/productos_provider.dart';
+import 'package:tobaco/Services/Ventas_Service/ventas_provider.dart';
 import 'package:tobaco/Services/PrecioEspecialService.dart';
 import 'package:tobaco/Services/PricingService.dart';
 import 'package:tobaco/Theme/app_theme.dart';
@@ -506,6 +507,15 @@ class _SeleccionarProductosScreenState
         print('Error cargando precios especiales: $e');
       }
     }
+  }
+
+  /// Máximo permitido por stock (evita superar stock al agregar productos).
+  /// En modo offline resta la cantidad ya reservada en ventas pendientes de sync.
+  double _maxCantidadProducto(Producto producto) {
+    final reservada = context.read<VentasProvider>().cantidadReservadaOfflinePorProducto;
+    final base = (producto.stock ?? 999).toDouble();
+    final reservado = producto.id != null ? (reservada[producto.id!] ?? 0) : 0.0;
+    return (base - reservado).clamp(0.0, double.infinity);
   }
 
   double _getPrecioFinal(Producto producto) {
@@ -1033,8 +1043,11 @@ class _SeleccionarProductosScreenState
                     ElevatedButton(
                       onPressed: () {
                         setState(() {
-                          cantidades[producto.id!] = 1;
-                          cantidadControllers[producto.id!]!.text = '1';
+                          final maxStock = _maxCantidadProducto(producto);
+                          final q = (1.0).clamp(0.0, maxStock);
+                          cantidades[producto.id!] = q;
+                          cantidadControllers[producto.id!]!.text =
+                              q % 1 == 0 ? q.toInt().toString() : q.toStringAsFixed(1);
                         });
                         Navigator.pop(context);
                       },
@@ -1128,10 +1141,11 @@ class _SeleccionarProductosScreenState
                     child: InkWell(
                       onTap: () {
                         setState(() {
-                          cantidades[producto.id!] =
-                              quantityPrice.quantity.toDouble();
+                          final maxStock = _maxCantidadProducto(producto);
+                          final q = quantityPrice.quantity.toDouble().clamp(0.0, maxStock);
+                          cantidades[producto.id!] = q;
                           cantidadControllers[producto.id!]!.text =
-                              quantityPrice.quantity.toString();
+                              q % 1 == 0 ? q.toInt().toString() : q.toStringAsFixed(1);
                         });
                         Navigator.pop(context);
                       },
@@ -1719,6 +1733,17 @@ class _SeleccionarProductosScreenState
                                                                       .w500,
                                                             ),
                                                           ),
+                                                          if (producto.stock != null && producto.stock! == 0) ...[
+                                                            const SizedBox(width: 8),
+                                                            Text(
+                                                              'Sin stock',
+                                                              style: TextStyle(
+                                                                fontSize: 12,
+                                                                fontWeight: FontWeight.w600,
+                                                                color: Colors.orange.shade700,
+                                                              ),
+                                                            ),
+                                                          ],
                                                         ],
                                                       ),
                                                     ],
@@ -1824,24 +1849,19 @@ class _SeleccionarProductosScreenState
                                                           ),
                                                           onPressed: () {
                                                             setState(() {
+                                                              final maxStock = _maxCantidadProducto(producto);
                                                               double current =
                                                                   cantidades[producto
                                                                           .id!] ??
                                                                       0;
                                                               if (current % 1 ==
                                                                   0) {
-                                                                // Si no tiene decimales, sumar 0.5
-                                                                if (current <
-                                                                    999) {
-                                                                  current +=
-                                                                      0.5;
+                                                                if (current < maxStock) {
+                                                                  current = (current + 0.5).clamp(0.0, maxStock);
                                                                 }
                                                               } else {
-                                                                // Si tiene decimales, restar 0.5
-                                                                if (current >=
-                                                                    0.5) {
-                                                                  current -=
-                                                                      0.5;
+                                                                if (current >= 0.5) {
+                                                                  current -= 0.5;
                                                                 }
                                                               }
                                                               cantidades[producto
@@ -2009,21 +2029,16 @@ class _SeleccionarProductosScreenState
                                                                     r'^\d{0,3}(\.\d{0,1})?$')),
                                                           ],
                                                           onChanged: (value) {
+                                                            final maxStock = _maxCantidadProducto(producto);
                                                             double newCantidad =
                                                                 double.tryParse(
                                                                         value) ??
                                                                     0;
-                                                            if (newCantidad >
-                                                                999) {
-                                                              newCantidad = 999;
-                                                            }
+                                                            newCantidad = newCantidad.clamp(0.0, maxStock);
                                                             setState(() {
                                                               cantidades[producto
                                                                       .id!] =
-                                                                  newCantidad <
-                                                                          0
-                                                                      ? 0.0
-                                                                      : newCantidad;
+                                                                  newCantidad;
                                                               _clearPricingCache();
                                                             });
                                                           },
@@ -2039,12 +2054,13 @@ class _SeleccionarProductosScreenState
                                                         ),
                                                         onPressed: () {
                                                           setState(() {
+                                                            final maxStock = _maxCantidadProducto(producto);
                                                             double current =
                                                                 cantidades[producto
                                                                         .id!] ??
                                                                     0;
-                                                            if (current < 999) {
-                                                              current += 1;
+                                                            if (current < maxStock) {
+                                                              current = (current + 1).clamp(0.0, maxStock);
                                                               cantidades[producto
                                                                       .id!] =
                                                                   current;
@@ -2193,7 +2209,8 @@ class _SeleccionarProductosScreenState
                             precio: precioFinal,
                             cantidad: e.value,
                             categoria: producto.categoriaNombre ?? '',
-                            categoriaId: producto.categoriaId);
+                            categoriaId: producto.categoriaId,
+                            stock: producto.stock);
                       }).toList();
 
                       Navigator.pop(context, seleccionados);

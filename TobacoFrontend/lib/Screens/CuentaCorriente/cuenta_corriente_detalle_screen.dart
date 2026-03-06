@@ -716,6 +716,9 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _mostrarModalSaldarDeuda,
         backgroundColor: AppTheme.primaryColor,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
+        ),
         icon: const Icon(Icons.payment, color: Colors.white),
         label: const Text(
           'Registrar abono',
@@ -856,7 +859,7 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
                 color: Colors.transparent,
                 child: InkWell(
                   onTap: () => setState(() => _selectedTabIndex = i),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
                     curve: Curves.easeOutCubic,
@@ -865,7 +868,7 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
                       color: selected
                           ? AppTheme.primaryColor
                           : (isDarkMode ? const Color(0xFF2A2A2A) : Colors.grey.shade100),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
                       boxShadow: selected
                           ? [
                               BoxShadow(

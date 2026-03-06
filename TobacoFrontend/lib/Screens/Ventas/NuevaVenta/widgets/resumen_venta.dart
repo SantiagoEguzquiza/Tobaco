@@ -194,4 +194,3 @@ class ResumenVenta extends StatelessWidget {
     );
   }
 }
-

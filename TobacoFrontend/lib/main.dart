@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:tobaco/Screens/menu_screen.dart';
+import 'package:tobaco/Screens/main_shell_screen.dart';
 import 'package:tobaco/Screens/Auth/login_screen.dart';
 import 'package:tobaco/Screens/SuperAdmin/super_admin_menu_screen.dart';
 import 'package:provider/provider.dart';
@@ -96,7 +97,7 @@ class MyApp extends StatelessWidget {
       locale: const Locale('es', 'ES'),
       home: const AuthWrapper(),
       routes: {
-        '/menu': (context) => const MenuScreen(),
+        '/menu': (context) => const MainShellScreen(),
         '/superadmin': (context) => const SuperAdminMenuScreen(),
         '/login': (context) => const LoginScreen(),
       },
@@ -126,10 +127,10 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
     // AuthService limpia tokens y llama este callback para que la UI vuelva al login.
     AuthService.onSessionInvalidated = () {
       if (mounted) {
-        context.read<ClienteProvider>().clearForNewUser();
-        context.read<VentasProvider>().clearForNewUser();
+        unawaited(context.read<ClienteProvider>().clearForNewUser());
+        unawaited(context.read<VentasProvider>().clearForNewUser());
         unawaited(context.read<ProductoProvider>().clearForNewUser());
-        context.read<CategoriasProvider>().clearForNewUser();
+        unawaited(context.read<CategoriasProvider>().clearForNewUser());
         context.read<AuthProvider>().clearSession(
           sessionExpiredMessage: 'Tu sesión ha expirado. Por favor, inicia sesión nuevamente.',
         );
@@ -172,6 +173,14 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
     } finally {
       if (mounted) {
         _isInitializing = false;
+        // Si no hay sesión, limpiar todo para no mostrar datos de otro usuario al iniciar/reinstalar
+        final authProvider = context.read<AuthProvider>();
+        if (!authProvider.isAuthenticated) {
+          unawaited(context.read<VentasProvider>().clearForNewUser());
+          unawaited(context.read<CategoriasProvider>().clearForNewUser());
+          unawaited(context.read<ClienteProvider>().clearForNewUser());
+          unawaited(context.read<ProductoProvider>().clearForNewUser());
+        }
       }
     }
   }
@@ -294,7 +303,7 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
 
           _permisosLoadTriggered = false;
           _permisosTimeoutFired = false;
-          return const MenuScreen();
+          return const MainShellScreen();
         }
 
         return const LoginScreen();

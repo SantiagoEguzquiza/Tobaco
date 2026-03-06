@@ -95,7 +95,7 @@ class _VentasScreenState extends State<VentasScreen> {
       ),
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
           child: Column(
             children: [
               if (provider.isOffline) ...[

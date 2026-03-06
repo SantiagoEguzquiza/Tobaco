@@ -410,8 +410,8 @@ class CategoriasProvider with ChangeNotifier {
     }
   }
 
-  /// Limpia listas y estado al cambiar de usuario (logout). Evita mostrar datos del usuario anterior.
-  void clearForNewUser() {
+  /// Limpia listas y caché al cambiar de usuario. Evita mostrar categorías de otro usuario.
+  Future<void> clearForNewUser() async {
     _categorias = [];
     _isLoading = false;
     _isOffline = false;
@@ -419,6 +419,12 @@ class CategoriasProvider with ChangeNotifier {
     _loadedFromCache = false;
     _pendingReorderDtos = null;
     notifyListeners();
+    try {
+      final categoriasCache = CategoriasCacheService();
+      await categoriasCache.clear();
+    } catch (e) {
+      debugPrint('⚠️ CategoriasProvider: error limpiando caché para nuevo usuario: $e');
+    }
   }
 }
 

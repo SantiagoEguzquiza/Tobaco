@@ -22,6 +22,8 @@ class ProductoProvider with ChangeNotifier {
   String? _selectedCategory;
   String _searchQuery = '';
   static const Duration _timeoutDuration = Duration(seconds: 6);
+  /// Tras clearForNewUser, no mostrar caché en la próxima carga (evita datos de otro usuario).
+  bool _skipCacheOnNextLoad = false;
 
   bool get isLoading => _isLoading;
   bool get isLoadingMore => false;
@@ -60,6 +62,7 @@ class ProductoProvider with ChangeNotifier {
   }
 
   /// Cache-first: carga desde SQLite al instante, luego sincroniza con el servidor.
+  /// Si _skipCacheOnNextLoad (tras cambio de usuario), omite caché y va directo al servidor.
   Future<void> cargarProductosInicial(
       CategoriasProvider categoriasProvider) async {
     if (_isLoading) return;
@@ -68,34 +71,38 @@ class ProductoProvider with ChangeNotifier {
     _errorMessage = null;
     _searchQuery = '';
     _isOffline = false;
+    final skipCache = _skipCacheOnNextLoad;
+    if (skipCache) _skipCacheOnNextLoad = false;
 
-    // PASO 1: Cargar productos y categorías desde caché (rápido, <50ms)
-    try {
-      final results = await Future.wait([
-        _cacheService.obtenerProductosDelCache(),
-        _cacheService.obtenerCategoriasDelCache(),
-      ]);
-      final productosCache = results[0] as List<Producto>;
-      final categoriasCache = results[1] as List<Categoria>;
+    // PASO 1: Cargar productos y categorías desde caché (rápido) solo si no acabamos de cambiar de usuario
+    if (!skipCache) {
+      try {
+        final results = await Future.wait([
+          _cacheService.obtenerProductosDelCache(),
+          _cacheService.obtenerCategoriasDelCache(),
+        ]);
+        final productosCache = results[0] as List<Producto>;
+        final categoriasCache = results[1] as List<Categoria>;
 
-      if (productosCache.isNotEmpty) {
-        _productos = productosCache;
-        _ordenarProductos();
-      }
-      if (categoriasCache.isNotEmpty) {
-        categoriasCache
-            .sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
-        _categorias = categoriasCache;
-      }
-      if (_productos.isNotEmpty) {
-        if (_selectedCategory == null && _categorias.isNotEmpty) {
-          _selectedCategory = _categorias.first.nombre;
+        if (productosCache.isNotEmpty) {
+          _productos = productosCache;
+          _ordenarProductos();
         }
-        _isLoading = false;
-        notifyListeners();
+        if (categoriasCache.isNotEmpty) {
+          categoriasCache
+              .sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+          _categorias = categoriasCache;
+        }
+        if (_productos.isNotEmpty) {
+          if (_selectedCategory == null && _categorias.isNotEmpty) {
+            _selectedCategory = _categorias.first.nombre;
+          }
+          _isLoading = false;
+          notifyListeners();
+        }
+      } catch (e) {
+        debugPrint('⚠️ ProductoProvider: Error cargando del caché: $e');
       }
-    } catch (e) {
-      debugPrint('⚠️ ProductoProvider: Error cargando del caché: $e');
     }
 
     // PASO 2: Sincronizar con el servidor en background
@@ -186,6 +193,7 @@ class ProductoProvider with ChangeNotifier {
     _isOffline = false;
     _isLoading = false;
     _isSyncing = false;
+    _skipCacheOnNextLoad = true;
     notifyListeners();
 
     try {

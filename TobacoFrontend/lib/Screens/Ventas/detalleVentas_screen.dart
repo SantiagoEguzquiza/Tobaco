@@ -39,7 +39,7 @@ class _DetalleVentaScreenState extends State<DetalleVentaScreen> {
         ),
         body: SafeArea(
           child: Padding(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
             child: SingleChildScrollView(
               child: Column(             
                 children: [               
@@ -57,6 +57,8 @@ class _DetalleVentaScreenState extends State<DetalleVentaScreen> {
 
                   // Resumen de totales
                   _buildSummarySection(context),
+                  // Margen inferior para que los botones no queden pegados al Desglose de Pagos
+                  const SizedBox(height: 24),
                 ],
               ),
             ),
@@ -74,7 +76,7 @@ class _DetalleVentaScreenState extends State<DetalleVentaScreen> {
         color: Theme.of(context).brightness == Brightness.dark
             ? const Color(0xFF1A1A1A)
             : Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(AppTheme.borderRadiusCards),
         border: Border.all(
           color: Theme.of(context).brightness == Brightness.dark
               ? Colors.grey.shade700
@@ -90,7 +92,7 @@ class _DetalleVentaScreenState extends State<DetalleVentaScreen> {
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: AppTheme.primaryColor,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(AppTheme.borderRadiusCards),
                 ),
                 child:  Icon(
                   Icons.receipt_long,
@@ -186,7 +188,7 @@ class _DetalleVentaScreenState extends State<DetalleVentaScreen> {
         color: Theme.of(context).brightness == Brightness.dark
             ? const Color(0xFF1A1A1A)
             : Colors.white,
-        borderRadius: BorderRadius.circular(15),
+        borderRadius: BorderRadius.circular(AppTheme.borderRadiusCards),
         boxShadow: [
           BoxShadow(
             color: Theme.of(context).brightness == Brightness.dark
@@ -211,9 +213,9 @@ class _DetalleVentaScreenState extends State<DetalleVentaScreen> {
               color: Theme.of(context).brightness == Brightness.dark
                   ? const Color(0xFF2A2A2A)
                   : Colors.grey.shade50,
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(15),
-                topRight: Radius.circular(15),
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(AppTheme.borderRadiusCards),
+                topRight: Radius.circular(AppTheme.borderRadiusCards),
               ),
             ),
             child: Row(
@@ -289,7 +291,7 @@ class _DetalleVentaScreenState extends State<DetalleVentaScreen> {
         color: Theme.of(context).brightness == Brightness.dark
             ? const Color(0xFF1A1A1A)
             : Colors.white,
-        borderRadius: BorderRadius.circular(15),
+        borderRadius: BorderRadius.circular(AppTheme.borderRadiusCards),
         boxShadow: [
           BoxShadow(
             color: Theme.of(context).brightness == Brightness.dark
@@ -314,9 +316,9 @@ class _DetalleVentaScreenState extends State<DetalleVentaScreen> {
               color: Theme.of(context).brightness == Brightness.dark
                   ? const Color(0xFF2A2A2A)
                   : Colors.grey.shade50,
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(15),
-                topRight: Radius.circular(15),
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(AppTheme.borderRadiusCards),
+                topRight: Radius.circular(AppTheme.borderRadiusCards),
               ),
             ),
             child: Row(
@@ -371,7 +373,7 @@ class _DetalleVentaScreenState extends State<DetalleVentaScreen> {
                               color: producto.entregado
                                   ? Colors.green.shade50
                                   : Colors.orange.shade50,
-                              borderRadius: BorderRadius.circular(8),
+                              borderRadius: BorderRadius.circular(AppTheme.borderRadiusCards),
                             ),
                             child: Icon(
                               producto.entregado ? Icons.check_circle : Icons.inventory_2,
@@ -425,7 +427,7 @@ class _DetalleVentaScreenState extends State<DetalleVentaScreen> {
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
                             color: Colors.orange.shade50,
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(AppTheme.borderRadiusCards),
                             border: Border.all(
                               color: Colors.orange.shade200,
                               width: 1,
@@ -485,7 +487,7 @@ class _DetalleVentaScreenState extends State<DetalleVentaScreen> {
         color: Theme.of(context).brightness == Brightness.dark
             ? const Color(0xFF1A1A1A)
             : Colors.white,
-        borderRadius: BorderRadius.circular(15),
+        borderRadius: BorderRadius.circular(AppTheme.borderRadiusCards),
         border: Border.all(
           color: Theme.of(context).brightness == Brightness.dark
               ? Colors.grey.shade700
@@ -636,8 +638,8 @@ class _DetalleVentaScreenState extends State<DetalleVentaScreen> {
                         : () {
                             showModalBottomSheet(
                               context: context,
-                              shape: const RoundedRectangleBorder(
-                                borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.vertical(top: Radius.circular(AppTheme.borderRadiusMainButtons)),
                               ),
                               builder: (sheetContext) {
                                 return SafeArea(
@@ -714,7 +716,7 @@ class _DetalleVentaScreenState extends State<DetalleVentaScreen> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppTheme.primaryColor,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
                       ),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       elevation: 2,
@@ -729,7 +731,7 @@ class _DetalleVentaScreenState extends State<DetalleVentaScreen> {
                       backgroundColor: Theme.of(context).cardTheme.color,
                       side: const BorderSide(color: Colors.grey, width: 1.5),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
                       ),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
@@ -824,7 +826,7 @@ class _DetalleVentaScreenState extends State<DetalleVentaScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
                   color: Colors.green.shade100,
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(AppTheme.borderRadiusCards),
                 ),
                 child: Text(
                   '-${porcentajeDescuento.toStringAsFixed(0)}%',
@@ -1066,7 +1068,7 @@ class _DetalleVentaScreenState extends State<DetalleVentaScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
         color: bgColor,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppTheme.borderRadiusCards),
       ),
       child: Center(
         child: Row(

@@ -20,6 +20,8 @@ class ClienteProvider with ChangeNotifier {
   String _searchQuery = '';
   String? _errorMessage;
   bool _isOffline = false;
+  /// Tras clearForNewUser, no mostrar caché en la próxima carga (evita datos de otro usuario).
+  bool _skipCacheOnNextLoad = false;
 
   List<Cliente> _clientesConDeuda = [];
   List<dynamic> get clientesConDeuda => _clientesConDeuda;
@@ -125,29 +127,34 @@ class ClienteProvider with ChangeNotifier {
     }
   }
 
-  /// Cache-first: carga desde SQLite al instante, luego sincroniza con el servidor.
+  /// Offline-first: carga inmediatamente desde SQLite y muestra; en segundo plano trae del servidor e integra (agrega/actualiza sin eliminar locales).
+  /// Si _skipCacheOnNextLoad (tras cambio de usuario), omite caché y va directo al servidor.
   Future<void> cargarClientes() async {
     if (_isLoading) return;
 
     _isLoading = true;
     _errorMessage = null;
     _searchQuery = '';
+    final skipCache = _skipCacheOnNextLoad;
+    if (skipCache) _skipCacheOnNextLoad = false;
 
-    // PASO 1: Cargar desde caché (rápido, <50ms). No se limpia la lista actual.
-    try {
-      final clientesCache = await _cacheService.obtenerClientesDelCache();
-      if (clientesCache.isNotEmpty) {
-        clientesCache.sort((a, b) =>
-            a.nombre.toLowerCase().compareTo(b.nombre.toLowerCase()));
-        _clientes = clientesCache;
-        _isLoading = false;
-        notifyListeners();
+    // PASO 1: Cargar desde SQLite al instante y mostrarlos (sin esperar API)
+    if (!skipCache) {
+      try {
+        final clientesLocales = await _cacheService.obtenerClientesDelCache();
+        if (clientesLocales.isNotEmpty) {
+          clientesLocales.sort((a, b) =>
+              a.nombre.toLowerCase().compareTo(b.nombre.toLowerCase()));
+          _clientes = clientesLocales;
+          _isLoading = false;
+          notifyListeners();
+        }
+      } catch (e) {
+        debugPrint('⚠️ ClienteProvider: Error cargando del caché: $e');
       }
-    } catch (e) {
-      debugPrint('⚠️ ClienteProvider: Error cargando del caché: $e');
     }
 
-    // PASO 2: Sincronizar con el servidor en background
+    // PASO 2: En segundo plano, consultar API y fusionar (agregar nuevos, actualizar existentes; no eliminar locales)
     _isSyncing = true;
     if (_isLoading) notifyListeners();
 
@@ -156,15 +163,10 @@ class ClienteProvider with ChangeNotifier {
           .obtenerClientes()
           .timeout(const Duration(seconds: 5));
 
-      clientesServidor.sort((a, b) =>
-          a.nombre.toLowerCase().compareTo(b.nombre.toLowerCase()));
-
-      await _cacheService.guardarClientesEnCache(clientesServidor);
-
-      _clientes = clientesServidor;
+      _fusionarClientesServidorConLocales(clientesServidor);
       _isOffline = false;
-      _isLoading = false;
       _isSyncing = false;
+      _isLoading = false;
       notifyListeners();
     } catch (e) {
       _isSyncing = false;
@@ -187,6 +189,26 @@ class ClienteProvider with ChangeNotifier {
       debugPrint('⚠️ ClienteProvider: Error sincronizando con servidor: $e');
       notifyListeners();
     }
+  }
+
+  /// Fusiona clientes del servidor con la lista local: actualiza por id y agrega los que no existan. No elimina clientes locales.
+  void _fusionarClientesServidorConLocales(List<Cliente> clientesServidor) {
+    final porId = <int, Cliente>{};
+    for (final c in _clientes) {
+      if (c.id != null) {
+        porId[c.id!] = c;
+      }
+    }
+    for (final c in clientesServidor) {
+      if (c.id != null) {
+        porId[c.id!] = c;
+      }
+    }
+    final sinId = _clientes.where((c) => c.id == null).toList();
+    _clientes = [...porId.values, ...sinId];
+    _clientes.sort((a, b) =>
+        a.nombre.toLowerCase().compareTo(b.nombre.toLowerCase()));
+    _guardarCacheEnBackground();
   }
 
   /// No-op. Se mantiene por compatibilidad (ya no hay paginación).
@@ -366,7 +388,8 @@ class ClienteProvider with ChangeNotifier {
         (e) => debugPrint('⚠️ Error guardando clientes en caché: $e'));
   }
 
-  void clearForNewUser() {
+  /// Limpia listas y caché al cambiar de usuario. Evita mostrar datos de otro usuario.
+  Future<void> clearForNewUser() async {
     _clientes = [];
     _clientesConDeuda = [];
     _searchQuery = '';
@@ -374,6 +397,12 @@ class ClienteProvider with ChangeNotifier {
     _isOffline = false;
     _isLoading = false;
     _isSyncing = false;
+    _skipCacheOnNextLoad = true;
     notifyListeners();
+    try {
+      await _cacheService.limpiarCache();
+    } catch (e) {
+      debugPrint('⚠️ ClienteProvider: error limpiando caché para nuevo usuario: $e');
+    }
   }
 }

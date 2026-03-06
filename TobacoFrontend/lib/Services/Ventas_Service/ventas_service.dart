@@ -11,6 +11,20 @@ class VentasService {
   static const Duration _timeoutDuration = Duration(seconds: 30); // Timeout normal para operaciones (aumentado para sincronización)
   static const Duration _timeoutRapidoDuration = Duration(seconds: 5); // Timeout más corto para refrescos rápidos (pull-to-refresh)
 
+  /// Verifica si el backend está prendido con GET /health (sin auth). Timeout corto para no esperar si está apagado.
+  static const Duration _timeoutHealth = Duration(seconds: 2);
+
+  Future<bool> get backendDisponible async {
+    try {
+      final response = await Apihandler.client
+          .get(Uri.parse('$baseUrl/health'))
+          .timeout(_timeoutHealth);
+      return response.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<List<Ventas>> obtenerVentas({bool timeoutRapido = false, bool timeoutNormal = false}) async {
     try {
       Duration timeout = timeoutNormal ? _timeoutDuration : (timeoutRapido ? _timeoutRapidoDuration : _timeoutDuration);
@@ -270,13 +284,15 @@ class VentasService {
     }
   }
 
-  Future<Map<String, dynamic>> obtenerVentasPaginadas(int page, int pageSize) async {
+  /// [timeout] opcional: si se pasa, se usa en lugar de _timeoutDuration (útil para fallar rápido en carga inicial sin backend).
+  Future<Map<String, dynamic>> obtenerVentasPaginadas(int page, int pageSize, {Duration? timeout}) async {
     try {
       final headers = await AuthService.getAuthHeaders();
+      final effectiveTimeout = timeout ?? _timeoutDuration;
       final response = await Apihandler.client.get(
         Uri.parse('$baseUrl/Ventas/paginados?page=$page&pageSize=$pageSize'),
         headers: headers,
-      ).timeout(_timeoutDuration);
+      ).timeout(effectiveTimeout);
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = jsonDecode(response.body);

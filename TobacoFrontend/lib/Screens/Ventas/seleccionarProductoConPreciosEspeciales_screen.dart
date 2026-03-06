@@ -6,6 +6,7 @@ import '../../Models/ProductoSeleccionado.dart';
 import '../../Models/Cliente.dart';
 import '../../Services/Categoria_Service/categoria_provider.dart';
 import '../../Services/Productos_Service/productos_provider.dart';
+import '../../Services/Ventas_Service/ventas_provider.dart';
 import '../../Services/PrecioEspecialService.dart';
 import '../../Theme/app_theme.dart';
 import '../../Helpers/api_handler.dart';
@@ -126,6 +127,14 @@ class _SeleccionarProductosConPreciosEspecialesScreenState
     return producto.precio;
   }
 
+  /// En modo offline resta la cantidad ya reservada en ventas pendientes de sync.
+  double _maxCantidadProducto(Producto producto) {
+    final reservada = context.read<VentasProvider>().cantidadReservadaOfflinePorProducto;
+    final base = (producto.stock ?? 999).toDouble();
+    final reservado = producto.id != null ? (reservada[producto.id!] ?? 0) : 0.0;
+    return (base - reservado).clamp(0.0, double.infinity);
+  }
+
   bool _tienePrecioEspecial(Producto producto) {
     return widget.cliente != null && preciosEspeciales.containsKey(producto.id);
   }
@@ -154,6 +163,7 @@ class _SeleccionarProductosConPreciosEspecialesScreenState
         cantidad: cantidad,
         categoria: producto.categoriaNombre ?? '',
         categoriaId: producto.categoriaId,
+        stock: producto.stock,
       );
 
       final existingIndex = widget.productosYaSeleccionados
@@ -560,6 +570,25 @@ class _SeleccionarProductosConPreciosEspecialesScreenState
                                                           overflow: TextOverflow.ellipsis,
                                                         ),
                                                       ),
+                                                      if (producto.stock != null && producto.stock! == 0)
+                                                        Container(
+                                                          padding: const EdgeInsets.symmetric(
+                                                            horizontal: 6,
+                                                            vertical: 2,
+                                                          ),
+                                                          decoration: BoxDecoration(
+                                                            color: Colors.orange.shade100,
+                                                            borderRadius: BorderRadius.circular(8),
+                                                          ),
+                                                          child: Text(
+                                                            'Sin stock',
+                                                            style: TextStyle(
+                                                              color: Colors.orange.shade800,
+                                                              fontSize: 10,
+                                                              fontWeight: FontWeight.bold,
+                                                            ),
+                                                          ),
+                                                        ),
                                                       if (_tienePrecioEspecial(producto))
                                                         Container(
                                                           padding: const EdgeInsets.symmetric(
@@ -649,7 +678,8 @@ class _SeleccionarProductosConPreciosEspecialesScreenState
                                                       ),
                                                     ),
                                                     onChanged: (value) {
-                                                      final cantidad = double.tryParse(value) ?? 0;
+                                                      final maxStock = _maxCantidadProducto(producto);
+                                                      final cantidad = (double.tryParse(value) ?? 0).clamp(0.0, maxStock);
                                                       setState(() {
                                                         cantidades[producto.id!] = cantidad;
                                                       });
@@ -666,9 +696,9 @@ class _SeleccionarProductosConPreciosEspecialesScreenState
                                                   ),
                                                   onPressed: () {
                                                     setState(() {
+                                                      final maxStock = _maxCantidadProducto(producto);
                                                       double current = cantidades[producto.id!] ?? 0;
-                                                      current += 1;
-                                                      if (current > 999) current = 999;
+                                                      current = (current + 1).clamp(0.0, maxStock);
                                                       cantidades[producto.id!] = current;
                                                       cantidadControllers[producto.id!]!.text =
                                                           current % 1 == 0
@@ -687,9 +717,11 @@ class _SeleccionarProductosConPreciosEspecialesScreenState
                                         SizedBox(
                                           width: double.infinity,
                                           child: ElevatedButton(
-                                            onPressed: cantidad > 0
-                                                ? () => _addProducto(producto, cantidad)
-                                                : null,
+                                            onPressed: (producto.stock != null && producto.stock! == 0)
+                                                ? null
+                                                : cantidad > 0
+                                                    ? () => _addProducto(producto, cantidad)
+                                                    : null,
                                             style: ElevatedButton.styleFrom(
                                               backgroundColor: AppTheme.primaryColor,
                                               foregroundColor: Colors.white,
@@ -699,9 +731,11 @@ class _SeleccionarProductosConPreciosEspecialesScreenState
                                               ),
                                             ),
                                             child: Text(
-                                              cantidad > 0
-                                                  ? 'Agregar ${cantidad.toStringAsFixed(cantidad % 1 == 0 ? 0 : 1)} unidad${cantidad == 1 ? '' : 'es'}'
-                                                  : 'Seleccionar cantidad',
+                                              producto.stock != null && producto.stock! == 0
+                                                  ? 'Sin stock'
+                                                  : cantidad > 0
+                                                      ? 'Agregar ${cantidad.toStringAsFixed(cantidad % 1 == 0 ? 0 : 1)} unidad${cantidad == 1 ? '' : 'es'}'
+                                                      : 'Seleccionar cantidad',
                                             ),
                                           ),
                                         ),

@@ -504,107 +504,6 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
     }
   }
 
-  /// Muestra diálogo preguntando cómo quiere asignar la venta
-  /// Retorna: 'a_mi', 'automatico', o null (cancelar)
-  Future<String?> _mostrarDialogoAsignacionVenta(BuildContext context) async {
-    return await showDialog<String>(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
-          title: Row(
-            children: [
-              Icon(Icons.assignment, color: AppTheme.primaryColor),
-              const SizedBox(width: 12),
-              const Text('Asignar Venta'),
-            ],
-          ),
-          content: const Text(
-            '¿Cómo deseas asignar esta venta?\n\n'
-            '• Asignarme a mí: La venta aparecerá en "Mis Entregas"\n'
-            '• Asignar automáticamente: Se asignará a otro repartidor disponible\n'
-            '• Cancelar: Dejar sin asignar',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(null),
-              style: TextButton.styleFrom(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              child: const Text('Cancelar'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop('automatico'),
-              style: TextButton.styleFrom(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              child: Text(
-                'Automático',
-                style: TextStyle(color: AppTheme.primaryColor),
-              ),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.of(context).pop('a_mi'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primaryColor,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              child: const Text('Asignarme a mí'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  /// Asigna la venta automáticamente a otro repartidor
-  Future<void> _asignarVentaAutomaticamente(
-    VentasProvider ventasProvider,
-    int ventaId,
-    int usuarioIdExcluir,
-  ) async {
-    try {
-      final resultado = await ventasProvider.asignarVentaAutomaticamente(
-          ventaId, usuarioIdExcluir);
-
-      if (mounted) {
-        if (resultado['asignada'] == true) {
-          final nombreAsignado = resultado['usuarioAsignadoNombre'];
-          await AppDialogs.showSuccessDialog(
-            context: context,
-            title: 'Venta Asignada',
-            message: nombreAsignado != null
-                ? 'La venta se asignó automáticamente a: $nombreAsignado'
-                : 'Venta asignada exitosamente',
-            buttonText: 'Entendido',
-          );
-        } else {
-          AppTheme.showSnackBar(
-            context,
-            AppTheme.errorSnackBar(
-                resultado['message'] ?? 'No se pudo asignar la venta'),
-          );
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        AppTheme.showSnackBar(
-          context,
-          AppTheme.errorSnackBar('Error al asignar la venta: $e'),
-        );
-      }
-    }
-  }
-
   void _onSearchChanged() {
     _debounceTimer?.cancel();
     _debounceTimer = Timer(const Duration(milliseconds: 300), () {
@@ -1151,6 +1050,23 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                                               : Colors.grey.shade600,
                                         ),
                                       ),
+                                      if (producto.stock != null) ...[
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          'Disponible: ${_maxCantidadDisponible(producto).toStringAsFixed(0)}',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: isDark
+                                                ? Colors.grey.shade500
+                                                : Colors.grey.shade600,
+                                          ),
+                                        ),
+                                        if (producto.stock != null && producto.cantidad > _maxCantidadDisponible(producto)) ...[
+                                          const SizedBox(width: 6),
+                                          Icon(Icons.warning_amber_rounded,
+                                              size: 14, color: Colors.orange.shade700),
+                                        ],
+                                      ],
                                     ],
                                   ),
                                 ],
@@ -1387,10 +1303,19 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
         : cantidad.toStringAsFixed(1);
   }
 
+  /// Stock efectivo: stock del producto menos lo ya reservado en ventas offline pendientes de sync.
+  double _maxCantidadDisponible(ProductoSeleccionado producto) {
+    final reservada = context.read<VentasProvider>().cantidadReservadaOfflinePorProducto;
+    final base = producto.stock ?? 999.0;
+    final reservado = reservada[producto.id] ?? 0.0;
+    return (base - reservado).clamp(0.0, double.infinity);
+  }
+
   void _ajustarCantidadProducto(
       ProductoSeleccionado producto, double delta) {
+    final maxDisp = _maxCantidadDisponible(producto);
     final nuevaCantidad =
-        (producto.cantidad + delta).clamp(0, 999).toDouble();
+        (producto.cantidad + delta).clamp(0.0, maxDisp).toDouble();
     _actualizarCantidadProductoSeleccionado(producto, nuevaCantidad);
   }
 
@@ -1399,7 +1324,8 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
     double nuevaCantidad, {
     bool actualizarController = true,
   }) {
-    final cantidadNormalizada = nuevaCantidad.clamp(0, 999).toDouble();
+    final maxCantidad = _maxCantidadDisponible(producto);
+    final cantidadNormalizada = nuevaCantidad.clamp(0.0, maxCantidad).toDouble();
     setState(() {
       producto.cantidad = cantidadNormalizada;
     });
@@ -1705,6 +1631,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
       isProcessingVenta = true;
     });
 
+    bool procesandoOverlayCerrado = false;
     try {
       final productos = productosSeleccionados
           .map((ps) {
@@ -1788,8 +1715,66 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
       // Crear la venta - el provider se encarga de intentar servidor primero y fallback a local
       final ventasProvider =
           Provider.of<VentasProvider>(context, listen: false);
-      
+
+      // Mostrar overlay de "Procesando..." de inmediato para que el usuario vea feedback
+      if (mounted) {
+        showDialog<void>(
+          context: context,
+          barrierDismissible: false,
+          barrierColor: Colors.black54,
+          builder: (ctx) => PopScope(
+            canPop: false,
+            child: Center(
+              child: Material(
+                color: Colors.transparent,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
+                  decoration: BoxDecoration(
+                    color: Theme.of(ctx).dialogBackgroundColor,
+                    borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.2),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const SizedBox(
+                        width: 36,
+                        height: 36,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Procesando venta...',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                          color: Theme.of(ctx).brightness == Brightness.dark
+                              ? Colors.white
+                              : Colors.black87,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      }
+
       final result = await ventasProvider.crearVenta(ventaConPagos);
+
+      // Cerrar overlay de "Procesando..." antes de mostrar la animación verde
+      if (mounted) {
+        Navigator.of(context).pop();
+        procesandoOverlayCerrado = true;
+      }
 
       if (mounted) {
         if (!result['success']) {
@@ -1808,82 +1793,13 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
           }
         }
 
-        // Manejar asignación según el tipo de empleado (en background si es offline)
-        if (!result['isOffline'] && result['ventaId'] != null) {
-          final usuario = await AuthService.getCurrentUser();
-          if (usuario != null && (usuario.isEmployee || usuario.isAdmin)) {
-            // Verificar si la venta ya fue asignada automáticamente por el backend
-            if (result['asignada'] == true && result['usuarioAsignadoId'] != null) {
-              // La venta fue asignada automáticamente (solo para RepartidorVendedor)
-              final nombreAsignado = result['usuarioAsignadoNombre'];
-              if (mounted) {
-                AppTheme.showSnackBar(
-                  context,
-                  AppTheme.successSnackBar(
-                    nombreAsignado != null
-                        ? 'Venta asignada a $nombreAsignado exitosamente'
-                        : 'Venta asignada exitosamente'),
-                );
-              }
-            } else if (usuario.isAdmin) {
-              // Admin: la venta se crea y queda pendiente de asignación
-              // No mostrar ningún diálogo, el admin puede asignarla después desde la pantalla de asignar ventas
-            // } else if (usuario.esVendedor) {
-            //   // Vendedor: mostrar diálogo informativo de que la venta queda pendiente de asignación
-            //   // if (mounted) {
-            //   //   await AppDialogs.showWarningDialog(
-            //   //     context: context,
-            //   //     title: 'Venta Creada',
-            //   //     message:
-            //   //         'Queda la venta pendiente de asignación para repartir o entregar',
-            //   //     buttonText: 'Entendido',
-            //   //     icon: Icons.info_outline,
-            //   //   );
-            //   // } 
-            // } else {
-              // Para Repartidor, mostrar el diálogo de asignación
-              final opcionAsignacion =
-                  await _mostrarDialogoAsignacionVenta(context);
-
-              if (mounted) {
-                try {
-                  if (opcionAsignacion == 'a_mi') {
-                    // Asignarse a sí mismo
-                    await ventasProvider.asignarVenta(
-                        result['ventaId'], usuario.id);
-                    if (mounted) {
-                      AppTheme.showSnackBar(
-                        context,
-                        AppTheme.successSnackBar(
-                            'Venta asignada a ti exitosamente'),
-                      );
-                    }
-                  } else if (opcionAsignacion == 'automatico') {
-                    // Asignar automáticamente a otro repartidor
-                    await _asignarVentaAutomaticamente(
-                        ventasProvider, result['ventaId'], usuario.id);
-                  }
-                  // Si es 'cancelar' o null, no hacer nada
-                } catch (e) {
-                  if (mounted) {
-                    AppTheme.showSnackBar(
-                      context,
-                      AppTheme.errorSnackBar('Error al asignar la venta: $e'),
-                    );
-                  }
-                }
-              }
-            }
-          }
-        }
-
         // Marcar que la venta se completó exitosamente
         _ventaCompletada = true;
 
         // Eliminar borrador después de confirmar la venta (de forma segura) en background
         _eliminarBorradorDeFormaSegura();
 
-        // Mostrar animación de confirmación después del diálogo
+        // Mostrar animación de confirmación
         showGeneralDialog(
           context: context,
           barrierDismissible: false,
@@ -1915,6 +1831,12 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
         );
       }
     } catch (e) {
+      // Cerrar overlay "Procesando..." solo si aún está abierto (excepción durante la API)
+      if (mounted && !procesandoOverlayCerrado) {
+        try {
+          Navigator.of(context).pop();
+        } catch (_) {}
+      }
       setState(() {
         isProcessingVenta = false;
       });

@@ -8,6 +8,7 @@ import 'package:tobaco/Helpers/api_handler.dart';
 import 'package:printing/printing.dart';
 import 'package:tobaco/Utils/pdf_generator/venta_pdf_builder.dart';
 import 'package:tobaco/Services/Printer_Service/bluetooth_printer_service.dart';
+import 'package:share_plus/share_plus.dart';
 
 class ResumenVentaScreen extends StatefulWidget {
   final Ventas? venta; // Recibir la venta como parámetro opcional
@@ -195,7 +196,7 @@ class _ResumenVentaScreenState extends State<ResumenVentaScreen> {
       ),
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
           child: Column(
             children: [
               Expanded(
@@ -260,7 +261,7 @@ class _ResumenVentaScreenState extends State<ResumenVentaScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.primaryColor,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
                 ),
               ),
             ),
@@ -288,6 +289,8 @@ class _ResumenVentaScreenState extends State<ResumenVentaScreen> {
 
           // Resumen de totales
           _buildSummarySection(),
+          // Separación al final (parte del scroll, no genera franja)
+          const SizedBox(height: 16),
         ],
       ),
     );
@@ -581,20 +584,11 @@ class _ResumenVentaScreenState extends State<ResumenVentaScreen> {
   // Botones de acción en la parte inferior
   Widget _buildBottomActions(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+      padding: const EdgeInsets.fromLTRB(18, 20, 18, 26),
       decoration: BoxDecoration(
         color: Theme.of(context).brightness == Brightness.dark
             ? const Color(0xFF1A1A1A)
             : Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Theme.of(context).brightness == Brightness.dark
-                ? Colors.black.withOpacity(0.3)
-                : Colors.black.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, -2),
-          ),
-        ],
       ),
       child: SafeArea(
         child: Row(
@@ -668,9 +662,9 @@ class _ResumenVentaScreenState extends State<ResumenVentaScreen> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.primaryColor,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
                   ),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
                   elevation: 2,
                 ),
               ),
@@ -678,14 +672,23 @@ class _ResumenVentaScreenState extends State<ResumenVentaScreen> {
             const SizedBox(width: 12),
             Expanded(
               child: OutlinedButton(
-                onPressed: () => Navigator.of(context).popUntil((route) => route.isFirst),
+                onPressed: () {
+                  // Navegación dentro del shell (navbar): ir a Inicio = primera ruta del navigator anidado
+                  final nav = Navigator.of(context, rootNavigator: false);
+                  if (nav.canPop()) {
+                    nav.popUntil((route) => route.isFirst);
+                  } else {
+                    // Por si el contexto apuntara al navigator raíz, ir al menú por nombre
+                    Navigator.of(context).pushNamedAndRemoveUntil('/menu', (_) => false);
+                  }
+                },
                 style: OutlinedButton.styleFrom(
                   backgroundColor: Theme.of(context).cardTheme.color,
                   side: const BorderSide(color: Colors.grey, width: 1.5),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
                   ),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
                 ),
                 child: Text(
                   'Volver al Inicio',

@@ -240,10 +240,6 @@ class EditarProductoScreenState extends State<EditarProductoScreen> {
                                 decoration: BoxDecoration(
                                   color: _parseColor(categoria.colorHex),
                                   shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
-                                    width: 1.5,
-                                  ),
                                 ),
                               ),
                               const SizedBox(width: 12),
@@ -287,9 +283,6 @@ class EditarProductoScreenState extends State<EditarProductoScreen> {
                       decoration: BoxDecoration(
                         color: isDark ? const Color(0xFF2A2A2A) : Colors.white,
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: isDark ? const Color(0xFF404040) : Colors.grey.shade300,
-                        ),
                       ),
                       child: Row(
                         children: [
@@ -354,9 +347,6 @@ class EditarProductoScreenState extends State<EditarProductoScreen> {
                           decoration: BoxDecoration(
                             color: isDark ? const Color(0xFF2A2A2A) : Colors.white,
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: isDark ? const Color(0xFF404040) : Colors.grey.shade300,
-                            ),
                           ),
                           child: Row(
                             children: [
@@ -417,9 +407,6 @@ class EditarProductoScreenState extends State<EditarProductoScreen> {
                       decoration: BoxDecoration(
                         color: isDark ? const Color(0xFF2A2A2A) : Colors.white,
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: isDark ? const Color(0xFF404040) : Colors.grey.shade300,
-                        ),
                       ),
                       child: Row(
                         children: [
@@ -507,11 +494,6 @@ class EditarProductoScreenState extends State<EditarProductoScreen> {
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-                border: Border(
-                  top: BorderSide(
-                    color: isDark ? Colors.grey.shade800 : Colors.grey.shade300,
-                  ),
-                ),
               ),
               child: SafeArea(
                 child: SizedBox(

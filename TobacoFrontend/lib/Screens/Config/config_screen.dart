@@ -777,10 +777,10 @@ class _ConfigScreenState extends State<ConfigScreen> {
 
     if (confirmado) {
       // Limpiar datos del usuario anterior para no mostrarlos al siguiente (incl. caché productos/tenant)
-      context.read<ClienteProvider>().clearForNewUser();
-      context.read<VentasProvider>().clearForNewUser();
+      await context.read<ClienteProvider>().clearForNewUser();
+      await context.read<VentasProvider>().clearForNewUser();
       await context.read<ProductoProvider>().clearForNewUser();
-      context.read<CategoriasProvider>().clearForNewUser();
+      await context.read<CategoriasProvider>().clearForNewUser();
       context.read<PermisosProvider>().clearPermisos();
       await context.read<AuthProvider>().logout();
       if (mounted) {
