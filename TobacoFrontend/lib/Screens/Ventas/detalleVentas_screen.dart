@@ -41,7 +41,7 @@ class _DetalleVentaScreenState extends State<DetalleVentaScreen> {
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
             child: SingleChildScrollView(
-              child: Column(            
+              child: Column(             
                 children: [               
                   // Header con información principal de la venta
                   _buildHeaderSection(context),
@@ -57,8 +57,8 @@ class _DetalleVentaScreenState extends State<DetalleVentaScreen> {
 
                   // Resumen de totales
                   _buildSummarySection(context),
-                  // Separación al final (parte del scroll, no genera franja)
-                  const SizedBox(height: 16),
+                  // Margen inferior para que los botones no queden pegados al Desglose de Pagos
+                  const SizedBox(height: 24),
                 ],
               ),
             ),
@@ -612,11 +612,18 @@ class _DetalleVentaScreenState extends State<DetalleVentaScreen> {
   // Botones de acción en la parte inferior
   Widget _buildBottomActions(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(14, 8, 14, 12),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
       decoration: BoxDecoration(
         color: Theme.of(context).brightness == Brightness.dark
             ? const Color(0xFF1A1A1A)
             : Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, -2),
+          ),
+        ],
       ),
       child: SafeArea(
         child: Column(
@@ -631,8 +638,8 @@ class _DetalleVentaScreenState extends State<DetalleVentaScreen> {
                         : () {
                             showModalBottomSheet(
                               context: context,
-                              shape: const RoundedRectangleBorder(
-                                borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.vertical(top: Radius.circular(AppTheme.borderRadiusMainButtons)),
                               ),
                               builder: (sheetContext) {
                                 return SafeArea(
@@ -711,7 +718,7 @@ class _DetalleVentaScreenState extends State<DetalleVentaScreen> {
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
                       ),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
                       elevation: 2,
                     ),
                   ),
@@ -726,7 +733,7 @@ class _DetalleVentaScreenState extends State<DetalleVentaScreen> {
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
                       ),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
                     child: Text(
                       'Volver',
