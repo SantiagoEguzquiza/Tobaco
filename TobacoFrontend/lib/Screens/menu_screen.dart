@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:tobaco/Screens/Clientes/clientes_screen.dart';
 import 'package:tobaco/Screens/Cotizaciones/cotizaciones_screen.dart';
@@ -46,8 +46,9 @@ class _MenuScreenState extends State<MenuScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
         child: _buildInicioContent(context),
       ),
@@ -59,6 +60,10 @@ class _MenuScreenState extends State<MenuScreen> {
     final screenWidth = screenSize.width;
     final isTablet = screenWidth > 600;
     final isDesktop = screenWidth > 900;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+    final cardBackground = isDark ? const Color(0xFF1A1A1A) : colorScheme.surfaceContainerHighest;
 
     final buttonSize =
         isTablet ? 180.0 : (screenWidth * 0.35).clamp(120.0, 160.0);
@@ -66,8 +71,6 @@ class _MenuScreenState extends State<MenuScreen> {
     final fontSize = isTablet ? 22.0 : (screenWidth * 0.04).clamp(16.0, 20.0);
     final spacing = isTablet ? 30.0 : 20.0;
     final horizontalPadding = isTablet ? 40.0 : 20.0;
-
-    const cardBackground = Color(0xFF1A1A1A);
 
     return Consumer2<AuthProvider, PermisosProvider>(
       builder: (context, authProvider, permisosProvider, child) {
@@ -78,7 +81,7 @@ class _MenuScreenState extends State<MenuScreen> {
               Navigator.of(context).pushReplacementNamed('/superadmin');
             }
           });
-          return const Center(child: CircularProgressIndicator(color: Colors.white));
+          return Center(child: CircularProgressIndicator(color: theme.colorScheme.primary));
         }
 
         if (authProvider.isAuthenticated &&
@@ -113,16 +116,16 @@ class _MenuScreenState extends State<MenuScreen> {
                   'Bienvenido,',
                   style: TextStyle(
                     fontSize: 14,
-                    color: Colors.white54,
+                    color: colorScheme.onSurfaceVariant,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   'Hola, $userName',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    color: colorScheme.onSurface,
                   ),
                 ),
                 SizedBox(height: spacing + 8),
@@ -316,7 +319,6 @@ class _MenuScreenState extends State<MenuScreen> {
                 // Resumen mensual
                 Consumer<VentasProvider>(
                   builder: (context, ventasProvider, _) {
-                    // Placeholder: podÃƒÂ©s conectar datos reales despuÃƒÂ©s
                     final totalMensual = 0.0;
                     final percentVsAnterior = 0.0;
                     return Container(
@@ -337,21 +339,21 @@ class _MenuScreenState extends State<MenuScreen> {
                                 style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w600,
-                                  color: Colors.white54,
+                                  color: colorScheme.onSurfaceVariant,
                                   letterSpacing: 0.5,
                                 ),
                               ),
                               Icon(Icons.bar_chart_rounded,
-                                  color: Colors.white38, size: 20),
+                                  color: colorScheme.onSurfaceVariant.withOpacity(0.7), size: 20),
                             ],
                           ),
                           const SizedBox(height: 12),
                           Text(
                             '\$${(totalMensual).toStringAsFixed(2)}',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 28,
                               fontWeight: FontWeight.bold,
-                              color: Colors.white,
+                              color: colorScheme.onSurface,
                             ),
                           ),
                           const SizedBox(height: 6),
@@ -364,7 +366,7 @@ class _MenuScreenState extends State<MenuScreen> {
                                 '${percentVsAnterior >= 0 ? '+' : ''}${percentVsAnterior.toStringAsFixed(1)}% vs mes anterior',
                                 style: TextStyle(
                                   fontSize: 13,
-                                  color: Colors.white70,
+                                  color: colorScheme.onSurfaceVariant,
                                 ),
                               ),
                             ],
@@ -392,8 +394,11 @@ class _MenuScreenState extends State<MenuScreen> {
     required double iconSize,
     required double fontSize,
   }) {
-    // Mismo fondo que la card "Resumen mensual"
-    const cardBg = Color(0xFF1A1A1A);
+    final theme = Theme.of(context);
+    final cardBg = theme.brightness == Brightness.dark
+        ? const Color(0xFF1A1A1A)
+        : theme.colorScheme.surfaceContainerHighest;
+    final labelColor = theme.colorScheme.onSurface;
 
     return Material(
       color: Colors.transparent,
@@ -430,7 +435,7 @@ class _MenuScreenState extends State<MenuScreen> {
                   style: TextStyle(
                     fontSize: fontSize,
                     fontWeight: FontWeight.w600,
-                    color: Colors.white,
+                    color: labelColor,
                   ),
                   textAlign: TextAlign.center,
                   maxLines: 1,

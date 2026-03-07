@@ -344,248 +344,282 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
     final TextEditingController montoController = TextEditingController();
     final TextEditingController notaController = TextEditingController();
     String? errorMessage;
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    
+
     showDialog(
       context: context,
       builder: (BuildContext dialogContext) {
         return StatefulBuilder(
           builder: (context, setState) {
-            return AppTheme.minimalAlertDialog(
-              title: 'Registrar abono',
-              content: TextSelectionTheme(
-                data: TextSelectionThemeData(
-                  cursorColor: AppTheme.primaryColor,
-                  selectionColor: AppTheme.primaryColor.withOpacity(0.3),
-                  selectionHandleColor: AppTheme.primaryColor,
-                ),
-                child: Container(
-                  padding: const EdgeInsets.only(bottom: 16),
+            final isDark = Theme.of(context).brightness == Brightness.dark;
+            final bgDialog = isDark ? const Color(0xFF1E1E1E) : Colors.white;
+            final cardBg = isDark ? const Color(0xFF2A2A2A) : Colors.grey.shade50;
+            final textColor = isDark ? Colors.white : Colors.black87;
+            final subColor = isDark ? Colors.grey.shade400 : Colors.grey.shade600;
+            final fillField = isDark ? const Color(0xFF2A2A2A) : Colors.grey.shade100;
+            final borderColor = isDark ? Colors.grey.shade600 : Colors.grey.shade400;
+
+            return AlertDialog(
+              backgroundColor: bgDialog,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              titlePadding: const EdgeInsets.fromLTRB(24, 20, 24, 12),
+              contentPadding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
+              title: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryColor.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.payment_rounded,
+                      color: AppTheme.primaryColor,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Text(
+                    'Registrar abono',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: textColor,
+                    ),
+                  ),
+                ],
+              ),
+              content: SingleChildScrollView(
+                child: TextSelectionTheme(
+                  data: TextSelectionThemeData(
+                    cursorColor: AppTheme.primaryColor,
+                    selectionColor: AppTheme.primaryColor.withOpacity(0.3),
+                    selectionHandleColor: AppTheme.primaryColor,
+                  ),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                // Información del cliente y saldo actual
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: AppTheme.primaryColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.person,
-                        color: AppTheme.primaryColor,
-                        size: 24,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                      // Cliente y saldo
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: cardBg,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: AppTheme.primaryColor.withOpacity(0.2),
+                            width: 1,
+                          ),
+                        ),
+                        child: Row(
                           children: [
-                            Text(
-                              widget.cliente.nombre,
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: AppTheme.primaryColor.withOpacity(0.15),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Icon(
+                                Icons.person_rounded,
                                 color: AppTheme.primaryColor,
+                                size: 22,
                               ),
                             ),
-                            Text(
-                              _parsearDeuda(widget.cliente.deuda) > 0
-                                  ? 'Saldo actual: \$${_formatearPrecio(_parsearDeuda(widget.cliente.deuda))}'
-                                  : 'Sin deuda actualmente',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: _parsearDeuda(widget.cliente.deuda) > 0 
-                                    ? Colors.red.shade600 
-                                    : Colors.green.shade600,
-                                fontWeight: FontWeight.w600,
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    widget.cliente.nombre,
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                      color: textColor,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    _parsearDeuda(widget.cliente.deuda) > 0
+                                        ? 'Saldo: \$${_formatearPrecio(_parsearDeuda(widget.cliente.deuda))}'
+                                        : 'Sin deuda actualmente',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: _parsearDeuda(widget.cliente.deuda) > 0
+                                          ? Colors.red.shade600
+                                          : Colors.green.shade600,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ],
                         ),
                       ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 20),
-                
-                // Mensaje de error
-                if (errorMessage != null) ...[
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.red.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.red.withOpacity(0.3)),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.error_outline,
-                          color: Colors.red.shade600,
-                          size: 20,
+                      const SizedBox(height: 20),
+
+                      if (errorMessage != null) ...[
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.red.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.red.withOpacity(0.3)),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.error_outline_rounded, color: Colors.red.shade600, size: 22),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  errorMessage!,
+                                  style: TextStyle(
+                                    color: Colors.red.shade600,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            errorMessage!,
-                            style: TextStyle(
-                              color: Colors.red.shade600,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
+                        const SizedBox(height: 16),
+                      ],
+
+                      Text(
+                        'Monto a abonar',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: subColor,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: montoController,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        inputFormatters: [
+                          FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                        ],
+                        style: TextStyle(color: textColor, fontSize: 16),
+                        decoration: InputDecoration(
+                          hintText: '0.00',
+                          prefixText: '\$ ',
+                          prefixStyle: TextStyle(color: subColor, fontSize: 16),
+                          filled: true,
+                          fillColor: fillField,
+                          hintStyle: TextStyle(color: subColor),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: borderColor),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: borderColor),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: AppTheme.primaryColor, width: 2),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+
+                      Text(
+                        'Nota (opcional)',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: subColor,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: notaController,
+                        maxLines: 2,
+                        style: TextStyle(color: textColor, fontSize: 16),
+                        decoration: InputDecoration(
+                          hintText: 'Ej: Pago en efectivo',
+                          filled: true,
+                          fillColor: fillField,
+                          hintStyle: TextStyle(color: subColor),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: borderColor),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: borderColor),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: AppTheme.primaryColor, width: 2),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextButton(
+                              onPressed: () => Navigator.of(context).pop(),
+                              style: TextButton.styleFrom(
+                                backgroundColor: isDark ? const Color(0xFF2A2A2A) : Colors.grey.shade200,
+                                foregroundColor: textColor,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
+                                ),
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                              ),
+                              child: const Text(
+                                'Cancelar',
+                                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+                              ),
                             ),
                           ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                ],
-                
-                // Campo monto
-                TextField(
-                  controller: montoController,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  inputFormatters: [
-                    FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
-                  ],
-                  style: TextStyle(
-                    color: isDarkMode ? Colors.white : Colors.black,
-                  ),
-                  decoration: InputDecoration(
-                    labelText: 'Monto a abonar',
-                    hintText: 'Ingrese el monto',
-                    prefixText: '\$ ',
-                    labelStyle: TextStyle(
-                      color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade700,
-                    ),
-                    hintStyle: TextStyle(
-                      color: isDarkMode ? Colors.grey.shade600 : Colors.grey.shade400,
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: const BorderSide(color: AppTheme.primaryColor),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(
-                        color: isDarkMode ? Colors.grey.shade700 : Colors.grey.shade400,
-                      ),
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                
-                // Campo nota
-                TextField(
-                  controller: notaController,
-                  maxLines: 2,
-                  style: TextStyle(
-                    color: isDarkMode ? Colors.white : Colors.black,
-                  ),
-                  decoration: InputDecoration(
-                    labelText: 'Nota (opcional)',
-                    hintText: 'Ingrese una nota...',
-                    labelStyle: TextStyle(
-                      color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade700,
-                    ),
-                    hintStyle: TextStyle(
-                      color: isDarkMode ? Colors.grey.shade600 : Colors.grey.shade400,
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: const BorderSide(color: AppTheme.primaryColor),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(
-                        color: isDarkMode ? Colors.grey.shade700 : Colors.grey.shade400,
-                      ),
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                
-                // Botones
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        style: TextButton.styleFrom(
-                          backgroundColor: isDarkMode ? const Color(0xFF2A2A2A) : Colors.grey.shade200,
-                          foregroundColor: isDarkMode ? Colors.white : Colors.black87,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: () async {
+                                final monto = double.tryParse(montoController.text);
+                                final deudaActual = _parsearDeuda(widget.cliente.deuda);
+                                setState(() => errorMessage = null);
+
+                                if (monto == null || monto <= 0) {
+                                  setState(() => errorMessage = 'Ingrese un monto válido');
+                                  return;
+                                }
+                                if (monto > deudaActual) {
+                                  setState(() => errorMessage = 'El monto no puede ser mayor al saldo actual');
+                                  return;
+                                }
+
+                                Navigator.of(context).pop();
+                                await _procesarAbono(monto, notaController.text);
+                              },
+                              icon: const Icon(Icons.check_rounded, size: 20),
+                              label: const Text(
+                                'Guardar',
+                                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppTheme.primaryColor,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
+                                ),
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                elevation: 2,
+                              ),
+                            ),
                           ),
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                        ),
-                        child: const Text(
-                          'Cancelar',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 16,
-                          ),
-                        ),
+                        ],
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () async {
-                          final monto = double.tryParse(montoController.text);
-                          final deudaActual = _parsearDeuda(widget.cliente.deuda);
-                          
-                          // Limpiar error previo
-                          setState(() {
-                            errorMessage = null;
-                          });
-                          
-                          if (monto == null || monto <= 0) {
-                            setState(() {
-                              errorMessage = 'Ingrese un monto válido';
-                            });
-                            return;
-                          }
-                          
-                          if (monto > deudaActual) {
-                            setState(() {
-                              errorMessage = 'El monto no puede ser mayor al saldo actual';
-                            });
-                            return;
-                          }
-                          
-                          Navigator.of(context).pop();
-                          await _procesarAbono(monto, notaController.text);
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.primaryColor,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
-                          ),
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          elevation: 2,
-                        ),
-                        child: const Text(
-                          'Guardar',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 16,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
                     ],
                   ),
                 ),

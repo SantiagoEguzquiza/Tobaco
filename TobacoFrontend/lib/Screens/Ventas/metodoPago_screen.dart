@@ -111,35 +111,87 @@ class _FormaPagoScreenState extends State<FormaPagoScreen> {
   void _mostrarDialogoMonto(_MetodoPago metodo) {
     _montoController.clear();
     final restante = _calcularRestante();
-    
+
     showDialog(
       context: context,
-      builder: (BuildContext context) {
-        return AppTheme.minimalAlertDialog(
-          title: 'Monto a pagar con ${metodo.nombre}',
-          content: Container(
-            padding: const EdgeInsets.only(bottom: 16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
+      builder: (BuildContext dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            final isDark = Theme.of(dialogContext).brightness == Brightness.dark;
+            final bgDialog = isDark ? const Color(0xFF1E1E1E) : Colors.white;
+            final textColor = isDark ? Colors.white : Colors.black87;
+            final subColor = isDark ? Colors.grey.shade400 : Colors.grey.shade600;
+            final fillField = isDark ? const Color(0xFF2A2A2A) : Colors.grey.shade100;
+            final borderColor = isDark ? Colors.grey.shade600 : Colors.grey.shade400;
+
+            return AlertDialog(
+          backgroundColor: bgDialog,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          titlePadding: const EdgeInsets.fromLTRB(24, 20, 24, 12),
+          contentPadding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryColor.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  metodo.icono,
+                  color: AppTheme.primaryColor,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Text(
+                  'Monto con ${metodo.nombre}',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: textColor,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
               GestureDetector(
                 onTap: () {
                   _montoController.text = restante.toStringAsFixed(2);
+                  setDialogState(() {});
                 },
                 child: Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: AppTheme.primaryColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
+                    color: isDark ? const Color(0xFF2A2A2A) : Colors.grey.shade50,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: AppTheme.primaryColor.withOpacity(0.2),
+                      width: 1,
+                    ),
                   ),
                   child: Row(
                     children: [
-                      Icon(
-                        metodo.icono,
-                        color: AppTheme.primaryColor,
-                        size: 24,
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: AppTheme.primaryColor.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(
+                          metodo.icono,
+                          color: AppTheme.primaryColor,
+                          size: 22,
+                        ),
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: 14),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -147,74 +199,90 @@ class _FormaPagoScreenState extends State<FormaPagoScreen> {
                             Text(
                               'Restante por pagar',
                               style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.grey.shade600,
+                                fontSize: 13,
+                                color: subColor,
+                                fontWeight: FontWeight.w500,
                               ),
                             ),
+                            const SizedBox(height: 4),
                             _formatearPrecioConDecimales(restante),
                           ],
                         ),
+                      ),
+                      Icon(
+                        Icons.touch_app_rounded,
+                        size: 20,
+                        color: subColor,
                       ),
                     ],
                   ),
                 ),
               ),
               const SizedBox(height: 20),
-                TextField(
+
+              Text(
+                'Monto',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: subColor,
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextField(
                 controller: _montoController,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 inputFormatters: [
                   FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
                 ],
+                style: TextStyle(color: textColor, fontSize: 16),
                 decoration: InputDecoration(
-                  labelText: 'Monto',
-                  hintText: 'Ingrese el monto',
-                  prefixText: '\$ ',                 
+                  hintText: '0.00',
+                  prefixText: '\$ ',
+                  prefixStyle: TextStyle(color: subColor, fontSize: 16),
+                  filled: true,
+                  fillColor: fillField,
+                  hintStyle: TextStyle(color: subColor),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: borderColor),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: borderColor),
+                  ),
                   focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: AppTheme.primaryColor),
-                  ),
-                  enabledBorder:  OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide(color: Colors.grey),
-                  ),
-                  border:  OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: AppTheme.primaryColor, width: 2),
                   ),
                 ),
-                onChanged: (value) {
-                  setState(() {});
-                },
-                ),
+                onChanged: (_) => setDialogState(() {}),
+              ),
               const SizedBox(height: 24),
+
               Row(
                 children: [
                   Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      style: OutlinedButton.styleFrom(
-                        backgroundColor: Theme.of(context).cardTheme.color,
-                        side: const BorderSide(color: Colors.grey, width: 1.5),
+                    child: TextButton(
+                      onPressed: () => Navigator.of(dialogContext).pop(),
+                      style: TextButton.styleFrom(
+                        backgroundColor: isDark ? const Color(0xFF2A2A2A) : Colors.grey.shade200,
+                        foregroundColor: textColor,
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
                         ),
                         padding: const EdgeInsets.symmetric(vertical: 14),
                       ),
-                      child: Text(
+                      child: const Text(
                         'Cancelar',
-                        style: TextStyle(
-                          color: Theme.of(context).brightness == Brightness.dark
-                              ? Colors.white
-                              : Colors.black,
-                          fontWeight: FontWeight.w400,
-                          fontSize: 16,
-                        ),
+                        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
                       ),
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: ElevatedButton(
+                    child: ElevatedButton.icon(
                       onPressed: () {
                         final monto = double.tryParse(_montoController.text);
                         if (monto != null && monto > 0 && monto <= restante) {
@@ -226,10 +294,10 @@ class _FormaPagoScreenState extends State<FormaPagoScreen> {
                               monto: monto,
                             ));
                           });
-                          Navigator.of(context).pop();
+                          Navigator.of(dialogContext).pop();
                         } else {
                           AppTheme.showSnackBar(
-                            context,
+                            dialogContext,
                             AppTheme.warningSnackBar(
                               monto == null || monto <= 0
                                   ? 'Ingrese un monto válido'
@@ -238,30 +306,28 @@ class _FormaPagoScreenState extends State<FormaPagoScreen> {
                           );
                         }
                       },
+                      icon: const Icon(Icons.add_rounded, size: 20),
+                      label: const Text(
+                        'Agregar',
+                        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+                      ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppTheme.primaryColor,
+                        foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
                         ),
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         elevation: 2,
-                      ),
-                      child: const Text(
-                        'Agregar',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 16,
-                        ),
                       ),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
-              ],
-            ),
+            ],
           ),
+            );
+          },
         );
       },
     );

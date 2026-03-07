@@ -7,7 +7,7 @@ import 'package:tobaco/Services/Cache/datos_cache_service.dart';
 
 class ClienteService {
   final Uri baseUrl = Apihandler.baseUrl;
-  static const Duration _timeoutDuration = Duration(seconds: 3); // Timeout razonable para detectar offline
+  static const Duration _timeoutDuration = Duration(seconds: 15); // Alineado con Auth/Ventas; 3s era poco en redes lentas
   final DatosCacheService _cacheService = DatosCacheService();
 
   Future<List<Cliente>> obtenerClientes() async {

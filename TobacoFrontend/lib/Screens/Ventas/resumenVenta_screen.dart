@@ -1,5 +1,8 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:tobaco/Models/Ventas.dart';
 import 'package:tobaco/Models/metodoPago.dart';
 import 'package:tobaco/Theme/app_theme.dart';
@@ -8,7 +11,6 @@ import 'package:tobaco/Helpers/api_handler.dart';
 import 'package:printing/printing.dart';
 import 'package:tobaco/Utils/pdf_generator/venta_pdf_builder.dart';
 import 'package:tobaco/Services/Printer_Service/bluetooth_printer_service.dart';
-import 'package:share_plus/share_plus.dart';
 
 class ResumenVentaScreen extends StatefulWidget {
   final Ventas? venta; // Recibir la venta como parámetro opcional
@@ -600,49 +602,114 @@ class _ResumenVentaScreenState extends State<ResumenVentaScreen> {
                     : () {
                         showModalBottomSheet(
                           context: context,
-                          shape: const RoundedRectangleBorder(
-                            borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-                          ),
+                          backgroundColor: Colors.transparent,
                           builder: (sheetContext) {
-                            return SafeArea(
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  ListTile(
-                                    leading: const Icon(Icons.picture_as_pdf, color: AppTheme.primaryColor),
-                                    title: const Text('Imprimir PDF'),
-                                    onTap: () async {
-                                      Navigator.of(sheetContext).pop();
-                                      try {
-                                        final ventaParaPdf = ventaCargadaBD ?? venta;
-                                        if (ventaParaPdf == null) return;
-                                        final bytes = await buildVentaPdf(ventaParaPdf);
-                                        await Printing.layoutPdf(onLayout: (_) async => bytes);
-                                      } catch (e) {
-                                        if (!context.mounted) return;
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          SnackBar(content: Text('Error al generar PDF: $e')),
-                                        );
-                                      }
-                                    },
+                            final isDark = Theme.of(sheetContext).brightness == Brightness.dark;
+                            final bg = isDark ? const Color(0xFF1E1E1E) : Colors.white;
+                            final cardBg = isDark ? const Color(0xFF2A2A2A) : const Color(0xFFF8F8F8);
+                            final textColor = isDark ? Colors.white : Colors.black87;
+                            final subColor = isDark ? Colors.grey.shade400 : Colors.grey.shade600;
+                            return Container(
+                              decoration: BoxDecoration(
+                                color: bg,
+                                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.15),
+                                    blurRadius: 20,
+                                    offset: const Offset(0, -4),
                                   ),
-                                  ListTile(
-                                    leading: const Icon(Icons.receipt_long, color: AppTheme.primaryColor),
-                                    title: const Text('Imprimir ticket'),
-                                    onTap: () async {
-                                      Navigator.of(sheetContext).pop();
-                                      await _imprimirTicketTermico(context);
-                                    },
-                                  ),
-                                  ListTile(
-                                    leading: const Icon(Icons.share, color: AppTheme.primaryColor),
-                                    title: const Text('Compartir PDF por WhatsApp'),
-                                    onTap: () {
-                                      Navigator.of(sheetContext).pop();
-                                    },
-                                  ),
-                                  const SizedBox(height: 8),
                                 ],
+                              ),
+                              child: SafeArea(
+                                top: false,
+                                child: Padding(
+                                  padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Container(
+                                        width: 40,
+                                        height: 4,
+                                        decoration: BoxDecoration(
+                                          color: subColor,
+                                          borderRadius: BorderRadius.circular(2),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 20),
+                                      Text(
+                                        'Opciones de impresión',
+                                        style: TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.w600,
+                                          color: textColor,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 20),
+                                      _PrintOptionTile(
+                                        icon: Icons.picture_as_pdf_rounded,
+                                        title: 'Imprimir PDF',
+                                        subtitle: 'Vista previa e impresión del comprobante',
+                                        backgroundColor: cardBg,
+                                        onTap: () async {
+                                          Navigator.of(sheetContext).pop();
+                                          try {
+                                            final ventaParaPdf = ventaCargadaBD ?? venta;
+                                            if (ventaParaPdf == null) return;
+                                            final bytes = await buildVentaPdf(ventaParaPdf);
+                                            await Printing.layoutPdf(onLayout: (_) async => bytes);
+                                          } catch (e) {
+                                            if (!context.mounted) return;
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              SnackBar(content: Text('Error al generar PDF: $e')),
+                                            );
+                                          }
+                                        },
+                                      ),
+                                      const SizedBox(height: 10),
+                                      _PrintOptionTile(
+                                        icon: Icons.receipt_long_rounded,
+                                        title: 'Imprimir ticket',
+                                        subtitle: 'Enviar a impresora térmica por Bluetooth',
+                                        backgroundColor: cardBg,
+                                        onTap: () async {
+                                          Navigator.of(sheetContext).pop();
+                                          await _imprimirTicketTermico(context);
+                                        },
+                                      ),
+                                      const SizedBox(height: 10),
+                                      _PrintOptionTile(
+                                        icon: Icons.share_rounded,
+                                        title: 'Compartir PDF',
+                                        subtitle: 'Enviar por WhatsApp, correo o otras apps',
+                                        backgroundColor: cardBg,
+                                        onTap: () async {
+                                          Navigator.of(sheetContext).pop();
+                                          try {
+                                            final ventaParaPdf = ventaCargadaBD ?? venta;
+                                            if (ventaParaPdf == null) return;
+                                            final bytes = await buildVentaPdf(ventaParaPdf);
+                                            final dir = await getTemporaryDirectory();
+                                            final ventaLabel = ventaParaPdf.id != null
+                                                ? 'Venta_${ventaParaPdf.id}'
+                                                : 'Venta_pendiente';
+                                            final file = File('${dir.path}/$ventaLabel.pdf');
+                                            await file.writeAsBytes(bytes);
+                                            await Share.shareXFiles(
+                                              [XFile(file.path)],
+                                              text: 'Comprobante de venta - $ventaLabel',
+                                            );
+                                          } catch (e) {
+                                            if (!context.mounted) return;
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              SnackBar(content: Text('Error al compartir PDF: $e')),
+                                            );
+                                          }
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                                ),
                               ),
                             );
                           },
@@ -731,6 +798,7 @@ class _ResumenVentaScreenState extends State<ResumenVentaScreen> {
             ),
           ),
         ),
+        const SizedBox(width: 16),
         Expanded(
           flex: 3,
           child: Text(
@@ -966,32 +1034,63 @@ class _PrinterSelectionDialogState extends State<_PrinterSelectionDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : Colors.black87;
+    final subColor = isDark ? Colors.grey.shade400 : Colors.grey.shade600;
     return AlertDialog(
-      title: const Text('Seleccionar Impresora'),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      title: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppTheme.primaryColor.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(Icons.print_rounded, color: AppTheme.primaryColor, size: 22),
+          ),
+          const SizedBox(width: 12),
+          Text(
+            'Seleccionar impresora',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: textColor),
+          ),
+        ],
+      ),
       content: SizedBox(
         width: double.maxFinite,
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Asegurate de que la impresora esté encendida',
-              style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+              'Asegurate de que la impresora esté encendida.',
+              style: TextStyle(fontSize: 14, color: subColor),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             if (isLoading)
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 24),
-                child: Center(child: CircularProgressIndicator()),
+                child: Center(child: CircularProgressIndicator(color: AppTheme.primaryColor)),
               )
             else if (errorMessage != null)
               Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(errorMessage!),
+                  Icon(Icons.error_outline_rounded, size: 40, color: Colors.red.shade400),
+                  const SizedBox(height: 12),
+                  Text(errorMessage!, style: TextStyle(color: textColor), textAlign: TextAlign.center),
                   const SizedBox(height: 16),
-                  ElevatedButton(
+                  ElevatedButton.icon(
                     onPressed: _loadBondedDevices,
-                    child: const Text('Reintentar'),
+                    icon: const Icon(Icons.refresh_rounded, size: 20),
+                    label: const Text('Reintentar'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryColor,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons)),
+                    ),
                   ),
                 ],
               )
@@ -999,12 +1098,12 @@ class _PrinterSelectionDialogState extends State<_PrinterSelectionDialog> {
               Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.bluetooth_disabled, size: 48, color: Colors.grey),
+                  Icon(Icons.bluetooth_disabled_rounded, size: 48, color: subColor),
                   const SizedBox(height: 12),
-                  const Text(
-                    'No hay dispositivos emparejados.',
+                  Text(
+                    'No hay dispositivos emparejados',
                     textAlign: TextAlign.center,
-                    style: TextStyle(fontWeight: FontWeight.w600),
+                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15, color: textColor),
                   ),
                   const SizedBox(height: 12),
                   Text(
@@ -1013,7 +1112,7 @@ class _PrinterSelectionDialogState extends State<_PrinterSelectionDialog> {
                     '2. Buscá y vinculá la impresora\n'
                     '3. Volvé a la app y tocá "Actualizar"',
                     textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+                    style: TextStyle(fontSize: 13, color: subColor),
                   ),
                 ],
               )
@@ -1024,15 +1123,46 @@ class _PrinterSelectionDialogState extends State<_PrinterSelectionDialog> {
                   itemCount: devices.length,
                   itemBuilder: (context, index) {
                     final device = devices[index];
-                    return ListTile(
-                      leading: const Icon(Icons.print),
-                      title: Text(
-                        (device.name?.isNotEmpty == true)
-                            ? device.name!
-                            : 'Dispositivo desconocido',
+                    return Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () => Navigator.of(context).pop(device),
+                        borderRadius: BorderRadius.circular(12),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.primaryColor.withOpacity(0.12),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: const Icon(Icons.print_rounded, color: AppTheme.primaryColor, size: 20),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      (device.name?.isNotEmpty == true) ? device.name! : 'Dispositivo desconocido',
+                                      style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15, color: textColor),
+                                    ),
+                                    if (device.address != null && device.address!.isNotEmpty)
+                                      Text(
+                                        device.address!,
+                                        style: TextStyle(fontSize: 12, color: subColor),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                              Icon(Icons.chevron_right_rounded, color: subColor, size: 22),
+                            ],
+                          ),
+                        ),
                       ),
-                      subtitle: Text(device.address ?? ''),
-                      onTap: () => Navigator.of(context).pop(device),
                     );
                   },
                 ),
@@ -1040,17 +1170,103 @@ class _PrinterSelectionDialogState extends State<_PrinterSelectionDialog> {
           ],
         ),
       ),
+      actionsPadding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancelar'),
+          style: TextButton.styleFrom(
+            backgroundColor: isDark ? const Color(0xFF2A2A2A) : Colors.grey.shade200,
+            foregroundColor: isDark ? Colors.white : Colors.black87,
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
+            ),
+          ),
+          child: const Text('Cancelar', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
         ),
         if (!isLoading)
           TextButton(
             onPressed: _loadBondedDevices,
-            child: const Text('Actualizar'),
+            style: TextButton.styleFrom(
+              backgroundColor: AppTheme.primaryColor,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
+              ),
+            ),
+            child: const Text('Actualizar', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
           ),
       ],
+    );
+  }
+}
+
+class _PrintOptionTile extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final Color backgroundColor;
+  final VoidCallback onTap;
+
+  const _PrintOptionTile({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.backgroundColor,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : Colors.black87;
+    final subColor = isDark ? Colors.grey.shade400 : Colors.grey.shade600;
+    return Material(
+      color: backgroundColor,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryColor.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: AppTheme.primaryColor, size: 24),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: textColor,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: TextStyle(fontSize: 13, color: subColor),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right_rounded, color: subColor, size: 24),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

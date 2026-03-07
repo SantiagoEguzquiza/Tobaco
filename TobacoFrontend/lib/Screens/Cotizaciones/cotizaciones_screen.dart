@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:tobaco/Services/Cotizaciones_Service/cotizaciones_provider.dart';
 import 'package:tobaco/Theme/app_theme.dart';
-import 'package:tobaco/Theme/headers.dart';
 import 'package:tobaco/Models/Cotizacion.dart';
 
 // Widget de Shimmer para efecto de carga
@@ -688,359 +687,447 @@ class _CotizacionesScreenState extends State<CotizacionesScreen> with SingleTick
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              HeaderSimple(
-                leadingIcon: Icons.currency_exchange,
-                title: 'Cotizaciones de Monedas',
-                subtitle: 'Tipos de cambio BCU',
-              ),
-              const SizedBox(height: 20),
-              // Panel de configuración
+              // Header compacto
               Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                 decoration: BoxDecoration(
-                  color: isDarkMode ? const Color(0xFF1A1A1A) : Colors.white,
-                  borderRadius: BorderRadius.circular(AppTheme.borderRadiusCards),
-                  boxShadow: [
-                    BoxShadow(
-                      color: isDarkMode
-                          ? Colors.black.withOpacity(0.3)
-                          : Colors.black.withOpacity(0.05),
-                      blurRadius: 10,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
+                  gradient: LinearGradient(
+                    colors: isDarkMode
+                        ? [const Color(0xFF1A1A1A), const Color(0xFF2A2A2A)]
+                        : [
+                            AppTheme.primaryColor.withOpacity(0.1),
+                            AppTheme.secondaryColor.withOpacity(0.3),
+                          ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: isDarkMode ? const Color(0xFF404040) : AppTheme.primaryColor.withOpacity(0.2),
+                    width: 1,
+                  ),
+                  boxShadow: isDarkMode
+                      ? [BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 6, offset: const Offset(0, 2))]
+                      : null,
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                child: Row(
                   children: [
-                    Text(
-                      'Configuración de Consulta',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: isDarkMode ? Colors.white : AppTheme.textColor,
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primaryColor,
+                        borderRadius: BorderRadius.circular(12),
                       ),
+                      child: const Icon(Icons.currency_exchange_rounded, color: Colors.white, size: 22),
                     ),
-                const SizedBox(height: 16),
-                
-                // Selector de grupo
-                Row(
-                  children: [
-                    Text(
-                      'Tipo: ',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w500,
-                        color: isDarkMode ? Colors.grey.shade300 : null,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 12),
                     Expanded(
-                      child: DropdownButton<int>(
-                        value: _selectedGroup,
-                        isExpanded: true,
-                        dropdownColor: isDarkMode ? const Color(0xFF2A2A2A) : Colors.white,
-                        style: TextStyle(
-                          color: isDarkMode ? Colors.white : Colors.black87,
-                        ),
-                        icon: Icon(
-                          Icons.arrow_drop_down,
-                          color: isDarkMode ? Colors.white : Colors.black87,
-                        ),
-                        items: _groups.entries.map((entry) {
-                          return DropdownMenuItem<int>(
-                            value: entry.key,
-                            child: Text(
-                              entry.value,
-                              style: TextStyle(
-                                color: isDarkMode ? Colors.white : Colors.black87,
-                              ),
-                            ),
-                          );
-                        }).toList(),
-                        onChanged: (value) {
-                          setState(() {
-                            _selectedGroup = value!;
-                          });
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-                
-                const SizedBox(height: 12),
-                
-                // Selector de días
-                Row(
-                  children: [
-                    Text(
-                      'Período: ',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w500,
-                        color: isDarkMode ? Colors.grey.shade300 : null,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: DropdownButton<int>(
-                        value: _selectedDays,
-                        isExpanded: true,
-                        dropdownColor: isDarkMode ? const Color(0xFF2A2A2A) : Colors.white,
-                        style: TextStyle(
-                          color: isDarkMode ? Colors.white : Colors.black87,
-                        ),
-                        icon: Icon(
-                          Icons.arrow_drop_down,
-                          color: isDarkMode ? Colors.white : Colors.black87,
-                        ),
-                        items: [
-                          DropdownMenuItem(
-                            value: 1,
-                            child: Text(
-                              'Último día',
-                              style: TextStyle(
-                                color: isDarkMode ? Colors.white : Colors.black87,
-                              ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Cotizaciones de Monedas',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: isDarkMode ? Colors.white : Colors.black87,
                             ),
                           ),
-                          DropdownMenuItem(
-                            value: 7,
-                            child: Text(
-                              'Últimos 7 días',
-                              style: TextStyle(
-                                color: isDarkMode ? Colors.white : Colors.black87,
-                              ),
-                            ),
-                          ),
-                          DropdownMenuItem(
-                            value: 15,
-                            child: Text(
-                              'Últimos 15 días',
-                              style: TextStyle(
-                                color: isDarkMode ? Colors.white : Colors.black87,
-                              ),
-                            ),
-                          ),
-                          DropdownMenuItem(
-                            value: 30,
-                            child: Text(
-                              'Últimos 30 días',
-                              style: TextStyle(
-                                color: isDarkMode ? Colors.white : Colors.black87,
-                              ),
+                          Text(
+                            'Tipos de cambio BCU',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
                             ),
                           ),
                         ],
-                        onChanged: (value) {
-                          setState(() {
-                            _selectedDays = value!;
-                          });
-                        },
                       ),
                     ),
                   ],
                 ),
-                
-                const SizedBox(height: 16),
-                
-                // Botón de consulta
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: vm.isLoading ? null : () => _loadCotizaciones(context),
-                    icon: vm.isLoading 
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                          )
-                        : const Icon(Icons.refresh),
-                    label: Text(vm.isLoading ? 'Consultando...' : 'Consultar Cotizaciones'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primaryColor,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
+              ),
+              const SizedBox(height: 12),
+
+              // Panel Configuración compacto (Tipo y Período en una fila)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                  boxShadow: [
+                    BoxShadow(
+                      color: isDarkMode ? Colors.black.withOpacity(0.3) : Colors.black.withOpacity(0.06),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                  border: isDarkMode ? Border.all(color: const Color(0xFF333333), width: 1) : null,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: AppTheme.primaryColor.withOpacity(0.12),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(Icons.tune_rounded, color: AppTheme.primaryColor, size: 18),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Configuración de consulta',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: isDarkMode ? Colors.white : Colors.black87,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    // Tipo y Período en una fila
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'Tipo',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                  color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: isDarkMode ? const Color(0xFF2A2A2A) : Colors.grey.shade100,
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                    color: isDarkMode ? Colors.grey.shade600 : Colors.grey.shade300,
+                                  ),
+                                ),
+                                child: DropdownButton<int>(
+                                  value: _selectedGroup,
+                                  isExpanded: true,
+                                  isDense: true,
+                                  underline: const SizedBox.shrink(),
+                                  dropdownColor: isDarkMode ? const Color(0xFF2A2A2A) : Colors.white,
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: isDarkMode ? Colors.white : Colors.black87,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                  icon: Icon(Icons.keyboard_arrow_down_rounded, size: 20, color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600),
+                                  items: _groups.entries.map((entry) {
+                                    return DropdownMenuItem<int>(
+                                      value: entry.key,
+                                      child: Text(entry.value),
+                                    );
+                                  }).toList(),
+                                  onChanged: (value) => setState(() => _selectedGroup = value!),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'Período',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                  color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: isDarkMode ? const Color(0xFF2A2A2A) : Colors.grey.shade100,
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                    color: isDarkMode ? Colors.grey.shade600 : Colors.grey.shade300,
+                                  ),
+                                ),
+                                child: DropdownButton<int>(
+                                  value: _selectedDays,
+                                  isExpanded: true,
+                                  isDense: true,
+                                  underline: const SizedBox.shrink(),
+                                  dropdownColor: isDarkMode ? const Color(0xFF2A2A2A) : Colors.white,
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: isDarkMode ? Colors.white : Colors.black87,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                  icon: Icon(Icons.keyboard_arrow_down_rounded, size: 20, color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600),
+                                  items: const [
+                                    DropdownMenuItem(value: 1, child: Text('Último día')),
+                                    DropdownMenuItem(value: 7, child: Text('Últimos 7 días')),
+                                    DropdownMenuItem(value: 15, child: Text('Últimos 15 días')),
+                                    DropdownMenuItem(value: 30, child: Text('Últimos 30 días')),
+                                  ],
+                                  onChanged: (value) => setState(() => _selectedDays = value!),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: vm.isLoading ? null : () => _loadCotizaciones(context),
+                        icon: vm.isLoading
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                              )
+                            : const Icon(Icons.sync_rounded, size: 20),
+                        label: Text(
+                          vm.isLoading ? 'Consultando...' : 'Consultar cotizaciones',
+                          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.primaryColor,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
+                          ),
+                          elevation: 2,
+                        ),
                       ),
                     ),
-                  ),
-                ),
-                
-                const SizedBox(height: 8),
-                
-                // Información adicional
-                if (vm.items.isNotEmpty)
-                  Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: isDarkMode
-                    ? Colors.green.shade900.withOpacity(0.3)
-                    : Colors.green[50],
-                borderRadius: BorderRadius.circular(6),
-                border: Border.all(
-                  color: isDarkMode
-                      ? Colors.green.shade700
-                      : Colors.green[200]!,
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.check_circle,
-                        color: isDarkMode
-                            ? Colors.green.shade400
-                            : Colors.green[600],
-                        size: 16,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'Mostrando ${vm.items.length} cotizaciones ${_groups[_selectedGroup]?.toLowerCase()} de la API del BCU',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: isDarkMode
-                                ? Colors.green.shade300
-                                : Colors.green[700],
+                    if (vm.items.isNotEmpty) ...[
+                      const SizedBox(height: 10),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: isDarkMode ? Colors.green.shade900.withOpacity(0.25) : Colors.green.shade50,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: isDarkMode ? Colors.green.shade700 : Colors.green.shade200,
                           ),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.check_circle_rounded,
+                              color: isDarkMode ? Colors.green.shade400 : Colors.green.shade700,
+                              size: 18,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    '${vm.items.length} cotizaciones · API BCU',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
+                                      color: isDarkMode ? Colors.green.shade300 : Colors.green.shade800,
+                                    ),
+                                  ),
+                                  if (_getUpdateMessage(vm.lastFetchTime).isNotEmpty)
+                                    Text(
+                                      _getUpdateMessage(vm.lastFetchTime),
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
-                  ),
-                  if (_getUpdateMessage(vm.lastFetchTime).isNotEmpty) ...[
-                    const SizedBox(height: 4),
-                    Padding(
-                      padding: const EdgeInsets.only(left: 24),
-                      child: Text(
-                        _getUpdateMessage(vm.lastFetchTime),
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: isDarkMode
-                              ? Colors.grey.shade400
-                              : Colors.grey.shade600,
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
                   ],
                 ),
               ),
-              
-              const SizedBox(height: 16),
+
+              const SizedBox(height: 12),
               
               // Resultados
               Expanded(
                 child: Container(
                   width: double.infinity,
                   decoration: BoxDecoration(
-                    color: isDarkMode ? const Color(0xFF1A1A1A) : Colors.white,
-                    borderRadius: BorderRadius.circular(AppTheme.borderRadiusCards),
+                    color: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+                    borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
-                        color: isDarkMode
-                            ? Colors.black.withOpacity(0.3)
-                            : Colors.black.withOpacity(0.05),
-                        blurRadius: 10,
+                        color: isDarkMode ? Colors.black.withOpacity(0.3) : Colors.black.withOpacity(0.06),
+                        blurRadius: 12,
                         offset: const Offset(0, 2),
                       ),
                     ],
+                    border: isDarkMode ? Border.all(color: const Color(0xFF333333), width: 1) : null,
                   ),
-              child: vm.isLoading
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(5),
+                              decoration: BoxDecoration(
+                                color: AppTheme.primaryColor.withOpacity(0.12),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: const Icon(Icons.list_alt_rounded, color: AppTheme.primaryColor, size: 16),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Resultados',
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                                color: isDarkMode ? Colors.white : Colors.black87,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Expanded(
+                        child: vm.isLoading
                         ? _buildSkeletonLoader(isDarkMode)
                         : vm.error != null
                             ? Center(
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      Icons.error_outline,
-                                      size: 64,
-                                      color: Colors.red[300],
-                                    ),
-                                    const SizedBox(height: 16),
-                                    Text(
-                                      'Error al cargar cotizaciones',
-                                      style: TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.bold,
-                                        color: isDarkMode ? Colors.red.shade300 : Colors.red[700],
+                                child: Padding(
+                                  padding: const EdgeInsets.all(24),
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(20),
+                                        decoration: BoxDecoration(
+                                          color: Colors.red.withOpacity(0.1),
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: Icon(
+                                          Icons.error_outline_rounded,
+                                          size: 48,
+                                          color: Colors.red.shade400,
+                                        ),
                                       ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Padding(
-                                      padding: const EdgeInsets.symmetric(horizontal: 32),
-                                      child: Text(
+                                      const SizedBox(height: 20),
+                                      Text(
+                                        'Error al cargar cotizaciones',
+                                        style: TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.w600,
+                                          color: isDarkMode ? Colors.red.shade300 : Colors.red.shade700,
+                                        ),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                      const SizedBox(height: 10),
+                                      Text(
                                         vm.error!,
                                         textAlign: TextAlign.center,
                                         style: TextStyle(
-                                          color: isDarkMode ? Colors.grey.shade400 : Colors.grey,
+                                          color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
                                           fontSize: 14,
                                         ),
                                       ),
-                                    ),
-                                    const SizedBox(height: 16),
-                                    ElevatedButton.icon(
-                                      onPressed: () => _loadCotizaciones(context),
-                                      icon: const Icon(Icons.refresh),
-                                      label: const Text('Reintentar'),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: AppTheme.primaryColor,
-                                        foregroundColor: Colors.white,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
+                                      const SizedBox(height: 24),
+                                      ElevatedButton.icon(
+                                        onPressed: () => _loadCotizaciones(context),
+                                        icon: const Icon(Icons.refresh_rounded, size: 20),
+                                        label: const Text('Reintentar', style: TextStyle(fontWeight: FontWeight.w600)),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: AppTheme.primaryColor,
+                                          foregroundColor: Colors.white,
+                                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
+                                          ),
                                         ),
                                       ),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
                               )
                             : vm.items.isEmpty
                                 ? Center(
-                                    child: Column(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        Icon(
-                                          Icons.inbox,
-                                          size: 64,
-                                          color: Colors.grey,
-                                        ),
-                                        const SizedBox(height: 16),
-                                        const Text(
-                                          'No hay cotizaciones disponibles',
-                                          style: TextStyle(
-                                            fontSize: 18,
-                                            color: Colors.grey,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 8),
-                                        const Text(
-                                          'La API del BCU no está devolviendo datos.\nIntenta cambiar el período o el tipo de monedas.',
-                                          textAlign: TextAlign.center,
-                                          style: TextStyle(
-                                            fontSize: 14,
-                                            color: Colors.grey,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 16),
-                                        ElevatedButton.icon(
-                                          onPressed: () => _loadCotizaciones(context),
-                                          icon: const Icon(Icons.refresh),
-                                          label: const Text('Reintentar'),
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: AppTheme.primaryColor,
-                                            foregroundColor: Colors.white,
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(24),
+                                      child: Column(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Container(
+                                            padding: const EdgeInsets.all(20),
+                                            decoration: BoxDecoration(
+                                              color: (isDarkMode ? Colors.grey.shade700 : Colors.grey.shade300).withOpacity(0.5),
+                                              shape: BoxShape.circle,
+                                            ),
+                                            child: Icon(
+                                              Icons.inbox_rounded,
+                                              size: 48,
+                                              color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
                                             ),
                                           ),
-                                        ),
-                                      ],
+                                          const SizedBox(height: 20),
+                                          Text(
+                                            'No hay cotizaciones disponibles',
+                                            style: TextStyle(
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.w600,
+                                              color: isDarkMode ? Colors.grey.shade300 : Colors.grey.shade700,
+                                            ),
+                                            textAlign: TextAlign.center,
+                                          ),
+                                          const SizedBox(height: 10),
+                                          Text(
+                                            'La API del BCU no está devolviendo datos.\nProbá cambiar el período o el tipo de monedas.',
+                                            textAlign: TextAlign.center,
+                                            style: TextStyle(
+                                              fontSize: 14,
+                                              color: isDarkMode ? Colors.grey.shade500 : Colors.grey.shade600,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 24),
+                                          ElevatedButton.icon(
+                                            onPressed: () => _loadCotizaciones(context),
+                                            icon: const Icon(Icons.sync_rounded, size: 20),
+                                            label: const Text('Reintentar', style: TextStyle(fontWeight: FontWeight.w600)),
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: AppTheme.primaryColor,
+                                              foregroundColor: Colors.white,
+                                              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   )
                                 : Builder(
@@ -1057,8 +1144,11 @@ class _CotizacionesScreenState extends State<CotizacionesScreen> with SingleTick
                                           return _buildCotizacionCard(c, context, isDarkMode);
                                         },
                                       );
-                                    },
-                                  ),
+                                        },
+                                      ),
+                                ),
+                    ],
+                  ),
                 ),
               ),
             ],
