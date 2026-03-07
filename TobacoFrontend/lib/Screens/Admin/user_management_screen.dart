@@ -321,7 +321,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                   ),
                   const SizedBox(height: 24),
                   const Text(
-                    'SesiÃ³n Finalizada',
+                    'Sesión finalizada',
                     style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
@@ -491,7 +491,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                   if (userProvider.errorMessage != null) {
                     // Check if it's a token expiration error
                     final isTokenExpired =
-                        userProvider.errorMessage!.contains('SesiÃ³n expirada');
+                        userProvider.errorMessage!.contains('Sesión expirada');
 
                     return Center(
                       child: Padding(
@@ -525,7 +525,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                             const SizedBox(height: 24),
                             Text(
                               isTokenExpired
-                                  ? 'SesiÃ³n Expirada'
+                                  ? 'Sesión expirada'
                                   : 'Error al cargar usuarios',
                               style: AppTheme.appBarTitleStyle.copyWith(
                                 color: isTokenExpired
@@ -1200,13 +1200,13 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
       final errorMessage = result['error'] ??
           userProvider.errorMessage ??
           'Error al actualizar usuario';
-      final isTokenExpired = errorMessage.contains('SesiÃ³n expirada');
+      final isTokenExpired = errorMessage.contains('Sesión expirada');
 
       if (isTokenExpired) {
         await AppDialogs.showWarningDialog(
           context: context,
-          title: 'SesiÃ³n Expirada',
-          message: 'Por favor, inicia sesiÃ³n nuevamente.',
+          title: 'Sesión expirada',
+          message: 'Por favor, inicia sesión nuevamente.',
         );
         if (mounted) {
           navigator.pushNamedAndRemoveUntil('/login', (route) => false);
@@ -1320,13 +1320,13 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
       final errorMessage = result['error'] ??
           userProvider.errorMessage ??
           'Error al eliminar usuario';
-      final isTokenExpired = errorMessage.contains('SesiÃ³n expirada');
+      final isTokenExpired = errorMessage.contains('Sesión expirada');
 
       if (isTokenExpired) {
         await AppDialogs.showWarningDialog(
           context: context,
-          title: 'SesiÃ³n Expirada',
-          message: 'Por favor, inicia sesiÃ³n nuevamente.',
+          title: 'Sesión expirada',
+          message: 'Por favor, inicia sesión nuevamente.',
         );
         if (mounted) {
           navigator.pushNamedAndRemoveUntil('/login', (route) => false);

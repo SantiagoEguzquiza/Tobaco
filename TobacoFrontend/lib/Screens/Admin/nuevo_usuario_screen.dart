@@ -98,15 +98,10 @@ class _NuevoUsuarioScreenState extends State<NuevoUsuarioScreen> {
     }
   }
 
-  static double _bottomNavHeight(BuildContext context) {
-    return 56.0 + MediaQuery.of(context).padding.bottom;
-  }
-
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final textColor = isDark ? const Color(0xFFE0E0E0) : Colors.black87;
-    final bottomNavHeight = _bottomNavHeight(context);
 
     return Theme(
       data: Theme.of(context).copyWith(
@@ -258,13 +253,9 @@ class _NuevoUsuarioScreenState extends State<NuevoUsuarioScreen> {
               left: 0,
               right: 0,
               bottom: 0,
-              child: Padding(
-                padding: EdgeInsets.only(bottom: bottomNavHeight),
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-                ),
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(color: isDark ? const Color(0xFF1E1E1E) : Colors.white),
                 child: SafeArea(
                   child: Row(
                     children: [
@@ -315,7 +306,6 @@ class _NuevoUsuarioScreenState extends State<NuevoUsuarioScreen> {
                       ),
                     ],
                   ),
-                ),
                 ),
               ),
             ),
