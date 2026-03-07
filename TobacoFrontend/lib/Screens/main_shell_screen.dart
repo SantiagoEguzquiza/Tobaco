@@ -31,6 +31,7 @@ class _MainShellScreenState extends State<MainShellScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBody: true,
       body: IndexedStack(
         index: _currentTabIndex,
         children: [
@@ -73,12 +74,13 @@ class _MainShellScreenState extends State<MainShellScreen> {
   }
 
   Widget _buildNavBar() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFF1A1A1A),
+        color: Theme.of(context).scaffoldBackgroundColor,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.3),
+            color: Colors.black.withOpacity(isDark ? 0.4 : 0.08),
             blurRadius: 8,
             offset: const Offset(0, -2),
           ),
@@ -103,12 +105,13 @@ class _MainShellScreenState extends State<MainShellScreen> {
 
   Widget _navItem(int index, IconData icon, String label, {bool enabled = true}) {
     final isSelected = _selectedNavIndex == index;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final iconColor = !enabled
-        ? Colors.white30
-        : (isSelected ? Colors.white : Colors.white70);
+        ? (isDark ? Colors.white30 : Colors.grey.shade400)
+        : (isSelected ? Colors.white : (isDark ? Colors.white70 : Colors.grey.shade700));
     final labelColor = !enabled
-        ? Colors.white30
-        : (isSelected ? AppTheme.primaryColor : Colors.white70);
+        ? (isDark ? Colors.white30 : Colors.grey.shade400)
+        : (isSelected ? AppTheme.primaryColor : (isDark ? Colors.white70 : Colors.grey.shade700));
     final bgColor = isSelected && enabled ? AppTheme.primaryColor : Colors.transparent;
 
     return InkWell(

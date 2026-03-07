@@ -21,6 +21,7 @@ class ProductoProvider with ChangeNotifier {
   List<Categoria> _categorias = [];
   String? _selectedCategory;
   String _searchQuery = '';
+  String _searchMarca = '';
   static const Duration _timeoutDuration = Duration(seconds: 6);
   /// Tras clearForNewUser, no mostrar caché en la próxima carga (evita datos de otro usuario).
   bool _skipCacheOnNextLoad = false;
@@ -34,24 +35,26 @@ class ProductoProvider with ChangeNotifier {
   List<Categoria> get categorias => _categorias;
   String? get selectedCategory => _selectedCategory;
   String get searchQuery => _searchQuery;
+  String get searchMarca => _searchMarca;
   bool get isSyncing => _isSyncing;
 
   List<Producto> get productosFiltrados {
-    if (_searchQuery.isNotEmpty) {
-      final queryLower = _searchQuery.toLowerCase();
-      return _productos.where((p) {
-        final nombreMatch = p.nombre.toLowerCase().contains(queryLower);
-        final marcaMatch = p.marca != null &&
-            p.marca!.isNotEmpty &&
-            p.marca!.toLowerCase().contains(queryLower);
-        return nombreMatch || marcaMatch;
-      }).toList();
-    } else if (_selectedCategory != null) {
-      return _productos
-          .where((p) => p.categoriaNombre == _selectedCategory)
-          .toList();
+    var list = _productos;
+    if (_selectedCategory != null) {
+      list = list.where((p) => p.categoriaNombre == _selectedCategory).toList();
     }
-    return List.from(_productos);
+    if (_searchQuery.isNotEmpty) {
+      final q = _searchQuery.trim().toLowerCase();
+      list = list.where((p) => p.nombre.toLowerCase().contains(q)).toList();
+    }
+    if (_searchMarca.isNotEmpty) {
+      final m = _searchMarca.trim().toLowerCase();
+      list = list.where((p) {
+        if (p.marca == null || p.marca!.isEmpty) return false;
+        return p.marca!.toLowerCase().contains(m);
+      }).toList();
+    }
+    return list;
   }
 
   List<Producto> get productosOriginal => _productos;
@@ -184,11 +187,25 @@ class ProductoProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  void setFiltroMarca(String? value) {
+    _searchMarca = (value ?? '').trim();
+    notifyListeners();
+  }
+
+  /// Limpia nombre, marca y categoría (buscador avanzado).
+  void limpiarFiltrosAvanzados() {
+    _searchQuery = '';
+    _searchMarca = '';
+    _selectedCategory = null;
+    notifyListeners();
+  }
+
   Future<void> clearForNewUser() async {
     _productos = [];
     _categorias = [];
     _selectedCategory = null;
     _searchQuery = '';
+    _searchMarca = '';
     _errorMessage = null;
     _isOffline = false;
     _isLoading = false;

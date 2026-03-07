@@ -199,39 +199,46 @@ class _CuentaCorrienteScreenState extends State<CuentaCorrienteScreen> {
       ..sort((a, b) => a.nombre.toLowerCase().compareTo(b.nombre.toLowerCase()));
 
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         centerTitle: true,
         elevation: 0,
-        backgroundColor: null, // Usar el tema
+        backgroundColor: null,
+        scrolledUnderElevation: 0,
         title: const Text(
           'Cuenta Corriente',
           style: AppTheme.appBarTitleStyle,
         ),
       ),
-      body: isLoading
-          ? const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CircularProgressIndicator(
-                    valueColor:
-                        AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
-                  ),
-                  SizedBox(height: 16),
-                  Text(
-                    'Cargando cuenta corriente...',
-                    style: TextStyle(
-                      color: Colors.grey,
-                      fontSize: 16,
+      body: Container(
+        color: Theme.of(context).scaffoldBackgroundColor,
+        child: isLoading
+            ? const Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    CircularProgressIndicator(
+                      valueColor:
+                          AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
                     ),
-                  ),
-                ],
-              ),
-            )
-          : SingleChildScrollView(
+                    SizedBox(height: 16),
+                    Text(
+                      'Cargando cuenta corriente...',
+                      style: TextStyle(
+                        color: Colors.grey,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            : SingleChildScrollView(
               controller: _scrollController,
-              padding: const EdgeInsets.all(16.0),
+              padding: const EdgeInsets.only(
+                left: 16,
+                right: 16,
+                top: 16,
+                bottom: 0,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -264,6 +271,7 @@ class _CuentaCorrienteScreenState extends State<CuentaCorrienteScreen> {
                 ],
               ),
             ),
+        ),
     );
   }
 

@@ -89,6 +89,7 @@ class ConfirmarVentaFooter extends StatelessWidget {
             children: [
               // Información del total
               Expanded(
+                flex: 9,
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -146,10 +147,11 @@ class ConfirmarVentaFooter extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 16),
-              
-              // Botón confirmar
+
+              // Botón confirmar (igual que en seleccionar producto)
               Expanded(
-                child: ElevatedButton(
+                flex: 10,
+                child: ElevatedButton.icon(
                   onPressed: onConfirmar,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.primaryColor,
@@ -160,11 +162,16 @@ class ConfirmarVentaFooter extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(vertical: 18),
                     elevation: 3,
                   ),
-                  child: const Text(
-                    'Confirmar Venta',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
+                  icon: const Icon(Icons.check_circle, color: Colors.white),
+                  label: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: const Text(
+                      'Confirmar Venta',
+                      style: TextStyle(
+                        fontSize: 15,
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ),

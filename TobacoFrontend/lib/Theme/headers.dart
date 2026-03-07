@@ -184,6 +184,8 @@ class HeaderConBuscador extends StatelessWidget {
   final ValueChanged<String>? onSubmitted;
   final Color? customBackgroundColor;
   final Color? customBorderColor;
+  /// Icono o botón a la derecha del buscador (ej. Icons.tune para filtros avanzados).
+  final Widget? trailing;
 
   const HeaderConBuscador({
     super.key,
@@ -197,6 +199,7 @@ class HeaderConBuscador extends StatelessWidget {
     this.onSubmitted,
     this.customBackgroundColor,
     this.customBorderColor,
+    this.trailing,
   });
 
   @override
@@ -329,15 +332,22 @@ class HeaderConBuscador extends StatelessWidget {
                     color: isDark ? Colors.grey[400] : Colors.grey[500],
                     size: 20,
                   ),
-                  suffixIcon: controller.text.isNotEmpty
-                      ? IconButton(
-                          icon: Icon(
-                            Icons.clear,
-                            color: isDark ? Colors.grey[400] : Colors.grey[500],
-                            size: 20,
-                          ),
-                          onPressed: onClear,
-                          tooltip: 'Limpiar búsqueda',
+                  suffixIcon: (controller.text.isNotEmpty || trailing != null)
+                      ? Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (trailing != null) trailing!,
+                            if (controller.text.isNotEmpty)
+                              IconButton(
+                                icon: Icon(
+                                  Icons.clear,
+                                  color: isDark ? Colors.grey[400] : Colors.grey[500],
+                                  size: 20,
+                                ),
+                                onPressed: onClear,
+                                tooltip: 'Limpiar búsqueda',
+                              ),
+                          ],
                         )
                       : null,
                   border: OutlineInputBorder(
@@ -449,15 +459,18 @@ class HeaderSimple extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: isDark ? Colors.white : AppTheme.primaryColor,
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? Colors.white : AppTheme.primaryColor,
+                    ),
+                    maxLines: 1,
                   ),
-                  overflow: TextOverflow.ellipsis,
-                  maxLines: 1,
                 ),
                 if (subtitle != null) ...[
                   const SizedBox(height: 4),

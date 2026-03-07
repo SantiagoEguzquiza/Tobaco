@@ -1053,29 +1053,38 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                                       ),
                                       if (producto.stock != null) ...[
                                         const SizedBox(width: 8),
-                                        _maxCantidadDisponible(producto) == 0
-                                            ? Text(
-                                                'Sin stock',
-                                                style: TextStyle(
-                                                  fontSize: 12,
-                                                  fontWeight: FontWeight.w600,
-                                                  color: Colors.orange.shade700,
-                                                ),
-                                              )
-                                            : Text(
-                                                'Disponible: ${_maxCantidadDisponible(producto).toStringAsFixed(0)}',
-                                                style: TextStyle(
-                                                  fontSize: 12,
-                                                  color: isDark
-                                                      ? Colors.grey.shade500
-                                                      : Colors.grey.shade600,
-                                                ),
+                                        Flexible(
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Expanded(
+                                                child: _maxCantidadDisponible(producto) == 0
+                                                    ? Text(
+                                                        'Sin stock',
+                                                        style: TextStyle(
+                                                          fontSize: 12,
+                                                          fontWeight: FontWeight.w600,
+                                                          color: Colors.orange.shade700,
+                                                        ),
+                                                        overflow: TextOverflow.ellipsis,
+                                                      )
+                                                    : Text(
+                                                        'Disponible: ${_maxCantidadDisponible(producto).toStringAsFixed(0)}',
+                                                        style: TextStyle(
+                                                          fontSize: 12,
+                                                          color: isDark
+                                                              ? Colors.grey.shade500
+                                                              : Colors.grey.shade600,
+                                                        ),
+                                                        overflow: TextOverflow.ellipsis,
+                                                      ),
                                               ),
-                                        if (producto.stock != null && producto.cantidad > _maxCantidadDisponible(producto)) ...[
-                                          const SizedBox(width: 6),
-                                          Icon(Icons.warning_amber_rounded,
-                                              size: 14, color: Colors.orange.shade700),
-                                        ],
+                                              if (producto.stock != null && producto.cantidad > _maxCantidadDisponible(producto))
+                                                Icon(Icons.warning_amber_rounded,
+                                                    size: 14, color: Colors.orange.shade700),
+                                            ],
+                                          ),
+                                        ),
                                       ],
                                     ],
                                   ),

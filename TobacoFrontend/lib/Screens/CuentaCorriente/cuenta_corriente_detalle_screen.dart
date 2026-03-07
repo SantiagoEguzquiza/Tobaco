@@ -693,56 +693,57 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
             style: AppTheme.appBarTitleStyle,
           ),
         ),
-      body: isLoadingDetalle
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+      body: Container(
+        color: Theme.of(context).scaffoldBackgroundColor,
+        child: isLoadingDetalle
+            ? Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Cargando detalles...',
+                      style: TextStyle(
+                        color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            : Column(
                 children: [
-                  const CircularProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Cargando detalles...',
-                    style: TextStyle(
-                      color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
-                      fontSize: 16,
+                  // Header con información del cliente
+                  _buildHeaderSection(isDarkMode),
+                  // Tabs custom (chips + animación)
+                  _buildCustomTabRow(isDarkMode),
+                  // Contenido con animación fade/slide
+                  Expanded(
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 220),
+                      switchInCurve: Curves.easeOutCubic,
+                      switchOutCurve: Curves.easeInCubic,
+                      transitionBuilder: (Widget child, Animation<double> animation) {
+                        return FadeTransition(
+                          opacity: animation,
+                          child: SlideTransition(
+                            position: Tween<Offset>(
+                              begin: const Offset(0.04, 0),
+                              end: Offset.zero,
+                            ).animate(animation),
+                            child: child,
+                          ),
+                        );
+                      },
+                      child: _buildTabContent(isDarkMode),
                     ),
                   ),
                 ],
               ),
-            )
-          : Column(
-              children: [
-                // Header con información del cliente
-                _buildHeaderSection(isDarkMode),
-                
-                // Tabs custom (chips + animación)
-                _buildCustomTabRow(isDarkMode),
-                
-                // Contenido con animación fade/slide
-                Expanded(
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 220),
-                    switchInCurve: Curves.easeOutCubic,
-                    switchOutCurve: Curves.easeInCubic,
-                    transitionBuilder: (Widget child, Animation<double> animation) {
-                      return FadeTransition(
-                        opacity: animation,
-                        child: SlideTransition(
-                          position: Tween<Offset>(
-                            begin: const Offset(0.04, 0),
-                            end: Offset.zero,
-                          ).animate(animation),
-                          child: child,
-                        ),
-                      );
-                    },
-                    child: _buildTabContent(isDarkMode),
-                  ),
-                ),
-              ],
-            ),
+      ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _mostrarModalSaldarDeuda,
         backgroundColor: AppTheme.primaryColor,
@@ -985,7 +986,7 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
     }
 
     return ListView.builder(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 72),
       itemCount: ventasCC.length + (_isLoadingMoreVentas ? 1 : 0),
       itemBuilder: (context, index) {
         if (index == ventasCC.length) {
@@ -1008,21 +1009,72 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
     }
 
     if (abonos.isEmpty) {
-      return _buildEmptyState(
-        isDarkMode: isDarkMode,
-        icon: Icons.payment,
-        title: 'No hay abonos registrados',
-        subtitle: 'Este cliente aún no ha realizado ningún abono',
+      return Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+            child: SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: _mostrarModalSaldarDeuda,
+                icon: const Icon(Icons.payment_rounded, size: 20),
+                label: const Text('Registrar abono', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryColor,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Expanded(
+            child: _buildEmptyState(
+              isDarkMode: isDarkMode,
+              icon: Icons.payment,
+              title: 'No hay abonos registrados',
+              subtitle: 'Este cliente aún no ha realizado ningún abono',
+            ),
+          ),
+        ],
       );
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: abonos.length,
-      itemBuilder: (context, index) {
-        final abono = abonos[index];
-        return _buildAbonoCard(abono, isDarkMode);
-      },
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+          child: SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: _mostrarModalSaldarDeuda,
+              icon: const Icon(Icons.payment_rounded, size: 20),
+              label: const Text('Registrar abono', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryColor,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
+                ),
+              ),
+            ),
+          ),
+        ),
+        Expanded(
+          child: ListView.builder(
+            padding: const EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 72),
+            itemCount: abonos.length,
+            itemBuilder: (context, index) {
+              final abono = abonos[index];
+              return _buildAbonoCard(abono, isDarkMode);
+            },
+          ),
+        ),
+      ],
     );
   }
 
@@ -1045,7 +1097,7 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
     }
 
     return ListView.builder(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 72),
       itemCount: notasCredito.length,
       itemBuilder: (context, index) {
         final movimiento = notasCredito[index];
@@ -1073,7 +1125,7 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
     }
 
     return ListView.builder(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 72),
       itemCount: productosAFavor.length,
       itemBuilder: (context, index) {
         final producto = productosAFavor[index];

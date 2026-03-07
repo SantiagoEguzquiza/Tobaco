@@ -112,6 +112,7 @@ class _VentasScreenState extends State<VentasScreen> {
     return Scaffold(
       appBar: AppBar(
         centerTitle: true,
+        scrolledUnderElevation: 0,
         title: const Text('Ventas', style: AppTheme.appBarTitleStyle),
         actions: [
           _SincronizarButton(
@@ -130,10 +131,12 @@ class _VentasScreenState extends State<VentasScreen> {
           ),
         ],
       ),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-          child: Column(
+      body: Container(
+        color: Theme.of(context).scaffoldBackgroundColor,
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+            child: Column(
             children: [
               ClipRect(
                 child: Align(
@@ -158,6 +161,7 @@ class _VentasScreenState extends State<VentasScreen> {
               Expanded(child: _buildVentasList(provider)),
             ],
           ),
+        ),
         ),
       ),
     );
@@ -281,6 +285,9 @@ class _VentasScreenState extends State<VentasScreen> {
       child: ListView.builder(
         controller: _scrollController,
         physics: const AlwaysScrollableScrollPhysics(),
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).padding.bottom + 24,
+        ),
         itemCount: filteredVentas.length + (provider.isLoadingMore ? 1 : 0),
         itemBuilder: (context, index) {
           if (index == filteredVentas.length) {

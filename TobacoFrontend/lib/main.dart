@@ -26,6 +26,7 @@ import 'package:tobaco/Services/Connectivity/connectivity_service.dart';
 import 'package:tobaco/Services/RecorridosProgramados_Service/recorridos_programados_provider.dart';
 import 'package:tobaco/Services/Permisos_Service/permisos_provider.dart';
 import 'package:tobaco/Services/Tenant_Service/tenant_provider.dart';
+import 'package:tobaco/Services/Compras_Service/compras_provider.dart';
 import 'package:tobaco/Helpers/app_lifecycle_observer.dart';
 
 void main() async {
@@ -48,6 +49,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => CategoriasProvider()),
         ChangeNotifierProvider(create: (_) => VentasProvider()),
         ChangeNotifierProvider(create: (_) => VentaBorradorProvider()),
+        ChangeNotifierProvider(create: (_) => ComprasProvider()),
         ChangeNotifierProvider.value(value: themeProvider),
         // 1) Repo primero
         Provider(create: (_) => BcuRepository()),
