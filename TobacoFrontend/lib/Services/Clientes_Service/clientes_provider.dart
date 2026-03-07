@@ -55,9 +55,7 @@ class ClienteProvider with ChangeNotifier {
 
   Future<List<Cliente>> obtenerClientes() async {
     try {
-      _clientes = await _clienteService
-          .obtenerClientes()
-          .timeout(const Duration(seconds: 3));
+      _clientes = await _clienteService.obtenerClientes();
       _clientes.sort((a, b) =>
           a.nombre.toLowerCase().compareTo(b.nombre.toLowerCase()));
 
@@ -159,9 +157,7 @@ class ClienteProvider with ChangeNotifier {
     if (_isLoading) notifyListeners();
 
     try {
-      final clientesServidor = await _clienteService
-          .obtenerClientes()
-          .timeout(const Duration(seconds: 5));
+      final clientesServidor = await _clienteService.obtenerClientes();
 
       _fusionarClientesServidorConLocales(clientesServidor);
       _isOffline = false;
@@ -178,7 +174,7 @@ class ClienteProvider with ChangeNotifier {
         return;
       }
 
-      _isOffline = Apihandler.isConnectionError(e);
+      _isOffline = Apihandler.isConnectionError(e) || e is TimeoutException;
 
       if (_clientes.isEmpty) {
         _errorMessage = _isOffline
@@ -256,7 +252,7 @@ class ClienteProvider with ChangeNotifier {
       return data;
     } catch (e) {
       debugPrint('Error al obtener clientes con deuda paginados: $e');
-      if (Apihandler.isConnectionError(e)) {
+      if (Apihandler.isConnectionError(e) || e is TimeoutException) {
         return await _cuentaCorrienteCache.obtenerClientesConSaldoPaginados(
             page: page, pageSize: pageSize);
       }

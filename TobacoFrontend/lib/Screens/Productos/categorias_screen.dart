@@ -6,7 +6,8 @@ import 'package:tobaco/Theme/app_theme.dart';
 import 'package:tobaco/Theme/dialogs.dart';
 import 'package:tobaco/Theme/headers.dart';
 import 'package:tobaco/Widgets/ReorderableCategoriaList.dart';
-import 'package:tobaco/Helpers/color_picker.dart';
+import 'package:tobaco/Screens/Productos/nueva_categoria_screen.dart';
+import 'package:tobaco/Screens/Productos/editar_categoria_screen.dart';
 
 class CategoriasScreen extends StatefulWidget {
   const CategoriasScreen({super.key});
@@ -16,58 +17,10 @@ class CategoriasScreen extends StatefulWidget {
 }
 
 class _CategoriasScreenState extends State<CategoriasScreen> {
-  final TextEditingController _nombreController = TextEditingController();
-  final TextEditingController _editNombreController = TextEditingController();
-
   @override
   void initState() {
     super.initState();
     Future.microtask(() => context.read<CategoriasProvider>().cargarCategorias());
-  }
-
-  @override
-  void dispose() {
-    _nombreController.dispose();
-    _editNombreController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _agregarCategoria() async {
-    final provider = context.read<CategoriasProvider>();
-    final nombre = _nombreController.text.trim();
-    if (nombre.isEmpty) {
-      AppTheme.showSnackBar(
-        context,
-        AppTheme.warningSnackBar('El nombre de la categoría es requerido'),
-      );
-      return;
-    }
-
-    try {
-      final nuevaCategoria = Categoria(
-        nombre: nombre,
-        colorHex: provider.selectedColor,
-        sortOrder: provider.categorias.length,
-      );
-
-      await provider.agregarCategoria(nuevaCategoria);
-
-      if (mounted) {
-        _nombreController.clear();
-        AppTheme.showSnackBar(
-          context,
-          AppTheme.successSnackBar('Categoría agregada exitosamente'),
-        );
-      }
-    } catch (e) {
-      if (!mounted) return;
-      AppTheme.showSnackBar(
-        context,
-        AppTheme.errorSnackBar(
-          'Error al agregar categoría: ${e.toString().replaceFirst('Exception: ', '')}',
-        ),
-      );
-    }
   }
 
   Future<void> _eliminarCategoria(Categoria categoria) async {
@@ -98,213 +51,6 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
         );
       }
     }
-  }
-
-  Future<void> _editarCategoria(Categoria categoria) async {
-    final provider = context.read<CategoriasProvider>();
-    final nombre = _editNombreController.text.trim();
-    if (nombre.isEmpty) {
-      AppTheme.showSnackBar(
-        context,
-        AppTheme.warningSnackBar('El nombre de la categoría es requerido'),
-      );
-      return;
-    }
-
-    try {
-      await provider.editarCategoria(
-        categoria.id!,
-        nombre,
-        provider.selectedColor,
-      );
-
-      if (mounted) {
-        AppTheme.showSnackBar(
-          context,
-          AppTheme.successSnackBar('Categoría actualizada exitosamente'),
-        );
-      }
-    } catch (e) {
-      if (!mounted) return;
-      final errorStr = e.toString().toLowerCase();
-      final mensaje = errorStr.contains('ya existe') || errorStr.contains('duplicad')
-          ? 'El nombre seleccionado ya existe, pruebe con otro.'
-          : e.toString().replaceFirst('Exception: ', '');
-      AppTheme.showSnackBar(
-        context,
-        AppTheme.errorSnackBar(mensaje),
-      );
-    }
-  }
-
-  Widget _buildCategoryNameField({
-    required TextEditingController controller,
-    required bool isDark,
-    bool autofocus = false,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Nombre de la categoría',
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-            color: isDark ? Colors.grey.shade300 : Colors.grey.shade700,
-          ),
-        ),
-        const SizedBox(height: 8),
-        TextField(
-          controller: controller,
-          autofocus: autofocus,
-          style: TextStyle(
-            color: isDark ? Colors.white : Colors.black87,
-            fontSize: 16,
-          ),
-          decoration: InputDecoration(
-            hintText: 'Ingresa el nombre de la categoría',
-            hintStyle: TextStyle(
-              color: isDark ? Colors.grey.shade600 : Colors.grey.shade400,
-            ),
-            prefixIcon: Icon(Icons.category_outlined, color: AppTheme.primaryColor, size: 20),
-            filled: true,
-            fillColor: isDark ? const Color(0xFF2A2A2A) : Colors.white,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: isDark ? const Color(0xFF404040) : Colors.grey.shade300),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: isDark ? const Color(0xFF404040) : Colors.grey.shade300),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: AppTheme.primaryColor, width: 2),
-            ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-          ),
-        ),
-      ],
-    );
-  }
-
-  void _showEditCategoriaDialog(Categoria categoria) {
-    _editNombreController.text = categoria.nombre;
-    _editNombreController.selection = TextSelection.collapsed(
-      offset: _editNombreController.text.length,
-    );
-    context.read<CategoriasProvider>().seleccionarColor(categoria.colorHex);
-
-    showDialog(
-      context: context,
-      builder: (dialogContext) => Theme(
-        data: Theme.of(dialogContext).copyWith(
-          textSelectionTheme: TextSelectionThemeData(
-            cursorColor: AppTheme.primaryColor,
-            selectionColor: AppTheme.primaryColor.withOpacity(0.3),
-            selectionHandleColor: AppTheme.primaryColor,
-          ),
-        ),
-        child: Consumer<CategoriasProvider>(
-          builder: (context, provider, _) {
-            final isDark = Theme.of(context).brightness == Brightness.dark;
-            return AppTheme.customAlertDialog(
-              title: 'Editar Categoría',
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const SizedBox(height: 4),
-                  _buildCategoryNameField(
-                    controller: _editNombreController,
-                    isDark: isDark,
-                    autofocus: true,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Color',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: isDark ? Colors.grey.shade300 : Colors.grey.shade700,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  ColorPicker(
-                    selectedColor: provider.selectedColor,
-                    onColorSelected: provider.seleccionarColor,
-                  ),
-                ],
-              ),
-              onCancel: () => Navigator.of(dialogContext).pop(),
-              onConfirm: () {
-                Navigator.of(dialogContext).pop();
-                _editarCategoria(categoria);
-              },
-              confirmText: 'Guardar',
-              cancelText: 'Cancelar',
-            );
-          },
-        ),
-      ),
-    );
-  }
-
-  void _showAddCategoriaDialog() {
-    context.read<CategoriasProvider>().seleccionarColor('#9E9E9E');
-    showDialog(
-      context: context,
-      builder: (dialogContext) => Theme(
-        data: Theme.of(dialogContext).copyWith(
-          textSelectionTheme: TextSelectionThemeData(
-            cursorColor: AppTheme.primaryColor,
-            selectionColor: AppTheme.primaryColor.withOpacity(0.3),
-            selectionHandleColor: AppTheme.primaryColor,
-          ),
-        ),
-        child: Consumer<CategoriasProvider>(
-          builder: (context, provider, _) {
-            final isDark = Theme.of(context).brightness == Brightness.dark;
-            return AppTheme.customAlertDialog(
-              title: 'Nueva Categoría',
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const SizedBox(height: 4),
-                  _buildCategoryNameField(
-                    controller: _nombreController,
-                    isDark: isDark,
-                    autofocus: true,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Color',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: isDark ? Colors.grey.shade300 : Colors.grey.shade700,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  ColorPicker(
-                    selectedColor: provider.selectedColor,
-                    onColorSelected: provider.seleccionarColor,
-                  ),
-                ],
-              ),
-              onCancel: () => Navigator.of(dialogContext).pop(),
-              onConfirm: () {
-                Navigator.of(dialogContext).pop();
-                _agregarCategoria();
-              },
-              confirmText: 'Agregar',
-              cancelText: 'Cancelar',
-            );
-          },
-        ),
-      ),
-    );
   }
 
   @override
@@ -393,7 +139,17 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
                             child: SizedBox(
                               width: double.infinity,
                               child: ElevatedButton.icon(
-                                onPressed: _showAddCategoriaDialog,
+                                onPressed: () async {
+                                  final result = await Navigator.push<bool>(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => const NuevaCategoriaScreen(),
+                                    ),
+                                  );
+                                  if (result == true && mounted) {
+                                    context.read<CategoriasProvider>().cargarCategorias();
+                                  }
+                                },
                                 icon: const Icon(Icons.add_circle_outline, size: 20),
                                 label: const Text(
                                   'Nueva Categoría',
@@ -503,8 +259,17 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
                         : ReorderableCategoriaList(
                             onDelete: (categoria) =>
                                 _eliminarCategoria(categoria),
-                            onEdit: (categoria) =>
-                                _showEditCategoriaDialog(categoria),
+                            onEdit: (categoria) async {
+                              final result = await Navigator.push<bool>(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => EditarCategoriaScreen(categoria: categoria),
+                                ),
+                              );
+                              if (result == true && mounted) {
+                                context.read<CategoriasProvider>().cargarCategorias();
+                              }
+                            },
                           ),
                   ),
                 ],

@@ -378,18 +378,56 @@ class _EditarPreciosEspecialesScreenState
                 },
               ),
               const SizedBox(height: 15),
-              // Filtros de categoría - mismo estilo que en productos_screen
-              if (categorias.isNotEmpty)
-                SizedBox(
-                  height: 45,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: categorias.length,
-                    itemBuilder: (context, index) {
-                      final categoria = categorias[index];
+              // Filtros de categoría (Todos por defecto) - mismo estilo que en productos_screen
+              SizedBox(
+                height: 45,
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  children: [
+                    // Opción "Todos" (por defecto)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 10),
+                      child: GestureDetector(
+                        onTap: () {
+                          setState(() => selectedCategory = null);
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: selectedCategory == null
+                                ? AppTheme.primaryColor
+                                : Theme.of(context).cardTheme.color,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: selectedCategory == null
+                                  ? AppTheme.primaryColor
+                                  : Colors.grey.shade300,
+                              width: 1,
+                            ),
+                          ),
+                          child: Text(
+                            'Todos',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: selectedCategory == null
+                                  ? FontWeight.w600
+                                  : FontWeight.normal,
+                              color: selectedCategory == null
+                                  ? Colors.white
+                                  : Theme.of(context)
+                                      .textTheme
+                                      .bodyLarge
+                                      ?.color,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    // Resto de categorías
+                    ...categorias.map((categoria) {
                       final isSelected = selectedCategory == categoria.nombre;
                       final categoriaColor = _parseColor(categoria.colorHex);
-
                       return Padding(
                         padding: const EdgeInsets.only(right: 10),
                         child: GestureDetector(
@@ -433,9 +471,10 @@ class _EditarPreciosEspecialesScreenState
                           ),
                         ),
                       );
-                    },
-                  ),
+                    }),
+                  ],
                 ),
+              ),
             ],
           ),
         ),
@@ -627,15 +666,18 @@ class _EditarPreciosEspecialesScreenState
                                               ),
                                             ),
 
-                                            // Campo de precio
-                                            Container(
+                                            // Campo de precio (mismo color que la card del producto)
+                                            Builder(
+                                              builder: (ctx) {
+                                                final isDark = Theme.of(ctx).brightness == Brightness.dark;
+                                                final inputBgColor = isDark
+                                                    ? const Color(0xFF1A1A1A)
+                                                    : Colors.white;
+                                                return Container(
                                               width: 100,
                                               height: 42,
                                               decoration: BoxDecoration(
-                                                color: Theme.of(context).brightness ==
-                                                        Brightness.dark
-                                                    ? const Color(0xFF121212)
-                                                    : Colors.grey.shade50,
+                                                color: inputBgColor,
                                                 border: Border.all(
                                                   color: tieneEspecial
                                                       ? Colors.green.shade400
@@ -648,7 +690,9 @@ class _EditarPreciosEspecialesScreenState
                                                 data: Theme.of(context)
                                                     .copyWith(
                                                   inputDecorationTheme:
-                                                      const InputDecorationTheme(
+                                                      InputDecorationTheme(
+                                                    filled: true,
+                                                    fillColor: inputBgColor,
                                                     border: InputBorder.none,
                                                     enabledBorder:
                                                         InputBorder.none,
@@ -694,15 +738,15 @@ class _EditarPreciosEspecialesScreenState
                                                         fontSize: 14,
                                                         fontWeight:
                                                             FontWeight.w600,
-                                                        color: Theme.of(context)
-                                                                    .brightness ==
-                                                                Brightness.dark
+                                                        color: isDark
                                                             ? Colors.white
                                                             : AppTheme
                                                                 .textColor,
                                                       ),
                                                       decoration:
-                                                          const InputDecoration(
+                                                          InputDecoration(
+                                                        filled: true,
+                                                        fillColor: inputBgColor,
                                                         hintText: '0.00',
                                                         border:
                                                             InputBorder.none,
@@ -728,6 +772,8 @@ class _EditarPreciosEspecialesScreenState
                                                   ),
                                                 ),
                                               ),
+                                                );
+                                              },
                                             ),
                                           ],
                                         ),
