@@ -98,16 +98,21 @@ class _ClientesScreenState extends State<ClientesScreen> {
           appBar: AppBar(
             centerTitle: true,
             elevation: 0,
-            backgroundColor: null, // Usar el tema
+            backgroundColor: Colors.transparent,
+            scrolledUnderElevation: 0,
             title: const Text(
               'Clientes',
               style: AppTheme.appBarTitleStyle,
             ),
           ),
-          body: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
+          body: Container(
+            color: Theme.of(context).scaffoldBackgroundColor,
+            child: SafeArea(
+              top: true,
+              bottom: false,
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
                 children: [
                   // Header con buscador - SIEMPRE VISIBLE
                   _buildHeaderSection(provider),
@@ -116,6 +121,7 @@ class _ClientesScreenState extends State<ClientesScreen> {
                   Expanded(child: _buildClientesList(provider)),
                 ],
               ),
+            ),
             ),
           ),
         );
@@ -210,6 +216,9 @@ class _ClientesScreenState extends State<ClientesScreen> {
       child: ListView.builder(
         controller: _scrollController,
         physics: const AlwaysScrollableScrollPhysics(),
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).padding.bottom + 24 + 56,
+        ),
         itemCount: clientesFiltrados.length,
         itemBuilder: (context, index) {
           final cliente = clientesFiltrados[index];

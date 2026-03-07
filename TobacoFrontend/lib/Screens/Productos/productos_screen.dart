@@ -26,7 +26,9 @@ class ProductosScreen extends StatefulWidget {
 
 class _ProductosScreenState extends State<ProductosScreen> {
   final TextEditingController _searchController = TextEditingController();
+  final TextEditingController _marcaController = TextEditingController();
   bool _categoriesLoadTriggered = false;
+  bool _advancedSearchExpanded = false;
 
   // ScrollController para detectar cuando llegar al final
   final ScrollController _scrollController = ScrollController();
@@ -97,6 +99,7 @@ class _ProductosScreenState extends State<ProductosScreen> {
     _scrollController.dispose();
     _categoriesScrollController.dispose();
     _searchController.dispose();
+    _marcaController.dispose();
     super.dispose();
   }
 
@@ -160,7 +163,8 @@ class _ProductosScreenState extends State<ProductosScreen> {
       appBar: AppBar(
         centerTitle: true,
         elevation: 0,
-        backgroundColor: null, // Usar el tema
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        scrolledUnderElevation: 0,
         title: const Text(
           'Productos',
           style: AppTheme.appBarTitleStyle,
@@ -252,43 +256,173 @@ class _ProductosScreenState extends State<ProductosScreen> {
           )
         ],
       ),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            children: [
-              // Header con buscador y controles - SIEMPRE VISIBLE
-              _buildHeaderSection(prov, categorias, searchQuery, selectedCategory),
-              const SizedBox(height: 20),
-              // Lista con estados dentro
-              Expanded(child: _buildProductosList(prov, categorias)),
-            ],
-          ),
+      body: Container(
+        color: Theme.of(context).scaffoldBackgroundColor,
+        child: SafeArea(
+          top: true,
+          bottom: false,
+          child: LayoutBuilder(
+          builder: (context, constraints) {
+            final viewInsets = MediaQuery.of(context).viewInsets.bottom;
+            final keyboardOpen = viewInsets > 0;
+            final headerNeedsScroll = keyboardOpen || _advancedSearchExpanded;
+            // Reservar espacio para botón + categorías + espaciados; el resto es para el listado de productos
+            const reservedForActionsAndList = 320.0;
+            final maxHeaderHeight = headerNeedsScroll
+                ? (constraints.maxHeight - reservedForActionsAndList).clamp(140.0, double.infinity)
+                : null;
+            return Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                children: [
+                  if (maxHeaderHeight != null)
+                    ConstrainedBox(
+                      constraints: BoxConstraints(maxHeight: maxHeaderHeight),
+                      child: SingleChildScrollView(
+                        child: _buildHeaderSearchAndFilter(prov),
+                      ),
+                    )
+                  else
+                    _buildHeaderSearchAndFilter(prov),
+                  const SizedBox(height: 15),
+                  _buildHeaderActions(prov, categorias, searchQuery, selectedCategory),
+                  const SizedBox(height: 20),
+                  Expanded(child: _buildProductosList(prov, categorias)),
+                ],
+              ),
+            );
+          },
+        ),
         ),
       ),
     );
   }
 
-  Widget _buildHeaderSection(ProductoProvider prov, List<Categoria> categorias, String searchQuery, String? selectedCategory) {
+  /// Solo buscador + filtro Marca (esta parte puede hacer scroll cuando falta espacio).
+  Widget _buildHeaderSearchAndFilter(ProductoProvider prov) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
       children: [
         HeaderConBuscador(
           leadingIcon: Icons.inventory_2,
           title: 'Gestión de Productos',
-          subtitle: '${prov.productos.length} productos • ${categorias.length} categorías',
+          subtitle: '${prov.productos.length} productos • ${context.read<CategoriasProvider>().categorias.length} categorías',
           controller: _searchController,
-          hintText: 'Buscar productos...',
-          onChanged: (value) {
-            prov.filtrarPorBusqueda(value);
-          },
+          hintText: 'Buscar por nombre...',
+          onChanged: (value) => prov.filtrarPorBusqueda(value),
           onClear: () {
             prov.limpiarBusqueda();
             _searchController.clear();
           },
+          trailing: IconButton(
+            icon: Icon(
+              Icons.tune_rounded,
+              color: _advancedSearchExpanded ? AppTheme.primaryColor : (isDark ? Colors.grey[400] : Colors.grey[600]),
+              size: 22,
+            ),
+            onPressed: () => setState(() => _advancedSearchExpanded = !_advancedSearchExpanded),
+            tooltip: 'Buscador avanzado',
+          ),
         ),
-        const SizedBox(height: 15),
-        // Botón de crear producto - Solo mostrar si tiene permiso
+        AnimatedSize(
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeInOut,
+          child: _advancedSearchExpanded
+              ? Padding(
+                  padding: const EdgeInsets.only(top: 10),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Marca',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.5,
+                          color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      TextField(
+                        controller: _marcaController,
+                        onChanged: (value) => prov.setFiltroMarca(value),
+                        style: TextStyle(
+                          fontSize: 15,
+                          color: isDark ? Colors.white : Colors.black87,
+                        ),
+                        decoration: InputDecoration(
+                          hintText: 'Filtrar por marca',
+                          hintStyle: TextStyle(
+                            color: Colors.grey.shade500,
+                            fontSize: 14,
+                          ),
+                          filled: true,
+                          fillColor: isDark ? const Color(0xFF2A2A2A) : Colors.grey.shade50,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(
+                              color: isDark ? Colors.grey.shade600 : Colors.grey.shade300,
+                            ),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(
+                              color: isDark ? Colors.grey.shade600 : Colors.grey.shade300,
+                            ),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(
+                              color: AppTheme.primaryColor,
+                              width: 2,
+                            ),
+                          ),
+                          prefixIcon: Icon(
+                            Icons.sell_outlined,
+                            size: 20,
+                            color: isDark ? Colors.grey.shade500 : Colors.grey.shade600,
+                          ),
+                          suffixIcon: IconButton(
+                            onPressed: () {
+                              prov.limpiarFiltrosAvanzados();
+                              _searchController.clear();
+                              _marcaController.clear();
+                              setState(() {});
+                            },
+                            icon: Icon(
+                              Icons.clear_all_rounded,
+                              size: 20,
+                              color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                            ),
+                            tooltip: 'Limpiar filtros',
+                            style: IconButton.styleFrom(
+                              padding: const EdgeInsets.all(8),
+                              minimumSize: const Size(36, 36),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              : const SizedBox.shrink(),
+        ),
+      ],
+    );
+  }
+
+  /// Botón Crear Nuevo Producto + chips de categoría + indicador búsqueda (siempre fijo encima del listado).
+  Widget _buildHeaderActions(ProductoProvider prov, List<Categoria> categorias, String searchQuery, String? selectedCategory) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final hasFiltrosActivos = searchQuery.isNotEmpty || prov.searchMarca.isNotEmpty;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
         Consumer<PermisosProvider>(
           builder: (context, permisosProvider, child) {
             if (permisosProvider.canCreateProductos || permisosProvider.isAdmin) {
@@ -336,7 +470,7 @@ class _ProductosScreenState extends State<ProductosScreen> {
         ),
         const SizedBox(height: 15),
         // Filtros de categoría (solo mostrar cuando NO hay búsqueda activa)
-        if (categorias.isNotEmpty && searchQuery.isEmpty) ...[
+        if (categorias.isNotEmpty && searchQuery.isEmpty && prov.searchMarca.isEmpty) ...[
           SizedBox(
             height: 45,
             child: ListView.builder(
@@ -379,8 +513,8 @@ class _ProductosScreenState extends State<ProductosScreen> {
             ),
           ),
         ],
-        // Indicador de búsqueda global (solo cuando hay productos)
-        if (prov.productosFiltrados.isNotEmpty && searchQuery.isNotEmpty) ...[
+        // Indicador de búsqueda global (solo cuando hay filtros activos)
+        if (prov.productosFiltrados.isNotEmpty && hasFiltrosActivos) ...[
           const SizedBox(height: 12),
           Row(
             children: [
@@ -438,7 +572,7 @@ class _ProductosScreenState extends State<ProductosScreen> {
     }
 
     if (filteredProductos.isEmpty) {
-      return _buildEmptyState(searchQuery);
+      return _buildEmptyState(prov);
     }
 
     return RefreshIndicator(
@@ -451,6 +585,9 @@ class _ProductosScreenState extends State<ProductosScreen> {
       child: ListView.builder(
         controller: _scrollController,
         physics: const AlwaysScrollableScrollPhysics(),
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).padding.bottom + 24 + 56,
+        ),
         itemCount: filteredProductos.length,
         itemBuilder: (context, index) {
           final producto = filteredProductos[index];
@@ -751,7 +888,15 @@ class _ProductosScreenState extends State<ProductosScreen> {
     );
   }
 
-  Widget _buildEmptyState(String searchQuery) {
+  Widget _buildEmptyState(ProductoProvider prov) {
+    final hasFiltros = prov.searchQuery.isNotEmpty || prov.searchMarca.isNotEmpty;
+    final mensajeFiltros = hasFiltros
+        ? (prov.searchQuery.isNotEmpty && prov.searchMarca.isNotEmpty
+            ? 'Nombre: "${prov.searchQuery}" · Marca: "${prov.searchMarca}"'
+            : prov.searchQuery.isNotEmpty
+                ? '"${prov.searchQuery}"'
+                : 'Marca: "${prov.searchMarca}"')
+        : '';
     return Container(
       decoration: BoxDecoration(
         color: Theme.of(context).brightness == Brightness.dark
@@ -778,7 +923,7 @@ class _ProductosScreenState extends State<ProductosScreen> {
                 Icon(Icons.inventory_2_outlined, size: 80, color: Colors.grey.shade400),
                 const SizedBox(height: 16),
                 Text(
-                  searchQuery.isNotEmpty ? 'Sin resultados' : 'No hay productos disponibles',
+                  hasFiltros ? 'Sin resultados' : 'No hay productos disponibles',
                   style: TextStyle(
                     fontSize: 18,
                     color: Colors.grey.shade600,
@@ -787,8 +932,8 @@ class _ProductosScreenState extends State<ProductosScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  searchQuery.isNotEmpty
-                      ? 'No se encontraron productos que coincidan con "$searchQuery"'
+                  hasFiltros
+                      ? 'No se encontraron productos que coincidan con $mensajeFiltros'
                       : 'Crea tu primer producto para comenzar',
                   style: TextStyle(
                     fontSize: 14,

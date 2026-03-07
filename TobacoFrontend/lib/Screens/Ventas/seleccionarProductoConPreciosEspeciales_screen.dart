@@ -37,6 +37,9 @@ class _SeleccionarProductosConPreciosEspecialesScreenState
   bool isLoading = true;
   String? errorMessage;
   String searchQuery = '';
+  String searchMarca = '';
+  bool _advancedSearchExpanded = false;
+  final TextEditingController _marcaController = TextEditingController();
 
   @override
   void initState() {
@@ -49,6 +52,7 @@ class _SeleccionarProductosConPreciosEspecialesScreenState
     for (var controller in cantidadControllers.values) {
       controller.dispose();
     }
+    _marcaController.dispose();
     super.dispose();
   }
 
@@ -142,13 +146,16 @@ class _SeleccionarProductosConPreciosEspecialesScreenState
   List<Producto> get filteredProductos {
     var filtered = productos.where((producto) {
       final matchesSearch = searchQuery.isEmpty ||
-          producto.nombre.toLowerCase().contains(searchQuery.toLowerCase());
+          producto.nombre.toLowerCase().contains(searchQuery.trim().toLowerCase());
+      final matchesMarca = searchMarca.isEmpty ||
+          (producto.marca != null &&
+              producto.marca!.isNotEmpty &&
+              producto.marca!.toLowerCase().contains(searchMarca.trim().toLowerCase()));
       final matchesCategory = selectedCategory == null ||
           producto.categoriaNombre == selectedCategory;
-      return matchesSearch && matchesCategory;
+      return matchesSearch && matchesMarca && matchesCategory;
     }).toList();
 
-    // Ordenar por nombre
     filtered.sort((a, b) => a.nombre.compareTo(b.nombre));
     return filtered;
   }
@@ -363,11 +370,14 @@ class _SeleccionarProductosConPreciosEspecialesScreenState
                   // Barra de búsqueda
                   Container(
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? const Color(0xFF2A2A2A)
+                          : Colors.white,
                       borderRadius: BorderRadius.circular(15),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
+                          color: Colors.black.withOpacity(
+                              Theme.of(context).brightness == Brightness.dark ? 0.2 : 0.05),
                           blurRadius: 10,
                           offset: const Offset(0, 2),
                         ),
@@ -375,7 +385,7 @@ class _SeleccionarProductosConPreciosEspecialesScreenState
                     ),
                     child: TextField(
                       decoration: InputDecoration(
-                        hintText: 'Buscar productos por nombre...',
+                        hintText: 'Buscar por nombre...',
                         hintStyle: TextStyle(
                           color: Colors.grey.shade400,
                           fontSize: 16,
@@ -385,8 +395,24 @@ class _SeleccionarProductosConPreciosEspecialesScreenState
                           color: AppTheme.primaryColor,
                           size: 24,
                         ),
-                        suffixIcon: searchQuery.isNotEmpty
-                            ? IconButton(
+                        suffixIcon: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: Icon(
+                                Icons.tune_rounded,
+                                color: _advancedSearchExpanded
+                                    ? AppTheme.primaryColor
+                                    : Colors.grey.shade500,
+                                size: 22,
+                              ),
+                              onPressed: () {
+                                setState(() => _advancedSearchExpanded = !_advancedSearchExpanded);
+                              },
+                              tooltip: 'Buscador avanzado',
+                            ),
+                            if (searchQuery.isNotEmpty)
+                              IconButton(
                                 icon: Icon(
                                   Icons.clear,
                                   color: Colors.grey.shade400,
@@ -397,27 +423,127 @@ class _SeleccionarProductosConPreciosEspecialesScreenState
                                     selectedCategory = null;
                                   });
                                 },
-                              )
-                            : null,
+                              ),
+                          ],
+                        ),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(15),
                           borderSide: BorderSide.none,
                         ),
                         filled: true,
-                        fillColor: Colors.white,
+                        fillColor: Colors.transparent,
                         contentPadding: const EdgeInsets.symmetric(
                           horizontal: 20,
                           vertical: 16,
                         ),
                       ),
                       cursorColor: AppTheme.primaryColor,
-                      style: const TextStyle(fontSize: 16),
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.white
+                            : Colors.black87,
+                      ),
                       onChanged: (query) {
                         setState(() {
                           searchQuery = query;
                         });
                       },
                     ),
+                  ),
+
+                  // Buscador avanzado (Marca + limpiar como icono en el input)
+                  AnimatedSize(
+                    duration: const Duration(milliseconds: 250),
+                    curve: Curves.easeInOut,
+                    child: _advancedSearchExpanded
+                        ? Padding(
+                            padding: const EdgeInsets.only(top: 10),
+                            child: Builder(
+                              builder: (context) {
+                                final isDark = Theme.of(context).brightness == Brightness.dark;
+                                return Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      'Marca',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        letterSpacing: 0.5,
+                                        color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    TextField(
+                                      controller: _marcaController,
+                                      onChanged: (value) => setState(() => searchMarca = value),
+                                      style: TextStyle(
+                                        fontSize: 15,
+                                        color: isDark ? Colors.white : Colors.black87,
+                                      ),
+                                      decoration: InputDecoration(
+                                        hintText: 'Filtrar por marca',
+                                        hintStyle: TextStyle(
+                                          color: Colors.grey.shade500,
+                                          fontSize: 14,
+                                        ),
+                                        filled: true,
+                                        fillColor: isDark ? const Color(0xFF2A2A2A) : Colors.grey.shade50,
+                                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                        border: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(12),
+                                          borderSide: BorderSide(
+                                            color: isDark ? Colors.grey.shade600 : Colors.grey.shade300,
+                                          ),
+                                        ),
+                                        enabledBorder: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(12),
+                                          borderSide: BorderSide(
+                                            color: isDark ? Colors.grey.shade600 : Colors.grey.shade300,
+                                          ),
+                                        ),
+                                        focusedBorder: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(12),
+                                          borderSide: const BorderSide(
+                                            color: AppTheme.primaryColor,
+                                            width: 2,
+                                          ),
+                                        ),
+                                        prefixIcon: Icon(
+                                          Icons.sell_outlined,
+                                          size: 20,
+                                          color: isDark ? Colors.grey.shade500 : Colors.grey.shade600,
+                                        ),
+                                        suffixIcon: IconButton(
+                                          onPressed: () {
+                                            setState(() {
+                                              searchQuery = '';
+                                              searchMarca = '';
+                                              selectedCategory = null;
+                                              _marcaController.clear();
+                                            });
+                                          },
+                                          icon: Icon(
+                                            Icons.clear_all_rounded,
+                                            size: 20,
+                                            color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                                          ),
+                                          tooltip: 'Limpiar filtros',
+                                          style: IconButton.styleFrom(
+                                            padding: const EdgeInsets.all(8),
+                                            minimumSize: const Size(36, 36),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              },
+                            ),
+                          )
+                        : const SizedBox.shrink(),
                   ),
 
                   // Filtro de categorías

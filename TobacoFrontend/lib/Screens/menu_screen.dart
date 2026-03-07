@@ -6,8 +6,8 @@ import 'package:tobaco/Screens/CuentaCorriente/cuenta_corriente_screen.dart';
 import 'package:tobaco/Screens/Ventas/nuevaVenta_screen.dart';
 import 'package:tobaco/Screens/Ventas/ventas_screen.dart';
 import 'package:tobaco/Screens/Productos/productos_screen.dart';
+import 'package:tobaco/Screens/Compras/compras_screen.dart';
 import 'package:tobaco/Screens/Auth/login_screen.dart';
-import 'package:tobaco/Screens/Config/config_screen.dart';
 import 'package:tobaco/Screens/Entregas/mapa_entregas_screen.dart';
 import 'package:tobaco/Screens/Entregas/entregas_screen.dart';
 import 'package:tobaco/Services/Auth_Service/auth_provider.dart';
@@ -219,13 +219,13 @@ class _MenuScreenState extends State<MenuScreen> {
                     Expanded(
                       child: _menuCard(
                         context,
-                        color: const Color(0xFF14B8A6),
-                        icon: Icons.attach_money,
-                        label: 'Monedas',
+                        color: const Color(0xFF0EA5E9),
+                        icon: Icons.shopping_cart,
+                        label: 'Compras',
                         onTap: () => Navigator.push(
                           context,
                           MaterialPageRoute(
-                              builder: (context) => const CotizacionesScreen()),
+                              builder: (context) => const ComprasScreen()),
                         ),
                         iconSize: iconSize,
                         fontSize: fontSize,
@@ -235,13 +235,13 @@ class _MenuScreenState extends State<MenuScreen> {
                     Expanded(
                       child: _menuCard(
                         context,
-                        color: const Color(0xFF6B7280),
-                        icon: Icons.settings_rounded,
-                        label: 'Ajustes',
+                        color: const Color(0xFF14B8A6),
+                        icon: Icons.attach_money,
+                        label: 'Monedas',
                         onTap: () => Navigator.push(
                           context,
                           MaterialPageRoute(
-                              builder: (context) => const ConfigScreen()),
+                              builder: (context) => const CotizacionesScreen()),
                         ),
                         iconSize: iconSize,
                         fontSize: fontSize,

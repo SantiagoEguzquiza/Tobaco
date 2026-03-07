@@ -191,12 +191,18 @@ class SeleccionarProductosScreen extends StatefulWidget {
   final List<ProductoSeleccionado> productosYaSeleccionados;
   final Cliente? cliente;
   final int? scrollToProductId; // ID del producto al que hacer scroll
+  /// Título del AppBar (ej. "Nueva venta" o "Agregar productos" para compras).
+  final String? appBarTitle;
+  /// Si true, al tocar un producto se abre popup cantidad + subtotal (para compras).
+  final bool modoCompra;
 
   const SeleccionarProductosScreen({
     super.key,
     required this.productosYaSeleccionados,
     this.cliente,
     this.scrollToProductId,
+    this.appBarTitle,
+    this.modoCompra = false,
   });
 
   @override
@@ -217,22 +223,31 @@ class _SeleccionarProductosScreenState
   bool isLoading = true;
   String? errorMessage;
   String searchQuery = '';
+  String searchMarca = '';
+  bool _advancedSearchExpanded = false;
   final TextEditingController _searchController = TextEditingController();
+  final TextEditingController _marcaController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final ScrollController _categoriesScrollController = ScrollController();
   final Map<int, GlobalKey> _productKeys = {}; // Keys para cada producto
   final Set<int> _expandedProducts =
       {}; // IDs de productos con controles expandidos
+  /// En modo compra: lista de productos con cantidad y subtotal (precio = costo unitario).
+  List<ProductoSeleccionado> _productosCompra = [];
 
   @override
   void initState() {
     super.initState();
+    if (widget.modoCompra) {
+      _productosCompra = List.from(widget.productosYaSeleccionados);
+    }
     loadProductos();
   }
 
   @override
   void dispose() {
     _searchController.dispose();
+    _marcaController.dispose();
     _scrollController.dispose();
     _categoriesScrollController.dispose();
     // Dispose de los controllers de cantidad
@@ -507,6 +522,300 @@ class _SeleccionarProductosScreenState
         print('Error cargando precios especiales: $e');
       }
     }
+  }
+
+  /// En modo compra: muestra diálogo cantidad + subtotal y agrega el producto a _productosCompra.
+  Future<void> _showDialogCantidadSubtotalCompra(Producto producto) async {
+    final cantidadController = TextEditingController(text: '1');
+    final subtotalController = TextEditingController(text: '0');
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bgDialog = isDark ? const Color(0xFF1A1A1A) : Colors.white;
+    final cardBg = isDark ? const Color(0xFF252525) : Colors.grey.shade50;
+    final textColor = isDark ? Colors.white : Colors.black87;
+    final subColor = isDark ? Colors.grey.shade400 : Colors.grey.shade600;
+    final fillField = isDark ? const Color(0xFF2A2A2A) : Colors.grey.shade100;
+    final borderColor = isDark ? Colors.grey.shade600 : Colors.grey.shade300;
+
+    final ok = await showDialog<bool>(
+      context: context,
+      barrierColor: Colors.black54,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx2, setModalState) {
+            final cant = double.tryParse(cantidadController.text.replaceAll(',', '.')) ?? 0.0;
+            final sub = double.tryParse(subtotalController.text.replaceAll(',', '.')) ?? 0.0;
+            final costoUnit = cant > 0 ? sub / cant : 0.0;
+            final isValid = cant > 0 && sub >= 0;
+            return Dialog(
+              backgroundColor: Colors.transparent,
+              insetPadding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Material(
+                borderRadius: BorderRadius.circular(24),
+                color: bgDialog,
+                elevation: 24,
+                shadowColor: Colors.black45,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Header con nombre del producto
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+                        decoration: BoxDecoration(
+                          color: cardBg,
+                          border: Border(
+                            bottom: BorderSide(
+                              color: isDark ? Colors.grey.shade800! : Colors.grey.shade200!,
+                              width: 1,
+                            ),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: AppTheme.primaryColor.withOpacity(0.15),
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              child: Icon(Icons.inventory_2_rounded, color: AppTheme.primaryColor, size: 26),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Text(
+                                producto.nombre,
+                                style: TextStyle(
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.w600,
+                                  color: textColor,
+                                  letterSpacing: 0.2,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      // Contenido: campos
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+                        child: TextSelectionTheme(
+                          data: TextSelectionThemeData(
+                            cursorColor: AppTheme.primaryColor,
+                            selectionColor: AppTheme.primaryColor.withOpacity(0.3),
+                            selectionHandleColor: AppTheme.primaryColor,
+                          ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Text(
+                                'Datos del proveedor',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  letterSpacing: 0.8,
+                                  color: subColor,
+                                ),
+                              ),
+                              const SizedBox(height: 14),
+                              Text(
+                                'Cantidad',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
+                                  color: subColor,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              TextField(
+                                controller: cantidadController,
+                                onChanged: (_) => setModalState(() {}),
+                                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                inputFormatters: [
+                                  FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                                ],
+                                style: TextStyle(color: textColor, fontSize: 17, fontWeight: FontWeight.w500),
+                                decoration: InputDecoration(
+                                  hintText: 'Ej: 10',
+                                  hintStyle: TextStyle(color: subColor.withOpacity(0.7)),
+                                  filled: true,
+                                  fillColor: fillField,
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                    borderSide: BorderSide(color: borderColor),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                    borderSide: const BorderSide(color: AppTheme.primaryColor, width: 2),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 18),
+                              Text(
+                                'Subtotal',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
+                                  color: subColor,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              TextField(
+                                controller: subtotalController,
+                                onChanged: (_) => setModalState(() {}),
+                                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                inputFormatters: [
+                                  FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                                ],
+                                style: TextStyle(color: textColor, fontSize: 17, fontWeight: FontWeight.w500),
+                                decoration: InputDecoration(
+                                  hintText: '0.00',
+                                  hintStyle: TextStyle(color: subColor.withOpacity(0.7)),
+                                  prefixText: '\$ ',
+                                  prefixStyle: TextStyle(
+                                    fontSize: 17,
+                                    fontWeight: FontWeight.w600,
+                                    color: subColor,
+                                  ),
+                                  filled: true,
+                                  fillColor: fillField,
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                    borderSide: BorderSide(color: borderColor),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                    borderSide: const BorderSide(color: AppTheme.primaryColor, width: 2),
+                                  ),
+                                ),
+                              ),
+                              if (cant > 0 && sub > 0) ...[
+                                const SizedBox(height: 16),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.primaryColor.withOpacity(0.12),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: AppTheme.primaryColor.withOpacity(0.3),
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        'Costo unitario',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w500,
+                                          color: subColor,
+                                        ),
+                                      ),
+                                      Text(
+                                        '\$${costoUnit.toStringAsFixed(2)}',
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w700,
+                                          color: AppTheme.primaryColor,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                              const SizedBox(height: 24),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: TextButton(
+                                      onPressed: () => Navigator.pop(ctx, false),
+                                      style: TextButton.styleFrom(
+                                        backgroundColor: isDark ? const Color(0xFF2A2A2A) : Colors.grey.shade200,
+                                        foregroundColor: textColor,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
+                                        ),
+                                        padding: const EdgeInsets.symmetric(vertical: 14),
+                                      ),
+                                      child: const Text(
+                                        'Cancelar',
+                                        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: ElevatedButton.icon(
+                                      onPressed: isValid
+                                          ? () {
+                                              final c = double.tryParse(cantidadController.text.replaceAll(',', '.')) ?? 0.0;
+                                              final s = double.tryParse(subtotalController.text.replaceAll(',', '.')) ?? 0.0;
+                                              if (c <= 0 || s < 0) return;
+                                              Navigator.pop(ctx, true);
+                                            }
+                                          : null,
+                                      icon: const Icon(Icons.add_rounded, size: 20),
+                                      label: const Text(
+                                        'Agregar',
+                                        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+                                      ),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: AppTheme.primaryColor,
+                                        foregroundColor: Colors.white,
+                                        disabledBackgroundColor: isDark ? Colors.grey.shade800 : Colors.grey.shade300,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
+                                        ),
+                                        padding: const EdgeInsets.symmetric(vertical: 14),
+                                        elevation: 2,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+    // Leer valores antes de disponer; disponer en el siguiente frame para no usar el controller tras dispose
+    final cant = double.tryParse(cantidadController.text.replaceAll(',', '.')) ?? 0.0;
+    final sub = double.tryParse(subtotalController.text.replaceAll(',', '.')) ?? 0.0;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      cantidadController.dispose();
+      subtotalController.dispose();
+    });
+    if (ok != true || !mounted) return;
+    if (cant <= 0 || sub < 0) return;
+    final costoUnitario = sub / cant;
+    setState(() {
+      _productosCompra.add(ProductoSeleccionado(
+        id: producto.id!,
+        nombre: producto.nombre,
+        precio: costoUnitario,
+        cantidad: cant,
+        categoria: producto.categoriaNombre ?? '',
+        categoriaId: producto.categoriaId,
+        stock: producto.stock,
+      ));
+    });
   }
 
   /// Máximo permitido por stock (evita superar stock al agregar productos).
@@ -879,14 +1188,45 @@ class _SeleccionarProductosScreenState
     );
   }
 
-  // Función especial para el total de la venta
-  Widget _formatearTotalVenta() {
+  /// Total formateado para modo compra (verde, mismo estilo que venta).
+  Widget _formatearTotalCompra() {
+    final total = _productosCompra.fold<double>(0, (s, p) => s + p.precio * p.cantidad);
+    final totalStr = total.toStringAsFixed(2);
+    final partes = totalStr.split('.');
+    final parteEntera = partes[0];
+    final parteDecimal = partes[1];
+    const fontSize = 22.0;
+    return RichText(
+      text: TextSpan(
+        children: [
+          TextSpan(
+            text: '\$$parteEntera',
+            style: TextStyle(
+              fontSize: fontSize,
+              fontWeight: FontWeight.bold,
+              color: AppTheme.primaryColor,
+            ),
+          ),
+          TextSpan(
+            text: ',$parteDecimal',
+            style: TextStyle(
+              fontSize: fontSize * 0.7,
+              fontWeight: FontWeight.w600,
+              color: AppTheme.primaryColor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Función especial para el total de la venta (opcional fontSize para footer, ej. 22)
+  Widget _formatearTotalVenta({double fontSize = 18}) {
     final total = cantidades.entries.where((e) => e.value > 0).map((e) {
       final producto = productos.firstWhere(
         (p) => p.id == e.key,
         orElse: () => throw Exception('Producto no encontrado'),
       );
-      // _getPrecioFinal ya devuelve el precio total para la cantidad, no multiplicar de nuevo
       return _getPrecioFinal(producto);
     }).fold<double>(0.0, (a, b) => a + b);
 
@@ -895,14 +1235,15 @@ class _SeleccionarProductosScreenState
     final parteEntera = partes[0].replaceAllMapped(
         RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (match) => '${match[1]}.');
     final parteDecimal = partes[1];
+    final decimalSize = fontSize * 0.7;
 
     return RichText(
       text: TextSpan(
         children: [
           TextSpan(
             text: '\$$parteEntera',
-            style: const TextStyle(
-              fontSize: 18,
+            style: TextStyle(
+              fontSize: fontSize,
               fontWeight: FontWeight.bold,
               color: AppTheme.primaryColor,
             ),
@@ -910,10 +1251,9 @@ class _SeleccionarProductosScreenState
           TextSpan(
             text: ',$parteDecimal',
             style: TextStyle(
-              fontSize: 12,
-              color: Theme.of(context).brightness == Brightness.dark
-                  ? Colors.grey.shade400
-                  : Colors.grey.shade400,
+              fontSize: decimalSize,
+              fontWeight: FontWeight.w600,
+              color: AppTheme.primaryColor,
             ),
           ),
         ],
@@ -1272,23 +1612,17 @@ class _SeleccionarProductosScreenState
       selectedCategory = categorias.first.nombre;
     }
 
-    // Lógica de filtrado: búsqueda global vs filtro por categoría
-    List<Producto> filteredProductos;
-
-    if (searchQuery.isNotEmpty) {
-      // Modo búsqueda global: buscar en todo el catálogo
-      filteredProductos = productos.where((producto) {
-        return producto.nombre
-            .toLowerCase()
-            .contains(searchQuery.toLowerCase());
-      }).toList();
-    } else {
-      // Modo categoría: filtrar por categoría seleccionada
-      filteredProductos = productos.where((producto) {
-        return selectedCategory == null ||
-            producto.categoriaNombre == selectedCategory;
-      }).toList();
-    }
+    // Lógica de filtrado: nombre + marca + categoría
+    final filteredProductos = productos.where((producto) {
+      final matchesSearch = searchQuery.isEmpty ||
+          producto.nombre.toLowerCase().contains(searchQuery.trim().toLowerCase());
+      final matchesMarca = searchMarca.isEmpty ||
+          (producto.marca != null &&
+              producto.marca!.toLowerCase().contains(searchMarca.trim().toLowerCase()));
+      final matchesCategory = selectedCategory == null ||
+          producto.categoriaNombre == selectedCategory;
+      return matchesSearch && matchesMarca && matchesCategory;
+    }).toList();
 
     // Ordenar alfabéticamente
     filteredProductos.sort(
@@ -1298,7 +1632,8 @@ class _SeleccionarProductosScreenState
       resizeToAvoidBottomInset: false,
       appBar: AppBar(
         centerTitle: true,
-        title: const Text('Nueva venta', style: AppTheme.appBarTitleStyle),
+        title: Text(widget.appBarTitle ?? 'Nueva venta', style: AppTheme.appBarTitleStyle),
+        actions: [],
       ),
       body: isLoading
           ? Center(
@@ -1341,11 +1676,9 @@ class _SeleccionarProductosScreenState
                           onChanged: (value) {
                             setState(() {
                               searchQuery = value;
-                              // Cuando hay búsqueda, limpiar la categoría seleccionada
                               if (value.isNotEmpty) {
                                 selectedCategory = null;
                               } else {
-                                // Cuando se limpia la búsqueda, restaurar la primera categoría
                                 if (categorias.isNotEmpty) {
                                   selectedCategory = categorias.first.nombre;
                                 }
@@ -1355,19 +1688,130 @@ class _SeleccionarProductosScreenState
                           onClear: () {
                             setState(() {
                               searchQuery = '';
-                              // Restaurar la primera categoría cuando se limpia la búsqueda
                               if (categorias.isNotEmpty) {
                                 selectedCategory = categorias.first.nombre;
                               }
                             });
                             _searchController.clear();
                           },
+                          trailing: IconButton(
+                            icon: Icon(
+                              Icons.tune_rounded,
+                              color: _advancedSearchExpanded
+                                  ? AppTheme.primaryColor
+                                  : (Theme.of(context).brightness == Brightness.dark
+                                      ? Colors.grey[400]
+                                      : Colors.grey[600]),
+                              size: 22,
+                            ),
+                            onPressed: () {
+                              setState(() => _advancedSearchExpanded = !_advancedSearchExpanded);
+                            },
+                            tooltip: 'Buscador avanzado',
+                          ),
+                        ),
+
+                        // Buscador avanzado (Marca + limpiar como icono en el input)
+                        AnimatedSize(
+                          duration: const Duration(milliseconds: 250),
+                          curve: Curves.easeInOut,
+                          child: _advancedSearchExpanded
+                              ? Padding(
+                                  padding: const EdgeInsets.only(top: 10),
+                                  child: Builder(
+                                    builder: (context) {
+                                      final isDark = Theme.of(context).brightness == Brightness.dark;
+                                      return Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text(
+                                            'Marca',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w600,
+                                              letterSpacing: 0.5,
+                                              color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 6),
+                                          TextField(
+                                            controller: _marcaController,
+                                            onChanged: (value) => setState(() => searchMarca = value),
+                                            style: TextStyle(
+                                              fontSize: 15,
+                                              color: isDark ? Colors.white : Colors.black87,
+                                            ),
+                                            decoration: InputDecoration(
+                                              hintText: 'Filtrar por marca',
+                                              hintStyle: TextStyle(
+                                                color: Colors.grey.shade500,
+                                                fontSize: 14,
+                                              ),
+                                              filled: true,
+                                              fillColor: isDark ? const Color(0xFF2A2A2A) : Colors.grey.shade50,
+                                              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                              border: OutlineInputBorder(
+                                                borderRadius: BorderRadius.circular(12),
+                                                borderSide: BorderSide(
+                                                  color: isDark ? Colors.grey.shade600 : Colors.grey.shade300,
+                                                ),
+                                              ),
+                                              enabledBorder: OutlineInputBorder(
+                                                borderRadius: BorderRadius.circular(12),
+                                                borderSide: BorderSide(
+                                                  color: isDark ? Colors.grey.shade600 : Colors.grey.shade300,
+                                                ),
+                                              ),
+                                              focusedBorder: OutlineInputBorder(
+                                                borderRadius: BorderRadius.circular(12),
+                                                borderSide: const BorderSide(
+                                                  color: AppTheme.primaryColor,
+                                                  width: 2,
+                                                ),
+                                              ),
+                                              prefixIcon: Icon(
+                                                Icons.sell_outlined,
+                                                size: 20,
+                                                color: isDark ? Colors.grey.shade500 : Colors.grey.shade600,
+                                              ),
+                                              suffixIcon: IconButton(
+                                                onPressed: () {
+                                                  setState(() {
+                                                    searchQuery = '';
+                                                    searchMarca = '';
+                                                    if (categorias.isNotEmpty) {
+                                                      selectedCategory = categorias.first.nombre;
+                                                    }
+                                                    _marcaController.clear();
+                                                    _searchController.clear();
+                                                  });
+                                                },
+                                                icon: Icon(
+                                                  Icons.clear_all_rounded,
+                                                  size: 20,
+                                                  color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                                                ),
+                                                tooltip: 'Limpiar filtros',
+                                                style: IconButton.styleFrom(
+                                                  padding: const EdgeInsets.all(8),
+                                                  minimumSize: const Size(36, 36),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      );
+                                    },
+                                  ),
+                                )
+                              : const SizedBox.shrink(),
                         ),
 
                         const SizedBox(height: 16),
 
-                        // Filtros de categorías (solo mostrar cuando NO hay búsqueda activa)
-                        if (searchQuery.isEmpty && categorias.isNotEmpty) ...[
+                        // Filtros de categorías (solo cuando no hay búsqueda ni filtro por marca)
+                        if (searchQuery.isEmpty && searchMarca.isEmpty && categorias.isNotEmpty) ...[
                           SizedBox(
                             height: 45,
                             child: ListView.builder(
@@ -1434,9 +1878,9 @@ class _SeleccionarProductosScreenState
                           )
                         ],
 
-                        // Indicador de búsqueda global o título normal
+                        // Indicador de búsqueda global (nombre o marca)
                         if (filteredProductos.isNotEmpty) ...[
-                          if (searchQuery.isNotEmpty) ...[
+                          if (searchQuery.isNotEmpty || searchMarca.isNotEmpty) ...[
                             Row(
                               children: [
                                 Container(
@@ -1548,7 +1992,7 @@ class _SeleccionarProductosScreenState
                                           ),
                                           const SizedBox(height: 16),
                                           Text(
-                                            searchQuery.isNotEmpty
+                                            (searchQuery.isNotEmpty || searchMarca.isNotEmpty)
                                                 ? 'Sin resultados'
                                                 : selectedCategory != null
                                                     ? 'No hay productos en esta categoría'
@@ -1566,8 +2010,12 @@ class _SeleccionarProductosScreenState
                                           ),
                                           const SizedBox(height: 8),
                                           Text(
-                                            searchQuery.isNotEmpty
-                                                ? 'No se encontraron productos que coincidan con "$searchQuery"'
+                                            (searchQuery.isNotEmpty || searchMarca.isNotEmpty)
+                                                ? (searchQuery.isNotEmpty && searchMarca.isNotEmpty
+                                                    ? 'No hay productos con "$searchQuery" y marca "$searchMarca"'
+                                                    : searchQuery.isNotEmpty
+                                                        ? 'No se encontraron productos que coincidan con "$searchQuery"'
+                                                        : 'No se encontraron productos con marca "$searchMarca"')
                                                 : 'Intenta con otra categoría o término de búsqueda',
                                             style: TextStyle(
                                               color: Theme.of(context)
@@ -1651,6 +2099,10 @@ class _SeleccionarProductosScreenState
                                         GestureDetector(
                                           behavior: HitTestBehavior.opaque,
                                           onTap: () {
+                                            if (widget.modoCompra) {
+                                              _showDialogCantidadSubtotalCompra(producto);
+                                              return;
+                                            }
                                             setState(() {
                                               if (isExpanded) {
                                                 _expandedProducts
@@ -2127,7 +2579,7 @@ class _SeleccionarProductosScreenState
               ),
             ),
       bottomNavigationBar: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
         decoration: BoxDecoration(
           color: Theme.of(context).brightness == Brightness.dark
               ? const Color(0xFF1A1A1A)
@@ -2143,33 +2595,73 @@ class _SeleccionarProductosScreenState
               children: [
                 // Información de productos seleccionados
                 Expanded(
-                  flex: 2,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Total:',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Theme.of(context).brightness == Brightness.dark
-                              ? Colors.grey.shade400
-                              : Colors.grey.shade600,
-                          fontWeight: FontWeight.w500,
+                  flex: 9,
+                  child: widget.modoCompra
+                      ? Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Total',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.grey.shade300
+                                    : Colors.grey.shade600,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            _formatearTotalCompra(),
+                            Text(
+                              '${_productosCompra.length} producto${_productosCompra.length == 1 ? '' : 's'}',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.grey.shade400
+                                    : Colors.grey.shade500,
+                              ),
+                            ),
+                          ],
+                        )
+                      : Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Total',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.grey.shade300
+                                    : Colors.grey.shade600,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            _formatearTotalVenta(fontSize: 22),
+                            Text(
+                              '${cantidades.entries.where((e) => e.value > 0).length} producto${cantidades.entries.where((e) => e.value > 0).length == 1 ? '' : 's'}',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.grey.shade400
+                                    : Colors.grey.shade500,
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                      _formatearTotalVenta(),
-                    ],
-                  ),
                 ),
 
                 const SizedBox(width: 16),
 
-                // Botón confirmar
+                // Botón confirmar compra / Confirmar Venta (ambos iguales)
                 Expanded(
-                  flex: 2,
+                  flex: 10,
                   child: ElevatedButton.icon(
                     onPressed: () {
+                      if (widget.modoCompra) {
+                        Navigator.pop(context, _productosCompra);
+                        return;
+                      }
                       final seleccionados =
                           cantidades.entries.where((e) => e.value > 0).map((e) {
                         final producto = filteredProductos.firstWhere(
@@ -2215,14 +2707,28 @@ class _SeleccionarProductosScreenState
 
                       Navigator.pop(context, seleccionados);
                     },
-                    style: AppTheme.elevatedButtonStyle(Colors.green),
-                    icon: const Icon(Icons.check_circle, color: Colors.white),
-                    label: const Text(
-                      'Confirmar',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 18),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      elevation: 3,
+                    ),
+                    icon: Icon(
+                      Icons.check_circle,
+                      color: Colors.white,
+                    ),
+                    label: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        widget.modoCompra ? 'Confirmar compra' : 'Confirmar Venta',
+                        style: const TextStyle(
+                          fontSize: 15,
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ),
