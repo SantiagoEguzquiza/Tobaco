@@ -67,18 +67,23 @@ class _ComprasScreenState extends State<ComprasScreen> {
                       await comprasProvider.cargarCompras();
                     }
                   },
-                  icon: const Icon(Icons.add, color: Colors.white, size: 22),
-                  label: const Text(
+                  icon: Icon(
+                    Icons.add,
+                    color: Colors.white,
+                    size: AppTheme.ventasButtonIconSize(context),
+                  ),
+                  label: Text(
                     'Nueva compra',
                     style: TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.w600,
-                      fontSize: 16,
+                      fontSize: AppTheme.ventasButtonFontSize(context),
                     ),
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.primaryColor,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    foregroundColor: Colors.white,
+                    padding: AppTheme.ventasButtonPadding(context),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
                     ),
@@ -97,7 +102,11 @@ class _ComprasScreenState extends State<ComprasScreen> {
 
   Widget _buildList(ComprasProvider provider, bool isDark) {
     if (provider.isLoading && provider.compras.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
+      return Center(
+        child: CircularProgressIndicator(
+          valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
+        ),
+      );
     }
     if ((provider.errorMessage != null || provider.isConnectionError) && provider.compras.isEmpty) {
       return Center(
@@ -188,6 +197,7 @@ class _ComprasScreenState extends State<ComprasScreen> {
   Widget _buildCard(BuildContext context, Compra compra, bool isDark) {
     final proveedorNombre = compra.proveedor?.nombre ?? 'Proveedor #${compra.proveedorId}';
     final fechaStr = _formatFecha(compra.fecha);
+    final isCompact = AppTheme.isCompactVentasButton(context);
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -205,7 +215,7 @@ class _ComprasScreenState extends State<ComprasScreen> {
             );
           },
           child: Container(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(isCompact ? 14 : 16),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(AppTheme.borderRadiusCards),
               boxShadow: [
@@ -219,39 +229,49 @@ class _ComprasScreenState extends State<ComprasScreen> {
             child: Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(10),
+                  padding: EdgeInsets.all(isCompact ? 8 : 10),
                   decoration: BoxDecoration(
                     color: AppTheme.primaryColor.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(Icons.receipt_long, color: AppTheme.primaryColor, size: 28),
+                  child: Icon(
+                    Icons.receipt_long,
+                    color: AppTheme.primaryColor,
+                    size: isCompact ? 24 : 28,
+                  ),
                 ),
-                const SizedBox(width: 16),
+                SizedBox(width: isCompact ? 12 : 16),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         proveedorNombre,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           fontWeight: FontWeight.w600,
-                          fontSize: 16,
+                          fontSize: isCompact ? 15 : 16,
                           color: isDark ? Colors.white : Colors.black87,
                         ),
                       ),
-                      const SizedBox(height: 4),
+                      SizedBox(height: isCompact ? 2 : 4),
                       Text(
                         fechaStr,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          fontSize: 14,
+                          fontSize: isCompact ? 13 : 14,
                           color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
                         ),
                       ),
                       if (compra.numeroComprobante != null && compra.numeroComprobante!.isNotEmpty)
                         Text(
                           'Comprobante: ${compra.numeroComprobante}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            fontSize: 12,
+                            fontSize: isCompact ? 11 : 12,
                             color: isDark ? Colors.grey.shade500 : Colors.grey.shade500,
                           ),
                         ),
@@ -266,12 +286,16 @@ class _ComprasScreenState extends State<ComprasScreen> {
                       '\$${compra.total.toStringAsFixed(2)}',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
-                        fontSize: 16,
+                        fontSize: isCompact ? 14 : 16,
                         color: isDark ? Colors.white : Colors.black87,
                       ),
                     ),
-                    const SizedBox(width: 4),
-                    const Icon(Icons.chevron_right, color: Colors.grey),
+                    SizedBox(width: isCompact ? 2 : 4),
+                    Icon(
+                      Icons.chevron_right,
+                      color: Colors.grey,
+                      size: isCompact ? 20 : 24,
+                    ),
                   ],
                 ),
               ],

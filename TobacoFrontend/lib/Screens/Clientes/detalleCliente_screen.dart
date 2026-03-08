@@ -138,6 +138,7 @@ class DetalleClienteScreen extends StatelessWidget {
 
             // Botón volver
             _buildBackButton(context),
+            const SizedBox(height: 36),
           ],
         ),
       ),

@@ -603,12 +603,14 @@ class _ResumenVentaScreenState extends State<ResumenVentaScreen> {
                         showModalBottomSheet(
                           context: context,
                           backgroundColor: Colors.transparent,
+                          isScrollControlled: true,
                           builder: (sheetContext) {
                             final isDark = Theme.of(sheetContext).brightness == Brightness.dark;
                             final bg = isDark ? const Color(0xFF1E1E1E) : Colors.white;
                             final cardBg = isDark ? const Color(0xFF2A2A2A) : const Color(0xFFF8F8F8);
                             final textColor = isDark ? Colors.white : Colors.black87;
                             final subColor = isDark ? Colors.grey.shade400 : Colors.grey.shade600;
+                            final maxHeight = MediaQuery.of(sheetContext).size.height * 0.7;
                             return Container(
                               decoration: BoxDecoration(
                                 color: bg,
@@ -623,30 +625,33 @@ class _ResumenVentaScreenState extends State<ResumenVentaScreen> {
                               ),
                               child: SafeArea(
                                 top: false,
-                                child: Padding(
-                                  padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Container(
-                                        width: 40,
-                                        height: 4,
-                                        decoration: BoxDecoration(
-                                          color: subColor,
-                                          borderRadius: BorderRadius.circular(2),
-                                        ),
-                                      ),
-                                      const SizedBox(height: 20),
-                                      Text(
-                                        'Opciones de impresión',
-                                        style: TextStyle(
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.w600,
-                                          color: textColor,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 20),
-                                      _PrintOptionTile(
+                                child: ConstrainedBox(
+                                  constraints: BoxConstraints(maxHeight: maxHeight),
+                                  child: Padding(
+                                    padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
+                                    child: SingleChildScrollView(
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Container(
+                                            width: 40,
+                                            height: 4,
+                                            decoration: BoxDecoration(
+                                              color: subColor,
+                                              borderRadius: BorderRadius.circular(2),
+                                            ),
+                                          ),
+                                          const SizedBox(height: 20),
+                                          Text(
+                                            'Opciones de impresión',
+                                            style: TextStyle(
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.w600,
+                                              color: textColor,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 20),
+                                          _PrintOptionTile(
                                         icon: Icons.picture_as_pdf_rounded,
                                         title: 'Imprimir PDF',
                                         subtitle: 'Vista previa e impresión del comprobante',
@@ -707,7 +712,9 @@ class _ResumenVentaScreenState extends State<ResumenVentaScreen> {
                                           }
                                         },
                                       ),
-                                    ],
+                                        ],
+                                      ),
+                                    ),
                                   ),
                                 ),
                               ),

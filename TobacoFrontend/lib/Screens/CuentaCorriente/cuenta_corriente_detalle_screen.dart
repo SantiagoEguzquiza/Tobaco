@@ -360,11 +360,12 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
 
             return AlertDialog(
               backgroundColor: bgDialog,
+              insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
               ),
-              titlePadding: const EdgeInsets.fromLTRB(24, 20, 24, 12),
-              contentPadding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
+              titlePadding: const EdgeInsets.fromLTRB(24, 18, 24, 10),
+              contentPadding: const EdgeInsets.fromLTRB(24, 0, 24, 14),
               title: Row(
                 children: [
                   Container(
@@ -458,7 +459,7 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
                           ],
                         ),
                       ),
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 16),
 
                       if (errorMessage != null) ...[
                         Container(
@@ -526,7 +527,7 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
                           ),
                         ),
                       ),
-                      const SizedBox(height: 18),
+                      const SizedBox(height: 14),
 
                       Text(
                         'Nota (opcional)',
@@ -561,7 +562,7 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
                           ),
                         ),
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 14),
 
                       Row(
                         children: [
@@ -569,8 +570,8 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
                             child: TextButton(
                               onPressed: () => Navigator.of(context).pop(),
                               style: TextButton.styleFrom(
-                                backgroundColor: isDark ? const Color(0xFF2A2A2A) : Colors.grey.shade200,
-                                foregroundColor: textColor,
+                                backgroundColor: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
+                                foregroundColor: isDark ? Colors.grey.shade200 : Colors.grey.shade800,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
                                 ),
@@ -743,18 +744,6 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
                   ),
                 ],
               ),
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _mostrarModalSaldarDeuda,
-        backgroundColor: AppTheme.primaryColor,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
-        ),
-        icon: const Icon(Icons.payment, color: Colors.white),
-        label: const Text(
-          'Registrar abono',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
       ),
       ),
     );
@@ -977,11 +966,16 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
     }
 
     if (ventasCC.isEmpty) {
-      return _buildEmptyState(
-        isDarkMode: isDarkMode,
-        icon: Icons.receipt_long,
-        title: 'No hay ventas a cuenta corriente',
-        subtitle: 'El historial de ventas a CC aparecerá aquí',
+      final bottomPad = MediaQuery.of(context).padding.bottom + 88;
+      return SingleChildScrollView(
+        padding: EdgeInsets.fromLTRB(16, 8, 16, bottomPad),
+        child: _buildEmptyState(
+          context: context,
+          isDarkMode: isDarkMode,
+          icon: Icons.receipt_long,
+          title: 'No hay ventas a cuenta corriente',
+          subtitle: 'El historial de ventas a CC aparecerá aquí',
+        ),
       );
     }
 
@@ -1008,70 +1002,65 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
       );
     }
 
-    if (abonos.isEmpty) {
-      return Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: abonos.isEmpty
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                    child: _buildEmptyState(
+                      context: context,
+                      isDarkMode: isDarkMode,
+                      icon: Icons.payment,
+                      title: 'No hay abonos registrados',
+                      subtitle: 'Este cliente aún no ha realizado ningún abono',
+                    ),
+                  ),
+                )
+              : ListView.builder(
+                  padding:
+                      const EdgeInsets.only(left: 16, right: 16, top: 0, bottom: 16),
+                  itemCount: abonos.length,
+                  itemBuilder: (context, index) {
+                    final abono = abonos[index];
+                    return _buildAbonoCard(abono, isDarkMode);
+                  },
+                ),
+        ),
+        Container(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+          decoration: BoxDecoration(
+            color: isDarkMode ? const Color(0xFF121212) : Colors.white,
+            border: Border(
+              top: BorderSide(
+                color: isDarkMode ? Colors.grey.shade800 : Colors.grey.shade200,
+              ),
+            ),
+          ),
+          child: SafeArea(
+            top: false,
             child: SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
                 onPressed: _mostrarModalSaldarDeuda,
                 icon: const Icon(Icons.payment_rounded, size: 20),
-                label: const Text('Registrar abono', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                label: const Text(
+                  'Registrar abono',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.primaryColor,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
+                    borderRadius:
+                        BorderRadius.circular(AppTheme.borderRadiusMainButtons),
                   ),
                 ),
               ),
             ),
-          ),
-          Expanded(
-            child: _buildEmptyState(
-              isDarkMode: isDarkMode,
-              icon: Icons.payment,
-              title: 'No hay abonos registrados',
-              subtitle: 'Este cliente aún no ha realizado ningún abono',
-            ),
-          ),
-        ],
-      );
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-          child: SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: _mostrarModalSaldarDeuda,
-              icon: const Icon(Icons.payment_rounded, size: 20),
-              label: const Text('Registrar abono', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primaryColor,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
-                ),
-              ),
-            ),
-          ),
-        ),
-        Expanded(
-          child: ListView.builder(
-            padding: const EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 72),
-            itemCount: abonos.length,
-            itemBuilder: (context, index) {
-              final abono = abonos[index];
-              return _buildAbonoCard(abono, isDarkMode);
-            },
           ),
         ),
       ],
@@ -1088,11 +1077,16 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
     }
 
     if (notasCredito.isEmpty) {
-      return _buildEmptyState(
-        isDarkMode: isDarkMode,
-        icon: Icons.receipt,
-        title: 'No hay notas de crédito',
-        subtitle: 'Aún no se registraron notas de crédito para este cliente',
+      final bottomPad = MediaQuery.of(context).padding.bottom + 88;
+      return SingleChildScrollView(
+        padding: EdgeInsets.fromLTRB(16, 8, 16, bottomPad),
+        child: _buildEmptyState(
+          context: context,
+          isDarkMode: isDarkMode,
+          icon: Icons.receipt,
+          title: 'No hay notas de crédito',
+          subtitle: 'Aún no se registraron notas de crédito para este cliente',
+        ),
       );
     }
 
@@ -1116,11 +1110,16 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
     }
 
     if (productosAFavor.isEmpty) {
-      return _buildEmptyState(
-        isDarkMode: isDarkMode,
-        icon: Icons.inventory_2_outlined,
-        title: 'Sin productos a favor',
-        subtitle: 'No hay entregas pendientes para este cliente',
+      final bottomPad = MediaQuery.of(context).padding.bottom + 88;
+      return SingleChildScrollView(
+        padding: EdgeInsets.fromLTRB(16, 8, 16, bottomPad),
+        child: _buildEmptyState(
+          context: context,
+          isDarkMode: isDarkMode,
+          icon: Icons.inventory_2_outlined,
+          title: 'Sin productos a favor',
+          subtitle: 'No hay entregas pendientes para este cliente',
+        ),
       );
     }
 
@@ -1878,41 +1877,53 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
   }
 
   Widget _buildEmptyState({
-    required bool isDarkMode, 
-    required IconData icon, 
-    required String title, 
-    required String subtitle
+    required BuildContext context,
+    required bool isDarkMode,
+    required IconData icon,
+    required String title,
+    required String subtitle,
   }) {
-    return Center(
+    final screenHeight = MediaQuery.of(context).size.height;
+    final isCompact = screenHeight < 600;
+    final iconSize = isCompact ? 40.0 : 52.0;
+    final iconPadding = isCompact ? 10.0 : 14.0;
+    final titleSize = isCompact ? 16.0 : 17.0;
+    final subtitleSize = isCompact ? 13.0 : 14.0;
+    final spacing = isCompact ? 8.0 : 12.0;
+    final subSpacing = isCompact ? 4.0 : 6.0;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            padding: const EdgeInsets.all(20),
+            padding: EdgeInsets.all(iconPadding),
             decoration: BoxDecoration(
               color: isDarkMode ? Colors.grey.shade800 : Colors.grey.shade100,
               shape: BoxShape.circle,
             ),
             child: Icon(
               icon,
-              size: 60,
+              size: iconSize,
               color: isDarkMode ? Colors.grey.shade600 : Colors.grey.shade400,
             ),
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: spacing),
           Text(
             title,
             style: TextStyle(
-              fontSize: 18,
+              fontSize: titleSize,
               color: isDarkMode ? Colors.grey.shade300 : Colors.grey.shade600,
               fontWeight: FontWeight.w500,
             ),
+            textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: subSpacing),
           Text(
             subtitle,
             style: TextStyle(
-              fontSize: 14,
+              fontSize: subtitleSize,
               color: isDarkMode ? Colors.grey.shade500 : Colors.grey.shade400,
             ),
             textAlign: TextAlign.center,

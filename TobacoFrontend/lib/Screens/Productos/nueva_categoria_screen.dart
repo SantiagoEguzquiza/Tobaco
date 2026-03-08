@@ -119,73 +119,86 @@ class _NuevaCategoriaScreenState extends State<NuevaCategoriaScreen> {
             ),
           ),
         ),
-        bottomNavigationBar: Container(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-          decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(isDark ? 0.2 : 0.08),
-                blurRadius: 8,
-                offset: const Offset(0, -2),
-              ),
-            ],
-          ),
-          child: SafeArea(
-            top: false,
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextButton(
-                    onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
-                    style: TextButton.styleFrom(
-                      backgroundColor: isDark ? const Color(0xFF2A2A2A) : Colors.grey.shade200,
-                      foregroundColor: isDark ? Colors.white : Colors.black87,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
-                      ),
-                    ),
-                    child: const Text('Cancelar', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
+        bottomNavigationBar: Builder(
+          builder: (context) {
+            final size = MediaQuery.of(context).size;
+            final isSmallPhone = size.width < 400 || size.height < 640;
+            final btnPadding = isSmallPhone ? 12.0 : 16.0;
+            final btnHeight = isSmallPhone ? 48.0 : 56.0;
+            final fontSize = isSmallPhone ? 14.0 : 16.0;
+            final iconSize = isSmallPhone ? 18.0 : 22.0;
+            final barPadding = isSmallPhone ? EdgeInsets.fromLTRB(12, 8, 12, 12) : const EdgeInsets.fromLTRB(16, 12, 16, 16);
+            return Container(
+              padding: barPadding,
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(isDark ? 0.2 : 0.08),
+                    blurRadius: 8,
+                    offset: const Offset(0, -2),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _isLoading
-                      ? Container(
-                          height: 56,
-                          decoration: BoxDecoration(
-                            color: AppTheme.primaryColor,
+                ],
+              ),
+              child: SafeArea(
+                top: false,
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextButton(
+                        onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
+                        style: TextButton.styleFrom(
+                          backgroundColor: isDark ? const Color(0xFF2A2A2A) : Colors.grey.shade200,
+                          foregroundColor: isDark ? Colors.white : Colors.black87,
+                          padding: EdgeInsets.symmetric(vertical: btnPadding),
+                          minimumSize: Size(0, btnHeight),
+                          shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
                           ),
-                          child: const Center(
-                            child: SizedBox(
-                              width: 24,
-                              height: 24,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 3,
-                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                        child: Text('Cancelar', style: TextStyle(fontWeight: FontWeight.w600, fontSize: fontSize)),
+                      ),
+                    ),
+                    SizedBox(width: isSmallPhone ? 8 : 12),
+                    Expanded(
+                      child: _isLoading
+                          ? Container(
+                              height: btnHeight,
+                              decoration: BoxDecoration(
+                                color: AppTheme.primaryColor,
+                                borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
+                              ),
+                              child: const Center(
+                                child: SizedBox(
+                                  width: 24,
+                                  height: 24,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 3,
+                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                  ),
+                                ),
+                              ),
+                            )
+                          : ElevatedButton.icon(
+                              onPressed: _crearCategoria,
+                              icon: Icon(Icons.add_circle_outline, size: iconSize),
+                              label: Text('Crear categoría', style: TextStyle(fontSize: fontSize, fontWeight: FontWeight.w600)),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppTheme.primaryColor,
+                                foregroundColor: Colors.white,
+                                padding: EdgeInsets.symmetric(vertical: btnPadding),
+                                minimumSize: Size(0, btnHeight),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
+                                ),
                               ),
                             ),
-                          ),
-                        )
-                      : ElevatedButton.icon(
-                          onPressed: _crearCategoria,
-                          icon: const Icon(Icons.add_circle_outline, size: 22),
-                          label: const Text('Crear categoría', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.primaryColor,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
-                            ),
-                          ),
-                        ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         ),
       ),
     );

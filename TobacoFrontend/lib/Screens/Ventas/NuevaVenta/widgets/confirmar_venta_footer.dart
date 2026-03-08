@@ -61,6 +61,7 @@ class ConfirmarVentaFooter extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
     final isKeyboardVisible = keyboardHeight > 0;
+    final isCompact = AppTheme.isCompactVentasButton(context);
 
     if (!enabled) {
       return const SizedBox.shrink();
@@ -159,18 +160,22 @@ class ConfirmarVentaFooter extends StatelessWidget {
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    padding: const EdgeInsets.symmetric(vertical: 18),
+                    padding: AppTheme.ventasButtonPadding(context),
                     elevation: 3,
                   ),
-                  icon: const Icon(Icons.check_circle, color: Colors.white),
+                  icon: Icon(
+                    Icons.check_circle,
+                    color: Colors.white,
+                    size: AppTheme.ventasButtonIconSize(context),
+                  ),
                   label: FittedBox(
                     fit: BoxFit.scaleDown,
-                    child: const Text(
+                    child: Text(
                       'Confirmar Venta',
                       style: TextStyle(
-                        fontSize: 15,
+                        fontSize: isCompact ? 14 : 16,
                         color: Colors.white,
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),

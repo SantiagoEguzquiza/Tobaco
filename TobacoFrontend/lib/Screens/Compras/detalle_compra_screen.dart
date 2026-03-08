@@ -113,9 +113,13 @@ class _DetalleCompraScreenState extends State<DetalleCompraScreen> {
               _card(
                 isDark: isDark,
                 child: _loading && compra.items.isEmpty
-                    ? const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 24),
-                        child: Center(child: CircularProgressIndicator()),
+                    ? Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 24),
+                        child: Center(
+                          child: CircularProgressIndicator(
+                            valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
+                          ),
+                        ),
                       )
                     : compra.items.isEmpty
                         ? Text(
@@ -215,24 +219,34 @@ class _DetalleCompraScreenState extends State<DetalleCompraScreen> {
   }
 
   Widget _row(String label, String value, bool isDark) {
+    final isCompact = AppTheme.isCompactVentasButton(context);
     return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
+      padding: EdgeInsets.only(bottom: isCompact ? 8 : 6),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 14,
-              color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: isCompact ? 13 : 14,
+                height: 1.2,
+                color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+              ),
             ),
           ),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: isDark ? Colors.white : Colors.black87,
+          const SizedBox(width: 12),
+          Flexible(
+            child: Text(
+              value,
+              textAlign: TextAlign.right,
+              style: TextStyle(
+                fontSize: isCompact ? 13 : 14,
+                height: 1.2,
+                fontWeight: FontWeight.w500,
+                color: isDark ? Colors.white : Colors.black87,
+              ),
             ),
           ),
         ],

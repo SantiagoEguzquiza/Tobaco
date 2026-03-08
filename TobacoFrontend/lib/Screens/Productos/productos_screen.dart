@@ -30,11 +30,13 @@ class _ProductosScreenState extends State<ProductosScreen> {
   bool _categoriesLoadTriggered = false;
   bool _advancedSearchExpanded = false;
 
-  // ScrollController para detectar cuando llegar al final
   final ScrollController _scrollController = ScrollController();
-  
-  // ScrollController para el ListView horizontal de categorías
   final ScrollController _categoriesScrollController = ScrollController();
+  final GlobalKey _headerKey = GlobalKey();
+
+  double _headerVisibility = 1.0;
+  double _lastScrollOffset = 0.0;
+  double _maxHeaderHeight = 0.0;
 
   // Helper method to safely parse color hex
   Color _parseColor(String colorHex) {
@@ -51,6 +53,10 @@ class _ProductosScreenState extends State<ProductosScreen> {
   @override
   void initState() {
     super.initState();
+    _scrollController.addListener(_onScroll);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _measureHeader();
+    });
     // Cargar categorías y productos al entrar (importante en app recién instalada o sin caché)
     Future.microtask(() async {
       if (!mounted) return;
@@ -101,6 +107,36 @@ class _ProductosScreenState extends State<ProductosScreen> {
     _searchController.dispose();
     _marcaController.dispose();
     super.dispose();
+  }
+
+  void _measureHeader() {
+    final ctx = _headerKey.currentContext;
+    if (ctx != null) {
+      final box = ctx.findRenderObject() as RenderBox?;
+      if (box != null && box.hasSize) {
+        _maxHeaderHeight = box.size.height;
+      }
+    }
+  }
+
+  void _onScroll() {
+    if (!_scrollController.hasClients) return;
+    final currentOffset = _scrollController.offset;
+    final delta = currentOffset - _lastScrollOffset;
+    _lastScrollOffset = currentOffset;
+    if (_maxHeaderHeight <= 0 || delta.abs() > 200) return;
+    double newVisibility;
+    if (currentOffset <= 0) {
+      newVisibility = 1.0;
+    } else {
+      newVisibility =
+          (_headerVisibility - delta * 0.5 / _maxHeaderHeight).clamp(0.0, 1.0);
+    }
+    if ((newVisibility - _headerVisibility).abs() > 0.001) {
+      setState(() {
+        _headerVisibility = newVisibility;
+      });
+    }
   }
 
   void _centerCategoryButton(int index, List<Categoria> categorias) {
@@ -158,12 +194,21 @@ class _ProductosScreenState extends State<ProductosScreen> {
       });
     }
 
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _measureHeader();
+    });
+
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         centerTitle: true,
         elevation: 0,
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        backgroundColor: Theme.of(context).brightness == Brightness.light
+            ? AppTheme.primaryColor
+            : Theme.of(context).scaffoldBackgroundColor,
+        foregroundColor: Theme.of(context).brightness == Brightness.light
+            ? Colors.white
+            : null,
         scrolledUnderElevation: 0,
         title: const Text(
           'Productos',
@@ -174,16 +219,7 @@ class _ProductosScreenState extends State<ProductosScreen> {
             margin: const EdgeInsets.only(right: 16),
             decoration: BoxDecoration(
               color: Theme.of(context).brightness == Brightness.dark
-                  ? Colors.black
-                  : AppTheme.primaryColor.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-          Container(
-            margin: const EdgeInsets.only(right: 16),
-            decoration: BoxDecoration(
-              color: Theme.of(context).brightness == Brightness.dark
-                  ? Colors.black
+                  ? Colors.transparent
                   : AppTheme.primaryColor,
               borderRadius: BorderRadius.circular(12),
             ),
@@ -261,38 +297,65 @@ class _ProductosScreenState extends State<ProductosScreen> {
         child: SafeArea(
           top: true,
           bottom: false,
-          child: LayoutBuilder(
-          builder: (context, constraints) {
-            final viewInsets = MediaQuery.of(context).viewInsets.bottom;
-            final keyboardOpen = viewInsets > 0;
-            final headerNeedsScroll = keyboardOpen || _advancedSearchExpanded;
-            // Reservar espacio para botón + categorías + espaciados; el resto es para el listado de productos
-            const reservedForActionsAndList = 320.0;
-            final maxHeaderHeight = headerNeedsScroll
-                ? (constraints.maxHeight - reservedForActionsAndList).clamp(140.0, double.infinity)
-                : null;
-            return Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                children: [
-                  if (maxHeaderHeight != null)
-                    ConstrainedBox(
-                      constraints: BoxConstraints(maxHeight: maxHeaderHeight),
-                      child: SingleChildScrollView(
-                        child: _buildHeaderSearchAndFilter(prov),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+            child: Column(
+              children: [
+                ClipRect(
+                  child: Align(
+                    alignment: Alignment.topCenter,
+                    heightFactor: _headerVisibility,
+                    child: Opacity(
+                      opacity: _headerVisibility,
+                      child: Builder(
+                        builder: (context) {
+                          final screenHeight = MediaQuery.of(context).size.height;
+                          final viewInsets = MediaQuery.of(context).viewInsets.bottom;
+                          final keyboardOpen = viewInsets > 0;
+                          final filterExpanded = _advancedSearchExpanded;
+                          final headerNeedsLimit = keyboardOpen || filterExpanded;
+                          final minListHeight = 360.0;
+                          final maxHeaderHeight = (screenHeight - minListHeight - 32).clamp(120.0, double.infinity);
+                          if (headerNeedsLimit) {
+                            return ConstrainedBox(
+                              constraints: BoxConstraints(maxHeight: maxHeaderHeight),
+                              child: SingleChildScrollView(
+                                child: Column(
+                                  key: _headerKey,
+                                  mainAxisSize: MainAxisSize.min,
+                                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                                  children: [
+                                    _buildHeaderSearchAndFilter(prov),
+                                    SizedBox(height: MediaQuery.of(context).size.height < 680 ? 8 : 12),
+                                    _buildHeaderActions(prov, categorias, searchQuery, selectedCategory),
+                                    const SizedBox(height: 6),
+                                  ],
+                                ),
+                              ),
+                            );
+                          }
+                          return Column(
+                            key: _headerKey,
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              _buildHeaderSearchAndFilter(prov),
+                              SizedBox(height: MediaQuery.of(context).size.height < 680 ? 8 : 12),
+                              _buildHeaderActions(prov, categorias, searchQuery, selectedCategory),
+                              const SizedBox(height: 6),
+                            ],
+                          );
+                        },
                       ),
-                    )
-                  else
-                    _buildHeaderSearchAndFilter(prov),
-                  const SizedBox(height: 15),
-                  _buildHeaderActions(prov, categorias, searchQuery, selectedCategory),
-                  const SizedBox(height: 20),
-                  Expanded(child: _buildProductosList(prov, categorias)),
-                ],
-              ),
-            );
-          },
-        ),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: _buildProductosList(prov, categorias),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -324,6 +387,11 @@ class _ProductosScreenState extends State<ProductosScreen> {
             ),
             onPressed: () => setState(() => _advancedSearchExpanded = !_advancedSearchExpanded),
             tooltip: 'Buscador avanzado',
+            style: IconButton.styleFrom(
+              backgroundColor: Colors.transparent,
+              shadowColor: Colors.transparent,
+              surfaceTintColor: Colors.transparent,
+            ),
           ),
         ),
         AnimatedSize(
@@ -331,7 +399,9 @@ class _ProductosScreenState extends State<ProductosScreen> {
           curve: Curves.easeInOut,
           child: _advancedSearchExpanded
               ? Padding(
-                  padding: const EdgeInsets.only(top: 10),
+                  padding: EdgeInsets.only(
+                    top: MediaQuery.of(context).size.height < 680 ? 6 : 10,
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
@@ -339,29 +409,32 @@ class _ProductosScreenState extends State<ProductosScreen> {
                       Text(
                         'Marca',
                         style: TextStyle(
-                          fontSize: 12,
+                          fontSize: MediaQuery.of(context).size.height < 680 ? 11 : 12,
                           fontWeight: FontWeight.w600,
                           letterSpacing: 0.5,
                           color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
                         ),
                       ),
-                      const SizedBox(height: 6),
+                      SizedBox(height: MediaQuery.of(context).size.height < 680 ? 4 : 6),
                       TextField(
                         controller: _marcaController,
                         onChanged: (value) => prov.setFiltroMarca(value),
                         style: TextStyle(
-                          fontSize: 15,
+                          fontSize: MediaQuery.of(context).size.height < 680 ? 14 : 15,
                           color: isDark ? Colors.white : Colors.black87,
                         ),
                         decoration: InputDecoration(
                           hintText: 'Filtrar por marca',
                           hintStyle: TextStyle(
                             color: Colors.grey.shade500,
-                            fontSize: 14,
+                            fontSize: MediaQuery.of(context).size.height < 680 ? 13 : 14,
                           ),
                           filled: true,
                           fillColor: isDark ? const Color(0xFF2A2A2A) : Colors.grey.shade50,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: MediaQuery.of(context).size.height < 680 ? 10 : 12,
+                          ),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                             borderSide: BorderSide(
@@ -451,16 +524,24 @@ class _ProductosScreenState extends State<ProductosScreen> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.primaryColor,
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    padding: EdgeInsets.symmetric(
+                      vertical: MediaQuery.of(context).size.height < 680 ? 12 : 16,
+                    ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
                     ),
                     elevation: 2,
                   ),
-                  icon: const Icon(Icons.add_circle_outline, size: 20),
-                  label: const Text(
+                  icon: Icon(
+                    Icons.add_circle_outline,
+                    size: MediaQuery.of(context).size.height < 680 ? 18 : 20,
+                  ),
+                  label: Text(
                     'Crear Nuevo Producto',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                    style: TextStyle(
+                      fontSize: MediaQuery.of(context).size.height < 680 ? 14 : 16,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               );
@@ -468,19 +549,21 @@ class _ProductosScreenState extends State<ProductosScreen> {
             return const SizedBox.shrink();
           },
         ),
-        const SizedBox(height: 15),
+        SizedBox(height: MediaQuery.of(context).size.height < 680 ? 8 : 12),
         // Filtros de categoría (solo mostrar cuando NO hay búsqueda activa)
         if (categorias.isNotEmpty && searchQuery.isEmpty && prov.searchMarca.isEmpty) ...[
           SizedBox(
-            height: 45,
+            height: MediaQuery.of(context).size.height < 680 ? 38 : 42,
             child: ListView.builder(
               controller: _categoriesScrollController,
               scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.only(right: 16),
               itemCount: categorias.length,
               itemBuilder: (context, index) {
                 final categoria = categorias[index];
                 final isSelected = selectedCategory == categoria.nombre;
                 final categoriaColor = _parseColor(categoria.colorHex);
+                final isCompact = MediaQuery.of(context).size.height < 680;
                 return Padding(
                   padding: const EdgeInsets.only(right: 10),
                   child: GestureDetector(
@@ -489,7 +572,10 @@ class _ProductosScreenState extends State<ProductosScreen> {
                       _centerCategoryButton(index, categorias);
                     },
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: isCompact ? 6 : 8,
+                      ),
                       decoration: BoxDecoration(
                         color: isSelected ? categoriaColor : Theme.of(context).cardTheme.color,
                         borderRadius: BorderRadius.circular(8),
@@ -498,12 +584,14 @@ class _ProductosScreenState extends State<ProductosScreen> {
                           width: 1,
                         ),
                       ),
-                      child: Text(
-                        categoria.nombre[0].toUpperCase() + categoria.nombre.substring(1),
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                          color: isSelected ? Colors.white : Theme.of(context).textTheme.bodyLarge?.color,
+                      child: Center(
+                        child: Text(
+                          categoria.nombre[0].toUpperCase() + categoria.nombre.substring(1),
+                          style: TextStyle(
+                            fontSize: isCompact ? 13 : 14,
+                            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                            color: isSelected ? Colors.white : Theme.of(context).textTheme.bodyLarge?.color,
+                          ),
                         ),
                       ),
                     ),
@@ -515,7 +603,7 @@ class _ProductosScreenState extends State<ProductosScreen> {
         ],
         // Indicador de búsqueda global (solo cuando hay filtros activos)
         if (prov.productosFiltrados.isNotEmpty && hasFiltrosActivos) ...[
-          const SizedBox(height: 12),
+          const SizedBox(height: 6),
           Row(
             children: [
               Container(
@@ -586,7 +674,7 @@ class _ProductosScreenState extends State<ProductosScreen> {
         controller: _scrollController,
         physics: const AlwaysScrollableScrollPhysics(),
         padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).padding.bottom + 24 + 56,
+          bottom: MediaQuery.of(context).padding.bottom + 24,
         ),
         itemCount: filteredProductos.length,
         itemBuilder: (context, index) {
@@ -897,6 +985,15 @@ class _ProductosScreenState extends State<ProductosScreen> {
                 ? '"${prov.searchQuery}"'
                 : 'Marca: "${prov.searchMarca}"')
         : '';
+    final size = MediaQuery.of(context).size;
+    final isSmallPhone = size.width < 400 || size.height < 640;
+    final padding = isSmallPhone ? 20.0 : 40.0;
+    final iconSize = isSmallPhone ? 56.0 : 80.0;
+    final titleSize = isSmallPhone ? 16.0 : 18.0;
+    final subtitleSize = isSmallPhone ? 13.0 : 14.0;
+    final spacing1 = isSmallPhone ? 12.0 : 16.0;
+    final spacing2 = isSmallPhone ? 6.0 : 8.0;
+    final bottomPadding = MediaQuery.of(context).padding.bottom + 24;
     return Container(
       decoration: BoxDecoration(
         color: Theme.of(context).brightness == Brightness.dark
@@ -913,36 +1010,37 @@ class _ProductosScreenState extends State<ProductosScreen> {
           ),
         ],
       ),
-      child: Center(
+      child: Align(
+        alignment: Alignment.topCenter,
         child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.all(40),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.inventory_2_outlined, size: 80, color: Colors.grey.shade400),
-                const SizedBox(height: 16),
-                Text(
-                  hasFiltros ? 'Sin resultados' : 'No hay productos disponibles',
-                  style: TextStyle(
-                    fontSize: 18,
-                    color: Colors.grey.shade600,
-                    fontWeight: FontWeight.w500,
-                  ),
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: EdgeInsets.fromLTRB(padding, padding, padding, padding + bottomPadding),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.inventory_2_outlined, size: iconSize, color: Colors.grey.shade400),
+              SizedBox(height: spacing1),
+              Text(
+                hasFiltros ? 'Sin resultados' : 'No hay productos disponibles',
+                style: TextStyle(
+                  fontSize: titleSize,
+                  color: Colors.grey.shade600,
+                  fontWeight: FontWeight.w500,
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  hasFiltros
-                      ? 'No se encontraron productos que coincidan con $mensajeFiltros'
-                      : 'Crea tu primer producto para comenzar',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey.shade500,
-                  ),
-                  textAlign: TextAlign.center,
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: spacing2),
+              Text(
+                hasFiltros
+                    ? 'No se encontraron productos que coincidan con $mensajeFiltros'
+                    : 'Crea tu primer producto para comenzar',
+                style: TextStyle(
+                  fontSize: subtitleSize,
+                  color: Colors.grey.shade500,
                 ),
-              ],
-            ),
+                textAlign: TextAlign.center,
+              ),
+            ],
           ),
         ),
       ),

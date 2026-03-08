@@ -22,12 +22,51 @@ class ClientesScreen extends StatefulWidget {
 class _ClientesScreenState extends State<ClientesScreen> {
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  final GlobalKey _headerKey = GlobalKey();
   Timer? _debounceTimer;
+
+  double _headerVisibility = 1.0;
+  double _lastScrollOffset = 0.0;
+  double _maxHeaderHeight = 0.0;
 
   @override
   void initState() {
     super.initState();
+    _scrollController.addListener(_onScroll);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _measureHeader();
+    });
     Future.microtask(() => context.read<ClienteProvider>().cargarClientes());
+  }
+
+  void _measureHeader() {
+    final ctx = _headerKey.currentContext;
+    if (ctx != null) {
+      final box = ctx.findRenderObject() as RenderBox?;
+      if (box != null && box.hasSize) {
+        _maxHeaderHeight = box.size.height;
+      }
+    }
+  }
+
+  void _onScroll() {
+    if (!_scrollController.hasClients) return;
+    final currentOffset = _scrollController.offset;
+    final delta = currentOffset - _lastScrollOffset;
+    _lastScrollOffset = currentOffset;
+    if (_maxHeaderHeight <= 0 || delta.abs() > 200) return;
+    double newVisibility;
+    if (currentOffset <= 0) {
+      newVisibility = 1.0;
+    } else {
+      newVisibility =
+          (_headerVisibility - delta * 0.5 / _maxHeaderHeight).clamp(0.0, 1.0);
+    }
+    if ((newVisibility - _headerVisibility).abs() > 0.001) {
+      setState(() {
+        _headerVisibility = newVisibility;
+      });
+    }
   }
 
   @override
@@ -91,6 +130,9 @@ class _ClientesScreenState extends State<ClientesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _measureHeader();
+    });
     return Consumer<ClienteProvider>(
       builder: (context, provider, child) {
         return Scaffold(
@@ -98,7 +140,12 @@ class _ClientesScreenState extends State<ClientesScreen> {
           appBar: AppBar(
             centerTitle: true,
             elevation: 0,
-            backgroundColor: Colors.transparent,
+            backgroundColor: Theme.of(context).brightness == Brightness.light
+                ? AppTheme.primaryColor
+                : Theme.of(context).scaffoldBackgroundColor,
+            foregroundColor: Theme.of(context).brightness == Brightness.light
+                ? Colors.white
+                : null,
             scrolledUnderElevation: 0,
             title: const Text(
               'Clientes',
@@ -111,17 +158,35 @@ class _ClientesScreenState extends State<ClientesScreen> {
               top: true,
               bottom: false,
               child: Padding(
-                padding: const EdgeInsets.all(16.0),
+                padding: EdgeInsets.fromLTRB(
+                  16,
+                  MediaQuery.of(context).size.height < 680 ? 12 : 16,
+                  16,
+                  0,
+                ),
                 child: Column(
-                children: [
-                  // Header con buscador - SIEMPRE VISIBLE
-                  _buildHeaderSection(provider),
-                  const SizedBox(height: 20),
-                  // Lista con estados dentro
-                  Expanded(child: _buildClientesList(provider)),
-                ],
+                  children: [
+                    ClipRect(
+                      child: Align(
+                        alignment: Alignment.topCenter,
+                        heightFactor: _headerVisibility,
+                        child: Opacity(
+                          opacity: _headerVisibility,
+                          child: Column(
+                            key: _headerKey,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              _buildHeaderSection(provider),
+                              SizedBox(height: MediaQuery.of(context).size.height < 680 ? 10 : 20),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    Expanded(child: _buildClientesList(provider)),
+                  ],
+                ),
               ),
-            ),
             ),
           ),
         );
@@ -148,10 +213,11 @@ class _ClientesScreenState extends State<ClientesScreen> {
             provider.buscarClientes('');
           },
         ),
-        const SizedBox(height: 16),
+        SizedBox(height: MediaQuery.of(context).size.height < 680 ? 8 : 16),
         // Botón de crear cliente - Solo mostrar si tiene permiso
         Consumer<PermisosProvider>(
           builder: (context, permisosProvider, child) {
+            final isCompact = MediaQuery.of(context).size.height < 680;
             if (permisosProvider.canCreateClientes || permisosProvider.isAdmin) {
               return SizedBox(
                 width: double.infinity,
@@ -171,17 +237,19 @@ class _ClientesScreenState extends State<ClientesScreen> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.primaryColor,
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    padding: EdgeInsets.symmetric(vertical: isCompact ? 12 : 16),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
                     ),
                     elevation: 2,
                   ),
-                  icon: const Icon(Icons.person_add, size: 20),
-                  label: const Text(
+                  icon: Icon(Icons.person_add, size: isCompact ? 18 : 20),
+                  label: Text(
                     'Nuevo Cliente',
                     style: TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.w600),
+                      fontSize: isCompact ? 14 : 16,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               );
@@ -217,7 +285,7 @@ class _ClientesScreenState extends State<ClientesScreen> {
         controller: _scrollController,
         physics: const AlwaysScrollableScrollPhysics(),
         padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).padding.bottom + 24 + 56,
+          bottom: MediaQuery.of(context).padding.bottom + 24,
         ),
         itemCount: clientesFiltrados.length,
         itemBuilder: (context, index) {

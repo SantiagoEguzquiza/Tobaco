@@ -119,28 +119,36 @@ class _QuantityPriceWidgetState extends State<QuantityPriceWidget> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              'Precios por Packs',
-              style: TextStyle(
-                fontSize: 16,
-                color: Theme.of(context).brightness == Brightness.dark
-                    ? Colors.white
-                    : Colors.black,
+            Expanded(
+              child: Text(
+                'Precios por Packs',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.white
+                      : Colors.black,
+                ),
               ),
             ),
-            ElevatedButton.icon(
-              onPressed: _addQuantityPrice,
-              icon: const Icon(Icons.add, size: 18),
-              label: const Text('Agregar Pack'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primaryColor,
-                foregroundColor: Colors.white,
-                elevation: 2,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
+            const SizedBox(width: 8),
+            Flexible(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerRight,
+                child: ElevatedButton.icon(
+                  onPressed: _addQuantityPrice,
+                  icon: const Icon(Icons.add, size: 18),
+                  label: const Text('Agregar Pack'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryColor,
+                    foregroundColor: Colors.white,
+                    elevation: 2,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -161,20 +169,24 @@ class _QuantityPriceWidgetState extends State<QuantityPriceWidget> {
           final qp = _quantityPrices[index];
           return _buildQuantityPriceRow(index, qp);
         }),
-        if (_quantityPrices.isEmpty)
+        if (_quantityPrices.isEmpty) ...[
           Center(
             child: Padding(
-              padding: const EdgeInsets.all(16.0),
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
               child: Text(
                 'No hay packs configurados. El producto se venderá solo por unidad.',
                 style: TextStyle(
+                  fontSize: 13,
                   color: Theme.of(context).brightness == Brightness.dark
                       ? Colors.grey.shade400
                       : Colors.grey,
                 ),
+                textAlign: TextAlign.center,
               ),
             ),
           ),
+          const SizedBox(height: 16),
+        ],
       ],
     );
   }
@@ -205,9 +217,171 @@ class _QuantityPriceWidgetState extends State<QuantityPriceWidget> {
       unitPriceController.text = currentUnitPriceText;
     }
 
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isNarrow = screenWidth < 380;
+    final labelStyle = TextStyle(
+      fontSize: isNarrow ? 11 : 12,
+      fontWeight: FontWeight.w500,
+      color: Theme.of(context).brightness == Brightness.dark
+          ? Colors.grey.shade400
+          : Colors.grey,
+    );
+
+    Widget cantidadField = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text('Cantidad', style: labelStyle),
+        const SizedBox(height: 4),
+        TextField(
+          controller: quantityController,
+          keyboardType: TextInputType.number,
+          textInputAction: TextInputAction.done,
+          inputFormatters: [
+            FilteringTextInputFormatter.digitsOnly,
+          ],
+          decoration: InputDecoration(
+            hintText: 'Cantidad',
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(1)),
+            contentPadding: EdgeInsets.symmetric(
+              horizontal: isNarrow ? 10 : 12,
+              vertical: isNarrow ? 6 : 8,
+            ),
+            isDense: true,
+          ),
+          onTap: () => _isQuantityEditing[index] = true,
+          onChanged: (value) {
+            _isQuantityEditing[index] = true;
+            if (value.isEmpty) return;
+            final quantity = int.tryParse(value);
+            if (quantity != null && quantity >= 2 && _isValidQuantity(quantity, index)) {
+              _isQuantityEditing[index] = false;
+              _updateQuantityPrice(index, qp.copyWith(quantity: quantity));
+              _isQuantityEditing[index] = true;
+            } else if (value.isNotEmpty && quantity != null && quantity >= 2 && !_isValidQuantity(quantity, index)) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Esta cantidad ya existe o debe ser >= 2'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          },
+          onEditingComplete: () {
+            _isQuantityEditing[index] = false;
+            if (quantityController.text.isEmpty) {
+              FocusScope.of(context).unfocus();
+              return;
+            }
+            final quantity = int.tryParse(quantityController.text);
+            if (quantity == null || quantity < 2 || !_isValidQuantity(quantity, index)) {
+              quantityController.text = '';
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('La cantidad debe ser >= 2 y única'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+              FocusScope.of(context).unfocus();
+            } else {
+              _updateQuantityPrice(index, qp.copyWith(quantity: quantity));
+              FocusScope.of(context).unfocus();
+            }
+          },
+        ),
+      ],
+    );
+
+    Widget precioTotalField = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(isNarrow ? 'P. Total' : 'Precio Total', style: labelStyle),
+        const SizedBox(height: 4),
+        TextField(
+          controller: priceController,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          textInputAction: TextInputAction.done,
+          inputFormatters: [
+            FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+          ],
+          decoration: InputDecoration(
+            hintText: 'Precio total',
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(1)),
+            contentPadding: EdgeInsets.symmetric(
+              horizontal: isNarrow ? 10 : 12,
+              vertical: isNarrow ? 6 : 8,
+            ),
+            isDense: true,
+          ),
+          onTap: () => _isPriceEditing[index] = true,
+          onChanged: (value) {
+            _isPriceEditing[index] = true;
+            if (value.isEmpty) return;
+            final price = double.tryParse(value);
+            if (price != null && price > 0) {
+              final currentQp = _quantityPrices[index];
+              setState(() {
+                _quantityPrices[index] = currentQp.copyWith(totalPrice: price);
+              });
+              widget.onChanged(_quantityPrices);
+            }
+          },
+          onEditingComplete: () {
+            _isPriceEditing[index] = false;
+            if (priceController.text.isEmpty) {
+              FocusScope.of(context).unfocus();
+              return;
+            }
+            final price = double.tryParse(priceController.text);
+            if (price == null || price <= 0) {
+              priceController.text = '';
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('El precio debe ser mayor a 0'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+              FocusScope.of(context).unfocus();
+            } else {
+              final currentQp = _quantityPrices[index];
+              setState(() {
+                _quantityPrices[index] = currentQp.copyWith(totalPrice: price);
+              });
+              widget.onChanged(_quantityPrices);
+              FocusScope.of(context).unfocus();
+            }
+          },
+        ),
+      ],
+    );
+
+    Widget unitarioField = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text('P. Unitario', style: labelStyle),
+        const SizedBox(height: 4),
+        TextField(
+          controller: unitPriceController,
+          readOnly: true,
+          decoration: InputDecoration(
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(isNarrow ? 6 : 10)),
+            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(isNarrow ? 6 : 10)),
+            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(isNarrow ? 6 : 10)),
+            contentPadding: EdgeInsets.symmetric(
+              horizontal: isNarrow ? 10 : 12,
+              vertical: isNarrow ? 6 : 8,
+            ),
+            isDense: true,
+          ),
+        ),
+      ],
+    );
+
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(12),
+      margin: EdgeInsets.only(bottom: isNarrow ? 10 : 12),
+      padding: EdgeInsets.all(isNarrow ? 10 : 12),
       decoration: BoxDecoration(
         border: Border.all(
           color: Theme.of(context).brightness == Brightness.dark
@@ -221,228 +395,27 @@ class _QuantityPriceWidgetState extends State<QuantityPriceWidget> {
       ),
       child: Column(
         children: [
-          Row(
-            children: [
-              Expanded(
-                flex: 2,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Cantidad',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        color: Theme.of(context).brightness == Brightness.dark
-                            ? Colors.grey.shade400
-                            : Colors.grey,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    TextField(
-                      controller: quantityController,
-                      keyboardType: TextInputType.number,
-                      textInputAction: TextInputAction.done,
-                      inputFormatters: [
-                        FilteringTextInputFormatter.digitsOnly,
-                      ],
-                      decoration: InputDecoration(
-                        hintText: 'Cantidad',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(1),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
-                        ),
-                        isDense: true,
-                      ),
-                      onTap: () {
-                        _isQuantityEditing[index] = true;
-                      },
-                      onChanged: (value) {
-                        _isQuantityEditing[index] = true;
-                        if (value.isEmpty) return;
-                        
-                        final quantity = int.tryParse(value);
-                        if (quantity != null && quantity >= 2) {
-                          if (_isValidQuantity(quantity, index)) {
-                            _isQuantityEditing[index] = false;
-                            _updateQuantityPrice(
-                              index,
-                              qp.copyWith(quantity: quantity),
-                            );
-                            _isQuantityEditing[index] = true;
-                          } else {
-                            // Show error for duplicate quantity
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Esta cantidad ya existe o debe ser >= 2'),
-                                backgroundColor: Colors.red,
-                              ),
-                            );
-                            // No revertir inmediatamente, permitir que el usuario corrija
-                          }
-                        } else if (value.isNotEmpty && (quantity == null || quantity < 2)) {
-                          // No validar hasta que el usuario termine de escribir
-                        }
-                      },
-                      onEditingComplete: () {
-                        _isQuantityEditing[index] = false;
-                        final quantity = int.tryParse(quantityController.text);
-                        if (quantityController.text.isEmpty) {
-                          // Si está vacío, cerrar teclado y dejar vacío
-                          FocusScope.of(context).unfocus();
-                          return;
-                        }
-                        if (quantity == null || quantity < 2 || !_isValidQuantity(quantity, index)) {
-                          quantityController.text = '';
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('La cantidad debe ser >= 2 y única'),
-                              backgroundColor: Colors.red,
-                            ),
-                          );
-                          FocusScope.of(context).unfocus();
-                        } else {
-                          // Guardar y cerrar teclado
-                          _updateQuantityPrice(
-                            index,
-                            qp.copyWith(quantity: quantity),
-                          );
-                          FocusScope.of(context).unfocus();
-                        }
-                      },
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                flex: 2,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Precio Total',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        color: Theme.of(context).brightness == Brightness.dark
-                            ? Colors.grey.shade400
-                            : Colors.grey,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    TextField(
-                      controller: priceController,
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      textInputAction: TextInputAction.done,
-                      inputFormatters: [
-                        FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
-                      ],
-                      decoration: InputDecoration(
-                        hintText: 'Precio total',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(1),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
-                        ),
-                        isDense: true,
-                      ),
-                      onTap: () {
-                        _isPriceEditing[index] = true;
-                      },
-                      onChanged: (value) {
-                        _isPriceEditing[index] = true;
-                        // Permitir escribir números sin restricciones mientras se escribe
-                        if (value.isEmpty) return;
-                        
-                        final price = double.tryParse(value);
-                        if (price != null && price > 0) {
-                          // Actualizar sin cambiar el controlador para evitar pérdida de foco
-                          final currentQp = _quantityPrices[index];
-                          setState(() {
-                            _quantityPrices[index] = currentQp.copyWith(totalPrice: price);
-                          });
-                          widget.onChanged(_quantityPrices);
-                        }
-                      },
-                      onEditingComplete: () {
-                        _isPriceEditing[index] = false;
-                        if (priceController.text.isEmpty) {
-                          // Si está vacío, cerrar teclado y dejar vacío
-                          FocusScope.of(context).unfocus();
-                          return;
-                        }
-                        final price = double.tryParse(priceController.text);
-                        if (price == null || price <= 0) {
-                          priceController.text = '';
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('El precio debe ser mayor a 0'),
-                              backgroundColor: Colors.red,
-                            ),
-                          );
-                          FocusScope.of(context).unfocus();
-                        } else {
-                          // Guardar y cerrar teclado
-                          final currentQp = _quantityPrices[index];
-                          setState(() {
-                            _quantityPrices[index] = currentQp.copyWith(totalPrice: price);
-                          });
-                          widget.onChanged(_quantityPrices);
-                          FocusScope.of(context).unfocus();
-                        }
-                      },
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                flex: 2,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                     Text(
-                      'P. Unitario',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        color: Theme.of(context).brightness == Brightness.dark
-                            ? Colors.grey.shade400
-                            : Colors.grey,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    TextField(
-                      controller: unitPriceController,
-                      readOnly: true,
-                      decoration: InputDecoration(
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
-                        ),
-                        isDense: true,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
+          if (isNarrow)
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                cantidadField,
+                const SizedBox(height: 10),
+                precioTotalField,
+                const SizedBox(height: 10),
+                unitarioField,
+              ],
+            )
+          else
+            Row(
+              children: [
+                Expanded(flex: 2, child: cantidadField),
+                const SizedBox(width: 12),
+                Expanded(flex: 2, child: precioTotalField),
+                const SizedBox(width: 12),
+                Expanded(flex: 2, child: unitarioField),
+              ],
+            ),
           if (qp.quantity == 1)
             const Padding(
               padding: EdgeInsets.only(top: 8),

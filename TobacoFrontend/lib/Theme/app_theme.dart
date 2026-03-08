@@ -13,6 +13,22 @@ class AppTheme {
   static const double borderRadiusMainButtons = 8;
   static const double borderRadiusCards = 8;
 
+  static bool isCompactVentasButton(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    return size.height < 680 || size.width < 380;
+  }
+
+  static double ventasButtonFontSize(BuildContext context) =>
+      isCompactVentasButton(context) ? 14 : 16;
+
+  static double ventasButtonIconSize(BuildContext context) =>
+      isCompactVentasButton(context) ? 18 : 20;
+
+  static EdgeInsets ventasButtonPadding(BuildContext context) =>
+      EdgeInsets.symmetric(
+        vertical: isCompactVentasButton(context) ? 12 : 16,
+      );
+
   static const TextStyle inputLabelStyle = TextStyle(
     fontSize: 16,
     color: Colors.black,

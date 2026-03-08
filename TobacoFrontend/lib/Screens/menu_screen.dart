@@ -81,7 +81,11 @@ class _MenuScreenState extends State<MenuScreen> {
               Navigator.of(context).pushReplacementNamed('/superadmin');
             }
           });
-          return Center(child: CircularProgressIndicator(color: theme.colorScheme.primary));
+          return Center(
+            child: CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
+            ),
+          );
         }
 
         if (authProvider.isAuthenticated &&

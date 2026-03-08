@@ -363,6 +363,8 @@ class _ConfirmationDialog extends StatelessWidget {
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       side: BorderSide.none,
+                      backgroundColor: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
+                      foregroundColor: isDark ? Colors.grey.shade200 : Colors.grey.shade800,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
                       ),
@@ -370,7 +372,7 @@ class _ConfirmationDialog extends StatelessWidget {
                     child: Text(
                       cancelText,
                       style: AppDialogs._buttonTextStyle.copyWith(
-                        color: Theme.of(context).textTheme.bodyLarge?.color,
+                        color: isDark ? Colors.grey.shade200 : Colors.grey.shade800,
                       ),
                     ),
                   ),

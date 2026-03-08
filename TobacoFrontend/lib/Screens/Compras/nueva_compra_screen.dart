@@ -103,9 +103,10 @@ class _NuevaCompraScreenState extends State<NuevaCompraScreen> {
         ),
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
               color: isDark ? const Color(0xFF2A2A2A) : Colors.grey.shade50,
               borderRadius: const BorderRadius.only(
@@ -144,7 +145,7 @@ class _NuevaCompraScreenState extends State<NuevaCompraScreen> {
                 return Container(
                   color: backgroundColor,
                   child: ListTile(
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                     title: Text(
                       line.productoNombre,
                       style: TextStyle(
@@ -153,7 +154,7 @@ class _NuevaCompraScreenState extends State<NuevaCompraScreen> {
                       ),
                     ),
                     subtitle: Padding(
-                      padding: const EdgeInsets.only(top: 4),
+                      padding: const EdgeInsets.only(top: 2),
                       child: Text(
                         '${line.cantidad} × \$${line.costoUnitario.toStringAsFixed(2)} = \$${line.subtotal.toStringAsFixed(2)}',
                         style: TextStyle(
@@ -172,6 +173,106 @@ class _NuevaCompraScreenState extends State<NuevaCompraScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  /// Barra Total + Confirmar compra (reutilizada en scroll cuando hay productos).
+  Widget _buildConfirmarCompraBar(bool isDark) {
+    final isCompact = AppTheme.isCompactVentasButton(context);
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF2A2A2A) : Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isDark ? 0.3 : 0.1),
+            blurRadius: 10,
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        top: false,
+        child: Row(
+          children: [
+            Expanded(
+              flex: 9,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Total',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: isDark ? Colors.grey.shade300 : Colors.grey.shade600,
+                    ),
+                  ),
+                  _buildPrecioTotalFormateado(_total),
+                  Text(
+                    '${_items.length} producto${_items.length == 1 ? '' : 's'}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isDark ? Colors.grey.shade400 : Colors.grey.shade500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              flex: 10,
+              child: _isSubmitting
+                  ? Container(
+                      height: isCompact ? 48 : 56,
+                      decoration: BoxDecoration(
+                        color: AppTheme.primaryColor,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Center(
+                        child: SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 3,
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        ),
+                      ),
+                    )
+                  : ElevatedButton.icon(
+                      onPressed: _items.isEmpty ? null : _confirmar,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primaryColor,
+                        foregroundColor: Colors.white,
+                        padding: AppTheme.ventasButtonPadding(context),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        elevation: 3,
+                      ),
+                      icon: Icon(
+                        Icons.check_circle,
+                        color: Colors.white,
+                        size: AppTheme.ventasButtonIconSize(context),
+                      ),
+                      label: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          'Confirmar compra',
+                          style: TextStyle(
+                            fontSize: AppTheme.ventasButtonFontSize(context),
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -210,6 +311,8 @@ class _NuevaCompraScreenState extends State<NuevaCompraScreen> {
       context: context,
       builder: (dialogContext) {
         DateTime selectedDate = _fecha;
+        final screenWidth = MediaQuery.of(dialogContext).size.width;
+        final isCompactDialog = screenWidth < 380;
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: isDark
@@ -230,13 +333,17 @@ class _NuevaCompraScreenState extends State<NuevaCompraScreen> {
           child: StatefulBuilder(
             builder: (context, setState) {
               return AlertDialog(
+                insetPadding: EdgeInsets.symmetric(
+                  horizontal: isCompactDialog ? 12 : 24,
+                  vertical: 24,
+                ),
                 backgroundColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
                 ),
                 contentPadding: const EdgeInsets.fromLTRB(0, 20, 0, 0),
                 content: SizedBox(
-                  width: 300,
+                  width: isCompactDialog ? screenWidth - 48 : 300,
                   child: CalendarDatePicker(
                     initialDate: selectedDate,
                     firstDate: DateTime(2020),
@@ -248,11 +355,16 @@ class _NuevaCompraScreenState extends State<NuevaCompraScreen> {
                     },
                   ),
                 ),
-                actionsPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                actionsPadding: EdgeInsets.symmetric(
+                  horizontal: isCompactDialog ? 12 : 24,
+                  vertical: 12,
+                ),
                 actions: [
                   Center(
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
+                    child: Wrap(
+                      alignment: WrapAlignment.center,
+                      spacing: 12,
+                      runSpacing: 8,
                       children: [
                         TextButton(
                           onPressed: () => Navigator.of(dialogContext).pop(),
@@ -262,13 +374,14 @@ class _NuevaCompraScreenState extends State<NuevaCompraScreen> {
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(8),
                             ),
-                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                            minimumSize: const Size(120, 44),
-                            fixedSize: const Size(120, 44),
+                            padding: EdgeInsets.symmetric(
+                              horizontal: isCompactDialog ? 18 : 24,
+                              vertical: 12,
+                            ),
+                            minimumSize: Size(isCompactDialog ? 110 : 120, 44),
                           ),
                           child: const Text('Cancelar'),
                         ),
-                        const SizedBox(width: 12),
                         TextButton(
                           onPressed: () => Navigator.of(dialogContext).pop(selectedDate),
                           style: TextButton.styleFrom(
@@ -277,9 +390,11 @@ class _NuevaCompraScreenState extends State<NuevaCompraScreen> {
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(8),
                             ),
-                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                            minimumSize: const Size(120, 44),
-                            fixedSize: const Size(120, 44),
+                            padding: EdgeInsets.symmetric(
+                              horizontal: isCompactDialog ? 18 : 24,
+                              vertical: 12,
+                            ),
+                            minimumSize: Size(isCompactDialog ? 110 : 120, 44),
                           ),
                           child: const Text('Aceptar'),
                         ),
@@ -589,11 +704,28 @@ class _NuevaCompraScreenState extends State<NuevaCompraScreen> {
                   width: double.infinity,
                   child: ElevatedButton.icon(
                     onPressed: _irANuevoProveedor,
-                    style: AppTheme.elevatedButtonStyle(AppTheme.primaryColor),
-                    icon: const Icon(Icons.add_business_rounded, color: Colors.white),
-                    label: const Text(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryColor,
+                      foregroundColor: Colors.white,
+                      padding: AppTheme.ventasButtonPadding(context),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(
+                            AppTheme.borderRadiusMainButtons),
+                      ),
+                      elevation: 2,
+                    ),
+                    icon: Icon(
+                      Icons.add_business_rounded,
+                      color: Colors.white,
+                      size: AppTheme.ventasButtonIconSize(context),
+                    ),
+                    label: Text(
                       'Nuevo proveedor',
-                      style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600),
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: AppTheme.ventasButtonFontSize(context),
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ),
@@ -601,7 +733,11 @@ class _NuevaCompraScreenState extends State<NuevaCompraScreen> {
               const SizedBox(height: 16),
               Expanded(
                 child: _loadingProveedores
-                    ? const Center(child: CircularProgressIndicator())
+                    ? Center(
+                        child: CircularProgressIndicator(
+                          valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
+                        ),
+                      )
                     : _proveedoresFiltrados.isEmpty
                         ? Center(
                             child: Text(
@@ -677,37 +813,38 @@ class _NuevaCompraScreenState extends State<NuevaCompraScreen> {
             ] else ...[
               Expanded(
                 child: _items.isEmpty
-                    ? Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          ProveedorSection(
-                            proveedor: proveedor!,
-                            onCambiarProveedor: _cambiarProveedor,
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            child: _buildDatosCompraCard(isDark),
-                          ),
-                          const SizedBox(height: 16),
-                          AgregarProductoButton(onPressed: _openAddItem, fullWidth: false),
-                          const SizedBox(height: 16),
-                          const Expanded(
-                            child: SingleChildScrollView(
-                              physics: NeverScrollableScrollPhysics(),
-                              child: Padding(
-                                padding: EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                                child: EmptyStateVenta(),
-                              ),
+                    ? SingleChildScrollView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        padding: const EdgeInsets.only(bottom: 4),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            ProveedorSection(
+                              proveedor: proveedor!,
+                              onCambiarProveedor: _cambiarProveedor,
                             ),
-                          ),
-                        ],
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              child: _buildDatosCompraCard(isDark),
+                            ),
+                            const SizedBox(height: 12),
+                            AgregarProductoButton(onPressed: _openAddItem, fullWidth: false),
+                            const SizedBox(height: 12),
+                            const Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                              child: EmptyStateVenta(),
+                            ),
+                          ],
+                        ),
                       )
                     : RefreshIndicator(
                         onRefresh: _loadProveedores,
                         child: SingleChildScrollView(
                           physics: const AlwaysScrollableScrollPhysics(),
-                          padding: const EdgeInsets.only(bottom: 24),
+                          padding: EdgeInsets.zero,
                           child: Column(
+                            mainAxisSize: MainAxisSize.min,
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
                               ProveedorSection(
@@ -718,11 +855,11 @@ class _NuevaCompraScreenState extends State<NuevaCompraScreen> {
                                 padding: const EdgeInsets.symmetric(horizontal: 16),
                                 child: _buildDatosCompraCard(isDark),
                               ),
-                              const SizedBox(height: 16),
+                              const SizedBox(height: 12),
                               AgregarProductoButton(onPressed: _openAddItem, fullWidth: false),
-                              const SizedBox(height: 16),
+                              const SizedBox(height: 12),
                               _buildProductosSectionCompra(isDark),
-                              const SizedBox(height: 100),
+                              const SizedBox(height: 6),
                             ],
                           ),
                         ),
@@ -733,97 +870,7 @@ class _NuevaCompraScreenState extends State<NuevaCompraScreen> {
         ),
       ),
       bottomNavigationBar: proveedor != null
-          ? Container(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-              decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF2A2A2A) : Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(isDark ? 0.3 : 0.1),
-                    blurRadius: 10,
-                    offset: const Offset(0, -2),
-                  ),
-                ],
-              ),
-              child: SafeArea(
-                top: false,
-                child: Row(
-                  children: [
-                    Expanded(
-                      flex: 9,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Total',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                              color: isDark ? Colors.grey.shade300 : Colors.grey.shade600,
-                            ),
-                          ),
-                          _buildPrecioTotalFormateado(_total),
-                          Text(
-                            '${_items.length} producto${_items.length == 1 ? '' : 's'}',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: isDark ? Colors.grey.shade400 : Colors.grey.shade500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      flex: 10,
-                      child: _isSubmitting
-                          ? Container(
-                              height: 56,
-                              decoration: BoxDecoration(
-                                color: AppTheme.primaryColor,
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: const Center(
-                                child: SizedBox(
-                                  width: 24,
-                                  height: 24,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 3,
-                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                  ),
-                                ),
-                              ),
-                            )
-                          : ElevatedButton.icon(
-                              onPressed: _items.isEmpty ? null : _confirmar,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppTheme.primaryColor,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(vertical: 18),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                elevation: 3,
-                              ),
-                              icon: const Icon(Icons.check_circle, color: Colors.white),
-                              label: const FittedBox(
-                                fit: BoxFit.scaleDown,
-                                child: Text(
-                                  'Confirmar compra',
-                                  style: TextStyle(
-                                    fontSize: 15,
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ),
-                    ),
-                  ],
-                ),
-              ),
-            )
+          ? _buildConfirmarCompraBar(isDark)
           : null,
     );
   }
