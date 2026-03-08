@@ -1,96 +1,157 @@
-# Requerimientos Funcionales – App de Gestión de Ventas
+# Requerimientos Funcionales – App de Gestión de Ventas Provider
 
 ## Convenciones de Prioridad
 - **MVP**: imprescindible para la primera versión en producción.  
 - **F2**: segunda fase, mejora operativa y control.  
-- **F3**: evolución/escala y analítica avanzada.  
+- **F3**: evolución del producto y funcionalidades analíticas o de expansión.  
+
+---
+
+## Descripción General del Sistema
+Provider es una plataforma orientada a distribuidoras de mercadería, diseñada para digitalizar y optimizar los procesos comerciales y operativos que ocurren entre el depósito de la empresa y los comercios clientes.  
+
+La aplicación permite registrar ventas, gestionar clientes y productos, controlar inventario y facilitar la distribución de mercadería, utilizando dispositivos móviles para operar directamente en campo.  
+
+El sistema está diseñado para complementar sistemas administrativos o contables existentes, brindando herramientas que optimizan el trabajo operativo de los distintos roles dentro de una distribuidora.  
+
+Provider contempla distintos roles operativos dentro de una empresa distribuidora, permitiendo que cada usuario acceda únicamente a las funcionalidades correspondientes a su puesto de trabajo.  
+
+**Roles contemplados:**
+- Administrador   
+- Vendedor
+- Repartidor  
+- Personal de Depósito  
+
+**Arquitectura del sistema:**
+- Aplicación móvil desarrollada en Flutter  
+- API backend desarrollada en .NET  
+- Base de datos centralizada  
+- Base de datos local SQLite para operación offline  
+- Arquitectura multi-tenant que permite soportar múltiples empresas utilizando la misma infraestructura  
 
 ---
 
 ## A. Autenticación y Roles
-- **RF01 (MVP)** – Inicio de sesión con usuario/contraseña contra la API .NET; mantener sesión con token seguro y expiración.  
-- **RF02 (MVP)** – Gestión de roles: *Administrador*, *Vendedor/Preventista*, *Supervisor*.  
-- **RF03 (F2)** – Recuperación de contraseña (enlace/código) y cambio de contraseña autenticado.  
-- **RF04 (F2)** – Cierre de sesión manual y cierre automático por inactividad.  
+- **RF01 (MVP)** – Inicio de sesión mediante usuario y contraseña contra la API backend.  
+- **RF02 (MVP)** – Gestión de usuarios dentro del sistema.  
+  - Cada usuario debe estar asociado a uno de los roles operativos.  
+- **RF03 (MVP)** – Recuperación de contraseña mediante flujo seguro de validación.  
+- **RF04 (MVP)** – Cierre manual de sesión desde la aplicación.  
+- **RF05 (F2)** – Cierre automático de sesión por inactividad prolongada.  
+
+---
 
 ## B. Clientes
-- **RF05 (MVP)** – ABM de clientes: crear, editar, eliminar (lógico), listar y buscar por nombre, documento, código y localidad.  
-- **RF06 (MVP)** – Detalle de cliente: datos fiscales, contacto, dirección, geolocalización, condiciones comerciales.  
-- **RF07 (MVP)** – Historial comercial del cliente: compras, saldos, últimos precios y productos frecuentes.  
-- **RF08 (F2)** – Validaciones: documentos únicos, campos obligatorios, formato de email/teléfono.  
-- **RF09 (F2)** – Importación masiva de clientes desde planilla (CSV/XLSX).  
+- **RF06 (MVP)** – Gestión completa de clientes (crear, editar, eliminar lógicamente, listar y buscar).  
+  - Filtros: nombre, documento, código de cliente, localidad.  
+- **RF07 (MVP)** – Visualización del detalle del cliente (datos fiscales, contacto, dirección, geolocalización, condiciones comerciales).  
+- **RF08 (MVP)** – Historial comercial del cliente (ventas anteriores, últimos productos comprados, últimos precios aplicados, saldo pendiente).  
+- **RF09 (MVP)** – Validaciones automáticas (documento único, campos obligatorios, formatos de datos).  
+- **RF10 (F2)** – Importación masiva de clientes mediante CSV/XLSX.  
+
+---
 
 ## C. Productos e Inventario
-- **RF10 (MVP)** – ABM de productos con códigos, nombre, descripción, categoría, precio base, impuestos, estado.  
-- **RF11 (MVP)** – Stock por depósito/sucursal y reserva al confirmar venta.  
-- **RF12 (MVP)** – Búsqueda y filtros por texto, categoría y estado; orden por precio/rotación.  
-- **RF13 (F2)** – Imágenes de producto y código de barras (escaneo cámara).  
-- **RF14 (F2)** – Listas de precios por cliente/segmento; reglas de redondeo.  
-- **RF15 (F3)** – Alertas de stock bajo configurables por producto.  
+- **RF11 (MVP)** – Gestión de productos (código, nombre, descripción, categoría, precio base, estado).  
+- **RF12 (MVP)** – Gestión de stock por depósito o sucursal.  
+- **RF13 (MVP)** – Búsqueda y filtrado de productos (texto, categoría, estado).  
+- **RF14 (F2)** – Asociación de imágenes a productos.  
+- **RF15 (F2)** – Lectura de códigos de barras con cámara.  
+- **RF16 (MVP)** – Alertas de stock bajo por producto.  
+- **RF17 (F2)** – Ajuste manual de stock con registro de usuario, producto, cantidad y motivo.  
 
-## D. Cotizaciones de Monedas (BROU)
-- **RF16 (MVP)** – Consulta de cotizaciones USD/UYU vía servicio BROU.  
-- **RF17 (MVP)** – Cacheo local (SQLite) y uso offline de la última cotización válida con fecha/hora.  
-- **RF18 (F2)** – Forzar actualización manual y política de expiración configurable.  
+---
 
-## E. Ventas / Pedidos / Facturación
-- **RF19 (MVP)** – Flujo “Nueva Venta/Pedido”: seleccionar cliente, ver resumen, agregar ítems, totales e impuestos.  
-- **RF20 (MVP)** – Validaciones: stock, tope de crédito, lista de precios.  
-- **RF21 (MVP)** – Guardado borrador y edición antes de confirmar.  
-- **RF22 (MVP)** – Confirmación de venta: genera documento con numeración del backend.  
-- **RF23 (MVP)** – PDF del comprobante y compartir por WhatsApp/Email.  
-- **RF24 (F2)** – Devoluciones/Notas de crédito con impacto en stock y saldos.  
-- **RF25 (F2)** – Promociones: 2x1, descuentos por volumen, reglas por cliente.  
-- **RF26 (F3)** – Ventas en múltiples monedas con cálculo automático.  
+## D. Cotizaciones de Monedas
+- **RF18 (MVP)** – Consulta automática de cotizaciones (USD/UYU) mediante servicio externo.  
+- **RF19 (MVP)** – Almacenamiento local de última cotización válida para operación offline.  
+- **RF20 (MVP)** – Actualización manual de cotizaciones.  
+
+---
+
+## E. Ventas / Pedidos
+- **RF21 (MVP)** – Flujo de creación de venta/pedido (cliente, resumen, productos, totales).  
+- **RF22 (MVP)** – Validaciones automáticas (stock, condiciones comerciales).  
+- **RF23 (MVP)** – Guardado en estado borrador.  
+- **RF24 (MVP)** – Confirmación de venta con documento backend (numeración independiente por tenant).  
+- **RF25 (MVP)** – Comprobantes PDF.  
+- **RF26 (MVP)** – Compartir comprobantes por apps externas.  
+- **RF27 (MVP)** – Promociones y descuentos.  
+- **RF28 (F2)** – Registro de devoluciones/notas de crédito.  
+- **RF29 (F2)** – Ventas en múltiples monedas.  
+
+---
 
 ## F. Cobranzas
-- **RF27 (F2)** – Registro de cobros: efectivo, transferencia, POS.  
-- **RF28 (F2)** – Estado de cuenta por cliente: saldos, vencidos, próximos a vencer.  
-- **RF29 (F3)** – Recibos en PDF y envío por WhatsApp/Email.  
+- **RF30 (F2)** – Registro de cobros (efectivo, transferencia, POS).  
+- **RF31 (F2)** – Consulta de estado de cuenta.  
+- **RF32 (F2)** – Recibos de pago en PDF.  
+
+---
 
 ## G. Ruteo, Visitas y Geolocalización
-- **RF30 (F2)** – Mapa con clientes geolocalizados y plan de visita.  
-- **RF31 (F2)** – Generar ruta óptima por cercanía.  
-- **RF32 (F2)** – Marcar cliente como “visitado” manualmente.  
-- **RF33 (F2)** – Auto-marcado por geofence (radio configurable).  
-- **RF34 (F2)** – Reordenamiento dinámico de la ruta según visitas completadas.  
-- **RF35 (F3)** – Planificación semanal de visitas con metas de cobertura.  
+- **RF33 (F2)** – Visualización de clientes en mapa.  
+- **RF34 (F2)** – Generación automática de rutas optimizadas.  
+- **RF35 (F2)** – Registro manual de visitas.  
+- **RF36 (F2)** – Marcado automático de visitas por geolocalización.  
+- **RF37 (F3)** – Planificación de recorridos semanales.  
+
+---
 
 ## H. Modo Offline y Sincronización
-- **RF36 (MVP)** – Caché local (SQLite) de clientes, productos, precios y cotización.  
-- **RF37 (MVP)** – Cola de operaciones para sincronizar al recuperar conexión.  
-- **RF38 (MVP)** – Resolución básica de conflictos (“última edición del servidor gana”).  
-- **RF39 (F2)** – Sincronización selectiva por zona/segmento.  
-- **RF40 (F3)** – Merge asistido de conflictos en panel admin.  
+- **RF38 (F2)** – Almacenamiento local de clientes, productos, precios y cotizaciones.  
+- **RF39 (F2)** – Cola de operaciones para sincronización automática.  
+- **RF40 (F2)** – Resolución básica de conflictos de sincronización.  
+
+---
 
 ## I. Notificaciones y Recordatorios
-- **RF41 (F2)** – Notificaciones: stock bajo, deuda vencida, visita programada.  
-- **RF42 (F3)** – Recordatorios por objetivos: ventas diarias, clientes inactivos.  
+- **RF41 (MVP)** – Notificación automática de stock bajo.  
+- **RF42 (F2)** – Notificaciones de deuda vencida y visitas programadas.  
+- **RF43 (F3)** – Recordatorios de objetivos comerciales.  
+
+---
 
 ## J. Reportes y Analítica
-- **RF43 (F2)** – Reportes: ventas por período, cliente, categoría, top productos.  
-- **RF44 (F2)** – Exportación CSV/XLSX desde el backend.  
-- **RF45 (F3)** – Panel de métricas: ticket promedio, margen estimado.  
+- **RF44 (F2)** – Reportes de ventas por período, cliente, categoría, producto.  
+- **RF45 (F2)** – Exportación de reportes en CSV/XLSX.  
+- **RF46 (F3)** – Panel de métricas comerciales.  
+
+---
 
 ## K. Configuración y Preferencias
-- **RF46 (MVP)** – Preferencias: moneda por defecto, formato de precios, tema.  
-- **RF47 (F2)** – Parámetros comerciales: impuestos, radios de geofence.  
-- **RF48 (F2)** – Multi-empresa / Multi-depósito.  
+- **RF47 (F2)** – Configuración de moneda por defecto.  
+- **RF48 (F2)** – Configuración de formato de precios.  
+- **RF49 (MVP)** – Selección de tema visual (claro/oscuro).  
+- **RF50 (F2)** – Soporte multi-empresa y multi-depósito.  
 
-## L. Seguridad y Auditoría
-- **RF49 (MVP)** – Autorizaciones por rol para acciones sensibles.  
-- **RF50 (F2)** – Auditoría de acciones clave.  
-- **RF51 (F2)** – Bloqueo de edición de documentos confirmados y circuito de aprobaciones.  
+---
+
+## L. Seguridad y Control de Accesos
+- **RF51 (MVP)** – Control de permisos basado en roles.  
+
+---
 
 ## M. Integraciones y Backend
-- **RF52 (MVP)** – API REST .NET con endpoints para auth, clientes, productos, ventas, cotizaciones y sincronización.  
-- **RF53 (MVP)** – SQL Server como fuente de verdad y SQLite en dispositivo.  
-- **RF54 (F2)** – Web Admin para ABM masivo, reportes y configuración avanzada.  
-- **RF55 (F3)** – Integración contable con sistemas externos.  
+- **RF52 (MVP)** – API REST en .NET para autenticación, clientes, productos, ventas, cotizaciones.  
+- **RF53 (MVP)** – Base de datos central como fuente de verdad.  
+- **RF54 (F2)** – Panel web administrativo.  
+- **RF55 (F3)** – Integración con sistemas contables externos.  
+
+---
 
 ## N. UX móvil y Performance
-- **RF56 (MVP)** – Listas grandes virtualizadas y búsqueda incremental.  
-- **RF57 (MVP)** – Pantalla “Nueva Venta”: buscador de cliente, resumen, botón “Agregar producto”, lista editable y botón Confirmar.  
-- **RF58 (MVP)** – Orden en rankings/listados y posiciones claras.  
-- **RF59 (F2)** – Accesibilidad básica: tamaños de fuente, contraste.  
-- **RF60 (F3)** – Soporte multilenguaje (es/en).  
+- **RF56 (MVP)** – Soporte para listas grandes con virtualización.  
+- **RF57 (MVP)** – Pantalla optimizada de Nueva Venta.  
+- **RF58 (MVP)** – Ordenamiento claro de listas y rankings.  
+- **RF59 (F2)** – Ajustes básicos de accesibilidad.  
+- **RF60 (F3)** – Soporte multilenguaje.  
+
+---
+
+## O. Entregas de Mercadería
+- **RF61 (F2)** – Visualización de pedidos pendientes.  
+- **RF62 (F2)** – Confirmación de entrega por repartidor.  
+- **RF63 (F2)** – Registro de fecha y hora de entrega.  
+- **RF64 (F2)** – Registro opcional de observaciones.  
+- **RF65 (F2)** – Confirmación de entrega mediante firma o validación del cliente.  
