@@ -297,6 +297,7 @@ class _VentasScreenState extends State<VentasScreen> {
       child: SingleChildScrollView(
         controller: _scrollController,
         physics: const AlwaysScrollableScrollPhysics(),
+<<<<<<< Updated upstream
         child: ListView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
@@ -310,6 +311,10 @@ class _VentasScreenState extends State<VentasScreen> {
             final isLast = index == filteredVentas.length - 1;
             return _buildVentaCard(venta, provider, isLast: isLast);
           },
+=======
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).padding.bottom + 12,
+>>>>>>> Stashed changes
         ),
       ),
     );

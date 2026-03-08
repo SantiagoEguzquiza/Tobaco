@@ -63,7 +63,8 @@ class _MenuScreenState extends State<MenuScreen> {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
-    final cardBackground = isDark ? const Color(0xFF1A1A1A) : colorScheme.surfaceContainerHighest;
+    // En modo claro un gris claro para que el cuadrado con border radius se vea
+    final cardBackground = isDark ? const Color(0xFF1A1A1A) : const Color(0xFFF0F0F0);
 
     final buttonSize =
         isTablet ? 180.0 : (screenWidth * 0.35).clamp(120.0, 160.0);
@@ -81,11 +82,16 @@ class _MenuScreenState extends State<MenuScreen> {
               Navigator.of(context).pushReplacementNamed('/superadmin');
             }
           });
+<<<<<<< Updated upstream
           return Center(
             child: CircularProgressIndicator(
               valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
             ),
           );
+=======
+          final loadingColor = isDark ? theme.colorScheme.primary : Colors.green;
+          return Center(child: CircularProgressIndicator(color: loadingColor));
+>>>>>>> Stashed changes
         }
 
         if (authProvider.isAuthenticated &&
@@ -401,7 +407,7 @@ class _MenuScreenState extends State<MenuScreen> {
     final theme = Theme.of(context);
     final cardBg = theme.brightness == Brightness.dark
         ? const Color(0xFF1A1A1A)
-        : theme.colorScheme.surfaceContainerHighest;
+        : const Color(0xFFF0F0F0);
     final labelColor = theme.colorScheme.onSurface;
 
     return Material(

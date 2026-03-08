@@ -261,6 +261,10 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
                 perm.marcarTimeoutYPermitirEntrada(auth);
               });
             }
+            final theme = Theme.of(context);
+            final loadingColor = theme.brightness == Brightness.light
+                ? Colors.green
+                : theme.colorScheme.primary;
             return Scaffold(
               resizeToAvoidBottomInset: false,
               body: Center(
@@ -268,9 +272,13 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
                   mainAxisSize: MainAxisSize.min,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
+<<<<<<< Updated upstream
                     CircularProgressIndicator(
                       valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
                     ),
+=======
+                    CircularProgressIndicator(color: loadingColor),
+>>>>>>> Stashed changes
                     const SizedBox(height: 16),
                     const Text('Cargando permisos...', style: TextStyle(fontSize: 14)),
                   ],

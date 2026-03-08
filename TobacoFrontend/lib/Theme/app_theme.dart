@@ -291,10 +291,18 @@ class AppTheme {
       scaffoldBackgroundColor: Colors.white,
       primarySwatch: Colors.green,
       primaryColor: primaryColor,
+      colorScheme: ColorScheme.light(
+        primary: primaryColor,
+        onPrimary: Colors.white,
+        surface: Colors.white,
+        onSurface: Colors.black87,
+      ),
       appBarTheme: AppBarTheme(
         backgroundColor: primaryColor,
         foregroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
         elevation: 0,
+        scrolledUnderElevation: 0,
         systemOverlayStyle: const SystemUiOverlayStyle(
           statusBarBrightness: Brightness.light,
           systemNavigationBarColor: Colors.transparent,
