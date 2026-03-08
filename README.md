@@ -1,76 +1,138 @@
-# Tobaco
+# Provider
 
-App móvil que transforma la gestión de ventas en empresas distribuidoras.
-Con un diseño intuitivo, permite controlar inventario, crear facturas digitales al instante, registrar clientes desde el terreno y consultar cotizaciones de monedas en vivo. Todo pensado para que los vendedores trabajen más rápido, con menos errores y con información clave siempre al alcance.
+Provider es una plataforma móvil diseñada para digitalizar la operación de empresas distribuidoras, permitiendo gestionar clientes, productos, ventas y entregas directamente desde el terreno.
+
+La aplicación está pensada para optimizar el trabajo de vendedores, repartidores y personal de depósito, centralizando la información comercial y operativa en un único sistema conectado a un backend seguro.
+
+Provider busca convertirse en una herramienta de campo que complemente sistemas administrativos o contables existentes, enfocándose en la velocidad, confiabilidad y simplicidad necesarias para la operación diaria de distribuidoras.
 
 ## Tabla de Contenidos
 
 - [Descripción](#descripción)
-- [Características](#características)
+- [Arquitectura del Sistema](#arquitectura-del-sistema)
+- [Características Principales](#características-principales)
+- [Roles Operativos](#roles-operativos)
 - [Tecnologías Utilizadas](#tecnologías-utilizadas)
-- [Instalación](#instalación)
-- [Uso](#uso)
-- [Futuras mejoras](#futuras-mejoras)
+- [Roadmap](#roadmap)
 - [Contribución](#contribución)
-
----
 
 ## Descripción
 
-Aplicación móvil multiplataforma desarrollada en Flutter, orientada a empresas proveedoras y distribuidoras de mercadería.
-La app integra en un mismo entorno la gestión de inventario, el registro de clientes, la generación de facturas digitales y la consulta de cotizaciones de monedas extranjeras en tiempo real.
-Además, está pensada para optimizar la labor diaria de los vendedores, permitiendo trabajar con o sin conexión a internet, planificar rutas de visitas mediante geolocalización y obtener reportes de ventas para una mejor toma de decisiones.
+Provider es una aplicación móvil desarrollada en Flutter orientada a empresas proveedoras y distribuidoras de mercadería.
 
-## Características
+El sistema permite gestionar la operación comercial y logística desde dispositivos móviles, facilitando tareas como:
 
-- **Gestión de inventario:** Controla el stock de productos disponibles y movimientos de inventario.
-- **Facturación digital:** Genera y gestiona facturas electrónicas de manera rápida y sencilla.
-- **Cotizaciones de monedas:** Consulta tasas de cambio de diferentes monedas en tiempo real.
-- **Registro de clientes:** Almacena y administra datos de clientes fácilmente.
-- **Optimización del proceso de ventas:** Acceso inmediato a información relevante para la toma de decisiones.
-- **Interfaz intuitiva:** Fácil de usar para vendedores en movimiento.
+- Registro de clientes
+- Generación de ventas
+- Control de productos
+- Consulta de historial comercial
+- Generación de comprobantes
+- Control básico de inventario
+
+La plataforma está diseñada para funcionar en entornos de conectividad variable, permitiendo continuar operando en campo y sincronizar la información cuando se restablece la conexión.
+
+Provider utiliza una arquitectura multi-tenant, lo que permite que múltiples empresas utilicen la misma infraestructura manteniendo el aislamiento completo de sus datos.
+
+## Arquitectura del Sistema
+
+La plataforma está compuesta por los siguientes componentes principales:
+
+### Aplicación móvil
+Aplicación desarrollada en Flutter, utilizada por vendedores, repartidores y otros roles operativos para interactuar con el sistema desde dispositivos móviles.
+
+### API Backend
+API REST desarrollada en .NET, encargada de:
+- Autenticación
+- Gestión de clientes
+- Gestión de productos
+- Registro de ventas
+- Sincronización de datos
+
+### Base de datos central
+Base de datos relacional utilizada como fuente de verdad del sistema, almacenando la información de todas las empresas registradas en la plataforma.
+
+### Base de datos local
+La aplicación utiliza SQLite en el dispositivo móvil para permitir operación offline y sincronización posterior con el backend.
+
+### Arquitectura Multi-Tenant
+Provider implementa un modelo multi-tenant, donde múltiples empresas utilizan la misma infraestructura manteniendo separación lógica de datos mediante identificadores de tenant. Esto permite escalar el sistema sin necesidad de desplegar instancias separadas para cada cliente.
+
+## Características Principales
+
+### Gestión de Clientes
+- Registro y edición de clientes
+- Consulta de historial comercial
+- Información de contacto y dirección
+- Búsqueda rápida de clientes
+
+### Gestión de Productos
+- Registro de productos
+- Consulta de precios
+- Control básico de inventario
+- Alertas de stock bajo
+
+### Gestión de Ventas
+- Creación de ventas desde dispositivos móviles
+- Selección rápida de productos
+- Cálculo automático de totales
+- Registro de ventas en campo
+
+### Comprobantes Digitales
+- Generación de comprobantes en PDF
+- Compartición mediante aplicaciones externas (WhatsApp, correo electrónico)
+
+### Consulta de Cotizaciones
+- Consulta de cotizaciones de monedas
+- Almacenamiento local para uso offline
+
+### Operación Offline
+La aplicación permite continuar operando incluso cuando no existe conexión a internet. Las operaciones se almacenan localmente y se sincronizan automáticamente con el servidor cuando la conexión vuelve a estar disponible.
+
+## Roles Operativos
+
+Provider está diseñado para contemplar distintos puestos de trabajo dentro de una distribuidora.
+
+| Rol | Descripción de funciones |
+| :--- | :--- |
+| **Administrador** | Configuración de la empresa, gestión de usuarios, administración de productos y clientes. |
+| **Vendedor / Preventista** | Registro de ventas, consulta de historial del cliente, aplicación de promociones y generación de comprobantes. |
+| **Repartidor** | Consulta de pedidos pendientes, registro de entregas realizadas y confirmación de recepción. |
+| **Personal de Depósito** | Gestión de stock, ajustes de inventario y preparación de pedidos para reparto. |
+| **Supervisor** | Supervisión de la operación comercial y revisión de información de ventas. |
 
 ## Tecnologías Utilizadas
 
-- **Dart / Flutter:** Desarrollo móvil multiplataforma.
-- **C++ / C / C#:** Lógica de integración nativa.
-- **CMake:** Gestión de la build.
-- **Swift:** Integración iOS (mínima).
-- **Otros:** Utilidades adicionales.
+### Frontend
+- Flutter
+- Dart
 
-## Instalación
+### Backend
+- .NET
+- ASP.NET Web API
 
-1. Clona este repositorio:
+### Base de Datos
+- SQL Server / PostgreSQL
+- SQLite (modo offline en dispositivo)
 
-   ```bash
-   git clone https://github.com/SantiagoEguzquiza/Tobaco.git
-   ```
+### Infraestructura
+- Backend desplegado en servicios cloud
+- Arquitectura multi-tenant
 
-2. Instala las dependencias necesarias según la plataforma (verifica que tienes instalado Flutter, CMake y compiladores de C/C++ según corresponda).
 
-3. Configura el entorno para Android/iOS siguiendo la [documentación oficial de Flutter](https://docs.flutter.dev/get-started/install).
+## Roadmap
 
-4. Compila e inicia la aplicación móvil:
+El desarrollo de Provider contempla futuras funcionalidades orientadas a mejorar la operación logística de distribuidoras. Entre las mejoras planificadas se encuentran:
 
-   ```bash
-   cd Tobaco
-   flutter pub get
-   flutter run
-   ```
-
-   > **Nota:** Puede requerirse configuración adicional para la compilación de módulos nativos (C/C++/C#).
-
-## Uso
-
-1. Inicia sesión con tus credenciales de vendedor.
-2. Accede al panel principal para gestionar inventario, clientes y facturación.
-3. Consulta cotizaciones de monedas extranjeras en la sección dedicada.
-4. Genera facturas digitales y registra ventas directamente desde la app.
-
-## Futuras mejoras
-
-- **Integración de mapas con rutas de clientes:** Se planea incorporar una funcionalidad que permita visualizar en un mapa la ubicación de los clientes y trazar rutas óptimas para realizar visitas, optimizando así la planificación y el recorrido diario de los vendedores.
+- Planificación de rutas de visitas
+- Visualización de clientes en mapas
+- Optimización automática de recorridos
+- Gestión de entregas
+- Integración con sistemas contables externos
+- Reportes comerciales avanzados
+- Panel administrativo web
 
 ## Contribución
 
-Si deseas contribuir a este proyecto, por favor comunícate conmigo antes de realizar cualquier cambio significativo. Estoy disponible para discutir ideas, sugerencias o posibles mejoras para asegurar que el desarrollo siga una dirección coherente.
+Este proyecto se encuentra en desarrollo activo.
+
+Si deseas contribuir o discutir ideas relacionadas con el sistema, puedes comunicarte directamente con el autor del proyecto. Las sugerencias y mejoras son bienvenidas, siempre buscando mantener una dirección coherente en la evolución de la plataforma.
