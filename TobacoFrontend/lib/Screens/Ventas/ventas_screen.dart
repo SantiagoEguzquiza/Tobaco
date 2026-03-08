@@ -25,6 +25,11 @@ class _VentasScreenState extends State<VentasScreen> {
   final TextEditingController _searchController = TextEditingController();
   final GlobalKey<_SincronizarButtonState> _syncButtonKey =
       GlobalKey<_SincronizarButtonState>();
+  final GlobalKey _headerKey = GlobalKey();
+
+  double _headerVisibility = 1.0;
+  double _lastScrollOffset = 0.0;
+  double _maxHeaderHeight = 0.0;
 
   @override
   void initState() {
@@ -33,17 +38,25 @@ class _VentasScreenState extends State<VentasScreen> {
     // Defer to after first frame to avoid setState/markNeedsBuild during build
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      // Mostrar loading de entrada y no la lista anterior (evita "listado → carga → listado de nuevo")
+      _measureHeader();
       context.read<VentasProvider>().prepararParaCargaInicial();
       _inicializarVentas();
     });
   }
 
   Future<void> _inicializarVentas() async {
-    // No borrar ventas pendientes al abrir: se preservan para que el usuario
-    // pueda sincronizar después (p. ej. si el servidor falló al guardar).
     if (!mounted) return;
     await context.read<VentasProvider>().cargarVentas(usarTimeoutNormal: true);
+  }
+
+  void _measureHeader() {
+    final ctx = _headerKey.currentContext;
+    if (ctx != null) {
+      final box = ctx.findRenderObject() as RenderBox?;
+      if (box != null && box.hasSize) {
+        _maxHeaderHeight = box.size.height;
+      }
+    }
   }
 
   @override
@@ -55,15 +68,39 @@ class _VentasScreenState extends State<VentasScreen> {
 
   void _onScroll() {
     if (!_scrollController.hasClients) return;
-    if (_scrollController.position.pixels >=
-        _scrollController.position.maxScrollExtent - 200) {
+
+    final currentOffset = _scrollController.offset;
+    final delta = currentOffset - _lastScrollOffset;
+    _lastScrollOffset = currentOffset;
+
+    if (currentOffset >= _scrollController.position.maxScrollExtent - 200) {
       context.read<VentasProvider>().cargarMasVentas();
+    }
+
+    if (_maxHeaderHeight <= 0 || delta.abs() > 200) return;
+
+    double newVisibility;
+    if (currentOffset <= 0) {
+      newVisibility = 1.0;
+    } else {
+      newVisibility =
+          (_headerVisibility - delta * 0.5 / _maxHeaderHeight).clamp(0.0, 1.0);
+    }
+
+    if ((newVisibility - _headerVisibility).abs() > 0.001) {
+      setState(() {
+        _headerVisibility = newVisibility;
+      });
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<VentasProvider>();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _measureHeader();
+    });
 
     if (_searchController.text != provider.searchQuery) {
       _searchController.text = provider.searchQuery;
@@ -101,12 +138,26 @@ class _VentasScreenState extends State<VentasScreen> {
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
             child: Column(
             children: [
-              if (provider.isOffline) ...[
-                _buildOfflineBanner(),
-                const SizedBox(height: 12),
-              ],
-              _buildHeaderSection(provider),
-              const SizedBox(height: 20),
+              ClipRect(
+                child: Align(
+                  alignment: Alignment.topCenter,
+                  heightFactor: _headerVisibility,
+                  child: Opacity(
+                    opacity: _headerVisibility,
+                    child: Column(
+                      key: _headerKey,
+                      children: [
+                        if (provider.isOffline) ...[
+                          _buildOfflineBanner(),
+                          const SizedBox(height: 12),
+                        ],
+                        _buildHeaderSection(provider),
+                        const SizedBox(height: 20),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
               Expanded(child: _buildVentasList(provider)),
             ],
           ),
