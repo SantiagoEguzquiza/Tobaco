@@ -49,7 +49,7 @@ Responsable de la configuración y mantenimiento:
 - Registro de compras de mercadería.
 - Supervisión del inventario.
 
-### Vendedor / Preventista
+### Vendedor
 Principal usuario operativo de la aplicación móvil:
 - Consulta de información de clientes y catálogo de productos.
 - Registro de ventas y generación de comprobantes.
