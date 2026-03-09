@@ -229,15 +229,23 @@ class _SeleccionarProductosScreenState
   final TextEditingController _marcaController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final ScrollController _categoriesScrollController = ScrollController();
+  final GlobalKey _headerKey = GlobalKey();
   final Map<int, GlobalKey> _productKeys = {}; // Keys para cada producto
   final Set<int> _expandedProducts =
       {}; // IDs de productos con controles expandidos
   /// En modo compra: lista de productos con cantidad y subtotal (precio = costo unitario).
   List<ProductoSeleccionado> _productosCompra = [];
+  double _headerVisibility = 1.0;
+  double _lastScrollOffset = 0.0;
+  double _maxHeaderHeight = 0.0;
 
   @override
   void initState() {
     super.initState();
+    _scrollController.addListener(_onScroll);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _measureHeader();
+    });
     if (widget.modoCompra) {
       _productosCompra = List.from(widget.productosYaSeleccionados);
     }
@@ -433,6 +441,38 @@ class _SeleccionarProductosScreenState
               'Error al cargar los Productos: ${e.toString().replaceFirst('Exception: ', '')}';
         });
       }
+    }
+  }
+
+  void _measureHeader() {
+    final ctx = _headerKey.currentContext;
+    if (ctx != null) {
+      final box = ctx.findRenderObject() as RenderBox?;
+      if (box != null && box.hasSize) {
+        _maxHeaderHeight = box.size.height;
+      }
+    }
+  }
+
+  void _onScroll() {
+    if (!_scrollController.hasClients) return;
+    final currentOffset = _scrollController.offset;
+    final delta = currentOffset - _lastScrollOffset;
+    _lastScrollOffset = currentOffset;
+    if (_maxHeaderHeight <= 0 || delta.abs() > 200) return;
+
+    double newVisibility;
+    if (currentOffset <= 0) {
+      newVisibility = 1.0;
+    } else {
+      newVisibility =
+          (_headerVisibility - delta * 0.5 / _maxHeaderHeight).clamp(0.0, 1.0);
+    }
+
+    if ((newVisibility - _headerVisibility).abs() > 0.001) {
+      setState(() {
+        _headerVisibility = newVisibility;
+      });
     }
   }
 
@@ -1607,6 +1647,8 @@ class _SeleccionarProductosScreenState
     // Detectar si el teclado está visible
     final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
     final isKeyboardVisible = keyboardHeight > 0;
+    final isCompactScreen = AppTheme.isCompactVentasButton(context);
+    final isSmallPhone = MediaQuery.of(context).size.height < 680;
 
     if (selectedCategory == null && categorias.isNotEmpty) {
       selectedCategory = categorias.first.nombre;
@@ -1660,277 +1702,314 @@ class _SeleccionarProductosScreenState
               child: Column(
                 mainAxisSize: MainAxisSize.max,
                 children: [
-                  // Header fijo
-                  Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // Barra de búsqueda usando HeaderConBuscador
-                        HeaderConBuscador(
-                          leadingIcon: Icons.inventory_2,
-                          title: 'Buscar Productos',
-                          subtitle: '${productos.length} productos disponibles',
-                          controller: _searchController,
-                          hintText: 'Buscar productos por nombre...',
-                          onChanged: (value) {
-                            setState(() {
-                              searchQuery = value;
-                              if (value.isNotEmpty) {
-                                selectedCategory = null;
-                              } else {
-                                if (categorias.isNotEmpty) {
-                                  selectedCategory = categorias.first.nombre;
-                                }
-                              }
-                            });
-                          },
-                          onClear: () {
-                            setState(() {
-                              searchQuery = '';
-                              if (categorias.isNotEmpty) {
-                                selectedCategory = categorias.first.nombre;
-                              }
-                            });
-                            _searchController.clear();
-                          },
-                          trailing: IconButton(
-                            icon: Icon(
-                              Icons.tune_rounded,
-                              color: _advancedSearchExpanded
-                                  ? AppTheme.primaryColor
-                                  : (Theme.of(context).brightness == Brightness.dark
-                                      ? Colors.grey[400]
-                                      : Colors.grey[600]),
-                              size: 22,
-                            ),
-                            onPressed: () {
-                              setState(() => _advancedSearchExpanded = !_advancedSearchExpanded);
-                            },
-                            tooltip: 'Buscador avanzado',
-                          ),
-                        ),
+                  ClipRect(
+                    child: Align(
+                      alignment: Alignment.topCenter,
+                      heightFactor: _headerVisibility,
+                      child: Opacity(
+                        opacity: _headerVisibility,
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Builder(
+                            builder: (context) {
+                        final screenHeight = MediaQuery.of(context).size.height;
+                        final headerNeedsLimit =
+                            isKeyboardVisible || _advancedSearchExpanded;
+                        final minListHeight = 360.0;
+                        final maxHeaderHeight = (screenHeight - minListHeight - 32)
+                            .clamp(120.0, double.infinity);
 
-                        // Buscador avanzado (Marca + limpiar como icono en el input)
-                        AnimatedSize(
-                          duration: const Duration(milliseconds: 250),
-                          curve: Curves.easeInOut,
-                          child: _advancedSearchExpanded
-                              ? Padding(
-                                  padding: const EdgeInsets.only(top: 10),
-                                  child: Builder(
-                                    builder: (context) {
-                                      final isDark = Theme.of(context).brightness == Brightness.dark;
-                                      return Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Text(
-                                            'Marca',
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              fontWeight: FontWeight.w600,
-                                              letterSpacing: 0.5,
-                                              color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 6),
-                                          TextField(
-                                            controller: _marcaController,
-                                            onChanged: (value) => setState(() => searchMarca = value),
-                                            style: TextStyle(
-                                              fontSize: 15,
-                                              color: isDark ? Colors.white : Colors.black87,
-                                            ),
-                                            decoration: InputDecoration(
-                                              hintText: 'Filtrar por marca',
-                                              hintStyle: TextStyle(
-                                                color: Colors.grey.shade500,
-                                                fontSize: 14,
-                                              ),
-                                              filled: true,
-                                              fillColor: isDark ? const Color(0xFF2A2A2A) : Colors.grey.shade50,
-                                              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                                              border: OutlineInputBorder(
-                                                borderRadius: BorderRadius.circular(12),
-                                                borderSide: BorderSide(
-                                                  color: isDark ? Colors.grey.shade600 : Colors.grey.shade300,
-                                                ),
-                                              ),
-                                              enabledBorder: OutlineInputBorder(
-                                                borderRadius: BorderRadius.circular(12),
-                                                borderSide: BorderSide(
-                                                  color: isDark ? Colors.grey.shade600 : Colors.grey.shade300,
-                                                ),
-                                              ),
-                                              focusedBorder: OutlineInputBorder(
-                                                borderRadius: BorderRadius.circular(12),
-                                                borderSide: const BorderSide(
-                                                  color: AppTheme.primaryColor,
-                                                  width: 2,
-                                                ),
-                                              ),
-                                              prefixIcon: Icon(
-                                                Icons.sell_outlined,
-                                                size: 20,
-                                                color: isDark ? Colors.grey.shade500 : Colors.grey.shade600,
-                                              ),
-                                              suffixIcon: IconButton(
-                                                onPressed: () {
-                                                  setState(() {
-                                                    searchQuery = '';
-                                                    searchMarca = '';
-                                                    if (categorias.isNotEmpty) {
-                                                      selectedCategory = categorias.first.nombre;
-                                                    }
-                                                    _marcaController.clear();
-                                                    _searchController.clear();
-                                                  });
-                                                },
-                                                icon: Icon(
-                                                  Icons.clear_all_rounded,
-                                                  size: 20,
+                        Widget headerContent = Column(
+                          key: _headerKey,
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            // Barra de búsqueda usando HeaderConBuscador
+                            HeaderConBuscador(
+                              leadingIcon: Icons.inventory_2,
+                              title: 'Buscar Productos',
+                              subtitle: '${productos.length} productos disponibles',
+                              controller: _searchController,
+                              hintText: 'Buscar productos por nombre...',
+                              onChanged: (value) {
+                                setState(() {
+                                  searchQuery = value;
+                                  if (value.isNotEmpty) {
+                                    selectedCategory = null;
+                                  } else {
+                                    if (categorias.isNotEmpty) {
+                                      selectedCategory = categorias.first.nombre;
+                                    }
+                                  }
+                                });
+                              },
+                              onClear: () {
+                                setState(() {
+                                  searchQuery = '';
+                                  if (categorias.isNotEmpty) {
+                                    selectedCategory = categorias.first.nombre;
+                                  }
+                                });
+                                _searchController.clear();
+                              },
+                              trailing: IconButton(
+                                icon: Icon(
+                                  Icons.tune_rounded,
+                                  color: _advancedSearchExpanded
+                                      ? AppTheme.primaryColor
+                                      : (Theme.of(context).brightness == Brightness.dark
+                                          ? Colors.grey[400]
+                                          : Colors.grey[600]),
+                                  size: 22,
+                                ),
+                                onPressed: () {
+                                  setState(() => _advancedSearchExpanded = !_advancedSearchExpanded);
+                                },
+                                tooltip: 'Buscador avanzado',
+                              ),
+                            ),
+
+                            // Buscador avanzado (Marca + limpiar como icono en el input)
+                            AnimatedSize(
+                              duration: const Duration(milliseconds: 250),
+                              curve: Curves.easeInOut,
+                              child: _advancedSearchExpanded
+                                  ? Padding(
+                                      padding: EdgeInsets.only(
+                                        top: isSmallPhone ? 6 : 10,
+                                      ),
+                                      child: Builder(
+                                        builder: (context) {
+                                          final isDark = Theme.of(context).brightness == Brightness.dark;
+                                          return Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Text(
+                                                'Marca',
+                                                style: TextStyle(
+                                                  fontSize: isSmallPhone ? 11 : 12,
+                                                  fontWeight: FontWeight.w600,
+                                                  letterSpacing: 0.5,
                                                   color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
                                                 ),
-                                                tooltip: 'Limpiar filtros',
-                                                style: IconButton.styleFrom(
-                                                  padding: const EdgeInsets.all(8),
-                                                  minimumSize: const Size(36, 36),
+                                              ),
+                                              SizedBox(height: isSmallPhone ? 4 : 6),
+                                              TextField(
+                                                controller: _marcaController,
+                                                onChanged: (value) => setState(() => searchMarca = value),
+                                                style: TextStyle(
+                                                  fontSize: isSmallPhone ? 14 : 15,
+                                                  color: isDark ? Colors.white : Colors.black87,
+                                                ),
+                                                decoration: InputDecoration(
+                                                  hintText: 'Filtrar por marca',
+                                                  hintStyle: TextStyle(
+                                                    color: Colors.grey.shade500,
+                                                    fontSize: isSmallPhone ? 13 : 14,
+                                                  ),
+                                                  filled: true,
+                                                  fillColor: isDark ? const Color(0xFF2A2A2A) : Colors.grey.shade50,
+                                                  contentPadding: EdgeInsets.symmetric(
+                                                    horizontal: 14,
+                                                    vertical: isSmallPhone ? 10 : 12,
+                                                  ),
+                                                  border: OutlineInputBorder(
+                                                    borderRadius: BorderRadius.circular(12),
+                                                    borderSide: BorderSide(
+                                                      color: isDark ? Colors.grey.shade600 : Colors.grey.shade300,
+                                                    ),
+                                                  ),
+                                                  enabledBorder: OutlineInputBorder(
+                                                    borderRadius: BorderRadius.circular(12),
+                                                    borderSide: BorderSide(
+                                                      color: isDark ? Colors.grey.shade600 : Colors.grey.shade300,
+                                                    ),
+                                                  ),
+                                                  focusedBorder: OutlineInputBorder(
+                                                    borderRadius: BorderRadius.circular(12),
+                                                    borderSide: const BorderSide(
+                                                      color: AppTheme.primaryColor,
+                                                      width: 2,
+                                                    ),
+                                                  ),
+                                                  prefixIcon: Icon(
+                                                    Icons.sell_outlined,
+                                                    size: 20,
+                                                    color: isDark ? Colors.grey.shade500 : Colors.grey.shade600,
+                                                  ),
+                                                  suffixIcon: IconButton(
+                                                    onPressed: () {
+                                                      setState(() {
+                                                        searchQuery = '';
+                                                        searchMarca = '';
+                                                        if (categorias.isNotEmpty) {
+                                                          selectedCategory = categorias.first.nombre;
+                                                        }
+                                                        _marcaController.clear();
+                                                        _searchController.clear();
+                                                      });
+                                                    },
+                                                    icon: Icon(
+                                                      Icons.clear_all_rounded,
+                                                      size: 20,
+                                                      color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                                                    ),
+                                                    tooltip: 'Limpiar filtros',
+                                                    style: IconButton.styleFrom(
+                                                      padding: const EdgeInsets.all(8),
+                                                      minimumSize: const Size(36, 36),
+                                                    ),
+                                                  ),
                                                 ),
                                               ),
+                                            ],
+                                          );
+                                        },
+                                      ),
+                                    )
+                                  : const SizedBox.shrink(),
+                            ),
+
+                            SizedBox(height: isSmallPhone ? 8 : 12),
+
+                            // Filtros de categorías (solo cuando no hay búsqueda ni filtro por marca)
+                            if (searchQuery.isEmpty && searchMarca.isEmpty && categorias.isNotEmpty) ...[
+                              SizedBox(
+                                height: isCompactScreen ? 42 : 45,
+                                child: ListView.builder(
+                                  controller: _categoriesScrollController,
+                                  scrollDirection: Axis.horizontal,
+                                  itemCount: categorias.length,
+                                  itemBuilder: (context, index) {
+                                    final categoria = categorias[index];
+                                    final isSelected =
+                                        selectedCategory == categoria.nombre;
+                                    final categoriaColor =
+                                        _parseColor(categoria.colorHex);
+                                    return Padding(
+                                      padding: const EdgeInsets.only(right: 10),
+                                      child: GestureDetector(
+                                        onTap: () {
+                                          setState(() {
+                                            selectedCategory = categoria.nombre;
+                                          });
+                                          _centerCategoryButton(index, categorias);
+                                        },
+                                        child: Container(
+                                          padding: EdgeInsets.symmetric(
+                                              horizontal: 12,
+                                              vertical: isCompactScreen ? 10 : 12),
+                                          decoration: BoxDecoration(
+                                            color: isSelected
+                                                ? categoriaColor
+                                                : Theme.of(context).cardTheme.color,
+                                            borderRadius: BorderRadius.circular(8),
+                                            border: Border.all(
+                                              color: isSelected
+                                                  ? categoriaColor
+                                                  : Colors.grey.shade300,
+                                              width: 1,
                                             ),
                                           ),
-                                        ],
-                                      );
-                                    },
-                                  ),
-                                )
-                              : const SizedBox.shrink(),
-                        ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Text(
+                                                categoria.nombre[0].toUpperCase() +
+                                                    categoria.nombre.substring(1),
+                                                style: TextStyle(
+                                                  fontSize: 14,
+                                                  fontWeight: isSelected
+                                                      ? FontWeight.w600
+                                                      : FontWeight.normal,
+                                                  color: isSelected
+                                                      ? Colors.white
+                                                      : Theme.of(context)
+                                                          .textTheme
+                                                          .bodyLarge
+                                                          ?.color,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              )
+                            ],
 
-                        const SizedBox(height: 16),
-
-                        // Filtros de categorías (solo cuando no hay búsqueda ni filtro por marca)
-                        if (searchQuery.isEmpty && searchMarca.isEmpty && categorias.isNotEmpty) ...[
-                          SizedBox(
-                            height: 45,
-                            child: ListView.builder(
-                              controller: _categoriesScrollController,
-                              scrollDirection: Axis.horizontal,
-                              itemCount: categorias.length,
-                              itemBuilder: (context, index) {
-                                final categoria = categorias[index];
-                                final isSelected =
-                                    selectedCategory == categoria.nombre;
-                                final categoriaColor =
-                                    _parseColor(categoria.colorHex);
-                                return Padding(
-                                  padding: const EdgeInsets.only(right: 10),
-                                  child: GestureDetector(
-                                    onTap: () {
-                                      setState(() {
-                                        selectedCategory = categoria.nombre;
-                                      });
-                                      // Centrar el botón en la pantalla
-                                      _centerCategoryButton(index, categorias);
-                                    },
-                                    child: Container(
+                            // Indicador de búsqueda global (nombre o marca)
+                            if (filteredProductos.isNotEmpty) ...[
+                              if (searchQuery.isNotEmpty || searchMarca.isNotEmpty) ...[
+                                Row(
+                                  children: [
+                                    Container(
                                       padding: const EdgeInsets.symmetric(
-                                          horizontal: 12, vertical: 12),
+                                          horizontal: 12, vertical: 6),
                                       decoration: BoxDecoration(
-                                        color: isSelected
-                                            ? categoriaColor
-                                            : Theme.of(context).cardTheme.color,
-                                        borderRadius: BorderRadius.circular(8),
+                                        color: AppTheme.primaryColor.withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(20),
                                         border: Border.all(
-                                          color: isSelected
-                                              ? categoriaColor
-                                              : Colors.grey.shade300,
+                                          color:
+                                              AppTheme.primaryColor.withOpacity(0.3),
                                           width: 1,
                                         ),
                                       ),
                                       child: Row(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
+                                          Icon(
+                                            Icons.search,
+                                            size: 16,
+                                            color: AppTheme.primaryColor,
+                                          ),
+                                          const SizedBox(width: 6),
                                           Text(
-                                            categoria.nombre[0].toUpperCase() +
-                                                categoria.nombre.substring(1),
+                                            'Búsqueda global',
                                             style: TextStyle(
-                                              fontSize: 14,
-                                              fontWeight: isSelected
-                                                  ? FontWeight.w600
-                                                  : FontWeight.normal,
-                                              color: isSelected
-                                                  ? Colors.white
-                                                  : Theme.of(context)
-                                                      .textTheme
-                                                      .bodyLarge
-                                                      ?.color,
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w600,
+                                              color: AppTheme.primaryColor,
                                             ),
                                           ),
                                         ],
                                       ),
                                     ),
-                                  ),
-                                );
-                              },
-                            ),
-                          )
-                        ],
-
-                        // Indicador de búsqueda global (nombre o marca)
-                        if (filteredProductos.isNotEmpty) ...[
-                          if (searchQuery.isNotEmpty || searchMarca.isNotEmpty) ...[
-                            Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 12, vertical: 6),
-                                  decoration: BoxDecoration(
-                                    color: AppTheme.primaryColor.withOpacity(0.1),
-                                    borderRadius: BorderRadius.circular(20),
-                                    border: Border.all(
-                                      color:
-                                          AppTheme.primaryColor.withOpacity(0.3),
-                                      width: 1,
-                                    ),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(
-                                        Icons.search,
-                                        size: 16,
-                                        color: AppTheme.primaryColor,
-                                      ),
-                                      const SizedBox(width: 6),
-                                      Text(
-                                        'Búsqueda global',
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Text(
+                                        '${filteredProductos.length} resultado${filteredProductos.length == 1 ? '' : 's'}',
                                         style: TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w600,
-                                          color: AppTheme.primaryColor,
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w500,
+                                          color: Colors.grey.shade600,
                                         ),
                                       ),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Text(
-                                    '${filteredProductos.length} resultado${filteredProductos.length == 1 ? '' : 's'}',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w500,
-                                      color: Colors.grey.shade600,
                                     ),
-                                  ),
+                                  ],
                                 ),
-                              ],
+                              ]
+                            ],
+                          ],
+                        );
+
+                        if (headerNeedsLimit) {
+                          return ConstrainedBox(
+                            constraints: BoxConstraints(maxHeight: maxHeaderHeight),
+                            child: SingleChildScrollView(
+                              child: headerContent,
                             ),
-                          ]
-                        ],
-                      ],
+                          );
+                        }
+
+                        return headerContent;
+                            },
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                   // Lista de productos scrolleable
@@ -1938,120 +2017,85 @@ class _SeleccionarProductosScreenState
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16.0),
                       child: filteredProductos.isEmpty
-                          ? LayoutBuilder(
-                              builder: (context, constraints) {
-                                const double desiredHeight = 320.0;
-
-                                Widget card = SizedBox(
-                                  height: desiredHeight,
-                                  width: double.infinity,
-                                  child: Container(
-                                    decoration: BoxDecoration(
+                          ? SingleChildScrollView(
+                              physics: const AlwaysScrollableScrollPhysics(),
+                              padding: const EdgeInsets.only(bottom: 8),
+                              child: Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.fromLTRB(24, 16, 24, 12),
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context).brightness ==
+                                          Brightness.dark
+                                      ? const Color(0xFF1A1A1A)
+                                      : Colors.white,
+                                  borderRadius: BorderRadius.circular(15),
+                                  boxShadow: [
+                                    BoxShadow(
                                       color: Theme.of(context).brightness ==
                                               Brightness.dark
-                                          ? const Color(0xFF1A1A1A)
-                                          : Colors.white,
-                                      borderRadius: BorderRadius.circular(15),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Theme.of(context).brightness ==
-                                                  Brightness.dark
-                                              ? Colors.black.withOpacity(0.3)
-                                              : Colors.black.withOpacity(0.05),
-                                          blurRadius: 10,
-                                          offset: const Offset(0, 2),
-                                        ),
-                                      ],
+                                          ? Colors.black.withOpacity(0.3)
+                                          : Colors.black.withOpacity(0.05),
+                                      blurRadius: 10,
+                                      offset: const Offset(0, 2),
                                     ),
-                                    child: Center(
-                                      child: Column(
-                                        mainAxisSize: MainAxisSize.min,
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.center,
-                                        children: [
-                                          Container(
-                                            padding: const EdgeInsets.all(20),
-                                            decoration: BoxDecoration(
-                                              color: Theme.of(context)
-                                                          .brightness ==
-                                                      Brightness.dark
-                                                  ? AppTheme.primaryColor
-                                                      .withOpacity(0.2)
-                                                  : AppTheme.secondaryColor,
-                                              shape: BoxShape.circle,
-                                            ),
-                                            child: Icon(
-                                              Icons.inventory_2_outlined,
-                                              size: 60,
-                                              color: Theme.of(context)
-                                                          .brightness ==
-                                                      Brightness.dark
-                                                  ? AppTheme.primaryColor
-                                                  : AppTheme.primaryColor,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 16),
-                                          Text(
-                                            (searchQuery.isNotEmpty || searchMarca.isNotEmpty)
-                                                ? 'Sin resultados'
-                                                : selectedCategory != null
-                                                    ? 'No hay productos en esta categoría'
-                                                    : 'No hay productos disponibles',
-                                            style: TextStyle(
-                                              color: Theme.of(context)
-                                                          .brightness ==
-                                                      Brightness.dark
-                                                  ? Colors.grey.shade400
-                                                  : Colors.grey.shade600,
-                                              fontSize: 18,
-                                              fontWeight: FontWeight.w500,
-                                            ),
-                                            textAlign: TextAlign.center,
-                                          ),
-                                          const SizedBox(height: 8),
-                                          Text(
-                                            (searchQuery.isNotEmpty || searchMarca.isNotEmpty)
-                                                ? (searchQuery.isNotEmpty && searchMarca.isNotEmpty
-                                                    ? 'No hay productos con "$searchQuery" y marca "$searchMarca"'
-                                                    : searchQuery.isNotEmpty
-                                                        ? 'No se encontraron productos que coincidan con "$searchQuery"'
-                                                        : 'No se encontraron productos con marca "$searchMarca"')
-                                                : 'Intenta con otra categoría o término de búsqueda',
-                                            style: TextStyle(
-                                              color: Theme.of(context)
-                                                          .brightness ==
-                                                      Brightness.dark
-                                                  ? Colors.grey.shade400
-                                                  : Colors.grey.shade500,
-                                              fontSize: 14,
-                                            ),
-                                            textAlign: TextAlign.center,
-                                          ),
-                                        ],
+                                  ],
+                                ),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(16),
+                                      decoration: BoxDecoration(
+                                        color: Theme.of(context).brightness ==
+                                                Brightness.dark
+                                            ? AppTheme.primaryColor.withOpacity(0.2)
+                                            : AppTheme.secondaryColor,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: Icon(
+                                        Icons.inventory_2_outlined,
+                                        size: 48,
+                                        color: Theme.of(context).brightness == Brightness.dark
+                                            ? AppTheme.primaryColor
+                                            : AppTheme.primaryColor,
                                       ),
                                     ),
-                                  ),
-                                );
-
-                                if (constraints.maxHeight < desiredHeight) {
-                                  return Align(
-                                    alignment: Alignment.topCenter,
-                                    child: OverflowBox(
-                                      alignment: Alignment.topCenter,
-                                      minWidth: constraints.maxWidth,
-                                      maxWidth: constraints.maxWidth,
-                                      minHeight: desiredHeight,
-                                      maxHeight: desiredHeight,
-                                      child: card,
+                                    const SizedBox(height: 12),
+                                    Text(
+                                      (searchQuery.isNotEmpty || searchMarca.isNotEmpty)
+                                          ? 'Sin resultados'
+                                          : selectedCategory != null
+                                              ? 'No hay productos en esta categoría'
+                                              : 'No hay productos disponibles',
+                                      style: TextStyle(
+                                        color: Theme.of(context).brightness == Brightness.dark
+                                            ? Colors.grey.shade400
+                                            : Colors.grey.shade600,
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                      textAlign: TextAlign.center,
                                     ),
-                                  );
-                                }
-
-                                return Align(
-                                  alignment: Alignment.topCenter,
-                                  child: card,
-                                );
-                              },
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      (searchQuery.isNotEmpty || searchMarca.isNotEmpty)
+                                          ? (searchQuery.isNotEmpty && searchMarca.isNotEmpty
+                                              ? 'No hay productos con "$searchQuery" y marca "$searchMarca"'
+                                              : searchQuery.isNotEmpty
+                                                  ? 'No se encontraron productos que coincidan con "$searchQuery"'
+                                                  : 'No se encontraron productos con marca "$searchMarca"')
+                                          : 'Intenta con otra categoría o término de búsqueda',
+                                      style: TextStyle(
+                                        color: Theme.of(context).brightness == Brightness.dark
+                                            ? Colors.grey.shade400
+                                            : Colors.grey.shade500,
+                                        fontSize: 14,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ],
+                                ),
+                              ),
                             )
                           : ClipRRect(
                               borderRadius: const BorderRadius.only(
@@ -2708,9 +2752,9 @@ class _SeleccionarProductosScreenState
                       Navigator.pop(context, seleccionados);
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
+                      backgroundColor: AppTheme.primaryColor,
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 18),
+                      padding: AppTheme.ventasButtonPadding(context),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
                       ),
@@ -2719,15 +2763,16 @@ class _SeleccionarProductosScreenState
                     icon: Icon(
                       Icons.check_circle,
                       color: Colors.white,
+                      size: AppTheme.ventasButtonIconSize(context),
                     ),
                     label: FittedBox(
                       fit: BoxFit.scaleDown,
                       child: Text(
                         widget.modoCompra ? 'Confirmar compra' : 'Confirmar Venta',
-                        style: const TextStyle(
-                          fontSize: 15,
+                        style: TextStyle(
+                          fontSize: AppTheme.ventasButtonFontSize(context),
                           color: Colors.white,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ),

@@ -791,16 +791,28 @@ class _FormaPagoScreenState extends State<FormaPagoScreen> {
                       flex: 3,
                       child: ElevatedButton.icon(
                         onPressed: _puedeConfirmarPago() ? _confirmarPago : null,
-                        style: AppTheme.elevatedButtonStyle(
-                            _puedeConfirmarPago() ? AppTheme.addGreenColor : Colors.grey),
-                        icon: const Icon(Icons.check_circle, color: Colors.white),
-                        label: const Text(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor:
+                              _puedeConfirmarPago() ? AppTheme.addGreenColor : Colors.grey,
+                          foregroundColor: Colors.white,
+                          padding: AppTheme.ventasButtonPadding(context),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          elevation: 3,
+                        ),
+                        icon: Icon(
+                          Icons.check_circle,
+                          color: Colors.white,
+                          size: AppTheme.ventasButtonIconSize(context),
+                        ),
+                        label: Text(
                            'Confirmar Pago',
-                           
+
                           style: TextStyle(
-                            fontSize: 16,
+                            fontSize: AppTheme.ventasButtonFontSize(context),
                             color: Colors.white,
-                            fontWeight: FontWeight.bold,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ),

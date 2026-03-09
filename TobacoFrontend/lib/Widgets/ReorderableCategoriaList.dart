@@ -120,7 +120,12 @@ class _ReorderableCategoriaListState extends State<ReorderableCategoriaList> {
         }
 
         return ReorderableListView.builder(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          padding: EdgeInsets.only(
+            left: 16,
+            right: 16,
+            top: 8,
+            bottom: MediaQuery.of(context).padding.bottom + 24,
+          ),
           itemCount: _categorias.length,
           onReorder: _onReorder, 
           proxyDecorator: (child, index, animation) {

@@ -116,15 +116,27 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
       context: context,
       barrierDismissible: false,
       builder: (BuildContext context) {
+        final maxHeight = MediaQuery.of(context).size.height * 0.85;
         return Dialog(
+          backgroundColor: Theme.of(context).brightness == Brightness.dark
+              ? const Color(0xFF1E1E1E)
+              : Colors.white,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(12),
           ),
           elevation: 8,
           child: Container(
-            constraints: const BoxConstraints(maxWidth: 380),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
+            constraints: BoxConstraints(maxWidth: 380, maxHeight: maxHeight),
+            decoration: BoxDecoration(
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? const Color(0xFF1E1E1E)
+                  : Colors.white,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Column(
+              mainAxisSize: MainAxisSize.max,
               children: [
                 // Header con gradiente
                 Container(
@@ -138,10 +150,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(12),
-                      topRight: Radius.circular(12),
-                    ),
+                    borderRadius: BorderRadius.zero,
                   ),
                   child: Row(
                     children: [
@@ -173,7 +182,17 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                   ),
                 ),
 
-                // Contenido
+                // Contenido scrollable para evitar overflow en pantallas pequeñas
+                Flexible(
+                  child: Container(
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? const Color(0xFF1E1E1E)
+                        : Colors.white,
+                    child: SingleChildScrollView(
+                      child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
                 Padding(
                   padding: const EdgeInsets.all(20),
                   child: Column(
@@ -254,80 +273,134 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                   ),
                 ),
 
-                // Botones
+                // Botones: en ancho chico se apilan para evitar texto truncado
                 Padding(
                   padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: () => Navigator.of(context).pop('nueva'),
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            side: BorderSide(
-                              color: Theme.of(context).brightness ==
-                                      Brightness.dark
-                                  ? Colors.grey.shade600
-                                  : Colors.grey.shade400,
-                              width: 1.5,
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final stackButtons = constraints.maxWidth < 280;
+
+                      Widget nuevaVentaButton() {
+                        return SizedBox(
+                          height: 52,
+                          child: OutlinedButton(
+                            onPressed: () => Navigator.of(context).pop('nueva'),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 16,
+                                horizontal: 12,
+                              ),
+                              side: BorderSide(
+                                color: Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.grey.shade600
+                                    : Colors.grey.shade400,
+                                width: 1.5,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
                             ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.add_circle_outline,
+                                  size: 18,
+                                  color: Theme.of(context).brightness == Brightness.dark
+                                      ? Colors.grey.shade400
+                                      : Colors.grey.shade700,
+                                ),
+                                const SizedBox(width: 6),
+                                Flexible(
+                                  child: Text(
+                                    'Nueva Venta',
+                                    maxLines: 1,
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                      color: Theme.of(context).brightness == Brightness.dark
+                                          ? Colors.grey.shade300
+                                          : Colors.grey.shade700,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          icon: Icon(
-                            Icons.add_circle_outline,
-                            size: 20,
-                            color:
-                                Theme.of(context).brightness == Brightness.dark
-                                    ? Colors.grey.shade400
-                                    : Colors.grey.shade700,
-                          ),
-                          label: Text(
-                            'Nueva Venta',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: Theme.of(context).brightness ==
-                                      Brightness.dark
-                                  ? Colors.grey.shade300
-                                  : Colors.grey.shade700,
+                        );
+                      }
+
+                      Widget continuarButton() {
+                        return SizedBox(
+                          height: 52,
+                          child: ElevatedButton(
+                            onPressed: () => Navigator.of(context).pop('continuar'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.primaryColor,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 16,
+                                horizontal: 12,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              elevation: 2,
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(Icons.play_arrow, color: Colors.white, size: 18),
+                                const SizedBox(width: 6),
+                                const Flexible(
+                                  child: Text(
+                                    'Continuar',
+                                    maxLines: 1,
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
+                        );
+                      }
+
+                      if (stackButtons) {
+                        return Column(
+                          children: [
+                            SizedBox(width: double.infinity, child: nuevaVentaButton()),
+                            const SizedBox(height: 12),
+                            SizedBox(width: double.infinity, child: continuarButton()),
+                          ],
+                        );
+                      }
+
+                      return SizedBox(
+                        height: 52,
+                        child: Row(
+                          children: [
+                            Expanded(child: nuevaVentaButton()),
+                            const SizedBox(width: 12),
+                            Expanded(child: continuarButton()),
+                          ],
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: () =>
-                              Navigator.of(context).pop('continuar'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.primaryColor,
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            elevation: 2,
-                          ),
-                          icon: const Icon(
-                            Icons.play_arrow,
-                            color: Colors.white,
-                            size: 20,
-                          ),
-                          label: const Text(
-                            'Continuar',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
+                      );
+                    },
+                  ),
+                ),
+                      ],
+                    ),
+                    ),
                   ),
                 ),
               ],
+            ),
             ),
           ),
         );
@@ -593,7 +666,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
     return ListView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
       itemCount: clientesFiltrados.length, // Mostrar TODOS los clientes
       itemBuilder: (context, index) {
         final cliente = clientesFiltrados[index];
@@ -1008,7 +1081,9 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                           left: 16,
                           right: _productosSeleccionadosExpandidos
                                   .contains(producto.id)
-                              ? 150
+                              ? (AppTheme.isCompactVentasButton(context)
+                                  ? 128
+                                  : 150)
                               : 16,
                           top: 10,
                           bottom: 10,
@@ -1152,25 +1227,46 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                                 .contains(producto.id)
                             ? Container(
                                 color: backgroundColor,
-                                padding: const EdgeInsets.only(
-                                  right: 8,
-                                  left: 8,
+                                padding: EdgeInsets.only(
+                                  right: AppTheme.isCompactVentasButton(context)
+                                      ? 4
+                                      : 8,
+                                  left: AppTheme.isCompactVentasButton(context)
+                                      ? 4
+                                      : 8,
                                 ),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     IconButton(
-                                      icon: const Icon(
+                                      icon: Icon(
                                         Icons.remove_circle_outline,
                                         color: Colors.red,
-                                        size: 24,
+                                        size: AppTheme.isCompactVentasButton(context)
+                                            ? 22
+                                            : 24,
+                                      ),
+                                      padding: EdgeInsets.zero,
+                                      constraints: BoxConstraints(
+                                        minWidth:
+                                            AppTheme.isCompactVentasButton(context)
+                                                ? 32
+                                                : 40,
+                                        minHeight:
+                                            AppTheme.isCompactVentasButton(context)
+                                                ? 32
+                                                : 40,
                                       ),
                                       onPressed: () => _ajustarCantidadProducto(
                                           producto, -1),
                                     ),
                                     Container(
-                                      width: 55,
-                                      height: 36,
+                                      width: AppTheme.isCompactVentasButton(context)
+                                          ? 46
+                                          : 55,
+                                      height: AppTheme.isCompactVentasButton(context)
+                                          ? 34
+                                          : 36,
                                       decoration: BoxDecoration(
                                         border: Border.all(
                                           color: isDark
@@ -1182,46 +1278,72 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                                             ? const Color(0xFF1F1F1F)
                                             : Colors.white,
                                       ),
-                                      child: TextField(
-                                        controller:
-                                            _getCantidadController(producto),
-                                        textAlign: TextAlign.center,
-                                        keyboardType:
-                                            const TextInputType.numberWithOptions(
-                                                decimal: true),
-                                        inputFormatters: [
-                                          FilteringTextInputFormatter.allow(
-                                            RegExp(r'^\d{0,3}(\.\d{0,1})?$'),
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.circular(8),
+                                        child: TextField(
+                                          controller:
+                                              _getCantidadController(producto),
+                                          textAlign: TextAlign.center,
+                                          keyboardType:
+                                              const TextInputType.numberWithOptions(
+                                                  decimal: true),
+                                          inputFormatters: [
+                                            FilteringTextInputFormatter.allow(
+                                              RegExp(r'^\d{0,3}(\.\d{0,1})?$'),
+                                            ),
+                                          ],
+                                          decoration: const InputDecoration(
+                                            border: InputBorder.none,
+                                            enabledBorder: InputBorder.none,
+                                            focusedBorder: InputBorder.none,
+                                            disabledBorder: InputBorder.none,
+                                            errorBorder: InputBorder.none,
+                                            focusedErrorBorder: InputBorder.none,
+                                            isCollapsed: true,
+                                            contentPadding: EdgeInsets.symmetric(
+                                                vertical: 6),
                                           ),
-                                        ],
-                                        decoration: const InputDecoration(
-                                          border: InputBorder.none,
-                                          contentPadding:
-                                              EdgeInsets.symmetric(vertical: 6),
+                                          style: TextStyle(
+                                            fontSize:
+                                                AppTheme.isCompactVentasButton(
+                                                        context)
+                                                    ? 14
+                                                    : 15,
+                                            fontWeight: FontWeight.bold,
+                                            color: isDark
+                                                ? Colors.white
+                                                : Colors.black,
+                                          ),
+                                          onChanged: (value) {
+                                            final nuevaCantidad =
+                                                double.tryParse(value) ?? 0;
+                                            _actualizarCantidadProductoSeleccionado(
+                                              producto,
+                                              nuevaCantidad,
+                                              actualizarController: false,
+                                            );
+                                          },
                                         ),
-                                        style: TextStyle(
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.bold,
-                                          color: isDark
-                                              ? Colors.white
-                                              : Colors.black,
-                                        ),
-                                        onChanged: (value) {
-                                          final nuevaCantidad =
-                                              double.tryParse(value) ?? 0;
-                                          _actualizarCantidadProductoSeleccionado(
-                                            producto,
-                                            nuevaCantidad,
-                                            actualizarController: false,
-                                          );
-                                        },
                                       ),
                                     ),
                                     IconButton(
-                                      icon: const Icon(
+                                      icon: Icon(
                                         Icons.add_circle_outline,
                                         color: Colors.green,
-                                        size: 24,
+                                        size: AppTheme.isCompactVentasButton(context)
+                                            ? 22
+                                            : 24,
+                                      ),
+                                      padding: EdgeInsets.zero,
+                                      constraints: BoxConstraints(
+                                        minWidth:
+                                            AppTheme.isCompactVentasButton(context)
+                                                ? 32
+                                                : 40,
+                                        minHeight:
+                                            AppTheme.isCompactVentasButton(context)
+                                                ? 32
+                                                : 40,
                                       ),
                                       onPressed: () => _ajustarCantidadProducto(
                                           producto, 1),
@@ -1767,10 +1889,13 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const SizedBox(
+                      SizedBox(
                         width: 36,
                         height: 36,
-                        child: CircularProgressIndicator(strokeWidth: 2),
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: AppTheme.primaryColor,
+                        ),
                       ),
                       const SizedBox(height: 16),
                       Text(
@@ -1904,7 +2029,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
             // Header fijo cuando se está buscando
             if (isSearching)
               Padding(
-                padding: const EdgeInsets.all(16.0),
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
                 child: HeaderConBuscador(
                   leadingIcon: Icons.people,
                   title: 'Buscar Cliente',
@@ -1939,55 +2064,70 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                   return isSearching && isLoadingClientesIniciales
                       ? Column(
                           children: [
+                            SizedBox(
+                              height:
+                                  AppTheme.isCompactVentasButton(context) ? 8 : 16,
+                            ),
                             Padding(
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 16),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  ElevatedButton.icon(
-                                    onPressed: () async {
-                                      final cliente = await VentasProvider
-                                          .obtenerOCrearConsumidorFinal(
-                                        context: context,
-                                        clientesIniciales: clientesIniciales,
-                                        clientesFiltrados: clientesFiltrados,
-                                        clienteSeleccionado:
-                                            clienteSeleccionado,
-                                      );
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                              ),
+                              child: SizedBox(
+                                width: double.infinity,
+                                child: ElevatedButton.icon(
+                                  onPressed: () async {
+                                    final cliente = await VentasProvider
+                                        .obtenerOCrearConsumidorFinal(
+                                      context: context,
+                                      clientesIniciales: clientesIniciales,
+                                      clientesFiltrados: clientesFiltrados,
+                                      clienteSeleccionado:
+                                          clienteSeleccionado,
+                                    );
 
-                                      if (cliente != null) {
-                                        _seleccionarCliente(cliente);
+                                    if (cliente != null) {
+                                      _seleccionarCliente(cliente);
 
-                                        if (!mounted) return;
-                                        setState(() {
-                                          clientesFiltrados = [];
-                                          errorMessage = null;
-                                        });
-                                      }
-                                    },
-                                    style: AppTheme.elevatedButtonStyle(
-                                        AppTheme.primaryColor),
-                                    icon: const Icon(
-                                      Icons.person_outline,
-                                      color: Colors.white,
+                                      if (!mounted) return;
+                                      setState(() {
+                                        clientesFiltrados = [];
+                                        errorMessage = null;
+                                      });
+                                    }
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppTheme.primaryColor,
+                                    foregroundColor: Colors.white,
+                                    padding: AppTheme.ventasButtonPadding(context),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
                                     ),
-                                    label: const Text(
-                                      'Consumidor Final',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w600,
-                                      ),
+                                    elevation: 2,
+                                  ),
+                                  icon: Icon(
+                                    Icons.person_outline,
+                                    color: Colors.white,
+                                    size: AppTheme.ventasButtonIconSize(context),
+                                  ),
+                                  label: Text(
+                                    'Consumidor Final',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: AppTheme.ventasButtonFontSize(context),
+                                      fontWeight: FontWeight.w600,
                                     ),
                                   ),
-                                ],
+                                ),
                               ),
+                            ),
+                            SizedBox(
+                              height:
+                                  AppTheme.isCompactVentasButton(context) ? 8 : 16,
                             ),
                             // Estado de carga que ocupa el espacio restante
                             Expanded(
                               child: Padding(
-                                padding: const EdgeInsets.all(16.0),
+                                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                                 child: Container(
                                   decoration: BoxDecoration(
                                     color: Theme.of(context).brightness ==
@@ -2040,27 +2180,30 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                             child: Column(
                               children: [
                                 if (isSearching) ...[
+                                SizedBox(
+                                  height:
+                                      AppTheme.isCompactVentasButton(context) ? 8 : 16,
+                                ),
                                 Padding(
                                   padding: const EdgeInsets.symmetric(
-                                      horizontal: 16.0, vertical: 8.0),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.stretch,
-                                    children: [
-                                      ElevatedButton.icon(
-                                        onPressed: () async {
-                                          final cliente = await VentasProvider
-                                              .obtenerOCrearConsumidorFinal(
-                                            context: context,
-                                            clientesIniciales:
-                                                clientesIniciales,
-                                            clientesFiltrados:
-                                                clientesFiltrados,
-                                            clienteSeleccionado:
-                                                clienteSeleccionado,
-                                          );
+                                    horizontal: 16.0,
+                                  ),
+                                  child: SizedBox(
+                                    width: double.infinity,
+                                    child: ElevatedButton.icon(
+                                      onPressed: () async {
+                                        final cliente = await VentasProvider
+                                            .obtenerOCrearConsumidorFinal(
+                                          context: context,
+                                          clientesIniciales:
+                                              clientesIniciales,
+                                          clientesFiltrados:
+                                              clientesFiltrados,
+                                          clienteSeleccionado:
+                                              clienteSeleccionado,
+                                        );
 
-                                          if (cliente != null) {
+                                        if (cliente != null) {
                                           _seleccionarCliente(cliente);
 
                                           if (!mounted) return;
@@ -2069,37 +2212,48 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                                             errorMessage = null;
                                           });
                                         }
-                                        },
-                                        style: AppTheme.elevatedButtonStyle(
-                                            AppTheme.primaryColor),
-                                        icon: const Icon(
-                                          Icons.person_outline,
-                                          color: Colors.white,
+                                      },
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: AppTheme.primaryColor,
+                                        foregroundColor: Colors.white,
+                                        padding: AppTheme.ventasButtonPadding(context),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(8),
                                         ),
-                                        label: const Text(
-                                          'Consumidor Final',
-                                          style: TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w600,
-                                          ),
+                                        elevation: 2,
+                                      ),
+                                      icon: Icon(
+                                        Icons.person_outline,
+                                        color: Colors.white,
+                                        size: AppTheme.ventasButtonIconSize(context),
+                                      ),
+                                      label: Text(
+                                        'Consumidor Final',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: AppTheme.ventasButtonFontSize(context),
+                                          fontWeight: FontWeight.w600,
                                         ),
                                       ),
-                                    ],
+                                    ),
                                   ),
+                                ),
+                                SizedBox(
+                                  height:
+                                      AppTheme.isCompactVentasButton(context) ? 8 : 16,
                                 ),
 
                                 // Lista de clientes
                                 if (clientesFiltrados.isNotEmpty)
                                   Padding(
-                                    padding: const EdgeInsets.only(top: 8.0),
+                                    padding: EdgeInsets.zero,
                                     child: _buildClientesList(
                                         clientesFiltrados, 'Clientes encontrados'),
                                   )
                                 else if (clientesIniciales.isNotEmpty &&
                                     _searchController.text.trim().isEmpty)
                                   Padding(
-                                    padding: const EdgeInsets.only(top: 8.0),
+                                    padding: EdgeInsets.zero,
                                     child: _buildClientesList(
                                         clientesIniciales, 'Clientes disponibles'),
                                   )

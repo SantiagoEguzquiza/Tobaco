@@ -481,7 +481,7 @@ class EditarProductoScreenState extends State<EditarProductoScreen> {
                   ],
                 ),
                 
-                const SizedBox(height: 100), // Espacio para el botón flotante
+                SizedBox(height: MediaQuery.of(context).padding.bottom + 100), // Espacio para el botón flotante (evitar que se corte)
               ],
             ),
           ),

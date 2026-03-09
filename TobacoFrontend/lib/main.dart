@@ -199,9 +199,11 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
     return Consumer2<AuthProvider, PermisosProvider>(
       builder: (context, authProvider, permisosProvider, child) {
         if (authProvider.isInitializing) {
-          return const Scaffold(
+          return Scaffold(
             body: Center(
-              child: CircularProgressIndicator(),
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
+              ),
             ),
           );
         }
@@ -210,9 +212,11 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
           final user = authProvider.currentUser;
 
           if (user == null) {
-            return const Scaffold(
+            return Scaffold(
               body: Center(
-                child: CircularProgressIndicator(),
+                child: CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
+                ),
               ),
             );
           }
@@ -257,6 +261,10 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
                 perm.marcarTimeoutYPermitirEntrada(auth);
               });
             }
+            final theme = Theme.of(context);
+            final loadingColor = theme.brightness == Brightness.light
+                ? Colors.green
+                : theme.colorScheme.primary;
             return Scaffold(
               resizeToAvoidBottomInset: false,
               body: Center(
@@ -264,7 +272,9 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
                   mainAxisSize: MainAxisSize.min,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const CircularProgressIndicator(),
+                    CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
+                    ),
                     const SizedBox(height: 16),
                     const Text('Cargando permisos...', style: TextStyle(fontSize: 14)),
                   ],

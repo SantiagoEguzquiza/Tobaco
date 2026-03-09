@@ -108,11 +108,11 @@ class _MainShellScreenState extends State<MainShellScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final iconColor = !enabled
         ? (isDark ? Colors.white30 : Colors.grey.shade400)
-        : (isSelected ? Colors.white : (isDark ? Colors.white70 : Colors.grey.shade700));
+        : (isSelected ? (isDark ? Colors.white : Colors.black87) : (isDark ? Colors.white70 : Colors.grey.shade700));
     final labelColor = !enabled
         ? (isDark ? Colors.white30 : Colors.grey.shade400)
-        : (isSelected ? AppTheme.primaryColor : (isDark ? Colors.white70 : Colors.grey.shade700));
-    final bgColor = isSelected && enabled ? AppTheme.primaryColor : Colors.transparent;
+        : (isSelected ? (isDark ? Colors.white : Colors.black87) : (isDark ? Colors.white70 : Colors.grey.shade700));
+    final bgColor = isSelected && enabled ? (isDark ? Colors.white24 : Colors.grey.shade200) : Colors.transparent;
 
     return InkWell(
       onTap: enabled

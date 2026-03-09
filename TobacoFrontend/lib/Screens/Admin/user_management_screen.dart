@@ -596,11 +596,17 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                       ? userProvider.users
                       : userProvider.users.where((u) => !u.isSuperAdmin).toList();
 
+                  final isCompact = MediaQuery.of(context).size.height < 680;
                   return Column(
                     children: [
                       // Header
                       Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                        padding: EdgeInsets.fromLTRB(
+                          16,
+                          isCompact ? 12 : 16,
+                          16,
+                          0,
+                        ),
                         child: HeaderSimple(
                           leadingIcon: Icons.people,
                           title: 'Gestión de usuarios',
@@ -610,7 +616,12 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                       
                       // Add user button
                       Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                        padding: EdgeInsets.fromLTRB(
+                          16,
+                          isCompact ? 8 : 12,
+                          16,
+                          isCompact ? 12 : 16,
+                        ),
                         child: SizedBox(
                           width: double.infinity,
                           child: ElevatedButton.icon(
@@ -623,11 +634,11 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                                 context.read<UserProvider>().loadUsers();
                               }
                             },
-                            icon: const Icon(Icons.person_add, size: 20),
-                            label: const Text(
+                            icon: Icon(Icons.person_add, size: isCompact ? 18 : 20),
+                            label: Text(
                               'Nuevo Usuario',
                               style: TextStyle(
-                                fontSize: 16,
+                                fontSize: isCompact ? 14 : 16,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -637,9 +648,9 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 24, 
-                                vertical: 16,
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 24,
+                                vertical: isCompact ? 12 : 16,
                               ),
                               elevation: 2,
                             ),

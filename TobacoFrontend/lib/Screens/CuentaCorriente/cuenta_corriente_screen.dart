@@ -28,15 +28,32 @@ class _CuentaCorrienteScreenState extends State<CuentaCorrienteScreen> {
   bool _hasMoreData = true;
   int _currentPage = 1;
   final int _pageSize = 20;
-  
-  // ScrollController para detectar cuando llegar al final
-  final ScrollController _scrollController = ScrollController();
 
-   @override
+  final ScrollController _scrollController = ScrollController();
+  final GlobalKey _headerKey = GlobalKey();
+
+  double _headerVisibility = 1.0;
+  double _lastScrollOffset = 0.0;
+  double _maxHeaderHeight = 0.0;
+
+  @override
   void initState() {
     super.initState();
-    _loadClientes();
     _scrollController.addListener(_onScroll);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _measureHeader();
+    });
+    _loadClientes();
+  }
+
+  void _measureHeader() {
+    final ctx = _headerKey.currentContext;
+    if (ctx != null) {
+      final box = ctx.findRenderObject() as RenderBox?;
+      if (box != null && box.hasSize) {
+        _maxHeaderHeight = box.size.height;
+      }
+    }
   }
 
   @override
@@ -85,9 +102,27 @@ class _CuentaCorrienteScreenState extends State<CuentaCorrienteScreen> {
   }
 
   void _onScroll() {
-    if (_scrollController.position.pixels >= 
-        _scrollController.position.maxScrollExtent - 200) {
+    if (!_scrollController.hasClients) return;
+    final currentOffset = _scrollController.offset;
+    final delta = currentOffset - _lastScrollOffset;
+    _lastScrollOffset = currentOffset;
+
+    if (currentOffset >= _scrollController.position.maxScrollExtent - 200) {
       _cargarMasClientes();
+    }
+
+    if (_maxHeaderHeight <= 0 || delta.abs() > 200) return;
+    double newVisibility;
+    if (currentOffset <= 0) {
+      newVisibility = 1.0;
+    } else {
+      newVisibility =
+          (_headerVisibility - delta * 0.5 / _maxHeaderHeight).clamp(0.0, 1.0);
+    }
+    if ((newVisibility - _headerVisibility).abs() > 0.001) {
+      setState(() {
+        _headerVisibility = newVisibility;
+      });
     }
   }
 
@@ -190,6 +225,10 @@ class _CuentaCorrienteScreenState extends State<CuentaCorrienteScreen> {
 
   @override
   Widget build(BuildContext context) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _measureHeader();
+    });
+
     final filteredClientes = clientes.where((cliente) {
       final matchesSearchQuery = cliente.nombre
           .toLowerCase()
@@ -231,44 +270,58 @@ class _CuentaCorrienteScreenState extends State<CuentaCorrienteScreen> {
                   ],
                 ),
               )
-            : SingleChildScrollView(
-              controller: _scrollController,
-              padding: const EdgeInsets.only(
-                left: 16,
-                right: 16,
-                top: 16,
-                bottom: 0,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Header con buscador
-                  HeaderConBuscador(
-                    leadingIcon: Icons.account_balance_wallet,
-                    title: 'Cuenta Corriente',
-                    subtitle: '${clientes.length} cliente${clientes.length != 1 ? 's' : ''} con cuenta corriente',
-                    controller: _searchController,
-                    hintText: 'Buscar clientes...',
-                    onChanged: (value) {
-                      setState(() {
-                        _searchText = value;
-                      });
-                    },
-                    onClear: () {
-                      _searchController.clear();
-                      setState(() {
-                        _searchText = '';
-                      });
-                    },
-                  ),
-                  const SizedBox(height: 20),
-
-                  // Lista de clientes con cuenta corriente
-                  if (filteredClientes.isEmpty && !isLoading)
-                    _buildEmptyState()
-                  else
-                    _buildClientesList(filteredClientes),
-                ],
+            : SafeArea(
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(
+                  16,
+                  MediaQuery.of(context).size.height < 680 ? 12 : 16,
+                  16,
+                  0,
+                ),
+                child: Column(
+                  children: [
+                    ClipRect(
+                      child: Align(
+                        alignment: Alignment.topCenter,
+                        heightFactor: _headerVisibility,
+                        child: Opacity(
+                          opacity: _headerVisibility,
+                          child: Column(
+                            key: _headerKey,
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              HeaderConBuscador(
+                                leadingIcon: Icons.account_balance_wallet,
+                                title: 'Cuenta Corriente',
+                                subtitle: '${clientes.length} cliente${clientes.length != 1 ? 's' : ''} con cuenta corriente',
+                                controller: _searchController,
+                                hintText: 'Buscar clientes...',
+                                onChanged: (value) {
+                                  setState(() {
+                                    _searchText = value;
+                                  });
+                                },
+                                onClear: () {
+                                  _searchController.clear();
+                                  setState(() {
+                                    _searchText = '';
+                                  });
+                                },
+                              ),
+                              SizedBox(height: MediaQuery.of(context).size.height < 680 ? 10 : 20),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: filteredClientes.isEmpty && !isLoading
+                          ? SizedBox.expand(child: _buildEmptyState())
+                          : _buildClientesList(filteredClientes),
+                    ),
+                  ],
+                ),
               ),
             ),
         ),
@@ -338,22 +391,22 @@ class _CuentaCorrienteScreenState extends State<CuentaCorrienteScreen> {
 
   // Lista de clientes
   Widget _buildClientesList(List<Cliente> filteredClientes) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        ListView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: filteredClientes.length + (_isLoadingMore ? 1 : 0),
-          itemBuilder: (context, index) {
-            if (index == filteredClientes.length) {
-              return _buildLoadingIndicator();
-            }
-            final cliente = filteredClientes[index];
-            return _buildClienteCard(cliente, index);
-          },
-        ),
-      ],
+    return RefreshIndicator(
+      color: AppTheme.primaryColor,
+      onRefresh: _loadClientes,
+      child: ListView.builder(
+        controller: _scrollController,
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.only(bottom: 8),
+        itemCount: filteredClientes.length + (_isLoadingMore ? 1 : 0),
+        itemBuilder: (context, index) {
+          if (index == filteredClientes.length) {
+            return _buildLoadingIndicator();
+          }
+          final cliente = filteredClientes[index];
+          return _buildClienteCard(cliente, index);
+        },
+      ),
     );
   }
 

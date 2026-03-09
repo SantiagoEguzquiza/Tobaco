@@ -13,6 +13,22 @@ class AppTheme {
   static const double borderRadiusMainButtons = 8;
   static const double borderRadiusCards = 8;
 
+  static bool isCompactVentasButton(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    return size.height < 680 || size.width < 380;
+  }
+
+  static double ventasButtonFontSize(BuildContext context) =>
+      isCompactVentasButton(context) ? 14 : 16;
+
+  static double ventasButtonIconSize(BuildContext context) =>
+      isCompactVentasButton(context) ? 18 : 20;
+
+  static EdgeInsets ventasButtonPadding(BuildContext context) =>
+      EdgeInsets.symmetric(
+        vertical: isCompactVentasButton(context) ? 12 : 16,
+      );
+
   static const TextStyle inputLabelStyle = TextStyle(
     fontSize: 16,
     color: Colors.black,
@@ -275,10 +291,18 @@ class AppTheme {
       scaffoldBackgroundColor: Colors.white,
       primarySwatch: Colors.green,
       primaryColor: primaryColor,
+      colorScheme: ColorScheme.light(
+        primary: primaryColor,
+        onPrimary: Colors.white,
+        surface: Colors.white,
+        onSurface: Colors.black87,
+      ),
       appBarTheme: AppBarTheme(
         backgroundColor: primaryColor,
         foregroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
         elevation: 0,
+        scrolledUnderElevation: 0,
         systemOverlayStyle: const SystemUiOverlayStyle(
           statusBarBrightness: Brightness.light,
           systemNavigationBarColor: Colors.transparent,

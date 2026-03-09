@@ -174,7 +174,7 @@ class _NuevoProveedorScreenState extends State<NuevoProveedorScreen> {
                 top: false,
                 child: _isLoading
                     ? Container(
-                        height: 56,
+                        height: AppTheme.isCompactVentasButton(context) ? 48 : 56,
                         decoration: BoxDecoration(
                           color: AppTheme.primaryColor,
                           borderRadius: BorderRadius.circular(12),
@@ -192,15 +192,21 @@ class _NuevoProveedorScreenState extends State<NuevoProveedorScreen> {
                       )
                     : ElevatedButton.icon(
                         onPressed: _crearProveedor,
-                        icon: const Icon(Icons.add_business_rounded, size: 24),
-                        label: const Text(
+                        icon: Icon(
+                          Icons.add_business_rounded,
+                          size: AppTheme.ventasButtonIconSize(context),
+                        ),
+                        label: Text(
                           'Crear proveedor',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                          style: TextStyle(
+                            fontSize: AppTheme.ventasButtonFontSize(context),
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppTheme.primaryColor,
                           foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          padding: AppTheme.ventasButtonPadding(context),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),

@@ -64,7 +64,12 @@ class DetalleClienteScreen extends StatelessWidget {
         ),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
+        padding: EdgeInsets.fromLTRB(
+          16,
+          16,
+          16,
+          16 + MediaQuery.of(context).padding.bottom + 24,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -138,6 +143,7 @@ class DetalleClienteScreen extends StatelessWidget {
 
             // Botón volver
             _buildBackButton(context),
+            const SizedBox(height: 36),
           ],
         ),
       ),

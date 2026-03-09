@@ -17,17 +17,23 @@ class AgregarProductoButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isCompact = AppTheme.isCompactVentasButton(context);
+
     return Padding(
       padding: fullWidth ? EdgeInsets.zero : const EdgeInsets.symmetric(horizontal: 16),
       child: SizedBox(
         width: double.infinity,
+        height: isCompact ? 48 : null,
         child: ElevatedButton.icon(
           onPressed: enabled ? onPressed : null,
-          icon: const Icon(Icons.add_shopping_cart, size: 20),
-          label: const Text(
+          icon: Icon(
+            Icons.add_shopping_cart,
+            size: AppTheme.ventasButtonIconSize(context),
+          ),
+          label: Text(
             'Agregar Productos',
             style: TextStyle(
-              fontSize: 16,
+              fontSize: AppTheme.ventasButtonFontSize(context),
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -39,7 +45,7 @@ class AgregarProductoButton extends StatelessWidget {
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(8),
             ),
-            padding: const EdgeInsets.symmetric(vertical: 16),
+            padding: AppTheme.ventasButtonPadding(context),
             elevation: enabled ? 2 : 0,
           ),
         ),

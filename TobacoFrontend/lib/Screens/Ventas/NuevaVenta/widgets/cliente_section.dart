@@ -47,10 +47,11 @@ class ClienteSection extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final tieneDeuda = _parsearDeuda(cliente.deuda) > 0;
     final tieneDescuento = cliente.descuentoGlobal > 0;
+    final isSmallPhone = MediaQuery.of(context).size.width < 380;
 
     return Container(
       margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(isSmallPhone ? 16 : 20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: isDark ? [
@@ -84,7 +85,7 @@ class ClienteSection extends StatelessWidget {
             children: [
               // Ícono del cliente
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: EdgeInsets.all(isSmallPhone ? 10 : 12),
                 decoration: BoxDecoration(
                   color: AppTheme.primaryColor,
                   borderRadius: BorderRadius.circular(8),
@@ -95,7 +96,7 @@ class ClienteSection extends StatelessWidget {
                   size: 24,
                 ),
               ),
-              const SizedBox(width: 16),
+              SizedBox(width: isSmallPhone ? 12 : 16),
               
               // Información del cliente
               Expanded(
@@ -105,11 +106,12 @@ class ClienteSection extends StatelessWidget {
                     Text(
                       cliente.nombre,
                       style: TextStyle(
-                        fontSize: 20,
+                        fontSize: isSmallPhone ? 16 : 20,
                         fontWeight: FontWeight.bold,
                         color: isDark ? Colors.white : AppTheme.primaryColor,
                       ),
-                      overflow: TextOverflow.ellipsis,
+                      maxLines: isSmallPhone ? 2 : 1,
+                      softWrap: true,
                     ),                                  
                     // Mostrar deuda si tiene
                     if (tieneDeuda) ...[
@@ -135,7 +137,7 @@ class ClienteSection extends StatelessWidget {
               ),
               
               // Botón cambiar cliente
-              const SizedBox(width: 12),
+              SizedBox(width: isSmallPhone ? 8 : 12),
               IconButton(
                 onPressed: onCambiarCliente,
                 icon: const Icon(Icons.swap_horiz),
@@ -145,7 +147,7 @@ class ClienteSection extends StatelessWidget {
                   backgroundColor: isDark 
                       ? AppTheme.primaryColor.withOpacity(0.2)
                       : AppTheme.primaryColor.withOpacity(0.1),
-                  padding: const EdgeInsets.all(12),
+                  padding: EdgeInsets.all(isSmallPhone ? 10 : 12),
                 ),
               ),
             ],

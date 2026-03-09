@@ -798,7 +798,8 @@ class _EditarPreciosEspecialesScreenState
                       height: 56,
                       decoration: BoxDecoration(
                         color: AppTheme.primaryColor,
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(
+                            AppTheme.borderRadiusMainButtons),
                       ),
                       child: const Center(
                         child: SizedBox(
@@ -826,7 +827,8 @@ class _EditarPreciosEspecialesScreenState
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(
+                              AppTheme.borderRadiusMainButtons),
                         ),
                       ),
                     ),
@@ -857,7 +859,8 @@ class _EditarPreciosEspecialesScreenState
                   height: 56,
                   decoration: BoxDecoration(
                     color: AppTheme.primaryColor,
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(
+                        AppTheme.borderRadiusMainButtons),
                   ),
                   child: const Center(
                     child: SizedBox(
@@ -885,7 +888,8 @@ class _EditarPreciosEspecialesScreenState
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(
+                          AppTheme.borderRadiusMainButtons),
                     ),
                   ),
                 ),

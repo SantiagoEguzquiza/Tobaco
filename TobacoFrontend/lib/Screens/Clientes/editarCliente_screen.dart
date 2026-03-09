@@ -420,7 +420,7 @@ class _EditarClienteScreenState extends State<EditarClienteScreen> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 100),
+                    const SizedBox(height: 220),
                   ],
                 ),
               ),

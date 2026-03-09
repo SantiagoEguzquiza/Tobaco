@@ -135,8 +135,14 @@ class _VentasScreenState extends State<VentasScreen> {
         color: Theme.of(context).scaffoldBackgroundColor,
         child: SafeArea(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+            padding: EdgeInsets.fromLTRB(
+              16,
+              MediaQuery.of(context).size.height < 680 ? 12 : 16,
+              16,
+              0,
+            ),
             child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
               ClipRect(
                 child: Align(
@@ -149,16 +155,16 @@ class _VentasScreenState extends State<VentasScreen> {
                       children: [
                         if (provider.isOffline) ...[
                           _buildOfflineBanner(),
-                          const SizedBox(height: 12),
+                          SizedBox(height: MediaQuery.of(context).size.height < 680 ? 8 : 12),
                         ],
                         _buildHeaderSection(provider),
-                        const SizedBox(height: 20),
+                        SizedBox(height: MediaQuery.of(context).size.height < 680 ? 10 : 20),
                       ],
                     ),
                   ),
                 ),
               ),
-              Expanded(child: _buildVentasList(provider)),
+              Flexible(child: _buildVentasList(provider)),
             ],
           ),
         ),
@@ -184,7 +190,7 @@ class _VentasScreenState extends State<VentasScreen> {
             context.read<VentasProvider>().actualizarBusqueda('');
           },
         ),
-        const SizedBox(height: 16),
+        SizedBox(height: MediaQuery.of(context).size.height < 680 ? 8 : 16),
         // Botón Nueva Venta - Solo mostrar si tiene permiso
         Consumer<PermisosProvider>(
           builder: (context, permisosProvider, child) {
@@ -214,17 +220,23 @@ class _VentasScreenState extends State<VentasScreen> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.primaryColor,
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    padding: AppTheme.ventasButtonPadding(context),
                     shape: RoundedRectangleBorder(
                       borderRadius:
                           BorderRadius.circular(AppTheme.borderRadiusMainButtons),
                     ),
                     elevation: 2,
                   ),
-                  icon: const Icon(Icons.add_shopping_cart, size: 20),
-                  label: const Text(
+                  icon: Icon(
+                    Icons.add_shopping_cart,
+                    size: AppTheme.ventasButtonIconSize(context),
+                  ),
+                  label: Text(
                     'Nueva Venta',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                    style: TextStyle(
+                      fontSize: AppTheme.ventasButtonFontSize(context),
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               );
@@ -282,33 +294,36 @@ class _VentasScreenState extends State<VentasScreen> {
       onRefresh: () async {
         await context.read<VentasProvider>().cargarVentas();
       },
-      child: ListView.builder(
+      child: SingleChildScrollView(
         controller: _scrollController,
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).padding.bottom + 24,
+        child: ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          padding: const EdgeInsets.only(bottom: 12),
+          itemCount: filteredVentas.length + (provider.isLoadingMore ? 1 : 0),
+          itemBuilder: (context, index) {
+            if (index == filteredVentas.length) {
+              return _buildLoadingIndicator();
+            }
+            final venta = filteredVentas[index];
+            final isLast = index == filteredVentas.length - 1;
+            return _buildVentaCard(venta, provider, isLast: isLast);
+          },
         ),
-        itemCount: filteredVentas.length + (provider.isLoadingMore ? 1 : 0),
-        itemBuilder: (context, index) {
-          if (index == filteredVentas.length) {
-            return _buildLoadingIndicator();
-          }
-          final venta = filteredVentas[index];
-          return _buildVentaCard(venta, provider);
-        },
       ),
     );
   }
 
   // Card individual de venta
-  Widget _buildVentaCard(Ventas venta, VentasProvider provider) {
+  Widget _buildVentaCard(Ventas venta, VentasProvider provider, {bool isLast = false}) {
     final key = venta.id != null
         ? Key(venta.id.toString())
         : Key(
             'offline_${venta.clienteId}_${venta.fecha.millisecondsSinceEpoch}');
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: EdgeInsets.only(bottom: isLast ? 0 : 12),
       child: Consumer<PermisosProvider>(
         builder: (context, permisosProvider, child) {
           final canDelete = permisosProvider.canDeleteVentas || permisosProvider.isAdmin;
@@ -594,46 +609,51 @@ class _VentasScreenState extends State<VentasScreen> {
         ],
       ),
       child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: isDark
-                    ? Colors.grey.shade800
-                    : AppTheme.secondaryColor,
-                shape: BoxShape.circle,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? Colors.grey.shade800
+                      : AppTheme.secondaryColor,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.shopping_cart_outlined,
+                  size: 60,
+                  color: AppTheme.primaryColor,
+                ),
               ),
-              child: Icon(
-                Icons.shopping_cart_outlined,
-                size: 60,
-                color: AppTheme.primaryColor,
+              const SizedBox(height: 16),
+              Text(
+                hasSearchQuery
+                    ? 'No se encontraron ventas'
+                    : 'No hay ventas registradas',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w500,
+                  color: isDark ? Colors.grey.shade300 : Colors.grey.shade700,
+                ),
+                textAlign: TextAlign.center,
               ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              hasSearchQuery
-                  ? 'No se encontraron ventas'
-                  : 'No hay ventas registradas',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w500,
-                color: isDark ? Colors.grey.shade300 : Colors.grey.shade700,
+              const SizedBox(height: 8),
+              Text(
+                hasSearchQuery
+                    ? 'Intenta con otro término de búsqueda'
+                    : 'Comienza creando tu primera venta',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                ),
+                textAlign: TextAlign.center,
               ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              hasSearchQuery
-                  ? 'Intenta con otro término de búsqueda'
-                  : 'Comienza creando tu primera venta',
-              style: TextStyle(
-                fontSize: 14,
-                color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

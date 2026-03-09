@@ -206,7 +206,17 @@ class HeaderConBuscador extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    
+    final screenHeight = MediaQuery.of(context).size.height;
+    final isCompact = screenHeight < 680;
+    final topPad = isCompact ? 12.0 : 20.0;
+    final horizontalPad = isCompact ? 14.0 : 20.0;
+    final bottomTitlePad = isCompact ? 16.0 : 24.0;
+    final searchPad = isCompact ? 12.0 : 16.0;
+    final titleSize = isCompact ? 18.0 : 24.0;
+    final subtitleSize = isCompact ? 12.0 : 14.0;
+    final iconPadding = isCompact ? 8.0 : 12.0;
+    final iconSize = isCompact ? 20.0 : 24.0;
+
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -239,11 +249,12 @@ class HeaderConBuscador extends StatelessWidget {
         children: [
           // Sección superior con ícono, título y subtítulo
           Padding(
-            padding: const EdgeInsets.all(20),
+            padding: EdgeInsets.fromLTRB(horizontalPad, topPad, horizontalPad, bottomTitlePad),
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
-                  padding: const EdgeInsets.all(12),
+                  padding: EdgeInsets.all(iconPadding),
                   decoration: BoxDecoration(
                     color: customBackgroundColor ?? AppTheme.primaryColor,
                     borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
@@ -251,34 +262,42 @@ class HeaderConBuscador extends StatelessWidget {
                   child: Icon(
                     leadingIcon,
                     color: Colors.white,
-                    size: 24,
+                    size: iconSize,
                   ),
                 ),
-                const SizedBox(width: 16),
+                SizedBox(width: isCompact ? 12 : 16),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
                         title,
                         style: TextStyle(
-                          fontSize: 24,
+                          fontSize: titleSize,
                           fontWeight: FontWeight.bold,
                           color: isDark ? Colors.white : AppTheme.primaryColor,
+                          height: 1.25,
                         ),
+                        maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        maxLines: 1,
+                        softWrap: true,
                       ),
                       if (subtitle != null) ...[
-                        const SizedBox(height: 4),
-                        Text(
-                          subtitle!,
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: isDark ? Colors.grey[300] : Colors.grey.shade600,
+                        SizedBox(height: isCompact ? 4 : 6),
+                        Padding(
+                          padding: EdgeInsets.only(bottom: isCompact ? 2 : 4),
+                          child: Text(
+                            subtitle!,
+                            style: TextStyle(
+                              fontSize: subtitleSize,
+                              height: 1.35,
+                              color: isDark ? Colors.grey[300] : Colors.grey.shade600,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            softWrap: true,
                           ),
-                          overflow: TextOverflow.ellipsis,
-                          maxLines: 2,
                         ),
                       ],
                     ],
@@ -288,11 +307,11 @@ class HeaderConBuscador extends StatelessWidget {
             ),
           ),
           
-          const SizedBox(height: 8),
+          SizedBox(height: isCompact ? 2 : 4),
           
           // Sección de búsqueda
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+            padding: EdgeInsets.fromLTRB(horizontalPad, 0, horizontalPad, searchPad),
             child: Container(
               decoration: BoxDecoration(
                 color: isDark ? Colors.grey[800] : Colors.white,
@@ -410,9 +429,17 @@ class HeaderSimple extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    
+    final isCompact = MediaQuery.of(context).size.height < 680;
+    final pad = isCompact ? 14.0 : 20.0;
+    final iconPad = isCompact ? 8.0 : 12.0;
+    final iconSize = isCompact ? 20.0 : 24.0;
+    final titleSize = isCompact ? 18.0 : 24.0;
+    final subtitleSize = isCompact ? 12.0 : 14.0;
+    final spacing = isCompact ? 8.0 : 16.0;
+    final subtitleTop = isCompact ? 2.0 : 4.0;
+
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(pad),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: isDark ? [
@@ -425,7 +452,7 @@ class HeaderSimple extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(isCompact ? 14 : 20),
         border: Border.all(
           color: isDark 
             ? const Color(0xFF404040)
@@ -443,18 +470,18 @@ class HeaderSimple extends StatelessWidget {
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: EdgeInsets.all(iconPad),
             decoration: BoxDecoration(
               color: customBackgroundColor ?? AppTheme.primaryColor,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(isCompact ? 10 : 12),
             ),
             child: Icon(
               leadingIcon,
               color: Colors.white,
-              size: 24,
+              size: iconSize,
             ),
           ),
-          const SizedBox(width: 16),
+          SizedBox(width: spacing),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -465,7 +492,7 @@ class HeaderSimple extends StatelessWidget {
                   child: Text(
                     title,
                     style: TextStyle(
-                      fontSize: 24,
+                      fontSize: titleSize,
                       fontWeight: FontWeight.bold,
                       color: isDark ? Colors.white : AppTheme.primaryColor,
                     ),
@@ -473,11 +500,11 @@ class HeaderSimple extends StatelessWidget {
                   ),
                 ),
                 if (subtitle != null) ...[
-                  const SizedBox(height: 4),
+                  SizedBox(height: subtitleTop),
                   Text(
                     subtitle!,
                     style: TextStyle(
-                      fontSize: 14,
+                      fontSize: subtitleSize,
                       color: isDark ? Colors.grey[300] : Colors.grey.shade600,
                     ),
                     overflow: TextOverflow.ellipsis,
@@ -489,7 +516,7 @@ class HeaderSimple extends StatelessWidget {
           ),
           // Widget de acciones adicionales (ej: badge de sincronización)
           if (actions != null) ...[
-            const SizedBox(width: 12),
+            SizedBox(width: isCompact ? 8 : 12),
             actions!,
           ],
         ],

@@ -216,6 +216,7 @@ class _NuevoClienteScreenState extends State<NuevoClienteScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bottomActionSpacing = 88.0 + MediaQuery.of(context).padding.bottom;
     return Theme(
       data: Theme.of(context).copyWith(
         textSelectionTheme: TextSelectionThemeData(
@@ -306,7 +307,10 @@ class _NuevoClienteScreenState extends State<NuevoClienteScreen> {
                             style: OutlinedButton.styleFrom(
                               foregroundColor: isDark ? Colors.white : Colors.black87,
                               side: BorderSide(color: isDark ? const Color(0xFF404040) : Colors.grey.shade300),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(
+                                    AppTheme.borderRadiusMainButtons),
+                              ),
                               padding: const EdgeInsets.symmetric(vertical: 14),
                             ),
                           ),
@@ -385,7 +389,7 @@ class _NuevoClienteScreenState extends State<NuevoClienteScreen> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 100),
+                    SizedBox(height: bottomActionSpacing),
                   ],
                 ),
               ),
@@ -407,7 +411,8 @@ class _NuevoClienteScreenState extends State<NuevoClienteScreen> {
                             height: 56,
                             decoration: BoxDecoration(
                               color: AppTheme.primaryColor,
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(
+                                  AppTheme.borderRadiusMainButtons),
                             ),
                             child: const Center(
                               child: SizedBox(
@@ -428,7 +433,10 @@ class _NuevoClienteScreenState extends State<NuevoClienteScreen> {
                               backgroundColor: AppTheme.primaryColor,
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(
+                                    AppTheme.borderRadiusMainButtons),
+                              ),
                             ),
                           ),
                   ),
