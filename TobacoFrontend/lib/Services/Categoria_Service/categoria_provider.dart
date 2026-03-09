@@ -202,6 +202,8 @@ class CategoriasProvider with ChangeNotifier {
       await _categoriaService.eliminarCategoria(id);
       _categorias.removeWhere((cat) => cat.id == id);
       await _guardarCategoriasLocales();
+      // Recargar desde servidor para asegurar sincronización
+      await cargarCategorias(silent: true);
     } catch (e) {
       if (Apihandler.isConnectionError(e)) {
         // Verificar productos vinculados también en modo offline

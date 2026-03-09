@@ -8,7 +8,6 @@ import '../../Services/Clientes_Service/clientes_provider.dart';
 import '../../Services/Categoria_Service/categoria_provider.dart';
 import '../../Services/Ventas_Service/ventas_provider.dart';
 import '../../Helpers/api_handler.dart';
-import '../menu_screen.dart';
 import 'recuperar_contrasena_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -109,8 +108,9 @@ class _LoginScreenState extends State<LoginScreen> {
                           MediaQuery.paddingOf(context).top -
                           MediaQuery.paddingOf(context).bottom -
                           (isMediumLayout ? 24 : 40));
+                final bottomPadding = padding + MediaQuery.paddingOf(context).bottom + 24;
                 return SingleChildScrollView(
-                  padding: EdgeInsets.all(padding),
+                  padding: EdgeInsets.fromLTRB(padding, padding, padding, bottomPadding),
                   child: ConstrainedBox(
                     constraints: BoxConstraints(
                       minHeight: minHeight ?? 0,
@@ -277,9 +277,9 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget _buildLoginForm(_LoginLayoutSize layoutSize) {
     final isCompactLayout = layoutSize == _LoginLayoutSize.compact;
     final formPadding = switch (layoutSize) {
-      _LoginLayoutSize.compact => 24.0,
-      _LoginLayoutSize.medium => 24.0,
-      _LoginLayoutSize.regular => 28.0,
+      _LoginLayoutSize.compact => 18.0,
+      _LoginLayoutSize.medium => 20.0,
+      _LoginLayoutSize.regular => 22.0,
     };
     final titleSize = switch (layoutSize) {
       _LoginLayoutSize.compact => 20.0,
@@ -292,24 +292,24 @@ class _LoginScreenState extends State<LoginScreen> {
       _LoginLayoutSize.regular => 14.0,
     };
     final afterSubtitle = switch (layoutSize) {
-      _LoginLayoutSize.compact => 24.0,
-      _LoginLayoutSize.medium => 20.0,
-      _LoginLayoutSize.regular => 28.0,
+      _LoginLayoutSize.compact => 14.0,
+      _LoginLayoutSize.medium => 14.0,
+      _LoginLayoutSize.regular => 16.0,
     };
     final fieldSpacing = switch (layoutSize) {
-      _LoginLayoutSize.compact => 22.0,
-      _LoginLayoutSize.medium => 18.0,
-      _LoginLayoutSize.regular => 22.0,
+      _LoginLayoutSize.compact => 14.0,
+      _LoginLayoutSize.medium => 12.0,
+      _LoginLayoutSize.regular => 16.0,
     };
     final afterPassword = switch (layoutSize) {
-      _LoginLayoutSize.compact => 18.0,
-      _LoginLayoutSize.medium => 14.0,
-      _LoginLayoutSize.regular => 18.0,
+      _LoginLayoutSize.compact => 6.0,
+      _LoginLayoutSize.medium => 6.0,
+      _LoginLayoutSize.regular => 8.0,
     };
     final beforeButton = switch (layoutSize) {
-      _LoginLayoutSize.compact => 22.0,
-      _LoginLayoutSize.medium => 18.0,
-      _LoginLayoutSize.regular => 24.0,
+      _LoginLayoutSize.compact => 10.0,
+      _LoginLayoutSize.medium => 10.0,
+      _LoginLayoutSize.regular => 12.0,
     };
     final buttonHeight = switch (layoutSize) {
       _LoginLayoutSize.compact => 48.0,
@@ -357,9 +357,9 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             SizedBox(
               height: switch (layoutSize) {
-                _LoginLayoutSize.compact => 14.0,
-                _LoginLayoutSize.medium => 13.0,
-                _LoginLayoutSize.regular => 12.0,
+                _LoginLayoutSize.compact => 6.0,
+                _LoginLayoutSize.medium => 6.0,
+                _LoginLayoutSize.regular => 8.0,
               },
             ),
             Text(
@@ -371,6 +371,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     : const Color(0xFF666666),
                 fontFamily: 'Raleway',
               ),
+              softWrap: true,
+              overflow: TextOverflow.visible,
             ),
             SizedBox(height: afterSubtitle),
 
@@ -414,7 +416,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 style: TextButton.styleFrom(
                   foregroundColor: const Color(0xFF2E7D32),
                   padding: EdgeInsets.symmetric(
-                    vertical: isCompactLayout ? 12 : 8,
+                    vertical: isCompactLayout ? 4 : 2,
                     horizontal: 16,
                   ),
                 ),
@@ -438,9 +440,12 @@ class _LoginScreenState extends State<LoginScreen> {
               builder: (context, authProvider, child) {
                 if (authProvider.errorMessage != null) {
                   return Container(
-                    padding: EdgeInsets.all(isCompactLayout ? 14 : 16),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: isCompactLayout ? 8 : 10,
+                    ),
                     margin: EdgeInsets.only(
-                      bottom: layoutSize == _LoginLayoutSize.medium ? 16 : 20,
+                      bottom: layoutSize == _LoginLayoutSize.medium ? 10 : 12,
                     ),
                     decoration: BoxDecoration(
                       color: Colors.red.withOpacity(0.1),
@@ -710,65 +715,64 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _handleLogin(BuildContext context, AuthProvider authProvider) async {
     if (_formKey.currentState!.validate()) {
       authProvider.clearError();
-      
-      // Limpiar permisos antes de iniciar login para asegurar estado limpio
+
+      // Capturar providers antes de cualquier await (el context puede invalidarse tras login)
       final permisosProvider = context.read<PermisosProvider>();
+      final clientesProvider = context.read<ClienteProvider>();
+      final categoriasProvider = context.read<CategoriasProvider>();
+      final productosProvider = context.read<ProductoProvider>();
+      final ventasProvider = context.read<VentasProvider>();
+
       permisosProvider.clearPermisos();
-      
+
       try {
         final success = await authProvider.login(
           _userNameController.text.trim(),
           _passwordController.text,
         );
 
-        if (success && mounted) {
-          // Limpiar caché y estado de otro usuario para no mostrar sus datos al abrir pantallas
-          await context.read<ClienteProvider>().clearForNewUser();
-          await context.read<CategoriasProvider>().clearForNewUser();
-          await context.read<ProductoProvider>().clearForNewUser();
-          await context.read<VentasProvider>().clearForNewUser();
-          if (!mounted) return;
-          // Dar un momento al almacenamiento para que el token esté disponible (evita fallos al reingresar con el mismo usuario)
-          await Future.delayed(const Duration(milliseconds: 150));
-          if (!mounted) return;
+        if (!success) return;
 
-          // Cargar permisos después del login; timeout 12s para no quedar colgado.
-          bool permisosLoaded = false;
-          for (int attempt = 0; attempt < 2 && mounted && !permisosLoaded; attempt++) {
-            try {
-              await permisosProvider
-                  .loadPermisos(authProvider, forceReload: true)
-                  .timeout(const Duration(seconds: 12));
-              permisosLoaded = true;
-            } on TimeoutException {
-              permisosProvider.marcarTimeoutPermisos();
+        // Limpiar caché y estado de otro usuario (evitar context tras posible dispose)
+        await clientesProvider.clearForNewUser();
+        await categoriasProvider.clearForNewUser();
+        await productosProvider.clearForNewUser();
+        await ventasProvider.clearForNewUser();
+
+        // Dar tiempo al almacenamiento para que el token esté disponible
+        await Future.delayed(const Duration(milliseconds: 300));
+
+        // Cargar permisos después del login; timeout 12s para no quedar colgado
+        bool permisosLoaded = false;
+        for (int attempt = 0; attempt < 2 && !permisosLoaded; attempt++) {
+          try {
+            await permisosProvider
+                .loadPermisos(authProvider, forceReload: true)
+                .timeout(const Duration(seconds: 12));
+            permisosLoaded = true;
+          } on TimeoutException {
+            permisosProvider.marcarTimeoutPermisos();
+            break;
+          } catch (e) {
+            final isConnectionError = Apihandler.isConnectionError(e);
+            if (isConnectionError && attempt == 0) {
+              await Future.delayed(const Duration(milliseconds: 1500));
+            } else {
               break;
-            } catch (e) {
-              final isConnectionError = Apihandler.isConnectionError(e);
-              if (isConnectionError && attempt == 0) {
-                await Future.delayed(const Duration(milliseconds: 1500));
-                if (!mounted) return;
-              } else {
-                break;
-              }
             }
           }
-          if (!permisosLoaded && mounted && permisosProvider.isLoading) {
-            permisosProvider.marcarTimeoutPermisos();
-          }
-
-          if (mounted) {
-            Navigator.of(context).pushReplacement(
-              MaterialPageRoute(builder: (context) => const MenuScreen()),
-            );
-          }
         }
+        if (!permisosLoaded && permisosProvider.isLoading) {
+          permisosProvider.marcarTimeoutPermisos();
+        }
+
+        // Forzar rebuild del AuthWrapper para mostrar MainShellScreen/SuperAdminMenuScreen
+        authProvider.notifyListeners();
+        permisosProvider.notifyListeners();
       } catch (e) {
-        // Mostrar diálogo de error de servidor si corresponde
         if (mounted && Apihandler.isConnectionError(e)) {
           await Apihandler.handleConnectionError(context, e);
         }
-        // Los demás errores ya se muestran en la UI del AuthProvider
       }
     }
   }

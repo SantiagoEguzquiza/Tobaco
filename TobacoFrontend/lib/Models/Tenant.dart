@@ -19,6 +19,14 @@ class Tenant {
     this.updatedAt,
   });
 
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is Tenant && runtimeType == other.runtimeType && id == other.id;
+
+  @override
+  int get hashCode => id.hashCode;
+
   factory Tenant.fromJson(Map<String, dynamic> json) {
     return Tenant(
       id: json['id'],

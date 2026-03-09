@@ -626,7 +626,7 @@ class _VentasScreenState extends State<VentasScreen> {
                 child: Icon(
                   Icons.shopping_cart_outlined,
                   size: 60,
-                  color: AppTheme.primaryColor,
+                  color: Colors.grey.shade400,
                 ),
               ),
               const SizedBox(height: 16),

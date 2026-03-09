@@ -21,11 +21,11 @@ class _VentaConfirmadaAnimacionState extends State<VentaConfirmadaAnimacion>
 
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1600),
+      duration: const Duration(milliseconds: 1200),
     );
 
     _radiusAnimation = Tween<double>(begin: 0.0, end: 2.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
+      CurvedAnimation(parent: _controller, curve: Curves.easeInCubic),
     );
 
     _controller.forward();

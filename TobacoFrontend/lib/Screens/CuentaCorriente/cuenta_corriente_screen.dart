@@ -349,9 +349,15 @@ class _CuentaCorrienteScreenState extends State<CuentaCorrienteScreen> {
         ],
       ),
       child: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(40),
+        child: SingleChildScrollView(
+          padding: EdgeInsets.fromLTRB(
+            24,
+            24,
+            24,
+            24 + MediaQuery.of(context).padding.bottom + 24,
+          ),
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(
@@ -366,7 +372,9 @@ class _CuentaCorrienteScreenState extends State<CuentaCorrienteScreen> {
                     : 'No se encontraron clientes',
                 style: TextStyle(
                   fontSize: 18,
-                  color: Colors.grey.shade600,
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.grey.shade300
+                      : Colors.grey.shade700,
                   fontWeight: FontWeight.w500,
                 ),
                 textAlign: TextAlign.center,
@@ -378,7 +386,9 @@ class _CuentaCorrienteScreenState extends State<CuentaCorrienteScreen> {
                     : 'Intenta con otro término de búsqueda',
                 style: TextStyle(
                   fontSize: 14,
-                  color: Colors.grey.shade500,
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.grey.shade400
+                      : Colors.grey.shade600,
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -412,6 +422,7 @@ class _CuentaCorrienteScreenState extends State<CuentaCorrienteScreen> {
 
   // Tarjeta de cliente
   Widget _buildClienteCard(Cliente cliente, int index) {
+    final deuda = _parsearDeuda(cliente.deuda);
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -450,12 +461,12 @@ class _CuentaCorrienteScreenState extends State<CuentaCorrienteScreen> {
             padding: const EdgeInsets.all(16),
             child: Row(
               children: [
-                // Indicador lateral
+                // Indicador lateral: rojo=deuda, verde=saldo a favor o sin deuda
                 Container(
                   width: 4,
                   height: 60,
                   decoration: BoxDecoration(
-                    color: _parsearDeuda(cliente.deuda) > 0 ? Colors.red : Colors.green,
+                    color: deuda > 0 ? Colors.red : Colors.green,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -488,17 +499,17 @@ class _CuentaCorrienteScreenState extends State<CuentaCorrienteScreen> {
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            _parsearDeuda(cliente.deuda) > 0
-                                ? 'Deuda: \$ ${_formatearPrecio(_parsearDeuda(cliente.deuda))}'
-                                : 'Sin deuda',
+                            deuda > 0
+                                ? 'Deuda: \$ ${_formatearPrecio(deuda)}'
+                                : deuda < 0
+                                    ? 'Saldo a favor: \$ ${_formatearPrecio(-deuda)}'
+                                    : 'Sin deuda',
                             style: TextStyle(
                               fontSize: 14,
-                              color: _parsearDeuda(cliente.deuda) > 0
-                                  ? (Theme.of(context).brightness == Brightness.dark
-                                      ? Colors.grey.shade400
-                                      : Colors.grey.shade600)
+                              color: deuda > 0
+                                  ? (Theme.of(context).brightness == Brightness.dark ? Colors.grey.shade400 : Colors.grey.shade600)
                                   : Colors.green.shade600,
-                              fontWeight: _parsearDeuda(cliente.deuda) > 0 ? FontWeight.normal : FontWeight.w500,
+                              fontWeight: deuda != 0 ? FontWeight.w500 : FontWeight.normal,
                             ),
                           ),
                         ],

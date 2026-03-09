@@ -997,15 +997,14 @@ class _ProductosScreenState extends State<ProductosScreen> {
     final spacing1 = isSmallPhone ? 12.0 : 16.0;
     final spacing2 = isSmallPhone ? 6.0 : 8.0;
     final bottomPadding = MediaQuery.of(context).padding.bottom + 24;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       decoration: BoxDecoration(
-        color: Theme.of(context).brightness == Brightness.dark
-            ? const Color(0xFF1A1A1A)
-            : Colors.white,
+        color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
         borderRadius: BorderRadius.circular(15),
         boxShadow: [
           BoxShadow(
-            color: Theme.of(context).brightness == Brightness.dark
+            color: isDark
                 ? Colors.black.withOpacity(0.3)
                 : Colors.black.withOpacity(0.05),
             blurRadius: 10,
@@ -1013,13 +1012,13 @@ class _ProductosScreenState extends State<ProductosScreen> {
           ),
         ],
       ),
-      child: Align(
-        alignment: Alignment.topCenter,
+      child: Center(
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: EdgeInsets.fromLTRB(padding, padding, padding, padding + bottomPadding),
           child: Column(
             mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(Icons.inventory_2_outlined, size: iconSize, color: Colors.grey.shade400),
               SizedBox(height: spacing1),
@@ -1027,7 +1026,7 @@ class _ProductosScreenState extends State<ProductosScreen> {
                 hasFiltros ? 'Sin resultados' : 'No hay productos disponibles',
                 style: TextStyle(
                   fontSize: titleSize,
-                  color: Colors.grey.shade600,
+                  color: isDark ? Colors.grey.shade300 : Colors.grey.shade700,
                   fontWeight: FontWeight.w500,
                 ),
                 textAlign: TextAlign.center,
@@ -1039,7 +1038,7 @@ class _ProductosScreenState extends State<ProductosScreen> {
                     : 'Crea tu primer producto para comenzar',
                 style: TextStyle(
                   fontSize: subtitleSize,
-                  color: Colors.grey.shade500,
+                  color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
                 ),
                 textAlign: TextAlign.center,
               ),

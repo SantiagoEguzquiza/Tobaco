@@ -108,7 +108,15 @@ class AuthService {
           final errorData = jsonDecode(response.body);
           throw Exception(errorData['message'] ?? 'Datos de login inválidos');
         } else {
-          throw Exception('Error del servidor. Intenta nuevamente más tarde.');
+          String serverError = 'Error del servidor. Intenta nuevamente más tarde.';
+          try {
+            final body = response.body.toLowerCase();
+            if (body.contains('transient') || body.contains('transitorio')) {
+              serverError =
+                  'El servidor está ocupado. Espera unos segundos e intenta de nuevo.';
+            }
+          } catch (_) {}
+          throw Exception(serverError);
         }
       } catch (e) {
         // Reintentar solo si es error de conexión/timeout y quedan intentos
@@ -124,10 +132,15 @@ class AuthService {
             'No se pudo conectar al servidor. Verifica que estés en la misma red (Wi‑Fi) '
             'y que el backend esté en ejecución.');
         }
-        // Clean up the error message to remove "Exception" prefix
+        // Clean up the error message and traducir errores técnicos
         String errorMessage = e.toString();
         if (errorMessage.contains('Exception: ')) {
           errorMessage = errorMessage.replaceFirst('Exception: ', '');
+        }
+        if (errorMessage.toLowerCase().contains('transient') ||
+            errorMessage.toLowerCase().contains('transitorio')) {
+          errorMessage =
+              'El servidor está ocupado. Espera unos segundos e intenta de nuevo.';
         }
         throw Exception(errorMessage);
       }

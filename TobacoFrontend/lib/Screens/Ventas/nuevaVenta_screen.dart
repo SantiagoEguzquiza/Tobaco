@@ -116,7 +116,8 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
       context: context,
       barrierDismissible: false,
       builder: (BuildContext context) {
-        final maxHeight = MediaQuery.of(context).size.height * 0.85;
+        final screenHeight = MediaQuery.of(context).size.height;
+        final maxHeight = (screenHeight * 0.85).clamp(280.0, 500.0);
         return Dialog(
           backgroundColor: Theme.of(context).brightness == Brightness.dark
               ? const Color(0xFF1E1E1E)
@@ -881,9 +882,9 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
   /// El usuario puede deslizar hacia abajo para refrescar.
   Widget _buildEmptyStateConRefresh() {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bottomPadding = MediaQuery.of(context).padding.bottom + 24;
 
     return Container(
-      padding: const EdgeInsets.all(40),
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF2F2F2F) : Colors.white,
         borderRadius: BorderRadius.circular(8),
@@ -898,41 +899,40 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
         ],
       ),
       child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: AppTheme.primaryColor.withOpacity(0.1),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(40, 40, 40, 40).copyWith(
+            bottom: 40 + bottomPadding,
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
                 Icons.people_outline,
                 size: 48,
-                color: AppTheme.primaryColor,
+                color: Colors.grey.shade400,
               ),
-            ),
-            const SizedBox(height: 20),
-            Text(
-              'No hay clientes disponibles',
-              style: TextStyle(
-                color: isDark ? Colors.grey.shade300 : Colors.grey.shade700,
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
+              const SizedBox(height: 20),
+              Text(
+                'No hay clientes disponibles',
+                style: TextStyle(
+                  color: isDark ? Colors.grey.shade300 : Colors.grey.shade700,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Desliza hacia abajo para actualizar',
-              style: TextStyle(
-                color: isDark ? Colors.grey.shade400 : Colors.grey.shade500,
-                fontSize: 14,
+              const SizedBox(height: 8),
+              Text(
+                'Desliza hacia abajo para actualizar',
+                style: TextStyle(
+                  color: isDark ? Colors.grey.shade400 : Colors.grey.shade500,
+                  fontSize: 14,
+                ),
+                textAlign: TextAlign.center,
               ),
-              textAlign: TextAlign.center,
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

@@ -723,6 +723,45 @@ class _NuevaCompraScreenState extends State<NuevaCompraScreen> {
     );
   }
 
+  Widget _buildEmptyStateProveedores(bool sinFiltro, bool isDark) {
+    final bottomPadding = MediaQuery.of(context).padding.bottom + 24;
+    final titulo = sinFiltro ? 'No hay proveedores. Crea uno.' : 'No se encontraron proveedores';
+    final subtitulo = sinFiltro ? 'Usa el botón de arriba para agregar uno' : 'Intenta con otro término de búsqueda';
+
+    return Center(
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: EdgeInsets.fromLTRB(40, 40, 40, 40 + bottomPadding),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.business_outlined, size: 48, color: Colors.grey.shade400),
+            const SizedBox(height: 20),
+            Text(
+              titulo,
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: isDark ? Colors.grey.shade300 : Colors.grey.shade700,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              subtitulo,
+              style: TextStyle(
+                fontSize: 14,
+                color: isDark ? Colors.grey.shade400 : Colors.grey.shade500,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -794,16 +833,9 @@ class _NuevaCompraScreenState extends State<NuevaCompraScreen> {
                         ),
                       )
                     : _proveedoresFiltrados.isEmpty
-                        ? Center(
-                            child: Text(
-                              _searchControllerProveedor.text.trim().isEmpty
-                                  ? 'No hay proveedores. Crea uno.'
-                                  : 'No se encontraron proveedores',
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
-                              ),
-                            ),
+                        ? _buildEmptyStateProveedores(
+                            _searchControllerProveedor.text.trim().isEmpty,
+                            isDark,
                           )
                         : ListView.builder(
                             padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),

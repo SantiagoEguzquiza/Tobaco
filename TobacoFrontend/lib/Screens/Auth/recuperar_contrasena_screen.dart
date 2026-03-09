@@ -61,7 +61,6 @@ class _RecuperarContrasenaScreenState extends State<RecuperarContrasenaScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(message),
-              const SizedBox(height: 24),
             ],
           ),
           actions: [
@@ -109,19 +108,19 @@ class _RecuperarContrasenaScreenState extends State<RecuperarContrasenaScreen> {
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           child: Form(
             key: _formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const SizedBox(height: 16),
+                const SizedBox(height: 8),
                 Icon(
                   Icons.lock_reset,
-                  size: 64,
+                  size: 52,
                   color: Theme.of(context).colorScheme.primary,
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 16),
                 Text(
                   '¿Olvidaste tu contraseña?',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
@@ -129,7 +128,7 @@ class _RecuperarContrasenaScreenState extends State<RecuperarContrasenaScreen> {
                       ),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 8),
                 Text(
                   'Ingresa tu nombre de usuario. Te indicaremos los pasos para recuperar el acceso.',
                   style: TextStyle(
@@ -138,7 +137,7 @@ class _RecuperarContrasenaScreenState extends State<RecuperarContrasenaScreen> {
                   ),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 32),
+                const SizedBox(height: 20),
                 TextFormField(
                   controller: _userNameController,
                   decoration: const InputDecoration(
@@ -159,7 +158,7 @@ class _RecuperarContrasenaScreenState extends State<RecuperarContrasenaScreen> {
                   },
                 ),
                 if (_errorMessage != null) ...[
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 12),
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
@@ -184,7 +183,7 @@ class _RecuperarContrasenaScreenState extends State<RecuperarContrasenaScreen> {
                     ),
                   ),
                 ],
-                const SizedBox(height: 32),
+                const SizedBox(height: 20),
                 SizedBox(
                   height: 48,
                   child: ElevatedButton(
@@ -198,7 +197,7 @@ class _RecuperarContrasenaScreenState extends State<RecuperarContrasenaScreen> {
                         : const Text('Enviar solicitud'),
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(),
                   child: const Text('Volver al inicio de sesión'),
