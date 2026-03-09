@@ -110,21 +110,6 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
           'Categorías',
           style: AppTheme.appBarTitleStyle,
         ),
-        actions: [
-          Container(
-            margin: const EdgeInsets.only(right: 16),
-            decoration: BoxDecoration(
-              color: AppTheme.primaryColor.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: IconButton(
-              icon: const Icon(Icons.refresh, color: AppTheme.primaryColor),
-              onPressed: () =>
-                  context.read<CategoriasProvider>().cargarCategorias(),
-              tooltip: 'Actualizar',
-            ),
-          ),
-        ],
       ),
       body: provider.isLoading
           ? Center(
@@ -284,40 +269,59 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
                           ),
                           Expanded(
                             child: provider.categorias.isEmpty
-                                ? SingleChildScrollView(
-                                    padding: const EdgeInsets.all(40),
-                                    child: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(
-                                          Icons.category_outlined,
-                                          size: 80,
-                                          color: Colors.grey.shade400,
-                                        ),
-                                        const SizedBox(height: 16),
-                                        Text(
-                                          'No hay categorías disponibles',
-                                          style: TextStyle(
-                                            fontSize: 18,
-                                            color: Colors.grey.shade600,
-                                            fontWeight: FontWeight.w500,
+                                ? RefreshIndicator(
+                                    color: AppTheme.primaryColor,
+                                    onRefresh: () =>
+                                        context.read<CategoriasProvider>().cargarCategorias(),
+                                    child: SingleChildScrollView(
+                                      physics: const AlwaysScrollableScrollPhysics(),
+                                      padding: const EdgeInsets.all(40),
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            Icons.category_outlined,
+                                            size: 80,
+                                            color: Colors.grey.shade400,
                                           ),
-                                        ),
-                                        const SizedBox(height: 8),
-                                        Text(
-                                          'Crea tu primera categoría para comenzar',
-                                          style: TextStyle(
-                                            fontSize: 14,
-                                            color: Colors.grey.shade500,
+                                          const SizedBox(height: 16),
+                                          Text(
+                                            'No hay categorías disponibles',
+                                            style: TextStyle(
+                                              fontSize: 18,
+                                              color: Colors.grey.shade600,
+                                              fontWeight: FontWeight.w500,
+                                            ),
                                           ),
-                                          textAlign: TextAlign.center,
-                                        ),
-                                      ],
+                                          const SizedBox(height: 8),
+                                          Text(
+                                            'Crea tu primera categoría para comenzar',
+                                            style: TextStyle(
+                                              fontSize: 14,
+                                              color: Colors.grey.shade500,
+                                            ),
+                                            textAlign: TextAlign.center,
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Text(
+                                            'Desliza hacia abajo para actualizar',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.grey.shade400,
+                                            ),
+                                            textAlign: TextAlign.center,
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   )
                                 : NotificationListener<ScrollNotification>(
                                     onNotification: _onScrollNotification,
-                                    child: ReorderableCategoriaList(
+                                    child: RefreshIndicator(
+                                      color: AppTheme.primaryColor,
+                                      onRefresh: () =>
+                                          context.read<CategoriasProvider>().cargarCategorias(),
+                                      child: ReorderableCategoriaList(
                                       onDelete: (categoria) =>
                                           _eliminarCategoria(categoria),
                                       onEdit: (categoria) async {
@@ -333,6 +337,7 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
                                       },
                                     ),
                                   ),
+                                ),
                           ),
                         ],
                       ),
