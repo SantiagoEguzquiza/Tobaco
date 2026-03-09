@@ -41,6 +41,26 @@ class _FormaPagoScreenState extends State<FormaPagoScreen> {
   final List<PagoParcial> pagosParciales = [];
   final TextEditingController _montoController = TextEditingController();
 
+  double _parsearDeuda(String? deuda) {
+    if (deuda == null || deuda.isEmpty) return 0.0;
+    final s = deuda.replaceAll(',', '.');
+    return double.tryParse(s) ?? 0.0;
+  }
+
+  /// Saldo a favor del cliente (crédito disponible). > 0 cuando deuda < 0.
+  double get _saldoAFavor {
+    final d = _parsearDeuda(widget.venta.cliente.deuda);
+    return d < 0 ? -d : 0.0;
+  }
+
+  /// Crédito disponible para usar en esta venta (saldo a favor menos lo ya pagado con CC).
+  double get _creditoDisponible {
+    final ccYaUsado = pagosParciales
+        .where((p) => p.metodo == MetodoPago.cuentaCorriente)
+        .fold(0.0, (s, p) => s + p.monto);
+    return (_saldoAFavor - ccYaUsado).clamp(0.0, double.infinity);
+  }
+
   /// Métodos de pago disponibles. Cuenta Corriente solo si el cliente tiene hasCCTE.
   List<_MetodoPago> get metodos {
     final base = [
@@ -52,6 +72,32 @@ class _FormaPagoScreenState extends State<FormaPagoScreen> {
       base.add(_MetodoPago(MetodoPago.cuentaCorriente, 'Cuenta corriente', Icons.receipt_long));
     }
     return base;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _aplicarSaldoAFavorAutomatico());
+  }
+
+  /// Aplica automáticamente el saldo a favor del cliente al abrir la pantalla.
+  /// Ej: cliente con $100 a favor y compra de $200 → se aplican $100, solo debe pagar $100.
+  void _aplicarSaldoAFavorAutomatico() {
+    if (pagosParciales.isNotEmpty) return;
+    if (!widget.venta.cliente.hasCCTE) return;
+    final saldo = _parsearDeuda(widget.venta.cliente.deuda);
+    if (saldo >= 0) return;
+    final credito = -saldo;
+    if (credito <= 0 || widget.venta.total <= 0) return;
+    final montoAplicar = credito < widget.venta.total ? credito : widget.venta.total;
+    setState(() {
+      pagosParciales.add(PagoParcial(
+        metodo: MetodoPago.cuentaCorriente,
+        nombre: 'Saldo a favor',
+        icono: Icons.account_balance_wallet,
+        monto: montoAplicar,
+      ));
+    });
   }
 
   @override
@@ -111,6 +157,11 @@ class _FormaPagoScreenState extends State<FormaPagoScreen> {
   void _mostrarDialogoMonto(_MetodoPago metodo) {
     _montoController.clear();
     final restante = _calcularRestante();
+    final esCuentaCorriente = metodo.metodo == MetodoPago.cuentaCorriente;
+    // Si usa saldo a favor: máximo = min(restante, creditoDisponible). Si no hay crédito: max = restante (agregar a deuda)
+    final maxMonto = esCuentaCorriente && _creditoDisponible > 0
+        ? (restante < _creditoDisponible ? restante : _creditoDisponible)
+        : restante;
 
     showDialog(
       context: context,
@@ -148,7 +199,9 @@ class _FormaPagoScreenState extends State<FormaPagoScreen> {
               const SizedBox(width: 14),
               Expanded(
                 child: Text(
-                  'Monto con ${metodo.nombre}',
+                  esCuentaCorriente && _saldoAFavor > 0
+                      ? 'Usar saldo a favor'
+                      : 'Monto con ${metodo.nombre}',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w600,
@@ -164,7 +217,7 @@ class _FormaPagoScreenState extends State<FormaPagoScreen> {
             children: [
               GestureDetector(
                 onTap: () {
-                  _montoController.text = restante.toStringAsFixed(2);
+                  _montoController.text = maxMonto.toStringAsFixed(2);
                   setDialogState(() {});
                 },
                 child: Container(
@@ -197,7 +250,9 @@ class _FormaPagoScreenState extends State<FormaPagoScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Restante por pagar',
+                              esCuentaCorriente && _saldoAFavor > 0
+                                  ? 'Máximo a usar (saldo a favor)'
+                                  : 'Restante por pagar',
                               style: TextStyle(
                                 fontSize: 13,
                                 color: subColor,
@@ -205,7 +260,7 @@ class _FormaPagoScreenState extends State<FormaPagoScreen> {
                               ),
                             ),
                             const SizedBox(height: 4),
-                            _formatearPrecioConDecimales(restante),
+                            _formatearPrecioConDecimales(maxMonto),
                           ],
                         ),
                       ),
@@ -285,7 +340,7 @@ class _FormaPagoScreenState extends State<FormaPagoScreen> {
                     child: ElevatedButton.icon(
                       onPressed: () {
                         final monto = double.tryParse(_montoController.text);
-                        if (monto != null && monto > 0 && monto <= restante) {
+                        if (monto != null && monto > 0 && monto <= maxMonto) {
                           setState(() {
                             pagosParciales.add(PagoParcial(
                               metodo: metodo.metodo,
@@ -301,7 +356,9 @@ class _FormaPagoScreenState extends State<FormaPagoScreen> {
                             AppTheme.warningSnackBar(
                               monto == null || monto <= 0
                                   ? 'Ingrese un monto válido'
-                                  : 'El monto no puede ser mayor al restante',
+                                  : esCuentaCorriente && _saldoAFavor > 0
+                                      ? 'El monto no puede superar el saldo a favor disponible (\$${maxMonto.toStringAsFixed(2)})'
+                                      : 'El monto no puede ser mayor al restante',
                             ),
                           );
                         }
@@ -826,6 +883,7 @@ class _FormaPagoScreenState extends State<FormaPagoScreen> {
   }
 
   Widget _buildMetodoPagoTile(_MetodoPago metodo, {bool isLast = false}) {
+    final tieneSaldoAFavor = metodo.metodo == MetodoPago.cuentaCorriente && _saldoAFavor > 0;
     return Container(
       decoration: BoxDecoration(
         color: Theme.of(context).brightness == Brightness.dark
@@ -867,6 +925,18 @@ class _FormaPagoScreenState extends State<FormaPagoScreen> {
                 : Colors.grey.shade800,
           ),
         ),
+        subtitle: tieneSaldoAFavor
+            ? Text(
+                _creditoDisponible > 0
+                    ? 'Saldo a favor: \$${_creditoDisponible.toStringAsFixed(2)} disponible'
+                    : 'Crédito usado. Puede agregar el restante a deuda',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Colors.green.shade700,
+                  fontWeight: FontWeight.w500,
+                ),
+              )
+            : null,
         trailing: Icon(
           Icons.add_circle_outline,
           color: Colors.green.shade600,

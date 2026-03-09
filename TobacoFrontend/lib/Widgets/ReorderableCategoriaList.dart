@@ -108,12 +108,21 @@ class _ReorderableCategoriaListState extends State<ReorderableCategoriaList> {
         }
 
         if (_categorias.isEmpty) {
-          return const Center(
-            child: Text(
-              'No hay categorías disponibles',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey,
+          final isSmallPhone = MediaQuery.of(context).size.height < 600 ||
+              MediaQuery.of(context).size.width < 360;
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Text(
+                'No hay categorías disponibles',
+                style: TextStyle(
+                  fontSize: isSmallPhone ? 15 : 16,
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.grey.shade400
+                      : Colors.grey.shade600,
+                  fontWeight: FontWeight.w500,
+                ),
+                textAlign: TextAlign.center,
               ),
             ),
           );

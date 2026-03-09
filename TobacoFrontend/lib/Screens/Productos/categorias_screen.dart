@@ -273,46 +273,72 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
                                     color: AppTheme.primaryColor,
                                     onRefresh: () =>
                                         context.read<CategoriasProvider>().cargarCategorias(),
-                                    child: SingleChildScrollView(
-                                      physics: const AlwaysScrollableScrollPhysics(),
-                                      padding: const EdgeInsets.all(40),
-                                      child: Column(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Icon(
-                                            Icons.category_outlined,
-                                            size: 80,
-                                            color: Colors.grey.shade400,
-                                          ),
-                                          const SizedBox(height: 16),
-                                          Text(
-                                            'No hay categorías disponibles',
-                                            style: TextStyle(
-                                              fontSize: 18,
-                                              color: Colors.grey.shade600,
-                                              fontWeight: FontWeight.w500,
+                                    child: LayoutBuilder(
+                                      builder: (context, constraints) {
+                                        final isSmallPhone = MediaQuery.of(context).size.height < 600 ||
+                                            MediaQuery.of(context).size.width < 360;
+                                        final padding = isSmallPhone ? 24.0 : 40.0;
+                                        final iconSize = isSmallPhone ? 64.0 : 80.0;
+                                        final titleSize = isSmallPhone ? 17.0 : 18.0;
+                                        return SingleChildScrollView(
+                                          physics: const AlwaysScrollableScrollPhysics(),
+                                          child: ConstrainedBox(
+                                            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                                            child: Center(
+                                              child: Padding(
+                                                padding: EdgeInsets.all(padding),
+                                                child: Column(
+                                                  mainAxisSize: MainAxisSize.min,
+                                                  mainAxisAlignment: MainAxisAlignment.center,
+                                                  children: [
+                                                    Icon(
+                                                      Icons.category_outlined,
+                                                      size: iconSize,
+                                                      color: Theme.of(context).brightness == Brightness.dark
+                                                          ? Colors.grey.shade400
+                                                          : Colors.grey.shade600,
+                                                    ),
+                                                    SizedBox(height: isSmallPhone ? 12 : 16),
+                                                    Text(
+                                                      'No hay categorías disponibles',
+                                                      style: TextStyle(
+                                                        fontSize: titleSize,
+                                                        color: Theme.of(context).brightness == Brightness.dark
+                                                            ? Colors.grey.shade300
+                                                            : Colors.grey.shade700,
+                                                        fontWeight: FontWeight.w600,
+                                                      ),
+                                                      textAlign: TextAlign.center,
+                                                    ),
+                                                    SizedBox(height: isSmallPhone ? 6 : 8),
+                                                    Text(
+                                                      'Crea tu primera categoría para comenzar',
+                                                      style: TextStyle(
+                                                        fontSize: isSmallPhone ? 13 : 14,
+                                                        color: Theme.of(context).brightness == Brightness.dark
+                                                            ? Colors.grey.shade400
+                                                            : Colors.grey.shade600,
+                                                      ),
+                                                      textAlign: TextAlign.center,
+                                                    ),
+                                                    SizedBox(height: isSmallPhone ? 6 : 8),
+                                                    Text(
+                                                      'Desliza hacia abajo para actualizar',
+                                                      style: TextStyle(
+                                                        fontSize: isSmallPhone ? 11 : 12,
+                                                        color: Theme.of(context).brightness == Brightness.dark
+                                                            ? Colors.grey.shade500
+                                                            : Colors.grey.shade500,
+                                                      ),
+                                                      textAlign: TextAlign.center,
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
                                             ),
                                           ),
-                                          const SizedBox(height: 8),
-                                          Text(
-                                            'Crea tu primera categoría para comenzar',
-                                            style: TextStyle(
-                                              fontSize: 14,
-                                              color: Colors.grey.shade500,
-                                            ),
-                                            textAlign: TextAlign.center,
-                                          ),
-                                          const SizedBox(height: 8),
-                                          Text(
-                                            'Desliza hacia abajo para actualizar',
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              color: Colors.grey.shade400,
-                                            ),
-                                            textAlign: TextAlign.center,
-                                          ),
-                                        ],
-                                      ),
+                                        );
+                                      },
                                     ),
                                   )
                                 : NotificationListener<ScrollNotification>(

@@ -124,6 +124,12 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
 
   double? _obtenerSaldoDesdeDetalle(Map<String, dynamic>? detalle) {
     if (detalle == null) return null;
+    // saldoAFavor > 0 significa crédito -> saldo negativo
+    final saldoAFavor = detalle['saldoAFavor'];
+    if (saldoAFavor != null) {
+      final v = saldoAFavor is num ? saldoAFavor.toDouble() : (double.tryParse(saldoAFavor.toString()) ?? 0.0);
+      if (v > 0) return -v;
+    }
     final raw = detalle['deudaActual'] ?? detalle['saldoActual'];
     if (raw is num) return raw.toDouble();
     if (raw is String) {
@@ -447,14 +453,18 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    _parsearDeuda(widget.cliente.deuda) > 0
-                                        ? 'Saldo: \$${_formatearPrecio(_parsearDeuda(widget.cliente.deuda))}'
-                                        : 'Sin deuda actualmente',
+                                    () {
+                                      final d = _parsearDeuda(widget.cliente.deuda);
+                                      if (d > 0) return 'Saldo: \$${_formatearPrecio(d)}';
+                                      if (d < 0) return 'Saldo a favor: \$${_formatearPrecio(-d)}';
+                                      return 'Sin deuda actualmente';
+                                    }(),
                                     style: TextStyle(
                                       fontSize: 14,
-                                      color: _parsearDeuda(widget.cliente.deuda) > 0
-                                          ? Colors.red.shade600
-                                          : Colors.green.shade600,
+                                      color: () {
+                                        final d = _parsearDeuda(widget.cliente.deuda);
+                                        return d > 0 ? Colors.red.shade600 : Colors.green.shade600;
+                                      }(),
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),
@@ -593,17 +603,13 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
                             child: ElevatedButton.icon(
                               onPressed: () async {
                                 final monto = double.tryParse(montoController.text);
-                                final deudaActual = _parsearDeuda(widget.cliente.deuda);
                                 setState(() => errorMessage = null);
 
                                 if (monto == null || monto <= 0) {
                                   setState(() => errorMessage = 'Ingrese un monto válido');
                                   return;
                                 }
-                                if (monto > deudaActual) {
-                                  setState(() => errorMessage = 'El monto no puede ser mayor al saldo actual');
-                                  return;
-                                }
+                                // Permitir abonos mayores a la deuda (genera saldo a favor)
 
                                 Navigator.of(context).pop();
                                 await _procesarAbono(monto, notaController.text);
@@ -664,9 +670,11 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
         AppTheme.showSnackBar(
           context,
           AppTheme.successSnackBar(
-            nuevaDeuda <= 0
-                ? 'Abono registrado. Cuenta corriente al día.'
-                : 'Abono registrado exitosamente',
+            nuevaDeuda < 0
+                ? 'Abono registrado. Saldo a favor: \$${_formatearPrecio(-nuevaDeuda)}'
+                : nuevaDeuda == 0
+                    ? 'Abono registrado. Cuenta corriente al día.'
+                    : 'Abono registrado exitosamente',
           ),
         );
         // No hacer pop al saldar: el usuario se queda en el detalle y ve el historial
@@ -819,7 +827,9 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
                     Text(
                       saldoActual > 0
                           ? 'Saldo actual: \$${_formatearPrecio(saldoActual)}'
-                          : 'Sin deuda actualmente',
+                          : saldoActual < 0
+                              ? 'Saldo a favor: \$${_formatearPrecio(-saldoActual)}'
+                              : 'Sin deuda actualmente',
                       style: TextStyle(
                         fontSize: 16,
                         color: saldoActual > 0 ? Colors.red.shade600 : Colors.green.shade600,

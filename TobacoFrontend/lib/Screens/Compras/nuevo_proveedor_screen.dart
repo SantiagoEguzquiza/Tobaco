@@ -177,7 +177,7 @@ class _NuevoProveedorScreenState extends State<NuevoProveedorScreen> {
                         height: AppTheme.isCompactVentasButton(context) ? 48 : 56,
                         decoration: BoxDecoration(
                           color: AppTheme.primaryColor,
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
                         ),
                         child: const Center(
                           child: SizedBox(
@@ -208,7 +208,7 @@ class _NuevoProveedorScreenState extends State<NuevoProveedorScreen> {
                           foregroundColor: Colors.white,
                           padding: AppTheme.ventasButtonPadding(context),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
                           ),
                         ),
                       ),

@@ -11,13 +11,14 @@ class VentasService {
   static const Duration _timeoutDuration = Duration(seconds: 30); // Timeout normal para operaciones (aumentado para sincronización)
   static const Duration _timeoutRapidoDuration = Duration(seconds: 5); // Timeout más corto para refrescos rápidos (pull-to-refresh)
 
-  /// Verifica si el backend está prendido con GET /health (sin auth). Timeout corto para no esperar si está apagado.
-  static const Duration _timeoutHealth = Duration(seconds: 2);
+  /// Verifica si el backend está prendido con GET /api/Health (sin auth).
+  /// Usa HealthController que siempre devuelve 200 si la API responde (más fiable que /health que verifica BD).
+  static const Duration _timeoutHealth = Duration(seconds: 5);
 
   Future<bool> get backendDisponible async {
     try {
       final response = await Apihandler.client
-          .get(Uri.parse('$baseUrl/health'))
+          .get(baseUrl.resolve('/api/Health'))
           .timeout(_timeoutHealth);
       return response.statusCode == 200;
     } catch (_) {
