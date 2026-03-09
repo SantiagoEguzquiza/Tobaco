@@ -140,21 +140,12 @@ class _ClientesScreenState extends State<ClientesScreen> {
           appBar: AppBar(
             centerTitle: true,
             elevation: 0,
-<<<<<<< Updated upstream
             backgroundColor: Theme.of(context).brightness == Brightness.light
                 ? AppTheme.primaryColor
                 : Theme.of(context).scaffoldBackgroundColor,
             foregroundColor: Theme.of(context).brightness == Brightness.light
                 ? Colors.white
                 : null,
-=======
-            backgroundColor: Theme.of(context).brightness == Brightness.dark
-                ? Colors.transparent
-                : AppTheme.primaryColor,
-            foregroundColor: Theme.of(context).brightness == Brightness.dark
-                ? null
-                : Colors.white,
->>>>>>> Stashed changes
             scrolledUnderElevation: 0,
             title: const Text(
               'Clientes',
@@ -294,11 +285,7 @@ class _ClientesScreenState extends State<ClientesScreen> {
         controller: _scrollController,
         physics: const AlwaysScrollableScrollPhysics(),
         padding: EdgeInsets.only(
-<<<<<<< Updated upstream
           bottom: MediaQuery.of(context).padding.bottom + 24,
-=======
-          bottom: MediaQuery.of(context).padding.bottom + 12,
->>>>>>> Stashed changes
         ),
         itemCount: clientesFiltrados.length,
         itemBuilder: (context, index) {

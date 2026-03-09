@@ -203,21 +203,12 @@ class _ProductosScreenState extends State<ProductosScreen> {
       appBar: AppBar(
         centerTitle: true,
         elevation: 0,
-<<<<<<< Updated upstream
-        backgroundColor: Theme.of(context).brightness == Brightness.light
-            ? AppTheme.primaryColor
-            : Theme.of(context).scaffoldBackgroundColor,
-        foregroundColor: Theme.of(context).brightness == Brightness.light
-            ? Colors.white
-            : null,
-=======
         backgroundColor: Theme.of(context).brightness == Brightness.dark
             ? Theme.of(context).scaffoldBackgroundColor
             : AppTheme.primaryColor,
         foregroundColor: Theme.of(context).brightness == Brightness.dark
             ? null
             : Colors.white,
->>>>>>> Stashed changes
         scrolledUnderElevation: 0,
         title: const Text(
           'Productos',
@@ -306,7 +297,6 @@ class _ProductosScreenState extends State<ProductosScreen> {
         child: SafeArea(
           top: true,
           bottom: false,
-<<<<<<< Updated upstream
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
             child: Column(
@@ -356,26 +346,6 @@ class _ProductosScreenState extends State<ProductosScreen> {
                             ],
                           );
                         },
-=======
-          child: LayoutBuilder(
-          builder: (context, constraints) {
-            final viewInsets = MediaQuery.of(context).viewInsets.bottom;
-            final keyboardOpen = viewInsets > 0;
-            final headerNeedsScroll = keyboardOpen || _advancedSearchExpanded;
-            const reservedForActionsAndList = 320.0;
-            final maxHeaderHeight = headerNeedsScroll
-                ? (constraints.maxHeight - reservedForActionsAndList).clamp(140.0, double.infinity)
-                : null;
-            return Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                children: [
-                  if (maxHeaderHeight != null)
-                    ConstrainedBox(
-                      constraints: BoxConstraints(maxHeight: maxHeaderHeight),
-                      child: SingleChildScrollView(
-                        child: _buildHeaderSearchAndFilter(prov),
->>>>>>> Stashed changes
                       ),
                     ),
                   ),
@@ -559,28 +529,12 @@ class _ProductosScreenState extends State<ProductosScreen> {
                       final categoriasProvider = context.read<CategoriasProvider>();
                       prov.recargarProductos(categoriasProvider);
                     }
-                  },
-<<<<<<< Updated upstream
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primaryColor,
-                    foregroundColor: Colors.white,
-                    padding: EdgeInsets.symmetric(
-                      vertical: MediaQuery.of(context).size.height < 680 ? 12 : 16,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
-                    ),
-                    elevation: 2,
-                  ),
+                  },                
                   icon: Icon(
                     Icons.add_circle_outline,
                     size: MediaQuery.of(context).size.height < 680 ? 18 : 20,
                   ),
                   label: Text(
-=======
-                  icon: const Icon(Icons.add_circle_outline, size: 20),
-                  label: const Text(
->>>>>>> Stashed changes
                     'Crear Nuevo Producto',
                     style: TextStyle(
                       fontSize: MediaQuery.of(context).size.height < 680 ? 14 : 16,
@@ -718,11 +672,7 @@ class _ProductosScreenState extends State<ProductosScreen> {
         controller: _scrollController,
         physics: const AlwaysScrollableScrollPhysics(),
         padding: EdgeInsets.only(
-<<<<<<< Updated upstream
           bottom: MediaQuery.of(context).padding.bottom + 24,
-=======
-          bottom: MediaQuery.of(context).padding.bottom + 12,
->>>>>>> Stashed changes
         ),
         itemCount: filteredProductos.length,
         itemBuilder: (context, index) {

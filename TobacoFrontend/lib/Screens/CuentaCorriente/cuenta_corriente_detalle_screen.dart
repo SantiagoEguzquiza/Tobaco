@@ -367,14 +367,8 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
               ),
-<<<<<<< Updated upstream
               titlePadding: const EdgeInsets.fromLTRB(24, 18, 24, 10),
               contentPadding: const EdgeInsets.fromLTRB(24, 0, 24, 14),
-=======
-              titlePadding: const EdgeInsets.fromLTRB(24, 20, 24, 12),
-              contentPadding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
-              insetPadding: EdgeInsets.fromLTRB(20, 24, 20, 24 + viewInsets.bottom),
->>>>>>> Stashed changes
               title: Row(
                 children: [
                   Container(
@@ -978,7 +972,6 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
     }
 
     if (ventasCC.isEmpty) {
-<<<<<<< Updated upstream
       final bottomPad = MediaQuery.of(context).padding.bottom + 88;
       return SingleChildScrollView(
         padding: EdgeInsets.fromLTRB(16, 8, 16, bottomPad),
@@ -989,14 +982,6 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
           title: 'No hay ventas a cuenta corriente',
           subtitle: 'El historial de ventas a CC aparecerá aquí',
         ),
-=======
-      return _buildEmptyState(
-        context: context,
-        isDarkMode: isDarkMode,
-        icon: Icons.receipt_long,
-        title: 'No hay ventas a cuenta corriente',
-        subtitle: 'El historial de ventas a CC aparecerá aquí',
->>>>>>> Stashed changes
       );
     }
 
@@ -1023,7 +1008,6 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
       );
     }
 
-<<<<<<< Updated upstream
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1083,78 +1067,6 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
                 ),
               ),
             ),
-=======
-    if (abonos.isEmpty) {
-      return Stack(
-        children: [
-          Center(
-            child: _buildEmptyState(
-              context: context,
-              isDarkMode: isDarkMode,
-              icon: Icons.payment,
-              title: 'No hay abonos registrados',
-              subtitle: 'Este cliente aún no ha realizado ningún abono',
-            ),
-          ),
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-              child: SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: _mostrarModalSaldarDeuda,
-                  icon: const Icon(Icons.payment_rounded, size: 20),
-                  label: const Text('Registrar abono', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primaryColor,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      );
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-          child: SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: _mostrarModalSaldarDeuda,
-              icon: const Icon(Icons.payment_rounded, size: 20),
-              label: const Text('Registrar abono', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primaryColor,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
-                ),
-              ),
-            ),
-          ),
-        ),
-        Expanded(
-          child: ListView.builder(
-            padding: const EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 72),
-            itemCount: abonos.length,
-            itemBuilder: (context, index) {
-              final abono = abonos[index];
-              return _buildAbonoCard(abono, isDarkMode);
-            },
->>>>>>> Stashed changes
           ),
         ),
       ],
@@ -1171,7 +1083,6 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
     }
 
     if (notasCredito.isEmpty) {
-<<<<<<< Updated upstream
       final bottomPad = MediaQuery.of(context).padding.bottom + 88;
       return SingleChildScrollView(
         padding: EdgeInsets.fromLTRB(16, 8, 16, bottomPad),
@@ -1182,14 +1093,6 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
           title: 'No hay notas de crédito',
           subtitle: 'Aún no se registraron notas de crédito para este cliente',
         ),
-=======
-      return _buildEmptyState(
-        context: context,
-        isDarkMode: isDarkMode,
-        icon: Icons.receipt,
-        title: 'No hay notas de crédito',
-        subtitle: 'Aún no se registraron notas de crédito para este cliente',
->>>>>>> Stashed changes
       );
     }
 
@@ -1213,7 +1116,6 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
     }
 
     if (productosAFavor.isEmpty) {
-<<<<<<< Updated upstream
       final bottomPad = MediaQuery.of(context).padding.bottom + 88;
       return SingleChildScrollView(
         padding: EdgeInsets.fromLTRB(16, 8, 16, bottomPad),
@@ -1224,14 +1126,6 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
           title: 'Sin productos a favor',
           subtitle: 'No hay entregas pendientes para este cliente',
         ),
-=======
-      return _buildEmptyState(
-        context: context,
-        isDarkMode: isDarkMode,
-        icon: Icons.inventory_2_outlined,
-        title: 'Sin productos a favor',
-        subtitle: 'No hay entregas pendientes para este cliente',
->>>>>>> Stashed changes
       );
     }
 
@@ -1995,7 +1889,6 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
     required String title,
     required String subtitle,
   }) {
-<<<<<<< Updated upstream
     final screenHeight = MediaQuery.of(context).size.height;
     final isCompact = screenHeight < 600;
     final iconSize = isCompact ? 40.0 : 52.0;
@@ -2042,48 +1935,6 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
             textAlign: TextAlign.center,
           ),
         ],
-=======
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: isDarkMode ? Colors.grey.shade800 : Colors.grey.shade100,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                icon,
-                size: 32,
-                color: isDarkMode ? Colors.grey.shade600 : Colors.grey.shade400,
-              ),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 15,
-                color: isDarkMode ? Colors.grey.shade300 : Colors.grey.shade600,
-                fontWeight: FontWeight.w500,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              subtitle,
-              style: TextStyle(
-                fontSize: 13,
-                color: isDarkMode ? Colors.grey.shade500 : Colors.grey.shade400,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
->>>>>>> Stashed changes
       ),
     );
   }

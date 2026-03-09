@@ -206,7 +206,6 @@ class HeaderConBuscador extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-<<<<<<< Updated upstream
     final screenHeight = MediaQuery.of(context).size.height;
     final isCompact = screenHeight < 680;
     final topPad = isCompact ? 12.0 : 20.0;
@@ -217,12 +216,6 @@ class HeaderConBuscador extends StatelessWidget {
     final subtitleSize = isCompact ? 12.0 : 14.0;
     final iconPadding = isCompact ? 8.0 : 12.0;
     final iconSize = isCompact ? 20.0 : 24.0;
-=======
-    final width = MediaQuery.sizeOf(context).width;
-    final isNarrow = width < 360;
-    final titleFontSize = isNarrow ? 18.0 : 24.0;
-    final horizontalPadding = isNarrow ? 14.0 : 20.0;
->>>>>>> Stashed changes
 
     return Container(
       decoration: BoxDecoration(
@@ -256,20 +249,12 @@ class HeaderConBuscador extends StatelessWidget {
         children: [
           // Sección superior con ícono, título y subtítulo
           Padding(
-<<<<<<< Updated upstream
             padding: EdgeInsets.fromLTRB(horizontalPad, topPad, horizontalPad, bottomTitlePad),
-=======
-            padding: EdgeInsets.all(horizontalPadding),
->>>>>>> Stashed changes
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
-<<<<<<< Updated upstream
                   padding: EdgeInsets.all(iconPadding),
-=======
-                  padding: EdgeInsets.all(isNarrow ? 10 : 12),
->>>>>>> Stashed changes
                   decoration: BoxDecoration(
                     color: customBackgroundColor ?? AppTheme.primaryColor,
                     borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
@@ -277,17 +262,10 @@ class HeaderConBuscador extends StatelessWidget {
                   child: Icon(
                     leadingIcon,
                     color: Colors.white,
-<<<<<<< Updated upstream
                     size: iconSize,
                   ),
                 ),
                 SizedBox(width: isCompact ? 12 : 16),
-=======
-                    size: isNarrow ? 20 : 24,
-                  ),
-                ),
-                SizedBox(width: isNarrow ? 12 : 16),
->>>>>>> Stashed changes
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -296,18 +274,13 @@ class HeaderConBuscador extends StatelessWidget {
                       Text(
                         title,
                         style: TextStyle(
-<<<<<<< Updated upstream
                           fontSize: titleSize,
-=======
-                          fontSize: titleFontSize,
->>>>>>> Stashed changes
                           fontWeight: FontWeight.bold,
                           color: isDark ? Colors.white : AppTheme.primaryColor,
                           height: 1.25,
                         ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-<<<<<<< Updated upstream
                         softWrap: true,
                       ),
                       if (subtitle != null) ...[
@@ -324,22 +297,6 @@ class HeaderConBuscador extends StatelessWidget {
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                             softWrap: true,
-=======
-                      ),
-                      if (subtitle != null) ...[
-                        const SizedBox(height: 4),
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 2),
-                          child: Text(
-                            subtitle!,
-                            style: TextStyle(
-                              fontSize: 14,
-                              height: 1.25,
-                              color: isDark ? Colors.grey[300] : Colors.grey.shade600,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                            maxLines: 2,
->>>>>>> Stashed changes
                           ),
                         ),
                       ],
@@ -354,11 +311,7 @@ class HeaderConBuscador extends StatelessWidget {
           
           // Sección de búsqueda
           Padding(
-<<<<<<< Updated upstream
             padding: EdgeInsets.fromLTRB(horizontalPad, 0, horizontalPad, searchPad),
-=======
-            padding: EdgeInsets.fromLTRB(horizontalPadding, 0, horizontalPadding, horizontalPadding),
->>>>>>> Stashed changes
             child: Container(
               decoration: BoxDecoration(
                 color: isDark ? Colors.grey[800] : Colors.white,

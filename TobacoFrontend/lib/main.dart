@@ -272,13 +272,9 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
                   mainAxisSize: MainAxisSize.min,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-<<<<<<< Updated upstream
                     CircularProgressIndicator(
                       valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
                     ),
-=======
-                    CircularProgressIndicator(color: loadingColor),
->>>>>>> Stashed changes
                     const SizedBox(height: 16),
                     const Text('Cargando permisos...', style: TextStyle(fontSize: 14)),
                   ],
