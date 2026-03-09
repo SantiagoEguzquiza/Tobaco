@@ -7,6 +7,8 @@ import 'package:tobaco/Models/EstadoEntrega.dart';
 
 class Ventas {
   int? id;
+  /// Número visible de venta (correlativo por tenant). Usar para tickets, PDFs, listados.
+  int? numeroVenta;
   int clienteId;
   Cliente cliente;
   List<VentasProductos> ventasProductos;
@@ -22,6 +24,7 @@ class Ventas {
 
   Ventas({
     this.id,
+    this.numeroVenta,
     required this.clienteId,
     required this.cliente,
     required this.ventasProductos,
@@ -45,6 +48,7 @@ class Ventas {
     final fechaLocal = fechaParsed.isUtc ? fechaParsed.toLocal() : fechaParsed;
     return Ventas(
         id: json['id'],
+        numeroVenta: json['numeroVenta'],
         clienteId: json['clienteId'] ?? 0,
         cliente: Cliente.fromJson(json['cliente']),
         ventasProductos: (json['ventaProductos'] as List?)
@@ -70,8 +74,12 @@ class Ventas {
       );
   }
 
+  /// Número visible para mostrar al usuario (NumeroVenta si existe, sino Id).
+  int get numeroVisible => numeroVenta ?? id ?? 0;
+
   Map<String, dynamic> toJson() => {
         if (id != null) 'id': id,
+        if (numeroVenta != null) 'numeroVenta': numeroVenta,
         'clienteId': clienteId,
         'cliente': cliente.toJson(),
         'ventaProductos': ventasProductos.map((e) => e.toJson()).toList(),

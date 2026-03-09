@@ -45,6 +45,10 @@ class ComprasProvider with ChangeNotifier {
     }
   }
 
+  Future<void> eliminarCompra(int id) async {
+    await _service.eliminarCompra(id);
+  }
+
   void clearError() {
     _errorMessage = null;
     _isConnectionError = false;

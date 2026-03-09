@@ -146,7 +146,7 @@ class _DetalleEntregasScreenState extends State<DetalleEntregasScreen> {
           centerTitle: true,
           title: Text(
             widget.venta.id != null
-                ? 'Entrega #${widget.venta.id}'
+                ? 'Entrega #${widget.venta.numeroVisible}'
                 : 'Entrega pendiente',
             style: AppTheme.appBarTitleStyle,
           ),
@@ -269,7 +269,7 @@ class _DetalleEntregasScreenState extends State<DetalleEntregasScreen> {
                     ),
                     Text(
                       widget.venta.id != null
-                          ? 'Pedido #${widget.venta.id}'
+                          ? 'Pedido #${widget.venta.numeroVisible}'
                           : 'Entrega pendiente',
                       style: TextStyle(
                         fontSize: 16,

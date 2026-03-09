@@ -1201,7 +1201,7 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        venta.id != null ? 'Venta #${venta.id}' : 'Venta Pendiente',
+                        venta.id != null ? 'Venta #${venta.numeroVisible}' : 'Venta Pendiente',
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,

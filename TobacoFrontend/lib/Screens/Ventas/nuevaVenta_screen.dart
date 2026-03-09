@@ -599,21 +599,35 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
     try {
       final provider = Provider.of<ClienteProvider>(context, listen: false);
       
-      // Cargar SOLO del caché local, sin consultar API
-      final clientesCache = await provider.obtenerClientesDelCache();
+      // 1. Intentar cargar primero del caché local (rápido)
+      var clientesCache = await provider.obtenerClientesDelCache();
       
-      if (mounted) {
+      if (mounted && clientesCache.isNotEmpty) {
         setState(() {
-          // Filtrar "Consumidor Final" de la lista inicial
           clientesIniciales = clientesCache.where((c) => !_esConsumidorFinal(c)).toList();
-          
-          // Ordenar alfabéticamente por nombre
           clientesIniciales.sort((a, b) => a.nombre.toLowerCase().compareTo(b.nombre.toLowerCase()));
-          
           isLoadingClientesIniciales = false;
         });
-        
         debugPrint('✅ Clientes iniciales cargados desde caché: ${clientesIniciales.length}');
+        return;
+      }
+      
+      // 2. Si el caché está vacío, cargar automáticamente desde el servidor
+      if (mounted && clientesCache.isEmpty) {
+        final clientes = await provider.obtenerClientes();
+        if (mounted) {
+          setState(() {
+            clientesIniciales = clientes.where((c) => !_esConsumidorFinal(c)).toList();
+            clientesIniciales.sort((a, b) => a.nombre.toLowerCase().compareTo(b.nombre.toLowerCase()));
+            isLoadingClientesIniciales = false;
+          });
+          debugPrint('✅ Clientes cargados desde servidor: ${clientesIniciales.length}');
+        }
+        return;
+      }
+      
+      if (mounted) {
+        setState(() => isLoadingClientesIniciales = false);
       }
     } catch (e) {
       if (mounted) {
@@ -622,7 +636,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
           isLoadingClientesIniciales = false;
         });
       }
-      debugPrint('Error al cargar clientes iniciales desde caché: $e');
+      debugPrint('Error al cargar clientes: $e');
     }
   }
 
@@ -863,6 +877,8 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
     );
   }
 
+  /// Estado vacío cuando no hay clientes (sin botón; se cargan automáticamente al entrar).
+  /// El usuario puede deslizar hacia abajo para refrescar.
   Widget _buildEmptyStateConRefresh() {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -909,42 +925,12 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Carga los clientes desde el servidor',
+              'Desliza hacia abajo para actualizar',
               style: TextStyle(
                 color: isDark ? Colors.grey.shade400 : Colors.grey.shade500,
                 fontSize: 14,
               ),
               textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: isLoadingClientesIniciales ? null : actualizarClientesDesdeServidor,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primaryColor,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                elevation: 2,
-              ),
-              icon: isLoadingClientesIniciales
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                      ),
-                    )
-                  : const Icon(Icons.refresh, size: 20),
-              label: Text(
-                isLoadingClientesIniciales ? 'Cargando...' : 'Cargar Clientes',
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
             ),
           ],
         ),
@@ -2320,7 +2306,12 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                                 if (productosSeleccionados.isNotEmpty) ...[
                                   _buildProductsSection(),
                                 ] else ...[
-                                  const EmptyStateVenta(),
+                                  SizedBox(
+                                    height: (constraints.maxHeight - 220).clamp(200.0, 900.0),
+                                    child: Center(
+                                      child: const EmptyStateVenta(),
+                                    ),
+                                  ),
                                 ],
                               ],
                             ],

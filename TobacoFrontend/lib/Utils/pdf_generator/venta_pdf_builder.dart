@@ -53,7 +53,7 @@ pw.Widget _buildHeader(Ventas venta) {
             children: [
               pw.Text('Comprobante de Venta', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
               pw.SizedBox(height: 2),
-              pw.Text(venta.id != null ? 'Venta #${venta.id}' : 'Venta (local)', style: const pw.TextStyle(fontSize: 10)),
+              pw.Text(venta.id != null ? 'Venta #${venta.numeroVisible}' : 'Venta (local)', style: const pw.TextStyle(fontSize: 10)),
             ],
           ),
           pw.Text(_formatDate(venta.fecha), style: const pw.TextStyle(fontSize: 10)),

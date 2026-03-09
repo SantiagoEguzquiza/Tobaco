@@ -422,6 +422,9 @@ class VentasProvider with ChangeNotifier {
       if (response['ventaId'] != null) {
         venta.id = response['ventaId'];
       }
+      if (response['numeroVenta'] != null) {
+        venta.numeroVenta = response['numeroVenta'];
+      }
 
       _ventas.insert(0, venta);
 
@@ -443,6 +446,7 @@ class VentasProvider with ChangeNotifier {
         'isOffline': false,
         'message': response['message'] ?? 'Venta creada exitosamente',
         'ventaId': response['ventaId'],
+        'numeroVenta': response['numeroVenta'],
         'asignada': response['asignada'] ?? false,
         'usuarioAsignadoId': response['usuarioAsignadoId'],
         'usuarioAsignadoNombre': response['usuarioAsignadoNombre'],

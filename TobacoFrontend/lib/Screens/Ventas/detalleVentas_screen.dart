@@ -29,7 +29,7 @@ class _DetalleVentaScreenState extends State<DetalleVentaScreen> {
         appBar: AppBar(
           centerTitle: true,
           title: Text(
-            widget.venta.id != null ? 'Venta #${widget.venta.id}' : 'Venta Pendiente',
+            widget.venta.id != null ? 'Venta #${widget.venta.numeroVisible}' : 'Venta Pendiente',
             style: AppTheme.appBarTitleStyle
           ),
           leading: IconButton(
@@ -118,7 +118,7 @@ class _DetalleVentaScreenState extends State<DetalleVentaScreen> {
                       ),
                     ),
                     Text(
-                      widget.venta.id != null ? 'Venta #${widget.venta.id}' : 'Venta Pendiente',
+                      widget.venta.id != null ? 'Venta #${widget.venta.numeroVisible}' : 'Venta Pendiente',
                       style: TextStyle(
                         fontSize: 16,
                         color: Theme.of(context).brightness == Brightness.dark
@@ -728,7 +728,7 @@ class _DetalleVentaScreenState extends State<DetalleVentaScreen> {
                                                 final bytes = await buildVentaPdf(widget.venta);
                                                 final dir = await getTemporaryDirectory();
                                                 final ventaLabel = widget.venta.id != null
-                                                    ? 'Venta_${widget.venta.id}'
+                                                    ? 'Venta_${widget.venta.numeroVisible}'
                                                     : 'Venta_pendiente';
                                                 final file = File('${dir.path}/$ventaLabel.pdf');
                                                 await file.writeAsBytes(bytes);

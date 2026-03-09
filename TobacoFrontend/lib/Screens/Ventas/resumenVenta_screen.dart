@@ -347,7 +347,7 @@ class _ResumenVentaScreenState extends State<ResumenVentaScreen> {
                     ),
                     Text(
                       venta!.id != null 
-                        ? 'Venta #${venta!.id}' 
+                        ? 'Venta #${venta!.numeroVisible}' 
                         : 'Guardada localmente',
                       style: TextStyle(
                         fontSize: 16,

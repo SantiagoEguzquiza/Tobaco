@@ -106,4 +106,18 @@ class ComprasService {
     final msg = response.body;
     throw Exception(msg.contains('message') ? _extractMessage(msg) : 'Error al registrar la compra');
   }
+
+  Future<void> eliminarCompra(int id) async {
+    final headers = await AuthService.getAuthHeaders();
+    final response = await Apihandler.client
+        .delete(Uri.parse('$baseUrl/api/Compra/$id'), headers: headers)
+        .timeout(_timeout);
+    if (response.statusCode == 204) return;
+    if (response.statusCode == 401) throw Exception('Sesión expirada. Por favor, inicia sesión nuevamente.');
+    if (response.statusCode == 400) {
+      final msg = response.body;
+      throw Exception(msg.contains('message') ? _extractMessage(msg) : 'Error al eliminar la compra');
+    }
+    throw Exception('Error al eliminar la compra: ${response.statusCode}');
+  }
 }

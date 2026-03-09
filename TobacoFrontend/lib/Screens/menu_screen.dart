@@ -221,22 +221,24 @@ class _MenuScreenState extends State<MenuScreen> {
                 SizedBox(height: spacing),
                 Row(
                   children: [
-                    Expanded(
-                      child: _menuCard(
-                        context,
-                        color: const Color(0xFF0EA5E9),
-                        icon: Icons.shopping_cart,
-                        label: 'Compras',
-                        onTap: () => Navigator.push(
+                    if (permisosProvider.canViewCompras || permisosProvider.isAdmin)
+                      Expanded(
+                        child: _menuCard(
                           context,
-                          MaterialPageRoute(
-                              builder: (context) => const ComprasScreen()),
+                          color: const Color(0xFF0EA5E9),
+                          icon: Icons.shopping_cart,
+                          label: 'Compras',
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) => const ComprasScreen()),
+                          ),
+                          iconSize: iconSize,
+                          fontSize: fontSize,
                         ),
-                        iconSize: iconSize,
-                        fontSize: fontSize,
                       ),
-                    ),
-                    SizedBox(width: spacing),
+                    if (permisosProvider.canViewCompras || permisosProvider.isAdmin)
+                      SizedBox(width: spacing),
                     Expanded(
                       child: _menuCard(
                         context,

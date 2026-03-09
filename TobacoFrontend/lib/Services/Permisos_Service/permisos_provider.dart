@@ -44,6 +44,11 @@ class PermisosProvider with ChangeNotifier {
   bool get canViewEntregas => _isAdmin || (_permisos?.entregasVisualizar ?? false);
   bool get canUpdateEstadoEntregas => _isAdmin || (_permisos?.entregasActualizarEstado ?? false);
 
+  bool get canViewCompras => _isAdmin || (_permisos?.comprasVisualizar ?? false);
+  bool get canCreateCompras => _isAdmin || (_permisos?.comprasCrear ?? false);
+  bool get canEditCompras => _isAdmin || (_permisos?.comprasEditar ?? false);
+  bool get canDeleteCompras => _isAdmin || (_permisos?.comprasEliminar ?? false);
+
   Future<void> loadPermisos(AuthProvider authProvider, {bool forceReload = false}) async {
     if (_logVerbosePermisos) {
       debugPrint('PermisosProvider.loadPermisos: Iniciando carga. forceReload: $forceReload');
@@ -213,6 +218,10 @@ class PermisosProvider with ChangeNotifier {
       cuentaCorrienteRegistrarAbonos: false,
       entregasVisualizar: false,
       entregasActualizarEstado: false,
+      comprasVisualizar: false,
+      comprasCrear: false,
+      comprasEditar: false,
+      comprasEliminar: false,
     );
   }
 
