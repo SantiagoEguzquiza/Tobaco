@@ -1,11 +1,16 @@
 // ignore_for_file: library_private_types_in_public_api
 
 import 'package:flutter/material.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:provider/provider.dart';
 import 'package:tobaco/Models/Compra.dart';
 import 'package:tobaco/Screens/Compras/detalle_compra_screen.dart';
 import 'package:tobaco/Screens/Compras/nueva_compra_screen.dart';
+import 'package:tobaco/Services/Categoria_Service/categoria_provider.dart';
+import 'package:tobaco/Helpers/api_handler.dart';
 import 'package:tobaco/Services/Compras_Service/compras_provider.dart';
+import 'package:tobaco/Services/Permisos_Service/permisos_provider.dart';
+import 'package:tobaco/Services/Productos_Service/productos_provider.dart';
 import 'package:tobaco/Theme/app_theme.dart';
 import 'package:tobaco/Theme/dialogs.dart';
 import 'package:tobaco/Theme/headers.dart';
@@ -34,6 +39,32 @@ class _ComprasScreenState extends State<ComprasScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final permisosProvider = context.watch<PermisosProvider>();
+    if (!permisosProvider.canViewCompras) {
+      return Scaffold(
+        appBar: AppBar(centerTitle: true, title: const Text('Compras', style: AppTheme.appBarTitleStyle)),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.lock, size: 64, color: Colors.grey.shade400),
+              const SizedBox(height: 16),
+              Text(
+                'No tienes permiso para ver este módulo',
+                style: TextStyle(fontSize: 16, color: Theme.of(context).brightness == Brightness.dark ? Colors.grey.shade400 : Colors.grey.shade600),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              TextButton.icon(
+                onPressed: () => Navigator.of(context).pop(),
+                icon: const Icon(Icons.arrow_back),
+                label: const Text('Volver'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
     final provider = context.watch<ComprasProvider>();
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -53,43 +84,50 @@ class _ComprasScreenState extends State<ComprasScreen> {
                 subtitle: '${provider.compras.length} compra${provider.compras.length != 1 ? 's' : ''} registrada${provider.compras.length != 1 ? 's' : ''}',
               ),
               const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () async {
-                    final comprasProvider = context.read<ComprasProvider>();
-                    final result = await Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const NuevaCompraScreen()),
-                    );
-                    if (!mounted) return;
-                    if (result == true) {
-                      await comprasProvider.cargarCompras();
-                    }
-                  },
-                  icon: Icon(
-                    Icons.add,
-                    color: Colors.white,
-                    size: AppTheme.ventasButtonIconSize(context),
-                  ),
-                  label: Text(
-                    'Nueva compra',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                      fontSize: AppTheme.ventasButtonFontSize(context),
+              Consumer<PermisosProvider>(
+                builder: (context, permisosProvider, child) {
+                  if (!permisosProvider.canCreateCompras && !permisosProvider.isAdmin) {
+                    return const SizedBox.shrink();
+                  }
+                  return SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        final comprasProvider = context.read<ComprasProvider>();
+                        final result = await Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const NuevaCompraScreen()),
+                        );
+                        if (!mounted) return;
+                        if (result == true) {
+                          await comprasProvider.cargarCompras();
+                        }
+                      },
+                      icon: Icon(
+                        Icons.add,
+                        color: Colors.white,
+                        size: AppTheme.ventasButtonIconSize(context),
+                      ),
+                      label: Text(
+                        'Nueva compra',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                          fontSize: AppTheme.ventasButtonFontSize(context),
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primaryColor,
+                        foregroundColor: Colors.white,
+                        padding: AppTheme.ventasButtonPadding(context),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
+                        ),
+                        elevation: 2,
+                      ),
                     ),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primaryColor,
-                    foregroundColor: Colors.white,
-                    padding: AppTheme.ventasButtonPadding(context),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
-                    ),
-                    elevation: 2,
-                  ),
-                ),
+                  );
+                },
               ),
               const SizedBox(height: 16),
               Expanded(child: _buildList(provider, isDark)),
@@ -194,40 +232,95 @@ class _ComprasScreenState extends State<ComprasScreen> {
     );
   }
 
+  Future<void> _confirmDeleteCompra(Compra compra) async {
+    final confirm = await AppDialogs.showDeleteConfirmationDialog(
+      context: context,
+      title: 'Eliminar compra',
+      message: '¿Eliminar esta compra?\n\nSe restaurará el stock de los productos involucrados (se restarán las cantidades que esta compra había sumado).\n\nEsta acción no se puede deshacer.',
+      confirmText: 'Eliminar',
+    );
+    if (confirm != true) return;
+
+    try {
+      await context.read<ComprasProvider>().eliminarCompra(compra.id);
+      if (!mounted) return;
+      await context.read<ComprasProvider>().cargarCompras();
+      if (!mounted) return;
+      final categoriasProvider = context.read<CategoriasProvider>();
+      await context.read<ProductoProvider>().recargarProductos(categoriasProvider);
+      if (!mounted) return;
+      AppTheme.showSnackBar(
+        context,
+        AppTheme.successSnackBar('Compra eliminada correctamente'),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      if (Apihandler.isConnectionError(e)) {
+        await AppDialogs.showServerErrorDialog(context: context);
+      } else {
+        final msg = e.toString().replaceFirst('Exception: ', '');
+        AppTheme.showSnackBar(context, AppTheme.errorSnackBar(msg));
+      }
+    }
+  }
+
   Widget _buildCard(BuildContext context, Compra compra, bool isDark) {
     final proveedorNombre = compra.proveedor?.nombre ?? 'Proveedor #${compra.proveedorId}';
     final fechaStr = _formatFecha(compra.fecha);
     final isCompact = AppTheme.isCompactVentasButton(context);
+    final canDeleteCompras = context.watch<PermisosProvider>().canDeleteCompras;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
-      child: Material(
-        color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
-        borderRadius: BorderRadius.circular(AppTheme.borderRadiusCards),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(AppTheme.borderRadiusCards),
-          onTap: () async {
-            await Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => DetalleCompraScreen(compra: compra),
+      child: Slidable(
+        key: ValueKey(compra.id),
+        endActionPane: canDeleteCompras
+            ? ActionPane(
+          motion: const ScrollMotion(),
+          children: [
+            SlidableAction(
+              onPressed: (_) => _confirmDeleteCompra(compra),
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+              icon: Icons.delete,
+              label: 'Eliminar',
+              borderRadius: const BorderRadius.only(
+                topRight: Radius.circular(AppTheme.borderRadiusCards),
+                bottomRight: Radius.circular(AppTheme.borderRadiusCards),
               ),
-            );
-          },
-          child: Container(
-            padding: EdgeInsets.all(isCompact ? 14 : 16),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(AppTheme.borderRadiusCards),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, 2),
-                ),
-              ],
             ),
-            child: Row(
-              children: [
+          ],
+        )
+            : null,
+        child: Material(
+          color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+          borderRadius: BorderRadius.circular(AppTheme.borderRadiusCards),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(AppTheme.borderRadiusCards),
+            onTap: () async {
+              await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => DetalleCompraScreen(compra: compra),
+                ),
+              );
+              if (!mounted) return;
+              await context.read<ComprasProvider>().cargarCompras();
+            },
+            child: Container(
+              padding: EdgeInsets.all(isCompact ? 14 : 16),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(AppTheme.borderRadiusCards),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
                 Container(
                   padding: EdgeInsets.all(isCompact ? 8 : 10),
                   decoration: BoxDecoration(
@@ -298,7 +391,8 @@ class _ComprasScreenState extends State<ComprasScreen> {
                     ),
                   ],
                 ),
-              ],
+                ],
+              ),
             ),
           ),
         ),

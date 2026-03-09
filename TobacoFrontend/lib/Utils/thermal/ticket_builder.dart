@@ -66,7 +66,7 @@ class TicketBuilder {
 
     // Información de la venta
     lines.add(_alignLeftRight(
-        'VENTA #${venta.id ?? 'LOCAL'}', _formatDate(venta.fecha)));
+        'VENTA #${venta.id != null ? venta.numeroVisible : 'LOCAL'}', _formatDate(venta.fecha)));
     lines.add(_createSeparator('-'));
 
     // Información del cliente

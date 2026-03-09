@@ -18,6 +18,8 @@ class LoginScreen extends StatefulWidget {
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
+enum _LoginLayoutSize { compact, medium, regular }
+
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _userNameController = TextEditingController();
@@ -84,13 +86,29 @@ class _LoginScreenState extends State<LoginScreen> {
               builder: (context, constraints) {
                 final height = MediaQuery.sizeOf(context).height;
                 final width = MediaQuery.sizeOf(context).width;
-                // Incluir más celulares como "small": altura < 700 o ancho < 400
-                final isSmallPhone = height < 700 || width < 400;
-                final padding = isSmallPhone ? 20.0 : 24.0;
-                final sectionSpacing = isSmallPhone ? 28.0 : 32.0;
-                final minHeight = isSmallPhone
+                final layoutSize = height < 700 || width < 360
+                    ? _LoginLayoutSize.compact
+                    : (height < 840 || width < 430)
+                        ? _LoginLayoutSize.medium
+                        : _LoginLayoutSize.regular;
+                final isCompactLayout = layoutSize == _LoginLayoutSize.compact;
+                final isMediumLayout = layoutSize == _LoginLayoutSize.medium;
+                final padding = switch (layoutSize) {
+                  _LoginLayoutSize.compact => 20.0,
+                  _LoginLayoutSize.medium => 22.0,
+                  _LoginLayoutSize.regular => 24.0,
+                };
+                final sectionSpacing = switch (layoutSize) {
+                  _LoginLayoutSize.compact => 24.0,
+                  _LoginLayoutSize.medium => 18.0,
+                  _LoginLayoutSize.regular => 32.0,
+                };
+                final minHeight = isCompactLayout
                     ? null
-                    : (height - MediaQuery.paddingOf(context).top - MediaQuery.paddingOf(context).bottom - 40);
+                    : (height -
+                          MediaQuery.paddingOf(context).top -
+                          MediaQuery.paddingOf(context).bottom -
+                          (isMediumLayout ? 24 : 40));
                 return SingleChildScrollView(
                   padding: EdgeInsets.all(padding),
                   child: ConstrainedBox(
@@ -99,16 +117,28 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     child: IntrinsicHeight(
                       child: Column(
-                        mainAxisAlignment: isSmallPhone ? MainAxisAlignment.start : MainAxisAlignment.spaceEvenly,
+                        mainAxisAlignment: isCompactLayout
+                            ? MainAxisAlignment.start
+                            : (isMediumLayout
+                                ? MainAxisAlignment.center
+                                : MainAxisAlignment.spaceEvenly),
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          if (isSmallPhone) SizedBox(height: sectionSpacing),
-                          _buildHeader(isSmallPhone),
-                          SizedBox(height: isSmallPhone ? sectionSpacing : 0),
-                          _buildLoginForm(isSmallPhone),
-                          SizedBox(height: isSmallPhone ? sectionSpacing : 0),
-                          _buildFooter(isSmallPhone),
-                          if (isSmallPhone) SizedBox(height: sectionSpacing),
+                          if (isCompactLayout) SizedBox(height: sectionSpacing),
+                          _buildHeader(layoutSize),
+                          SizedBox(
+                            height: layoutSize == _LoginLayoutSize.regular
+                                ? 0
+                                : sectionSpacing,
+                          ),
+                          _buildLoginForm(layoutSize),
+                          SizedBox(
+                            height: layoutSize == _LoginLayoutSize.regular
+                                ? 0
+                                : sectionSpacing,
+                          ),
+                          _buildFooter(layoutSize),
+                          if (isCompactLayout) SizedBox(height: sectionSpacing),
                         ],
                       ),
                     ),
@@ -122,11 +152,28 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Widget _buildHeader(bool isSmallPhone) {
-    final logoSize = isSmallPhone ? 64.0 : 100.0;
-    final iconSize = isSmallPhone ? 32.0 : 50.0;
-    final titleSize = isSmallPhone ? 24.0 : 32.0;
-    final subtitleSize = isSmallPhone ? 13.0 : 16.0;
+  Widget _buildHeader(_LoginLayoutSize layoutSize) {
+    final isCompactLayout = layoutSize == _LoginLayoutSize.compact;
+    final logoSize = switch (layoutSize) {
+      _LoginLayoutSize.compact => 64.0,
+      _LoginLayoutSize.medium => 78.0,
+      _LoginLayoutSize.regular => 100.0,
+    };
+    final iconSize = switch (layoutSize) {
+      _LoginLayoutSize.compact => 32.0,
+      _LoginLayoutSize.medium => 38.0,
+      _LoginLayoutSize.regular => 50.0,
+    };
+    final titleSize = switch (layoutSize) {
+      _LoginLayoutSize.compact => 24.0,
+      _LoginLayoutSize.medium => 27.0,
+      _LoginLayoutSize.regular => 32.0,
+    };
+    final subtitleSize = switch (layoutSize) {
+      _LoginLayoutSize.compact => 13.0,
+      _LoginLayoutSize.medium => 14.5,
+      _LoginLayoutSize.regular => 16.0,
+    };
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -146,13 +193,13 @@ class _LoginScreenState extends State<LoginScreen> {
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(0.4),
-                blurRadius: isSmallPhone ? 12 : 20,
-                offset: Offset(0, isSmallPhone ? 6 : 10),
+                blurRadius: isCompactLayout ? 12 : (layoutSize == _LoginLayoutSize.medium ? 16 : 20),
+                offset: Offset(0, isCompactLayout ? 6 : (layoutSize == _LoginLayoutSize.medium ? 8 : 10)),
               ),
               BoxShadow(
                 color: const Color(0xFF4CAF50).withOpacity(0.3),
-                blurRadius: isSmallPhone ? 8 : 15,
-                offset: Offset(0, isSmallPhone ? 3 : 5),
+                blurRadius: isCompactLayout ? 8 : (layoutSize == _LoginLayoutSize.medium ? 11 : 15),
+                offset: Offset(0, isCompactLayout ? 3 : (layoutSize == _LoginLayoutSize.medium ? 4 : 5)),
               ),
             ],
           ),
@@ -162,7 +209,13 @@ class _LoginScreenState extends State<LoginScreen> {
             color: Colors.white,
           ),
         ),
-        SizedBox(height: isSmallPhone ? 20 : 24),
+        SizedBox(
+          height: switch (layoutSize) {
+            _LoginLayoutSize.compact => 20.0,
+            _LoginLayoutSize.medium => 18.0,
+            _LoginLayoutSize.regular => 24.0,
+          },
+        ),
         Text(
           'PROVIDER',
           style: TextStyle(
@@ -172,10 +225,20 @@ class _LoginScreenState extends State<LoginScreen> {
                 ? Colors.white
                 : const Color.fromARGB(255, 48, 48, 48),
             fontFamily: 'Raleway',
-            letterSpacing: isSmallPhone ? 1.2 : 2.0,
+            letterSpacing: switch (layoutSize) {
+              _LoginLayoutSize.compact => 1.2,
+              _LoginLayoutSize.medium => 1.5,
+              _LoginLayoutSize.regular => 2.0,
+            },
           ),
         ),
-        SizedBox(height: isSmallPhone ? 10 : 12),
+        SizedBox(
+          height: switch (layoutSize) {
+            _LoginLayoutSize.compact => 10.0,
+            _LoginLayoutSize.medium => 9.0,
+            _LoginLayoutSize.regular => 12.0,
+          },
+        ),
         Text(
           'Sistema de Gestión Comercial',
           style: TextStyle(
@@ -184,13 +247,21 @@ class _LoginScreenState extends State<LoginScreen> {
                 ? Colors.grey.shade300
                 : const Color.fromARGB(255, 49, 49, 49),
             fontFamily: 'Raleway',
-            letterSpacing: isSmallPhone ? 0.5 : 1.0,
+            letterSpacing: switch (layoutSize) {
+              _LoginLayoutSize.compact => 0.5,
+              _LoginLayoutSize.medium => 0.7,
+              _LoginLayoutSize.regular => 1.0,
+            },
           ),
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 8),
         Container(
-          width: isSmallPhone ? 56 : 80,
+          width: switch (layoutSize) {
+            _LoginLayoutSize.compact => 56.0,
+            _LoginLayoutSize.medium => 66.0,
+            _LoginLayoutSize.regular => 80.0,
+          },
           height: 3,
           decoration: BoxDecoration(
             gradient: const LinearGradient(
@@ -203,23 +274,61 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Widget _buildLoginForm(bool isSmallPhone) {
-    // En small phone más padding y espaciado para que no quede todo pegado
-    final formPadding = isSmallPhone ? 24.0 : 28.0;
-    final titleSize = isSmallPhone ? 20.0 : 24.0;
-    final subtitleSize = isSmallPhone ? 13.0 : 14.0;
-    final afterSubtitle = isSmallPhone ? 28.0 : 28.0;
-    final fieldSpacing = isSmallPhone ? 26.0 : 22.0;
-    final afterPassword = isSmallPhone ? 22.0 : 18.0;
-    final beforeButton = isSmallPhone ? 28.0 : 24.0;
-    final buttonHeight = isSmallPhone ? 48.0 : 48.0;
+  Widget _buildLoginForm(_LoginLayoutSize layoutSize) {
+    final isCompactLayout = layoutSize == _LoginLayoutSize.compact;
+    final formPadding = switch (layoutSize) {
+      _LoginLayoutSize.compact => 24.0,
+      _LoginLayoutSize.medium => 24.0,
+      _LoginLayoutSize.regular => 28.0,
+    };
+    final titleSize = switch (layoutSize) {
+      _LoginLayoutSize.compact => 20.0,
+      _LoginLayoutSize.medium => 22.0,
+      _LoginLayoutSize.regular => 24.0,
+    };
+    final subtitleSize = switch (layoutSize) {
+      _LoginLayoutSize.compact => 13.0,
+      _LoginLayoutSize.medium => 13.5,
+      _LoginLayoutSize.regular => 14.0,
+    };
+    final afterSubtitle = switch (layoutSize) {
+      _LoginLayoutSize.compact => 24.0,
+      _LoginLayoutSize.medium => 20.0,
+      _LoginLayoutSize.regular => 28.0,
+    };
+    final fieldSpacing = switch (layoutSize) {
+      _LoginLayoutSize.compact => 22.0,
+      _LoginLayoutSize.medium => 18.0,
+      _LoginLayoutSize.regular => 22.0,
+    };
+    final afterPassword = switch (layoutSize) {
+      _LoginLayoutSize.compact => 18.0,
+      _LoginLayoutSize.medium => 14.0,
+      _LoginLayoutSize.regular => 18.0,
+    };
+    final beforeButton = switch (layoutSize) {
+      _LoginLayoutSize.compact => 22.0,
+      _LoginLayoutSize.medium => 18.0,
+      _LoginLayoutSize.regular => 24.0,
+    };
+    final buttonHeight = switch (layoutSize) {
+      _LoginLayoutSize.compact => 48.0,
+      _LoginLayoutSize.medium => 50.0,
+      _LoginLayoutSize.regular => 52.0,
+    };
     return Container(
       padding: EdgeInsets.all(formPadding),
       decoration: BoxDecoration(
         color: Theme.of(context).brightness == Brightness.dark
             ? const Color(0xFF1A1A1A)
             : Colors.white,
-        borderRadius: BorderRadius.circular(isSmallPhone ? 18 : 20),
+        borderRadius: BorderRadius.circular(
+          switch (layoutSize) {
+            _LoginLayoutSize.compact => 18.0,
+            _LoginLayoutSize.medium => 19.0,
+            _LoginLayoutSize.regular => 20.0,
+          },
+        ),
         boxShadow: [
           BoxShadow(
             color: Theme.of(context).brightness == Brightness.dark
@@ -246,7 +355,13 @@ class _LoginScreenState extends State<LoginScreen> {
                 fontFamily: 'Raleway',
               ),
             ),
-            SizedBox(height: isSmallPhone ? 14 : 12),
+            SizedBox(
+              height: switch (layoutSize) {
+                _LoginLayoutSize.compact => 14.0,
+                _LoginLayoutSize.medium => 13.0,
+                _LoginLayoutSize.regular => 12.0,
+              },
+            ),
             Text(
               'Inicia sesión para acceder al sistema',
               style: TextStyle(
@@ -259,12 +374,11 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             SizedBox(height: afterSubtitle),
 
-            // Username Field
             _buildTextField(
               controller: _userNameController,
               label: 'Usuario',
               icon: Icons.person_outline,
-              isCompact: isSmallPhone,
+              layoutSize: layoutSize,
               validator: (value) {
                 if (value == null || value.isEmpty) {
                   return 'Por favor ingrese su usuario';
@@ -274,13 +388,12 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             SizedBox(height: fieldSpacing),
 
-            // Password Field
             _buildTextField(
               controller: _passwordController,
               label: 'Contraseña',
               icon: Icons.lock_outline,
               isPassword: true,
-              isCompact: isSmallPhone,
+              layoutSize: layoutSize,
               validator: (value) {
                 if (value == null || value.isEmpty) {
                   return 'Por favor ingrese su contraseña';
@@ -300,12 +413,19 @@ class _LoginScreenState extends State<LoginScreen> {
                 },
                 style: TextButton.styleFrom(
                   foregroundColor: const Color(0xFF2E7D32),
-                  padding: EdgeInsets.symmetric(vertical: isSmallPhone ? 12 : 8, horizontal: 16),
+                  padding: EdgeInsets.symmetric(
+                    vertical: isCompactLayout ? 12 : 8,
+                    horizontal: 16,
+                  ),
                 ),
                 child: Text(
                   '¿Olvidaste tu contraseña?',
                   style: TextStyle(
-                    fontSize: isSmallPhone ? 13 : 14,
+                    fontSize: switch (layoutSize) {
+                      _LoginLayoutSize.compact => 13.0,
+                      _LoginLayoutSize.medium => 13.5,
+                      _LoginLayoutSize.regular => 14.0,
+                    },
                     fontFamily: 'Raleway',
                   ),
                 ),
@@ -318,8 +438,10 @@ class _LoginScreenState extends State<LoginScreen> {
               builder: (context, authProvider, child) {
                 if (authProvider.errorMessage != null) {
                   return Container(
-                    padding: EdgeInsets.all(isSmallPhone ? 14 : 16),
-                    margin: EdgeInsets.only(bottom: isSmallPhone ? 16 : 20),
+                    padding: EdgeInsets.all(isCompactLayout ? 14 : 16),
+                    margin: EdgeInsets.only(
+                      bottom: layoutSize == _LoginLayoutSize.medium ? 16 : 20,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.red.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(12),
@@ -388,8 +510,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     child: authProvider.isLoading
                         ? SizedBox(
-                            height: isSmallPhone ? 22 : 24,
-                            width: isSmallPhone ? 22 : 24,
+                          height: isCompactLayout ? 22 : 24,
+                          width: isCompactLayout ? 22 : 24,
                             child: const CircularProgressIndicator(
                               strokeWidth: 3.0,
                               valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
@@ -401,17 +523,23 @@ class _LoginScreenState extends State<LoginScreen> {
                               Icon(
                                 Icons.login,
                                 color: Colors.white,
-                                size: isSmallPhone ? 22 : 24,
+                                size: isCompactLayout ? 22 : 24,
                               ),
-                              SizedBox(width: isSmallPhone ? 10 : 12),
+                              SizedBox(
+                                width: layoutSize == _LoginLayoutSize.medium ? 10 : 12,
+                              ),
                               Text(
                                 'INICIAR SESIÓN',
                                 style: TextStyle(
-                                  fontSize: isSmallPhone ? 16 : 18,
+                                  fontSize: switch (layoutSize) {
+                                    _LoginLayoutSize.compact => 16.0,
+                                    _LoginLayoutSize.medium => 17.0,
+                                    _LoginLayoutSize.regular => 18.0,
+                                  },
                                   fontWeight: FontWeight.bold,
                                   color: Colors.white,
                                   fontFamily: 'Raleway',
-                                  letterSpacing: isSmallPhone ? 0.8 : 1.0,
+                                  letterSpacing: isCompactLayout ? 0.8 : 1.0,
                                 ),
                               ),
                             ],
@@ -431,14 +559,30 @@ class _LoginScreenState extends State<LoginScreen> {
     required String label,
     required IconData icon,
     bool isPassword = false,
-    bool isCompact = false,
+    required _LoginLayoutSize layoutSize,
     String? Function(String?)? validator,
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final fontSize = isCompact ? 15.0 : 16.0;
-    final iconSize = isCompact ? 20.0 : 24.0;
-    final verticalPadding = isCompact ? 12.0 : 16.0;
-    final borderRadius = isCompact ? 12.0 : 16.0;
+    final fontSize = switch (layoutSize) {
+      _LoginLayoutSize.compact => 15.0,
+      _LoginLayoutSize.medium => 16.0,
+      _LoginLayoutSize.regular => 16.0,
+    };
+    final iconSize = switch (layoutSize) {
+      _LoginLayoutSize.compact => 20.0,
+      _LoginLayoutSize.medium => 22.0,
+      _LoginLayoutSize.regular => 24.0,
+    };
+    final verticalPadding = switch (layoutSize) {
+      _LoginLayoutSize.compact => 12.0,
+      _LoginLayoutSize.medium => 14.0,
+      _LoginLayoutSize.regular => 16.0,
+    };
+    final borderRadius = switch (layoutSize) {
+      _LoginLayoutSize.compact => 12.0,
+      _LoginLayoutSize.medium => 14.0,
+      _LoginLayoutSize.regular => 16.0,
+    };
 
     return TextFormField(
       controller: controller,
@@ -454,6 +598,11 @@ class _LoginScreenState extends State<LoginScreen> {
           color: isDark ? Colors.grey.shade400 : const Color(0xFF333333),
           fontFamily: 'Raleway',
           fontWeight: FontWeight.w500,
+          fontSize: switch (layoutSize) {
+            _LoginLayoutSize.compact => 14.0,
+            _LoginLayoutSize.medium => 15.0,
+            _LoginLayoutSize.regular => 15.0,
+          },
         ),
         prefixIcon: Icon(
           icon,
@@ -503,7 +652,11 @@ class _LoginScreenState extends State<LoginScreen> {
           borderSide: const BorderSide(color: Colors.red, width: 2),
         ),
         contentPadding: EdgeInsets.symmetric(
-          horizontal: isCompact ? 12 : 16,
+          horizontal: switch (layoutSize) {
+            _LoginLayoutSize.compact => 12.0,
+            _LoginLayoutSize.medium => 14.0,
+            _LoginLayoutSize.regular => 16.0,
+          },
           vertical: verticalPadding,
         ),
       ),
@@ -511,7 +664,7 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Widget _buildFooter(bool isSmallPhone) {
+  Widget _buildFooter(_LoginLayoutSize layoutSize) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -521,18 +674,32 @@ class _LoginScreenState extends State<LoginScreen> {
             color: Theme.of(context).brightness == Brightness.dark
                 ? Colors.grey.shade400
                 : const Color.fromARGB(255, 223, 223, 223),
-            fontSize: isSmallPhone ? 12 : 14,
+            fontSize: switch (layoutSize) {
+              _LoginLayoutSize.compact => 12.0,
+              _LoginLayoutSize.medium => 13.0,
+              _LoginLayoutSize.regular => 14.0,
+            },
             fontFamily: 'Raleway',
           ),
         ),
-        SizedBox(height: isSmallPhone ? 6 : 4),
+        SizedBox(
+          height: switch (layoutSize) {
+            _LoginLayoutSize.compact => 6.0,
+            _LoginLayoutSize.medium => 5.0,
+            _LoginLayoutSize.regular => 4.0,
+          },
+        ),
         Text(
           'Sistema de Gestión Comercial',
           style: TextStyle(
             color: Theme.of(context).brightness == Brightness.dark
                 ? Colors.grey.shade500
                 : const Color.fromARGB(255, 255, 255, 255),
-            fontSize: isSmallPhone ? 11 : 12,
+            fontSize: switch (layoutSize) {
+              _LoginLayoutSize.compact => 11.0,
+              _LoginLayoutSize.medium => 11.5,
+              _LoginLayoutSize.regular => 12.0,
+            },
             fontFamily: 'Raleway',
           ),
         ),

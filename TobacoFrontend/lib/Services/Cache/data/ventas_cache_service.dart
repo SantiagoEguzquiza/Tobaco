@@ -19,7 +19,7 @@ class VentasCacheService implements ICacheService<Ventas> {
 
   static Database? _database;
   static const String _databaseName = 'tobaco_cache.db';
-  static const int _databaseVersion = 3;
+  static const int _databaseVersion = 4;
   static const String _tableName = 'ventas_cache';
   static const String _productosTableName = 'ventas_cache_productos';
 
@@ -93,6 +93,10 @@ class VentasCacheService implements ICacheService<Ventas> {
 
     if (oldVersion < 3) {
       await db.execute('ALTER TABLE $_productosTableName ADD COLUMN marca TEXT');
+    }
+
+    if (oldVersion < 4) {
+      await db.execute('ALTER TABLE $_tableName ADD COLUMN numero_venta INTEGER');
     }
   }
 
@@ -169,6 +173,7 @@ class VentasCacheService implements ICacheService<Ventas> {
           // Guardar venta principal
           await txn.insert(_tableName, {
             'id': venta.id,
+            'numero_venta': venta.numeroVenta,
             'cliente_id': venta.clienteId,
             'cliente_json': jsonEncode(venta.cliente.toJson()),
             'total': venta.total,
@@ -302,6 +307,7 @@ class VentasCacheService implements ICacheService<Ventas> {
     // Construir objeto Venta
     return Ventas(
       id: ventaMap['id'] as int?,
+      numeroVenta: ventaMap['numero_venta'] as int?,
       clienteId: ventaMap['cliente_id'] as int,
       cliente: cliente,
       ventasProductos: productos,

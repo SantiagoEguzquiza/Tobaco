@@ -28,10 +28,12 @@ class _NuevaCategoriaScreenState extends State<NuevaCategoriaScreen> {
   Future<void> _crearCategoria() async {
     if (!_formKey.currentState!.validate()) return;
 
-    setState(() => _isLoading = true);
-
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
     final provider = context.read<CategoriasProvider>();
     final sortOrder = provider.categorias.length;
+
+    setState(() => _isLoading = true);
 
     try {
       final nueva = Categoria(
@@ -43,11 +45,10 @@ class _NuevaCategoriaScreenState extends State<NuevaCategoriaScreen> {
 
       if (!mounted) return;
       setState(() => _isLoading = false);
-      AppTheme.showSnackBar(
-        context,
+      scaffoldMessenger.showSnackBar(
         AppTheme.successSnackBar('Categoría agregada exitosamente'),
       );
-      Navigator.pop(context, true);
+      navigator.pop(true);
     } catch (e) {
       if (!mounted) return;
       setState(() => _isLoading = false);
@@ -55,7 +56,9 @@ class _NuevaCategoriaScreenState extends State<NuevaCategoriaScreen> {
         await Apihandler.handleConnectionError(context, e);
       } else {
         final msg = e.toString().replaceFirst('Exception: ', '');
-        AppTheme.showSnackBar(context, AppTheme.errorSnackBar('Error al agregar categoría: $msg'));
+        scaffoldMessenger.showSnackBar(
+          AppTheme.errorSnackBar('Error al agregar categoría: $msg'),
+        );
       }
     }
   }

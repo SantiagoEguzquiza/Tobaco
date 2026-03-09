@@ -131,6 +131,7 @@ class VentasService {
         
         final result = {
           'ventaId': responseData['ventaId'],
+          'numeroVenta': responseData['numeroVenta'],
           'message': responseData['message'] ?? 'Venta creada exitosamente',
           'asignada': responseData['asignada'] ?? false,
           'usuarioAsignadoId': responseData['usuarioAsignadoId'],

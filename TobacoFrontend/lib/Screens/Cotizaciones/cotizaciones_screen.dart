@@ -735,7 +735,7 @@ class _CotizacionesScreenState extends State<CotizacionesScreen> with SingleTick
                             ),
                           ),
                           Text(
-                            'Tipos de cambio BCU',
+                            'Tipos de cambio BROU',
                             style: TextStyle(
                               fontSize: 13,
                               color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
@@ -944,7 +944,7 @@ class _CotizacionesScreenState extends State<CotizacionesScreen> with SingleTick
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Text(
-                                    '${vm.items.length} cotizaciones · API BCU',
+                                    '${vm.items.length} cotizaciones · Banco República',
                                     style: TextStyle(
                                       fontSize: 12,
                                       fontWeight: FontWeight.w500,
@@ -1105,7 +1105,7 @@ class _CotizacionesScreenState extends State<CotizacionesScreen> with SingleTick
                                           ),
                                           const SizedBox(height: 10),
                                           Text(
-                                            'La API del BCU no está devolviendo datos.\nProbá cambiar el período o el tipo de monedas.',
+                                            'No se pudieron obtener cotizaciones.\nVerificá tu conexión o probá más tarde.',
                                             textAlign: TextAlign.center,
                                             style: TextStyle(
                                               fontSize: 14,

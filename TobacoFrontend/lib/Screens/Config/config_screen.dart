@@ -393,56 +393,59 @@ class _ConfigScreenState extends State<ConfigScreen> {
 
     final selectedAction = await showModalBottomSheet<_AsistenciaQuickAction>(
       context: context,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (context) {
         return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(20.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: Colors.grey[400],
-                      borderRadius: BorderRadius.circular(99),
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[400],
+                        borderRadius: BorderRadius.circular(99),
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Acciones rápidas',
-                  style: _sectionTitleStyle,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Selecciona una acción para continuar con tu registro de asistencia.',
-                  style: _supportTextStyle,
-                ),
-                const SizedBox(height: 20),
-                _buildSheetOption(
-                  icon: Icons.login,
-                  color: Colors.green,
-                  title: 'Registrar entrada',
-                  subtitle: 'Comienza una nueva jornada laboral.',
-                  value: _AsistenciaQuickAction.registrarEntrada,
-                  context: context,
-                ),
-                const SizedBox(height: 12),
-                _buildSheetOption(
-                  icon: Icons.logout,
-                  color: Colors.red,
-                  title: 'Registrar salida',
-                  subtitle: 'Finaliza tu jornada y calcula horas trabajadas.',
-                  value: _AsistenciaQuickAction.registrarSalida,
-                  context: context,
-                ),
-              ],
+                  const SizedBox(height: 16),
+                  Text(
+                    'Acciones rápidas',
+                    style: _sectionTitleStyle,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Selecciona una acción para continuar con tu registro de asistencia.',
+                    style: _supportTextStyle,
+                  ),
+                  const SizedBox(height: 20),
+                  _buildSheetOption(
+                    icon: Icons.login,
+                    color: Colors.green,
+                    title: 'Registrar entrada',
+                    subtitle: 'Comienza una nueva jornada laboral.',
+                    value: _AsistenciaQuickAction.registrarEntrada,
+                    context: context,
+                  ),
+                  const SizedBox(height: 12),
+                  _buildSheetOption(
+                    icon: Icons.logout,
+                    color: Colors.red,
+                    title: 'Registrar salida',
+                    subtitle: 'Finaliza tu jornada y calcula horas trabajadas.',
+                    value: _AsistenciaQuickAction.registrarSalida,
+                    context: context,
+                  ),
+                ],
+              ),
             ),
           ),
         );

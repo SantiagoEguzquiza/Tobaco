@@ -550,52 +550,57 @@ class _ProductosScreenState extends State<ProductosScreen> {
         SizedBox(height: MediaQuery.of(context).size.height < 680 ? 8 : 12),
         // Filtros de categoría (solo mostrar cuando NO hay búsqueda activa)
         if (categorias.isNotEmpty && searchQuery.isEmpty && prov.searchMarca.isEmpty) ...[
-          SizedBox(
-            height: MediaQuery.of(context).size.height < 680 ? 38 : 42,
-            child: ListView.builder(
-              controller: _categoriesScrollController,
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.only(right: 16),
-              itemCount: categorias.length,
-              itemBuilder: (context, index) {
-                final categoria = categorias[index];
-                final isSelected = selectedCategory == categoria.nombre;
-                final categoriaColor = _parseColor(categoria.colorHex);
-                final isCompact = MediaQuery.of(context).size.height < 680;
-                return Padding(
-                  padding: const EdgeInsets.only(right: 10),
-                  child: GestureDetector(
-                    onTap: () {
-                      prov.seleccionarCategoria(categoria.nombre);
-                      _centerCategoryButton(index, categorias);
-                    },
-                    child: Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: isCompact ? 6 : 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: isSelected ? categoriaColor : Theme.of(context).cardTheme.color,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: isSelected ? categoriaColor : Colors.grey.shade300,
-                          width: 1,
+          Padding(
+            padding: EdgeInsets.symmetric(
+              vertical: MediaQuery.of(context).size.height < 680 ? 2 : 3,
+            ),
+            child: SizedBox(
+              height: MediaQuery.of(context).size.height < 680 ? 38 : 42,
+              child: ListView.builder(
+                controller: _categoriesScrollController,
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.only(right: 16),
+                itemCount: categorias.length,
+                itemBuilder: (context, index) {
+                  final categoria = categorias[index];
+                  final isSelected = selectedCategory == categoria.nombre;
+                  final categoriaColor = _parseColor(categoria.colorHex);
+                  final isCompact = MediaQuery.of(context).size.height < 680;
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 10),
+                    child: GestureDetector(
+                      onTap: () {
+                        prov.seleccionarCategoria(categoria.nombre);
+                        _centerCategoryButton(index, categorias);
+                      },
+                      child: Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: isCompact ? 6 : 8,
                         ),
-                      ),
-                      child: Center(
-                        child: Text(
-                          categoria.nombre[0].toUpperCase() + categoria.nombre.substring(1),
-                          style: TextStyle(
-                            fontSize: isCompact ? 13 : 14,
-                            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                            color: isSelected ? Colors.white : Theme.of(context).textTheme.bodyLarge?.color,
+                        decoration: BoxDecoration(
+                          color: isSelected ? categoriaColor : Theme.of(context).cardTheme.color,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: isSelected ? categoriaColor : Colors.grey.shade300,
+                            width: 1,
+                          ),
+                        ),
+                        child: Center(
+                          child: Text(
+                            categoria.nombre[0].toUpperCase() + categoria.nombre.substring(1),
+                            style: TextStyle(
+                              fontSize: isCompact ? 13 : 14,
+                              fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                              color: isSelected ? Colors.white : Theme.of(context).textTheme.bodyLarge?.color,
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-                );
-              },
+                  );
+                },
+              ),
             ),
           ),
         ],

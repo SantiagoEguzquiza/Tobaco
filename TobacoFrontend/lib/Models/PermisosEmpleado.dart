@@ -30,6 +30,12 @@ class PermisosEmpleado {
   final bool entregasVisualizar;
   final bool entregasActualizarEstado;
 
+  // Permisos de Compras
+  final bool comprasVisualizar;
+  final bool comprasCrear;
+  final bool comprasEditar;
+  final bool comprasEliminar;
+
   PermisosEmpleado({
     required this.id,
     required this.userId,
@@ -49,6 +55,10 @@ class PermisosEmpleado {
     required this.cuentaCorrienteRegistrarAbonos,
     required this.entregasVisualizar,
     required this.entregasActualizarEstado,
+    required this.comprasVisualizar,
+    required this.comprasCrear,
+    required this.comprasEditar,
+    required this.comprasEliminar,
   });
 
   factory PermisosEmpleado.fromJson(Map<String, dynamic> json) {
@@ -88,6 +98,10 @@ class PermisosEmpleado {
       cuentaCorrienteRegistrarAbonos: getValue(json, ['CuentaCorriente_RegistrarAbonos', 'cuentaCorriente_RegistrarAbonos']) ?? false,
       entregasVisualizar: getValue(json, ['Entregas_Visualizar', 'entregas_Visualizar']) ?? false,
       entregasActualizarEstado: getValue(json, ['Entregas_ActualizarEstado', 'entregas_ActualizarEstado']) ?? false,
+      comprasVisualizar: getValue(json, ['Compras_Visualizar', 'compras_Visualizar']) ?? false,
+      comprasCrear: getValue(json, ['Compras_Crear', 'compras_Crear']) ?? false,
+      comprasEditar: getValue(json, ['Compras_Editar', 'compras_Editar']) ?? false,
+      comprasEliminar: getValue(json, ['Compras_Eliminar', 'compras_Eliminar']) ?? false,
     );
   }
 
@@ -111,6 +125,10 @@ class PermisosEmpleado {
       'cuentaCorriente_RegistrarAbonos': cuentaCorrienteRegistrarAbonos,
       'entregas_Visualizar': entregasVisualizar,
       'entregas_ActualizarEstado': entregasActualizarEstado,
+      'compras_Visualizar': comprasVisualizar,
+      'compras_Crear': comprasCrear,
+      'compras_Editar': comprasEditar,
+      'compras_Eliminar': comprasEliminar,
     };
   }
 
@@ -132,6 +150,10 @@ class PermisosEmpleado {
       'cuentaCorriente_RegistrarAbonos': cuentaCorrienteRegistrarAbonos,
       'entregas_Visualizar': entregasVisualizar,
       'entregas_ActualizarEstado': entregasActualizarEstado,
+      'compras_Visualizar': comprasVisualizar,
+      'compras_Crear': comprasCrear,
+      'compras_Editar': comprasEditar,
+      'compras_Eliminar': comprasEliminar,
     };
   }
 
@@ -154,6 +176,10 @@ class PermisosEmpleado {
     bool? cuentaCorrienteRegistrarAbonos,
     bool? entregasVisualizar,
     bool? entregasActualizarEstado,
+    bool? comprasVisualizar,
+    bool? comprasCrear,
+    bool? comprasEditar,
+    bool? comprasEliminar,
   }) {
     return PermisosEmpleado(
       id: id ?? this.id,
@@ -174,6 +200,10 @@ class PermisosEmpleado {
       cuentaCorrienteRegistrarAbonos: cuentaCorrienteRegistrarAbonos ?? this.cuentaCorrienteRegistrarAbonos,
       entregasVisualizar: entregasVisualizar ?? this.entregasVisualizar,
       entregasActualizarEstado: entregasActualizarEstado ?? this.entregasActualizarEstado,
+      comprasVisualizar: comprasVisualizar ?? this.comprasVisualizar,
+      comprasCrear: comprasCrear ?? this.comprasCrear,
+      comprasEditar: comprasEditar ?? this.comprasEditar,
+      comprasEliminar: comprasEliminar ?? this.comprasEliminar,
     );
   }
 }

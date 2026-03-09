@@ -235,7 +235,7 @@ class CuentaCorrienteCacheService {
         saldoDelta: deuda,
         fecha: venta.fecha,
         tipo: TipoMovimientoCuentaCorriente.venta,
-        detalle: 'Venta #${venta.id ?? ''}',
+        detalle: 'Venta #${venta.numeroVisible}',
         metadataJson: jsonEncode(venta.toJson()),
       );
     }).toList();

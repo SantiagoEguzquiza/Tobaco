@@ -33,7 +33,7 @@ class BcuProvider with ChangeNotifier {
       _items = result.items;
       _lastFetchTime = DateTime.now(); // Timestamp del fetch local
     } catch (e) {
-      _error = e.toString();
+      _error = e.toString().replaceFirst('Exception: ', '');
       _items = [];
       _lastFetchTime = DateTime.now(); // Guardar timestamp incluso en caso de error
     } finally {

@@ -11,6 +11,7 @@ import 'package:tobaco/Screens/Compras/proveedor_section.dart';
 import 'package:tobaco/Screens/Ventas/NuevaVenta/widgets/widgets.dart';
 import 'package:tobaco/Screens/Ventas/seleccionarProducto_screen.dart';
 import 'package:tobaco/Services/Compras_Service/compras_service.dart';
+import 'package:tobaco/Services/Categoria_Service/categoria_provider.dart';
 import 'package:tobaco/Theme/headers.dart';
 import 'package:tobaco/Services/Productos_Service/productos_provider.dart';
 import 'package:tobaco/Theme/app_theme.dart';
@@ -459,12 +460,66 @@ class _NuevaCompraScreenState extends State<NuevaCompraScreen> {
     }).toList();
   }
 
-  Future<void> _openAddItem() async {
+  Future<bool> _ensureProductosDisponiblesParaCompra() async {
     final productoProvider = context.read<ProductoProvider>();
-    if (productoProvider.productos.isEmpty) {
-      AppTheme.showSnackBar(context, AppTheme.warningSnackBar('Carga productos desde la sección Productos'));
+    final categoriasProvider = context.read<CategoriasProvider>();
+
+    if (productoProvider.productos.isNotEmpty) {
+      return true;
+    }
+
+    try {
+      final productosCache = await productoProvider.obtenerProductosDelCache();
+      if (productosCache.isNotEmpty) {
+        return true;
+      }
+    } catch (e) {
+      debugPrint('Error verificando productos en caché para compras: $e');
+    }
+
+    try {
+      final productosServidor = await productoProvider.obtenerProductos();
+      try {
+        await categoriasProvider.obtenerCategorias(silent: true);
+      } catch (e) {
+        debugPrint('Error cargando categorías para compras: $e');
+      }
+
+      if (productosServidor.isNotEmpty) {
+        return true;
+      }
+
+      if (!mounted) return false;
+      AppTheme.showSnackBar(
+        context,
+        AppTheme.warningSnackBar('No existen productos disponibles.'),
+      );
+      return false;
+    } catch (e) {
+      if (!mounted) return false;
+
+      final mensaje = e.toString().replaceFirst('Exception: ', '');
+      final lowerMessage = mensaje.toLowerCase();
+      final isOfflineWithoutCache = lowerMessage.contains('offline') ||
+          lowerMessage.contains('sin conexión') ||
+          lowerMessage.contains('sincronizar');
+
+      AppTheme.showSnackBar(
+        context,
+        isOfflineWithoutCache
+            ? AppTheme.warningSnackBar('Sin conexión y sin productos en caché.')
+            : AppTheme.errorSnackBar(mensaje),
+      );
+      return false;
+    }
+  }
+
+  Future<void> _openAddItem() async {
+    final canContinue = await _ensureProductosDisponiblesParaCompra();
+    if (!canContinue || !mounted) {
       return;
     }
+
     final resultado = await Navigator.push<List<ProductoSeleccionado>>(
       context,
       MaterialPageRoute(
