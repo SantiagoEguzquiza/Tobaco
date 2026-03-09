@@ -120,9 +120,8 @@ class _ReorderableCategoriaListState extends State<ReorderableCategoriaList> {
         }
 
         return ReorderableListView.builder(
+          physics: const AlwaysScrollableScrollPhysics(),
           padding: EdgeInsets.only(
-            left: 16,
-            right: 16,
             top: 8,
             bottom: MediaQuery.of(context).padding.bottom + 24,
           ),
