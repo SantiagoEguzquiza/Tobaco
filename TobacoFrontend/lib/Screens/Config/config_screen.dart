@@ -3,7 +3,6 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:tobaco/Models/Asistencia.dart';
 import 'package:tobaco/Screens/Admin/user_management_screen.dart';
-import 'package:tobaco/Screens/Auth/login_screen.dart';
 import 'package:tobaco/Services/Asistencia_Service/asistencia_service.dart';
 import 'package:tobaco/Services/Auth_Service/auth_provider.dart';
 import 'package:tobaco/Services/Categoria_Service/categoria_provider.dart';
@@ -786,12 +785,9 @@ class _ConfigScreenState extends State<ConfigScreen> {
       await context.read<CategoriasProvider>().clearForNewUser();
       context.read<PermisosProvider>().clearPermisos();
       await context.read<AuthProvider>().logout();
-      if (mounted) {
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const LoginScreen()),
-          (route) => false,
-        );
-      }
+      // No navegar manualmente: AuthWrapper escucha AuthProvider y mostrará LoginScreen
+      // automáticamente cuando isAuthenticated sea false. Si navegáramos con pushAndRemoveUntil,
+      // perderíamos AuthWrapper del árbol y al loguear de nuevo no habría quien mostrara el menú.
     }
   }
 }
