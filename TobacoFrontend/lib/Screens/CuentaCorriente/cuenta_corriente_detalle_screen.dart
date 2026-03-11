@@ -1149,18 +1149,30 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
     );
   }
 
+  /// Total de la venta con precio especial incluido (suma de precioFinalCalculado por producto).
+  double _totalVentaConPrecioEspecial(Ventas venta) {
+    if (venta.ventasProductos.isEmpty) return venta.total;
+    return venta.ventasProductos.fold(
+      0.0,
+      (s, p) => s + p.precioFinalCalculado,
+    );
+  }
+
   Widget _buildVentaCard(Ventas venta, bool isDarkMode) {
-    // Calcular el monto específico pagado con cuenta corriente
+    final totalVenta = _totalVentaConPrecioEspecial(venta);
+    // Monto en cuenta corriente: total de la venta (con precio especial) cuando es 100% CC
     double montoCuentaCorriente = 0.0;
     if (venta.pagos != null && venta.pagos!.isNotEmpty) {
-      // Si tenemos pagos cargados, calcular el monto de cuenta corriente
       montoCuentaCorriente = venta.pagos!
           .where((pago) => pago.metodo.index == MetodoPago.cuentaCorriente.index)
           .fold(0.0, (sum, pago) => sum + pago.monto);
+      // Si hay pagos mixtos y el monto CC suma menos que el total, puede ser que los
+      // pagos no incluyan precio especial; usar totalVenta cuando toda la venta es CC
+      if (venta.metodoPago == MetodoPago.cuentaCorriente && montoCuentaCorriente < totalVenta - 0.01) {
+        montoCuentaCorriente = totalVenta;
+      }
     } else if (venta.metodoPago == MetodoPago.cuentaCorriente) {
-      // Si no tenemos pagos cargados pero el método de pago es cuenta corriente,
-      // usar el total de la venta como monto de cuenta corriente
-      montoCuentaCorriente = venta.total;
+      montoCuentaCorriente = totalVenta;
     }
 
     return GestureDetector(
@@ -1228,7 +1240,7 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
                       if (venta.pagos != null && venta.pagos!.length > 1) ...[
                         const SizedBox(height: 2),
                         Text(
-                          'Total: \$${_formatearPrecio(venta.total)}',
+                          'Total: \$${_formatearPrecio(totalVenta)}',
                           style: TextStyle(
                             fontSize: 12,
                             color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade500,
@@ -1903,8 +1915,8 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
     final isCompact = screenHeight < 600;
     final iconSize = isCompact ? 40.0 : 52.0;
     final iconPadding = isCompact ? 10.0 : 14.0;
-    final titleSize = isCompact ? 16.0 : 17.0;
-    final subtitleSize = isCompact ? 13.0 : 14.0;
+    const titleSize = 16.0;
+    const subtitleSize = 14.0;
     final spacing = isCompact ? 8.0 : 12.0;
     final subSpacing = isCompact ? 4.0 : 6.0;
 

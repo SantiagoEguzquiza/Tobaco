@@ -118,6 +118,7 @@ class _VentasScreenState extends State<VentasScreen> {
           _SincronizarButton(
             key: _syncButtonKey,
             isSincronizando: provider.isSincronizando,
+            isOffline: provider.isOffline,
             onSincronizar: () async {
               final result =
                   await context.read<VentasProvider>().sincronizarAhora();
@@ -206,16 +207,15 @@ class _VentasScreenState extends State<VentasScreen> {
                       ),
                     );
                     if (!mounted) return;
-                    if (result != null) {
-                      await context.read<VentasProvider>().cargarVentas();
+                    // Siempre recargar ventas y botón de sincronizar al volver
+                    // (la venta pudo crearse offline con popUntil, que no pasa result)
+                    await context.read<VentasProvider>().cargarVentas();
+                    if (!mounted) return;
+                    _syncButtonKey.currentState?.recargarPendientes();
+                    Future.delayed(const Duration(milliseconds: 400), () {
                       if (!mounted) return;
-                      // Actualizar botón de sincronizar al volver (p. ej. venta creada en offline)
                       _syncButtonKey.currentState?.recargarPendientes();
-                      Future.delayed(const Duration(milliseconds: 400), () {
-                        if (!mounted) return;
-                        _syncButtonKey.currentState?.recargarPendientes();
-                      });
-                    }
+                    });
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.primaryColor,
@@ -635,7 +635,7 @@ class _VentasScreenState extends State<VentasScreen> {
                     ? 'No se encontraron ventas'
                     : 'No hay ventas registradas',
                 style: TextStyle(
-                  fontSize: 18,
+                  fontSize: 16,
                   fontWeight: FontWeight.w500,
                   color: isDark ? Colors.grey.shade300 : Colors.grey.shade700,
                 ),
@@ -722,7 +722,7 @@ class _VentasScreenState extends State<VentasScreen> {
         AppTheme.showSnackBar(
           context,
           AppTheme.warningSnackBar(
-            '$sincronizadas venta(s) sincronizada(s). $fallidas fallaron. Los datos siguen guardados localmente.',
+            message.isNotEmpty ? message : '$sincronizadas venta(s) sincronizada(s). $fallidas fallaron. Los datos siguen guardados localmente.',
           ),
         );
       } else if (sincronizadas == 0 && fallidas == 0) {
@@ -754,8 +754,8 @@ class _VentasScreenState extends State<VentasScreen> {
           ),
         );
       } else if (fallidas > 0) {
-        // Si hay fallidas, asegurar que el mensaje indique que los datos están guardados
-        final mensajeFinal = message.isNotEmpty && message.contains('siguen guardados')
+        // Usar el mensaje del servicio (incluye explicación de stock insuficiente si aplica)
+        final mensajeFinal = message.isNotEmpty
             ? message
             : sincronizadas > 0
                 ? '$sincronizadas venta(s) sincronizada(s). $fallidas fallaron. Los datos siguen guardados localmente.'
@@ -766,8 +766,8 @@ class _VentasScreenState extends State<VentasScreen> {
           AppTheme.errorSnackBar(mensajeFinal),
         );
       } else {
-        // Error general - siempre indicar que los datos están guardados
-        final mensajeFinal = message.isNotEmpty && message.contains('siguen guardados')
+        // Error general - usar mensaje del servicio si está disponible
+        final mensajeFinal = message.isNotEmpty
             ? message
             : 'Error al sincronizar. Los datos siguen guardados localmente. Puedes reintentar más tarde.';
         
@@ -868,11 +868,13 @@ class _VentasScreenState extends State<VentasScreen> {
 /// Widget para el botón de sincronización que se actualiza automáticamente
 class _SincronizarButton extends StatefulWidget {
   final bool isSincronizando;
+  final bool isOffline;
   final VoidCallback onSincronizar;
 
   const _SincronizarButton({
     super.key,
     required this.isSincronizando,
+    required this.isOffline,
     required this.onSincronizar,
   });
 
@@ -949,13 +951,16 @@ class _SincronizarButtonState extends State<_SincronizarButton> {
     super.didUpdateWidget(oldWidget);
     // Si terminó de sincronizar (exitosa o fallida), SIEMPRE recargar el contador y verificar conexión
     if (oldWidget.isSincronizando && !widget.isSincronizando) {
-      // Esperar un momento para asegurar que la BD se actualizó
       Future.delayed(const Duration(milliseconds: 300), () {
         if (mounted) {
           _cargarPendientes();
           _verificarConexion();
         }
       });
+    }
+    // Si pasamos de offline a online (ej. scroll cargó datos del servidor), actualizar el botón
+    if (oldWidget.isOffline && !widget.isOffline && !_tieneConexion) {
+      _verificarConexion();
     }
   }
 

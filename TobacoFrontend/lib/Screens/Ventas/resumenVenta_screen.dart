@@ -44,6 +44,17 @@ class _ResumenVentaScreenState extends State<ResumenVentaScreen> {
           venta = widget.venta;
           isLoading = false;
         });
+        // SnackBar después del primer frame (ya no tapado por la animación verde)
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            AppTheme.showSnackBar(
+              context,
+              AppTheme.warningSnackBar(
+                'Venta guardada localmente. Se sincronizará cuando haya conexión.',
+              ),
+            );
+          }
+        });
         return; // No intentar cargar del servidor
       }
       

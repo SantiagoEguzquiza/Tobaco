@@ -89,6 +89,7 @@ class SimpleSyncService {
     _isSyncing = true;
     int sincronizadas = 0;
     int fallidas = 0;
+    bool hadStockConflict = false; // Stock agotado por otro usuario mientras offline
     List<Ventas> ventasSincronizadas = [];
 
     try {
@@ -227,6 +228,15 @@ class SimpleSyncService {
           } else {
             userMessage = 'Error al sincronizar: ${e.toString()}';
             errorMessage = errorString;
+          }
+          
+          // Detectar conflicto de stock (otro usuario agotó stock mientras este estaba offline)
+          final errorLower = errorString.toLowerCase();
+          if (errorLower.contains('stock insuficiente') ||
+              (errorLower.contains('stock') && errorLower.contains('disponible'))) {
+            hadStockConflict = true;
+            userMessage = 'Stock insuficiente: otro usuario vendió los productos mientras estabas offline. '
+                'La venta sigue guardada localmente. Reintenta cuando se reponga stock o elimina la venta pendiente.';
           }
           
           debugPrint('   Mensaje de error para BD: $errorMessage');
@@ -405,13 +415,20 @@ class SimpleSyncService {
       // Si sincronizamos al menos una venta, considerarlo como éxito parcial
       // Solo marcar como fallido si todas las ventas fallaron
       final todasFallaron = sincronizadas == 0 && fallidas > 0;
-      final mensaje = sincronizadas > 0 && fallidas > 0
-          ? '$sincronizadas venta(s) sincronizada(s) correctamente. $fallidas fallaron. Los datos siguen guardados localmente.'
-          : sincronizadas > 0
-              ? '$sincronizadas venta(s) sincronizada(s) exitosamente'
-              : fallidas > 0
-                  ? 'Error al sincronizar. Los datos siguen guardados localmente. Puedes reintentar más tarde.'
-                  : 'No hay ventas pendientes';
+      String mensaje;
+      if (sincronizadas > 0 && fallidas > 0) {
+        mensaje = hadStockConflict
+            ? '$sincronizadas venta(s) sincronizada(s). $fallidas no se pudieron sincronizar: otro usuario agotó el stock. Los datos siguen guardados localmente.'
+            : '$sincronizadas venta(s) sincronizada(s) correctamente. $fallidas fallaron. Los datos siguen guardados localmente.';
+      } else if (sincronizadas > 0) {
+        mensaje = '$sincronizadas venta(s) sincronizada(s) exitosamente';
+      } else if (fallidas > 0) {
+        mensaje = hadStockConflict
+            ? 'Stock insuficiente: otro usuario vendió los productos mientras estabas offline. La venta sigue guardada localmente. Reintenta cuando se reponga stock o elimina la venta pendiente.'
+            : 'Error al sincronizar. Los datos siguen guardados localmente. Puedes reintentar más tarde.';
+      } else {
+        mensaje = 'No hay ventas pendientes';
+      }
 
       debugPrint('📝 SimpleSyncService: Mensaje para el usuario: $mensaje');
       debugPrint('✅ SimpleSyncService: Success calculado: ${!todasFallaron}');

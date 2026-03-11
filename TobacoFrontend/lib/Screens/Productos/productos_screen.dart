@@ -992,8 +992,8 @@ class _ProductosScreenState extends State<ProductosScreen> {
     final isSmallPhone = size.width < 400 || size.height < 640;
     final padding = isSmallPhone ? 20.0 : 40.0;
     final iconSize = isSmallPhone ? 56.0 : 80.0;
-    final titleSize = isSmallPhone ? 16.0 : 18.0;
-    final subtitleSize = isSmallPhone ? 13.0 : 14.0;
+    const titleSize = 16.0;
+    const subtitleSize = 14.0;
     final spacing1 = isSmallPhone ? 12.0 : 16.0;
     final spacing2 = isSmallPhone ? 6.0 : 8.0;
     final bottomPadding = MediaQuery.of(context).padding.bottom + 24;

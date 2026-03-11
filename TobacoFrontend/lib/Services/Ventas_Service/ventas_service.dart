@@ -79,6 +79,16 @@ class VentasService {
 
       final ventaJson = venta.toJson();
 
+      // El backend exige Cliente.Direccion. Si es null/vacío (ej. Consumidor Final offline),
+      // enviar un valor por defecto para que la validación pase.
+      if (ventaJson['cliente'] != null && ventaJson['cliente'] is Map) {
+        final clienteJson = ventaJson['cliente'] as Map<String, dynamic>;
+        final dir = clienteJson['direccion'];
+        if (dir == null || dir.toString().trim().isEmpty) {
+          clienteJson['direccion'] = 'Sin especificar';
+        }
+      }
+
       // Asegurar que los pagos tengan id: 0 y ventaId: 0 para nuevas ventas
       if (ventaJson['ventaPagos'] != null && ventaJson['ventaPagos'] is List) {
         final pagos = ventaJson['ventaPagos'] as List;

@@ -176,14 +176,17 @@ class VentasProvider with ChangeNotifier {
         notifyListeners();
         return;
       }
-      // Marcar offline de inmediato para que el banner "Modo Offline" aparezca aunque falle algo después
-      _isOffline = true;
-      _hasMoreData = false;
+      // Solo marcar offline cuando es error de conexión o timeout (no por 400, 500, etc.)
+      final esErrorConexion = Apihandler.isConnectionError(e) || e is TimeoutException;
+      if (esErrorConexion) {
+        _isOffline = true;
+        _hasMoreData = false;
+      }
       if (_ventas.isEmpty) {
         _errorMessage = _limpiarMensajeError(e.toString());
       }
-      notifyListeners(); // Actualizar UI con el banner antes de cargar datos offline
-      if (_ventas.isEmpty) {
+      notifyListeners();
+      if (_ventas.isEmpty && esErrorConexion) {
         await _cargarVentasOffline();
       }
     } finally {
@@ -226,8 +229,8 @@ class VentasProvider with ChangeNotifier {
       );
     } catch (e) {
       debugPrint('⚠️ VentasProvider: Error al cargar más ventas: $e');
-      // Si falla al cargar más (ej. sin backend), marcar offline para que aparezca el banner y no siga intentando
-      _isOffline = true;
+      // No marcar _isOffline: el fallo al cargar página N+1 no implica estar offline
+      // (ya tenemos página 1). Solo dejar de intentar cargar más.
       _hasMoreData = false;
     } finally {
       _isLoadingMore = false;
@@ -595,9 +598,13 @@ class VentasProvider with ChangeNotifier {
     return reservada;
   }
 
+  /// Cuenta ventas pendientes de sincronizar (pending + failed).
+  /// Las ventas con status 'failed' también se pueden reintentar.
   Future<int> contarVentasPendientes() async {
     final stats = await _db.getStats();
-    return stats['pending'] ?? 0;
+    final pending = stats['pending'] ?? 0;
+    final failed = stats['failed'] ?? 0;
+    return pending + failed;
   }
 
   /// Limpia listas y caché al cambiar de usuario. Evita mostrar ventas de otro usuario.
@@ -1007,15 +1014,18 @@ class VentasProvider with ChangeNotifier {
       debugPrint('⚠️ VentasProvider: Error leyendo caché de ventas: $e');
     }
 
-    // 2) Cargar ventas pendientes de sincronizar (ventas_offline) solo del usuario actual
+    // 2) Cargar solo ventas PENDIENTES o FALLIDAS de sincronizar (ventas_offline).
+    // Las marcadas como 'synced' no se incluyen: si están realmente en el servidor,
+    // ya estarían en el caché. Incluirlas causaba "ventas fantasma" cuando la
+    // sincronización falló pero se marcó como exitosa, o cuando se eliminaron en el servidor.
     try {
       final db = await _db.database;
       if (db.isOpen) {
         final ventasRows = currentUserId != null
             ? await db.query(
                 'ventas_offline',
-                where: 'usuario_id_creador = ?',
-                whereArgs: [currentUserId],
+                where: 'usuario_id_creador = ? AND sync_status IN (?, ?)',
+                whereArgs: [currentUserId, 'pending', 'failed'],
                 orderBy: 'created_at DESC',
               )
             : <Map<String, dynamic>>[]; // Sin usuario no mostrar ventas offline de nadie
@@ -1327,15 +1337,6 @@ class VentasProvider with ChangeNotifier {
           clienteConsumidor = _buscarConsumidorFinalEnColecciones([clientesCache]);
         } catch (_) {}
         if (clienteConsumidor != null) {
-          if (context.mounted) {
-            AppTheme.showSnackBar(
-              context,
-              const SnackBar(
-                content: Text('Usando Consumidor Final en modo offline'),
-                backgroundColor: Colors.orange,
-              ),
-            );
-          }
           return clienteConsumidor;
         }
         // Placeholder local para poder continuar la venta sin conexión
@@ -1347,15 +1348,6 @@ class VentasProvider with ChangeNotifier {
           preciosEspeciales: const [],
           visible: true,
         );
-        if (context.mounted) {
-          AppTheme.showSnackBar(
-            context,
-            const SnackBar(
-              content: Text('Modo offline: usando Consumidor Final local. Se sincronizará al conectar.'),
-              backgroundColor: Colors.orange,
-            ),
-          );
-        }
         return clienteConsumidor;
       }
       // Para otros errores (no de conexión), mostrar el error y retornar null
