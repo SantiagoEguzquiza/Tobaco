@@ -109,40 +109,52 @@ class _LoginScreenState extends State<LoginScreen> {
                           MediaQuery.paddingOf(context).bottom -
                           (isMediumLayout ? 24 : 40));
                 final bottomPadding = padding + MediaQuery.paddingOf(context).bottom + 24;
-                return SingleChildScrollView(
-                  padding: EdgeInsets.fromLTRB(padding, padding, padding, bottomPadding),
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      minHeight: minHeight ?? 0,
-                    ),
-                    child: IntrinsicHeight(
-                      child: Column(
-                        mainAxisAlignment: isCompactLayout
-                            ? MainAxisAlignment.start
-                            : (isMediumLayout
-                                ? MainAxisAlignment.center
-                                : MainAxisAlignment.spaceEvenly),
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (isCompactLayout) SizedBox(height: sectionSpacing),
-                          _buildHeader(layoutSize),
-                          SizedBox(
-                            height: layoutSize == _LoginLayoutSize.regular
-                                ? 0
-                                : sectionSpacing,
-                          ),
-                          _buildLoginForm(layoutSize),
-                          SizedBox(
-                            height: layoutSize == _LoginLayoutSize.regular
-                                ? 0
-                                : sectionSpacing,
-                          ),
-                          _buildFooter(layoutSize),
-                          if (isCompactLayout) SizedBox(height: sectionSpacing),
-                        ],
-                      ),
+                final keyboardVisible = MediaQuery.of(context).viewInsets.bottom > 0;
+                final needsScroll = isCompactLayout || keyboardVisible;
+                final content = ConstrainedBox(
+                  constraints: BoxConstraints(
+                    minHeight: minHeight ?? 0,
+                  ),
+                  child: IntrinsicHeight(
+                    child: Column(
+                      mainAxisAlignment: isCompactLayout
+                          ? MainAxisAlignment.start
+                          : (isMediumLayout
+                              ? MainAxisAlignment.center
+                              : MainAxisAlignment.spaceEvenly),
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (isCompactLayout) SizedBox(height: sectionSpacing),
+                        _buildHeader(layoutSize),
+                        SizedBox(
+                          height: layoutSize == _LoginLayoutSize.regular
+                              ? 0
+                              : sectionSpacing,
+                        ),
+                        _buildLoginForm(layoutSize),
+                        SizedBox(
+                          height: layoutSize == _LoginLayoutSize.regular
+                              ? 0
+                              : sectionSpacing,
+                        ),
+                        _buildFooter(layoutSize),
+                        if (isCompactLayout) SizedBox(height: sectionSpacing),
+                      ],
                     ),
                   ),
+                );
+                final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
+                return SingleChildScrollView(
+                  physics: needsScroll
+                      ? const AlwaysScrollableScrollPhysics()
+                      : const NeverScrollableScrollPhysics(),
+                  padding: EdgeInsets.fromLTRB(
+                    padding,
+                    padding,
+                    padding,
+                    bottomPadding + keyboardHeight,
+                  ),
+                  child: content,
                 );
               },
             ),
@@ -592,6 +604,7 @@ class _LoginScreenState extends State<LoginScreen> {
     return TextFormField(
       controller: controller,
       obscureText: isPassword ? _obscurePassword : false,
+      scrollPadding: const EdgeInsets.only(bottom: 200),
       style: TextStyle(
         fontSize: fontSize,
         color: isDark ? Colors.white : const Color.fromARGB(255, 0, 0, 0),

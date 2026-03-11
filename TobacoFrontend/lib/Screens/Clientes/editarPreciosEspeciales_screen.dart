@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../Models/Categoria.dart';
 import '../../Models/Producto.dart';
 import '../../Models/Cliente.dart';
@@ -33,7 +34,11 @@ class _EditarPreciosEspecialesScreenState
   List<Categoria> categorias = [];
   List<PrecioEspecial> preciosEspeciales = [];
   final Map<int, TextEditingController> precioControllers = {};
+  /// Estado actual del campo (precio diferente al estándar) - para el badge/borde
   final Map<int, bool> tienePrecioEspecial = {};
+  /// Estado guardado en servidor - solo se actualiza al cargar/guardar. Usado para ordenar
+  /// la lista de forma estable y evitar que el producto salte al cambiar un dígito.
+  final Map<int, bool> tienePrecioEspecialGuardado = {};
   String? selectedCategory;
   bool isLoading = true;
   bool isSaving = false;
@@ -122,9 +127,11 @@ class _EditarPreciosEspecialesScreenState
             );
           }
 
-          tienePrecioEspecial[producto.id!] = preciosEspeciales.any(
+          final tieneGuardado = preciosEspeciales.any(
             (p) => p.productoId == producto.id,
           );
+          tienePrecioEspecial[producto.id!] = tieneGuardado;
+          tienePrecioEspecialGuardado[producto.id!] = tieneGuardado;
         }
 
         isLoading = false;
@@ -156,10 +163,11 @@ class _EditarPreciosEspecialesScreenState
       return matchesSearch && matchesCategory;
     }).toList();
 
-    // Ordenar: primero los que tienen precio especial, luego por nombre
+    // Ordenar por estado GUARDADO, no por edición actual. Así el producto no salta
+    // cuando el usuario borra un dígito (tienePrecioEspecial cambiaría y reordenaría).
     filtered.sort((a, b) {
-      final aTieneEspecial = tienePrecioEspecial[a.id!] ?? false;
-      final bTieneEspecial = tienePrecioEspecial[b.id!] ?? false;
+      final aTieneEspecial = tienePrecioEspecialGuardado[a.id!] ?? false;
+      final bTieneEspecial = tienePrecioEspecialGuardado[b.id!] ?? false;
 
       if (aTieneEspecial && !bTieneEspecial) return -1;
       if (!aTieneEspecial && bTieneEspecial) return 1;
@@ -218,7 +226,7 @@ class _EditarPreciosEspecialesScreenState
         }
       }
 
-      // Recargar datos
+      // Recargar datos (esto actualiza tienePrecioEspecialGuardado)
       await _loadData();
 
       if (mounted) {
@@ -241,6 +249,85 @@ class _EditarPreciosEspecialesScreenState
     }
   }
 
+  Widget _buildEmptyStatePreciosEspeciales() {
+    final size = MediaQuery.of(context).size;
+    final isSmallPhone = size.width < 400 || size.height < 640;
+    final contentPadding = isSmallPhone ? 20.0 : 40.0;
+    final iconSize = isSmallPhone ? 56.0 : 80.0;
+    final titleSize = isSmallPhone ? 16.0 : 18.0;
+    final subtitleSize = isSmallPhone ? 13.0 : 14.0;
+    final spacing1 = isSmallPhone ? 12.0 : 16.0;
+    final spacing2 = isSmallPhone ? 6.0 : 8.0;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    // Padding abajo para poder hacer scroll y ver el mensaje sobre el botón "Guardar Todos"
+    final bottomScrollPadding = 80.0;
+    // Mismo margen que las cards del ListView (16)
+    const cardMargin = 16.0;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(cardMargin, cardMargin, cardMargin, cardMargin),
+      child: Container(
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+        borderRadius: BorderRadius.circular(15),
+        boxShadow: [
+          BoxShadow(
+            color: isDark
+                ? Colors.black.withOpacity(0.3)
+                : Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Center(
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: EdgeInsets.fromLTRB(
+            contentPadding,
+            contentPadding,
+            contentPadding,
+            contentPadding + bottomScrollPadding,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.inventory_2_outlined,
+                size: iconSize,
+                color: Colors.grey.shade400,
+              ),
+              SizedBox(height: spacing1),
+              Text(
+                selectedCategory != null
+                    ? 'No hay productos en esta categoría'
+                    : 'No hay productos disponibles',
+                style: TextStyle(
+                  fontSize: titleSize,
+                  color: isDark ? Colors.grey.shade300 : Colors.grey.shade700,
+                  fontWeight: FontWeight.w500,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: spacing2),
+              Text(
+                selectedCategory != null
+                    ? 'Prueba con otra categoría o busca productos'
+                    : 'Asigna precios especiales a los productos del cliente',
+                style: TextStyle(
+                  fontSize: subtitleSize,
+                  color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+    );
+  }
+
   Widget _buildPrecioInfo(Producto producto) {
     final tieneEspecial = tienePrecioEspecial[producto.id!] ?? false;
     final precioEstandar = producto.precio;
@@ -251,8 +338,14 @@ class _EditarPreciosEspecialesScreenState
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Wrap(
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 8,
+            runSpacing: 4,
+            children: [
             Text(
               '\$${precioEspecial.toStringAsFixed(2)}',
               style: TextStyle(
@@ -265,8 +358,7 @@ class _EditarPreciosEspecialesScreenState
                         : AppTheme.primaryColor),
               ),
             ),
-            if (tieneEspecial) ...[
-              const SizedBox(width: 8),
+            if (tieneEspecial)
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
@@ -283,7 +375,7 @@ class _EditarPreciosEspecialesScreenState
                 ),
               ),
             ],
-          ],
+          ),
         ),
         if (tieneEspecial) ...[
           const SizedBox(height: 2),
@@ -307,6 +399,7 @@ class _EditarPreciosEspecialesScreenState
     return widget.isWizardMode
         ? _buildContent()
         : Scaffold(
+            resizeToAvoidBottomInset: true,
             backgroundColor: Theme.of(context).scaffoldBackgroundColor,
             appBar: widget.isIndividualEdit 
                 ? AppBar(
@@ -515,44 +608,16 @@ class _EditarPreciosEspecialesScreenState
                       ),
                     )
                   : filteredProductos.isEmpty
-                      ? Container(
-                          padding: const EdgeInsets.all(20),
-                          child: Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(20),
-                                  decoration: BoxDecoration(
-                                    color: AppTheme.secondaryColor,
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: Icon(
-                                    Icons.inventory_2_outlined,
-                                    size: 60,
-                                    color: AppTheme.primaryColor,
-                                  ),
-                                ),
-                                const SizedBox(height: 16),
-                                Text(
-                                  selectedCategory != null
-                                      ? 'No hay productos en esta categoría'
-                                      : 'No hay productos disponibles',
-                                  style: TextStyle(
-                                    color: Colors.grey.shade600,
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                  textAlign: TextAlign.center,
-                                ),
-                              ],
-                            ),
-                          ),
-                        )
+                      ? _buildEmptyStatePreciosEspeciales()
                       : ListView.builder(
-                          // Padding extra abajo para que el último producto
-                          // no quede tapado por la barra de "Guardar Todos"
-                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
+                          // Padding extra abajo para la barra "Guardar Todos" + espacio
+                          // para el teclado cuando se edita un precio (evita que tape el campo)
+                          padding: EdgeInsets.fromLTRB(
+                            16,
+                            16,
+                            16,
+                            120 + MediaQuery.of(context).viewInsets.bottom,
+                          ),
                           itemCount: filteredProductos.length,
                           itemBuilder: (context, index) {
                             final producto = filteredProductos[index];
@@ -725,13 +790,17 @@ class _EditarPreciosEspecialesScreenState
                                                       ),
                                                     ),
                                                     child: TextField(
+                                                      key: ValueKey('precio_${producto.id}'),
                                                       controller:
                                                           precioControllers[
                                                               producto.id!],
-                                                      keyboardType:
-                                                          const TextInputType
-                                                                  .numberWithOptions(
-                                                              decimal: true),
+                                                      // TextInputType.text + formatter evita el bug del teclado
+                                                      // numérico que no aparece en algunos emuladores
+                                                      keyboardType: TextInputType.text,
+                                                      inputFormatters: [
+                                                        FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+                                                      ],
+                                                      scrollPadding: const EdgeInsets.only(bottom: 200),
                                                       textAlign:
                                                           TextAlign.center,
                                                       style: TextStyle(
