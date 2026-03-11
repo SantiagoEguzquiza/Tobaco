@@ -878,19 +878,18 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
     );
   }
 
-  /// Estado vacío cuando no hay clientes (sin botón; se cargan automáticamente al entrar).
+  /// Estado vacío cuando no hay clientes (igual que listado de clientes).
   /// El usuario puede deslizar hacia abajo para refrescar.
   Widget _buildEmptyStateConRefresh() {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bottomPadding = MediaQuery.of(context).padding.bottom + 24;
-
     return Container(
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF2F2F2F) : Colors.white,
-        borderRadius: BorderRadius.circular(8),
+        color: Theme.of(context).brightness == Brightness.dark
+            ? const Color(0xFF1A1A1A)
+            : Colors.white,
+        borderRadius: BorderRadius.circular(15),
         boxShadow: [
           BoxShadow(
-            color: isDark
+            color: Theme.of(context).brightness == Brightness.dark
                 ? Colors.black.withOpacity(0.3)
                 : Colors.black.withOpacity(0.05),
             blurRadius: 10,
@@ -901,33 +900,41 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
       child: Center(
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(40, 40, 40, 40).copyWith(
-            bottom: 40 + bottomPadding,
+          padding: EdgeInsets.fromLTRB(
+            24,
+            24,
+            24,
+            24 + MediaQuery.of(context).padding.bottom + 24,
           ),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
             mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(
                 Icons.people_outline,
-                size: 48,
+                size: 80,
                 color: Colors.grey.shade400,
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
               Text(
-                'No hay clientes disponibles',
+                'No hay clientes registrados',
                 style: TextStyle(
-                  color: isDark ? Colors.grey.shade300 : Colors.grey.shade700,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
+                  fontSize: 16,
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.grey.shade300
+                      : Colors.grey.shade700,
+                  fontWeight: FontWeight.w500,
                 ),
+                textAlign: TextAlign.center,
               ),
               const SizedBox(height: 8),
               Text(
-                'Desliza hacia abajo para actualizar',
+                'Crea tu primer cliente para comenzar',
                 style: TextStyle(
-                  color: isDark ? Colors.grey.shade400 : Colors.grey.shade500,
                   fontSize: 14,
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.grey.shade400
+                      : Colors.grey.shade600,
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -1916,17 +1923,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
           throw Exception(result['message']);
         }
 
-        // Mostrar mensaje offline si es necesario (usar SnackBar para respuesta inmediata)
-        if (result['isOffline']) {
-          if (mounted) {
-            AppTheme.showSnackBar(
-              context,
-              AppTheme.warningSnackBar(
-                'Venta guardada localmente. Se sincronizará cuando haya conexión.',
-              ),
-            );
-          }
-        }
+        // Mensaje offline: se muestra en ResumenVentaScreen como "Guardada localmente"
 
         // Marcar que la venta se completó exitosamente
         _ventaCompletada = true;
@@ -2253,11 +2250,13 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                                         'No se encontraron clientes con ese nombre'),
                                   )
                                 else
-                                  // Estado vacío con botón de refresh
+                                  // Estado vacío con altura mínima para centrar verticalmente
                                   Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 16.0, vertical: 16.0),
-                                    child: _buildEmptyStateConRefresh(),
+                                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                                    child: SizedBox(
+                                      height: (MediaQuery.of(context).size.height - 320).clamp(200.0, 400.0),
+                                      child: _buildEmptyStateConRefresh(),
+                                    ),
                                   ),
                               ] else ...[
                                 // Cliente seleccionado

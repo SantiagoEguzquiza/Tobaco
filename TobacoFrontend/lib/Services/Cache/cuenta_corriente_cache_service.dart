@@ -750,6 +750,19 @@ class CuentaCorrienteCacheService {
     };
   }
 
+  /// Limpia todo el caché de cuenta corriente (clientes y movimientos).
+  /// Se invoca al cambiar de usuario para evitar mostrar datos de otro tenant.
+  Future<void> limpiarCache() async {
+    try {
+      final db = await database;
+      await db.delete(_clientesTable);
+      await db.delete(_movimientosTable);
+      debugPrint('🧹 CuentaCorrienteCacheService: Caché limpiado (cambio de usuario)');
+    } catch (e) {
+      debugPrint('❌ CuentaCorrienteCacheService: Error limpiando caché: $e');
+    }
+  }
+
   /// Elimina TODAS las ventas de cuenta corriente de un cliente
   /// Se usa cuando se cargan las ventas del servidor en modo online
   /// para reemplazar completamente el caché y evitar ventas pendientes bugeadas

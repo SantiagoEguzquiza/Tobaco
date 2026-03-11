@@ -371,7 +371,7 @@ class _CuentaCorrienteScreenState extends State<CuentaCorrienteScreen> {
                     ? 'No hay clientes con cuenta corriente'
                     : 'No se encontraron clientes',
                 style: TextStyle(
-                  fontSize: 18,
+                  fontSize: 16,
                   color: Theme.of(context).brightness == Brightness.dark
                       ? Colors.grey.shade300
                       : Colors.grey.shade700,

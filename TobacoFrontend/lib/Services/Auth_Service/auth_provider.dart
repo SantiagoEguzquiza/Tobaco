@@ -139,6 +139,14 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Detiene el estado de carga (útil cuando hay timeout para no quedar colgado).
+  void stopLoading() {
+    if (_isLoading) {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
   // Update current user data
   void updateCurrentUser(User updatedUser) {
     _currentUser = updatedUser;

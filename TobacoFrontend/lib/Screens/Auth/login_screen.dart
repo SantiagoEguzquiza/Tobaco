@@ -91,7 +91,6 @@ class _LoginScreenState extends State<LoginScreen> {
                         ? _LoginLayoutSize.medium
                         : _LoginLayoutSize.regular;
                 final isCompactLayout = layoutSize == _LoginLayoutSize.compact;
-                final isMediumLayout = layoutSize == _LoginLayoutSize.medium;
                 final padding = switch (layoutSize) {
                   _LoginLayoutSize.compact => 20.0,
                   _LoginLayoutSize.medium => 22.0,
@@ -102,59 +101,37 @@ class _LoginScreenState extends State<LoginScreen> {
                   _LoginLayoutSize.medium => 18.0,
                   _LoginLayoutSize.regular => 32.0,
                 };
-                final minHeight = isCompactLayout
-                    ? null
-                    : (height -
-                          MediaQuery.paddingOf(context).top -
-                          MediaQuery.paddingOf(context).bottom -
-                          (isMediumLayout ? 24 : 40));
-                final bottomPadding = padding + MediaQuery.paddingOf(context).bottom + 24;
-                final keyboardVisible = MediaQuery.of(context).viewInsets.bottom > 0;
-                final needsScroll = isCompactLayout || keyboardVisible;
-                final content = ConstrainedBox(
-                  constraints: BoxConstraints(
-                    minHeight: minHeight ?? 0,
-                  ),
-                  child: IntrinsicHeight(
-                    child: Column(
-                      mainAxisAlignment: isCompactLayout
-                          ? MainAxisAlignment.start
-                          : (isMediumLayout
-                              ? MainAxisAlignment.center
-                              : MainAxisAlignment.spaceEvenly),
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (isCompactLayout) SizedBox(height: sectionSpacing),
-                        _buildHeader(layoutSize),
-                        SizedBox(
-                          height: layoutSize == _LoginLayoutSize.regular
-                              ? 0
-                              : sectionSpacing,
-                        ),
-                        _buildLoginForm(layoutSize),
-                        SizedBox(
-                          height: layoutSize == _LoginLayoutSize.regular
-                              ? 0
-                              : sectionSpacing,
-                        ),
-                        _buildFooter(layoutSize),
-                        if (isCompactLayout) SizedBox(height: sectionSpacing),
-                      ],
-                    ),
-                  ),
-                );
                 final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
-                return SingleChildScrollView(
-                  physics: needsScroll
-                      ? const AlwaysScrollableScrollPhysics()
-                      : const NeverScrollableScrollPhysics(),
-                  padding: EdgeInsets.fromLTRB(
-                    padding,
-                    padding,
-                    padding,
-                    bottomPadding + keyboardHeight,
-                  ),
-                  child: content,
+                final bottomPadding = padding + MediaQuery.paddingOf(context).bottom + 24;
+                final content = Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _buildHeader(layoutSize),
+                    SizedBox(height: sectionSpacing),
+                    _buildLoginForm(layoutSize),
+                    SizedBox(height: sectionSpacing),
+                    _buildFooter(layoutSize),
+                  ],
+                );
+                return Column(
+                  children: [
+                    Expanded(
+                      child: Center(
+                        child: SingleChildScrollView(
+                          physics: isCompactLayout || keyboardHeight > 0
+                              ? const AlwaysScrollableScrollPhysics()
+                              : const NeverScrollableScrollPhysics(),
+                          padding: EdgeInsets.fromLTRB(
+                            padding,
+                            padding,
+                            padding,
+                            bottomPadding + keyboardHeight,
+                          ),
+                          child: content,
+                        ),
+                      ),
+                    ),
+                  ],
                 );
               },
             ),
@@ -725,6 +702,69 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
+  Future<void> _runLoginWithTimeout({
+    required AuthProvider authProvider,
+    required PermisosProvider permisosProvider,
+    required ClienteProvider clientesProvider,
+    required CategoriasProvider categoriasProvider,
+    required ProductoProvider productosProvider,
+    required VentasProvider ventasProvider,
+    required String userName,
+    required String password,
+  }) async {
+    Future<void> doLogin() async {
+      final success = await authProvider.login(userName, password);
+      if (!success) return;
+
+      // Limpiar caché con timeout para no bloquear (p. ej. BD lenta)
+      await Future.any([
+        Future.wait([
+          clientesProvider.clearForNewUser(),
+          categoriasProvider.clearForNewUser(),
+          productosProvider.clearForNewUser(),
+          ventasProvider.clearForNewUser(),
+        ]),
+        Future.delayed(const Duration(seconds: 8), () {}),
+      ]);
+
+      await Future.delayed(const Duration(milliseconds: 300));
+
+      bool permisosLoaded = false;
+      for (int attempt = 0; attempt < 2 && !permisosLoaded; attempt++) {
+        try {
+          await permisosProvider
+              .loadPermisos(authProvider, forceReload: true)
+              .timeout(const Duration(seconds: 12));
+          permisosLoaded = true;
+        } on TimeoutException {
+          permisosProvider.marcarTimeoutPermisos();
+          break;
+        } catch (e) {
+          if (Apihandler.isConnectionError(e) && attempt == 0) {
+            await Future.delayed(const Duration(milliseconds: 1500));
+          } else {
+            break;
+          }
+        }
+      }
+      if (!permisosLoaded && permisosProvider.isLoading) {
+        permisosProvider.marcarTimeoutPermisos();
+      }
+
+      authProvider.notifyListeners();
+      permisosProvider.notifyListeners();
+    }
+
+    await doLogin().timeout(
+      const Duration(seconds: 55),
+      onTimeout: () {
+        throw TimeoutException(
+          'El inicio de sesión tardó demasiado. Verifica tu conexión e intenta de nuevo.',
+        );
+      },
+    );
+  }
+
   Future<void> _handleLogin(BuildContext context, AuthProvider authProvider) async {
     if (_formKey.currentState!.validate()) {
       authProvider.clearError();
@@ -739,52 +779,25 @@ class _LoginScreenState extends State<LoginScreen> {
       permisosProvider.clearPermisos();
 
       try {
-        final success = await authProvider.login(
-          _userNameController.text.trim(),
-          _passwordController.text,
+        await _runLoginWithTimeout(
+          authProvider: authProvider,
+          permisosProvider: permisosProvider,
+          clientesProvider: clientesProvider,
+          categoriasProvider: categoriasProvider,
+          productosProvider: productosProvider,
+          ventasProvider: ventasProvider,
+          userName: _userNameController.text.trim(),
+          password: _passwordController.text,
         );
-
-        if (!success) return;
-
-        // Limpiar caché y estado de otro usuario (evitar context tras posible dispose)
-        await clientesProvider.clearForNewUser();
-        await categoriasProvider.clearForNewUser();
-        await productosProvider.clearForNewUser();
-        await ventasProvider.clearForNewUser();
-
-        // Dar tiempo al almacenamiento para que el token esté disponible
-        await Future.delayed(const Duration(milliseconds: 300));
-
-        // Cargar permisos después del login; timeout 12s para no quedar colgado
-        bool permisosLoaded = false;
-        for (int attempt = 0; attempt < 2 && !permisosLoaded; attempt++) {
-          try {
-            await permisosProvider
-                .loadPermisos(authProvider, forceReload: true)
-                .timeout(const Duration(seconds: 12));
-            permisosLoaded = true;
-          } on TimeoutException {
-            permisosProvider.marcarTimeoutPermisos();
-            break;
-          } catch (e) {
-            final isConnectionError = Apihandler.isConnectionError(e);
-            if (isConnectionError && attempt == 0) {
-              await Future.delayed(const Duration(milliseconds: 1500));
-            } else {
-              break;
-            }
-          }
-        }
-        if (!permisosLoaded && permisosProvider.isLoading) {
-          permisosProvider.marcarTimeoutPermisos();
-        }
-
-        // Forzar rebuild del AuthWrapper para mostrar MainShellScreen/SuperAdminMenuScreen
-        authProvider.notifyListeners();
-        permisosProvider.notifyListeners();
       } catch (e) {
-        if (mounted && Apihandler.isConnectionError(e)) {
-          await Apihandler.handleConnectionError(context, e);
+        if (mounted) {
+          authProvider.stopLoading();
+          if (Apihandler.isConnectionError(e) || e is TimeoutException) {
+            await Apihandler.handleConnectionError(context, e);
+          } else {
+            authProvider.clearError();
+            authProvider.notifyListeners();
+          }
         }
       }
     }

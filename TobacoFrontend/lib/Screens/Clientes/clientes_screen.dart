@@ -374,7 +374,7 @@ class _ClientesScreenState extends State<ClientesScreen> {
                     ? 'No se encontraron clientes'
                     : 'No hay clientes registrados',
                 style: TextStyle(
-                  fontSize: 18,
+                  fontSize: 16,
                   color: Theme.of(context).brightness == Brightness.dark
                       ? Colors.grey.shade300
                       : Colors.grey.shade700,

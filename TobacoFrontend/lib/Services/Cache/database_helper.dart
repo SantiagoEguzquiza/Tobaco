@@ -505,7 +505,9 @@ class DatabaseHelper {
     );
   }
 
-  /// Marca una venta como sincronizada
+  /// Marca una venta como sincronizada.
+  /// No actualizamos la columna id (PRIMARY KEY) para evitar UNIQUE constraint:
+  /// id es AUTOINCREMENT de la fila, no el ventaId del servidor.
   Future<void> markVentaAsSynced(String localId, int? serverId) async {
     final db = await database;
     
@@ -513,14 +515,12 @@ class DatabaseHelper {
       _ventasTable,
       {
         'sync_status': 'synced',
-        'id': serverId,
+        'error_message': null,
         'updated_at': DateTime.now().toIso8601String(),
       },
       where: 'local_id = ?',
       whereArgs: [localId],
     );
-
-    
   }
 
   /// Marca una venta como fallida en la sincronización

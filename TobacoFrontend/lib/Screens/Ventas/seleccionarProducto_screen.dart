@@ -1642,6 +1642,89 @@ class _SeleccionarProductosScreenState
     );
   }
 
+  /// Estado vacío de productos (igual que productos_screen)
+  Widget _buildEmptyStateProductos({
+    required String searchQuery,
+    required String searchMarca,
+    required String? selectedCategory,
+    required bool productosVacios,
+  }) {
+    final hasFiltros = searchQuery.isNotEmpty || searchMarca.isNotEmpty;
+    final mensajeFiltros = hasFiltros
+        ? (searchQuery.isNotEmpty && searchMarca.isNotEmpty
+            ? 'Nombre: "$searchQuery" · Marca: "$searchMarca"'
+            : searchQuery.isNotEmpty
+                ? '"$searchQuery"'
+                : 'Marca: "$searchMarca"')
+        : '';
+    final size = MediaQuery.of(context).size;
+    final isSmallPhone = size.width < 400 || size.height < 640;
+    final padding = isSmallPhone ? 20.0 : 40.0;
+    final iconSize = isSmallPhone ? 56.0 : 80.0;
+    const titleSize = 16.0;
+    const subtitleSize = 14.0;
+    final spacing1 = isSmallPhone ? 12.0 : 16.0;
+    final spacing2 = isSmallPhone ? 6.0 : 8.0;
+    final bottomPadding = MediaQuery.of(context).padding.bottom + 24;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+        borderRadius: BorderRadius.circular(15),
+        boxShadow: [
+          BoxShadow(
+            color: isDark
+                ? Colors.black.withOpacity(0.3)
+                : Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Align(
+        alignment: const Alignment(0, 0.35),
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: EdgeInsets.fromLTRB(padding, padding, padding, padding + bottomPadding),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.inventory_2_outlined, size: iconSize, color: Colors.grey.shade400),
+              SizedBox(height: spacing1),
+              Text(
+                hasFiltros
+                    ? 'Sin resultados'
+                    : (selectedCategory != null && !productosVacios)
+                        ? 'No hay productos en esta categoría'
+                        : 'No hay productos disponibles',
+                style: TextStyle(
+                  fontSize: titleSize,
+                  color: isDark ? Colors.grey.shade300 : Colors.grey.shade700,
+                  fontWeight: FontWeight.w500,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: spacing2),
+              Text(
+                hasFiltros
+                    ? 'No se encontraron productos que coincidan con $mensajeFiltros'
+                    : (selectedCategory != null && !productosVacios)
+                        ? 'Intenta con otra categoría o término de búsqueda'
+                        : 'Crea tu primer producto para comenzar',
+                style: TextStyle(
+                  fontSize: subtitleSize,
+                  color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     // Detectar si el teclado está visible
@@ -1672,44 +1755,73 @@ class _SeleccionarProductosScreenState
 
     return Scaffold(
       resizeToAvoidBottomInset: false,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         centerTitle: true,
         title: Text(widget.appBarTitle ?? 'Nueva venta', style: AppTheme.appBarTitleStyle),
         actions: [],
       ),
       body: isLoading
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CircularProgressIndicator(
-                    valueColor:
-                        AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
+          ? Container(
+              color: Theme.of(context).scaffoldBackgroundColor,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? const Color(0xFF1A1A1A)
+                        : Colors.white,
+                    borderRadius: BorderRadius.circular(15),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.black.withOpacity(0.3)
+                            : Colors.black.withOpacity(0.05),
+                        blurRadius: 10,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Cargando productos...',
-                    style: TextStyle(
-                      color: Theme.of(context).brightness == Brightness.dark
-                          ? Colors.grey.shade400
-                          : Colors.grey.shade600,
+                  child: const Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        CircularProgressIndicator(
+                          valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
+                        ),
+                        SizedBox(height: 16),
+                        Text(
+                          'Cargando productos...',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ],
+                ),
               ),
             )
-          : SafeArea(
-              child: Column(
-                mainAxisSize: MainAxisSize.max,
-                children: [
-                  ClipRect(
-                    child: Align(
-                      alignment: Alignment.topCenter,
-                      heightFactor: _headerVisibility,
-                      child: Opacity(
-                        opacity: _headerVisibility,
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
+          : Container(
+              color: Theme.of(context).scaffoldBackgroundColor,
+              child: SafeArea(
+                top: true,
+                bottom: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.max,
+                    children: [
+                      ClipRect(
+                        child: Align(
+                          alignment: Alignment.topCenter,
+                          heightFactor: _headerVisibility,
+                          child: Opacity(
+                            opacity: _headerVisibility,
+                            child: Padding(
+                              padding: const EdgeInsets.only(bottom: 6.0),
                           child: Builder(
                             builder: (context) {
                         final screenHeight = MediaQuery.of(context).size.height;
@@ -2012,92 +2124,16 @@ class _SeleccionarProductosScreenState
                       ),
                     ),
                   ),
-                  // Lista de productos scrolleable
+                  // Lista de productos scrolleable (estado vacío igual que productos_screen)
                   Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                      child: filteredProductos.isEmpty
-                          ? SingleChildScrollView(
-                              physics: const AlwaysScrollableScrollPhysics(),
-                              padding: const EdgeInsets.only(bottom: 8),
-                              child: Container(
-                                width: double.infinity,
-                                padding: const EdgeInsets.fromLTRB(24, 16, 24, 12),
-                                decoration: BoxDecoration(
-                                  color: Theme.of(context).brightness ==
-                                          Brightness.dark
-                                      ? const Color(0xFF1A1A1A)
-                                      : Colors.white,
-                                  borderRadius: BorderRadius.circular(15),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Theme.of(context).brightness ==
-                                              Brightness.dark
-                                          ? Colors.black.withOpacity(0.3)
-                                          : Colors.black.withOpacity(0.05),
-                                      blurRadius: 10,
-                                      offset: const Offset(0, 2),
-                                    ),
-                                  ],
-                                ),
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.all(16),
-                                      decoration: BoxDecoration(
-                                        color: Theme.of(context).brightness ==
-                                                Brightness.dark
-                                            ? AppTheme.primaryColor.withOpacity(0.2)
-                                            : AppTheme.secondaryColor,
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: Icon(
-                                        Icons.inventory_2_outlined,
-                                        size: 48,
-                                        color: Theme.of(context).brightness == Brightness.dark
-                                            ? AppTheme.primaryColor
-                                            : AppTheme.primaryColor,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 12),
-                                    Text(
-                                      (searchQuery.isNotEmpty || searchMarca.isNotEmpty)
-                                          ? 'Sin resultados'
-                                          : selectedCategory != null
-                                              ? 'No hay productos en esta categoría'
-                                              : 'No hay productos disponibles',
-                                      style: TextStyle(
-                                        color: Theme.of(context).brightness == Brightness.dark
-                                            ? Colors.grey.shade400
-                                            : Colors.grey.shade600,
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                      textAlign: TextAlign.center,
-                                    ),
-                                    const SizedBox(height: 6),
-                                    Text(
-                                      (searchQuery.isNotEmpty || searchMarca.isNotEmpty)
-                                          ? (searchQuery.isNotEmpty && searchMarca.isNotEmpty
-                                              ? 'No hay productos con "$searchQuery" y marca "$searchMarca"'
-                                              : searchQuery.isNotEmpty
-                                                  ? 'No se encontraron productos que coincidan con "$searchQuery"'
-                                                  : 'No se encontraron productos con marca "$searchMarca"')
-                                          : 'Intenta con otra categoría o término de búsqueda',
-                                      style: TextStyle(
-                                        color: Theme.of(context).brightness == Brightness.dark
-                                            ? Colors.grey.shade400
-                                            : Colors.grey.shade500,
-                                        fontSize: 14,
-                                      ),
-                                      textAlign: TextAlign.center,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            )
-                          : ClipRRect(
+                    child: filteredProductos.isEmpty
+                        ? _buildEmptyStateProductos(
+                            searchQuery: searchQuery,
+                            searchMarca: searchMarca,
+                            selectedCategory: selectedCategory,
+                            productosVacios: productos.isEmpty,
+                          )
+                        : ClipRRect(
                               borderRadius: const BorderRadius.only(
                                 topLeft: Radius.circular(15),
                                 topRight: Radius.circular(15),
@@ -2617,11 +2653,12 @@ class _SeleccionarProductosScreenState
                                 },
                               ),
                             ),
-                    ),
                   ),
                 ],
               ),
             ),
+          ),
+        ),
       bottomNavigationBar: Container(
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
         decoration: BoxDecoration(

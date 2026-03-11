@@ -4,6 +4,8 @@ import 'package:tobaco/Models/Cliente.dart';
 import 'package:tobaco/Services/Clientes_Service/clientes_service.dart';
 import 'package:tobaco/Services/Cache/datos_cache_service.dart';
 import 'package:tobaco/Services/Cache/cuenta_corriente_cache_service.dart';
+import 'package:tobaco/Services/PrecioEspecialService.dart';
+import 'package:tobaco/Services/Catalogo_Local/catalogo_local_service.dart';
 import 'package:tobaco/Helpers/api_handler.dart';
 import 'package:tobaco/Services/Connectivity/connectivity_service.dart';
 import 'package:tobaco/Services/Auth_Service/auth_service.dart';
@@ -60,6 +62,7 @@ class ClienteProvider with ChangeNotifier {
           a.nombre.toLowerCase().compareTo(b.nombre.toLowerCase()));
 
       await _cacheService.guardarClientesEnCache(_clientes);
+      _cachearPreciosEspecialesEnBackground();
     } catch (e) {
       debugPrint('⚠️ ClienteProvider: Error obteniendo del servidor: $e');
 
@@ -164,6 +167,9 @@ class ClienteProvider with ChangeNotifier {
       _isSyncing = false;
       _isLoading = false;
       notifyListeners();
+
+      // Cachear precios especiales de todos los clientes para ventas offline
+      _cachearPreciosEspecialesEnBackground();
     } catch (e) {
       _isSyncing = false;
       _isLoading = false;
@@ -384,7 +390,30 @@ class ClienteProvider with ChangeNotifier {
         (e) => debugPrint('⚠️ Error guardando clientes en caché: $e'));
   }
 
-  /// Limpia listas y caché al cambiar de usuario. Evita mostrar datos de otro usuario.
+  /// Cachea precios especiales de todos los clientes para uso offline en ventas.
+  /// Se ejecuta en background tras cargar clientes del servidor.
+  void _cachearPreciosEspecialesEnBackground() {
+    Future(() async {
+      try {
+        final precios = await PrecioEspecialService.getAllPreciosEspeciales();
+        if (precios.isEmpty) return;
+
+        final catalogoLocal = CatalogoLocalService();
+        final porCliente = <int, List<Map<String, dynamic>>>{};
+        for (final p in precios) {
+          porCliente.putIfAbsent(p.clienteId, () => []).add(p.toJson());
+        }
+        for (final entry in porCliente.entries) {
+          await catalogoLocal.guardarPreciosEspeciales(entry.key, entry.value);
+        }
+        debugPrint('✅ ClienteProvider: ${porCliente.length} clientes con precios especiales cacheados');
+      } catch (e) {
+        debugPrint('⚠️ ClienteProvider: Error cacheando precios especiales: $e');
+      }
+    }).catchError((e) => debugPrint('⚠️ ClienteProvider: Error en _cachearPreciosEspecialesEnBackground: $e'));
+  }
+
+  /// Limpia listas y caché al cambiar de usuario. Evita mostrar datos de otro usuario/tenant.
   Future<void> clearForNewUser() async {
     _clientes = [];
     _clientesConDeuda = [];
@@ -397,6 +426,7 @@ class ClienteProvider with ChangeNotifier {
     notifyListeners();
     try {
       await _cacheService.limpiarCache();
+      await _cuentaCorrienteCache.limpiarCache();
     } catch (e) {
       debugPrint('⚠️ ClienteProvider: error limpiando caché para nuevo usuario: $e');
     }
