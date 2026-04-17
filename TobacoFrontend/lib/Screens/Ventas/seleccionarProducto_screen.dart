@@ -193,6 +193,7 @@ class SeleccionarProductosScreen extends StatefulWidget {
   final int? scrollToProductId; // ID del producto al que hacer scroll
   /// Título del AppBar (ej. "Nueva venta" o "Agregar productos" para compras).
   final String? appBarTitle;
+
   /// Si true, al tocar un producto se abre popup cantidad + subtotal (para compras).
   final bool modoCompra;
 
@@ -280,9 +281,11 @@ class _SeleccionarProductosScreenState
 
       // Cargar primero del caché local inmediatamente para mostrar UI rápido
       try {
-        final productosCache = await productoProvider.obtenerProductosDelCache();
-        final categoriasCache = await categoriasProvider.obtenerCategoriasDelCache();
-        
+        final productosCache =
+            await productoProvider.obtenerProductosDelCache();
+        final categoriasCache =
+            await categoriasProvider.obtenerCategoriasDelCache();
+
         if (mounted && productosCache.isNotEmpty) {
           setState(() {
             categorias = categoriasCache;
@@ -321,12 +324,10 @@ class _SeleccionarProductosScreenState
         final fetchedProductos = results[0] as List<Producto>;
         final fetchedCategorias = results[1] as List<Categoria>;
         // No reemplazar con lista vacía si ya teníamos productos (evita que desaparezcan offline)
-        final productosFinal = fetchedProductos.isNotEmpty
-            ? fetchedProductos
-            : productos;
-        final categoriasFinal = fetchedCategorias.isNotEmpty
-            ? fetchedCategorias
-            : categorias;
+        final productosFinal =
+            fetchedProductos.isNotEmpty ? fetchedProductos : productos;
+        final categoriasFinal =
+            fetchedCategorias.isNotEmpty ? fetchedCategorias : categorias;
         setState(() {
           categorias = categoriasFinal;
           productos = productosFinal;
@@ -350,8 +351,10 @@ class _SeleccionarProductosScreenState
         // Si no teníamos productos, intentar una vez más desde caché/SQLite (modo offline)
         if (productos.isEmpty) {
           try {
-            final productosOffline = await productoProvider.obtenerProductosDelCache();
-            final categoriasOffline = await categoriasProvider.obtenerCategoriasDelCache();
+            final productosOffline =
+                await productoProvider.obtenerProductosDelCache();
+            final categoriasOffline =
+                await categoriasProvider.obtenerCategoriasDelCache();
             if (mounted && productosOffline.isNotEmpty) {
               setState(() {
                 productos = productosOffline;
@@ -384,8 +387,10 @@ class _SeleccionarProductosScreenState
           debugPrint('Error cargando productos/categorías: $e');
           // Modo offline: intentar solo desde caché/SQLite (sin llamar al servidor)
           try {
-            fetchedProductos = await productoProvider.obtenerProductosDelCache();
-            fetchedCategorias = await categoriasProvider.obtenerCategoriasDelCache();
+            fetchedProductos =
+                await productoProvider.obtenerProductosDelCache();
+            fetchedCategorias =
+                await categoriasProvider.obtenerCategoriasDelCache();
           } catch (_) {}
         }
         if (mounted) {
@@ -405,7 +410,8 @@ class _SeleccionarProductosScreenState
               } catch (_) {}
             }
             isLoading = false;
-            if (productos.isEmpty) errorMessage = 'No hay productos. Conecta para sincronizar.';
+            if (productos.isEmpty)
+              errorMessage = 'No hay productos. Conecta para sincronizar.';
           });
         }
       }
@@ -474,6 +480,21 @@ class _SeleccionarProductosScreenState
         _headerVisibility = newVisibility;
       });
     }
+  }
+
+  void _scrollProductosToTop() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (_scrollController.hasClients) {
+        _scrollController.jumpTo(0);
+      }
+      if (_headerVisibility != 1.0) {
+        setState(() {
+          _headerVisibility = 1.0;
+          _lastScrollOffset = 0.0;
+        });
+      }
+    });
   }
 
   void _centerCategoryButton(int index, List<Categoria> categorias) {
@@ -582,8 +603,12 @@ class _SeleccionarProductosScreenState
       builder: (ctx) {
         return StatefulBuilder(
           builder: (ctx2, setModalState) {
-            final cant = double.tryParse(cantidadController.text.replaceAll(',', '.')) ?? 0.0;
-            final sub = double.tryParse(subtotalController.text.replaceAll(',', '.')) ?? 0.0;
+            final cant =
+                double.tryParse(cantidadController.text.replaceAll(',', '.')) ??
+                    0.0;
+            final sub =
+                double.tryParse(subtotalController.text.replaceAll(',', '.')) ??
+                    0.0;
             final costoUnit = cant > 0 ? sub / cant : 0.0;
             final isValid = cant > 0 && sub >= 0;
             return Dialog(
@@ -607,7 +632,9 @@ class _SeleccionarProductosScreenState
                           color: cardBg,
                           border: Border(
                             bottom: BorderSide(
-                              color: isDark ? Colors.grey.shade800! : Colors.grey.shade200!,
+                              color: isDark
+                                  ? Colors.grey.shade800!
+                                  : Colors.grey.shade200!,
                               width: 1,
                             ),
                           ),
@@ -620,7 +647,8 @@ class _SeleccionarProductosScreenState
                                 color: AppTheme.primaryColor.withOpacity(0.15),
                                 borderRadius: BorderRadius.circular(14),
                               ),
-                              child: Icon(Icons.inventory_2_rounded, color: AppTheme.primaryColor, size: 26),
+                              child: Icon(Icons.inventory_2_rounded,
+                                  color: AppTheme.primaryColor, size: 26),
                             ),
                             const SizedBox(width: 14),
                             Expanded(
@@ -645,7 +673,8 @@ class _SeleccionarProductosScreenState
                         child: TextSelectionTheme(
                           data: TextSelectionThemeData(
                             cursorColor: AppTheme.primaryColor,
-                            selectionColor: AppTheme.primaryColor.withOpacity(0.3),
+                            selectionColor:
+                                AppTheme.primaryColor.withOpacity(0.3),
                             selectionHandleColor: AppTheme.primaryColor,
                           ),
                           child: Column(
@@ -674,25 +703,35 @@ class _SeleccionarProductosScreenState
                               TextField(
                                 controller: cantidadController,
                                 onChanged: (_) => setModalState(() {}),
-                                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                keyboardType:
+                                    const TextInputType.numberWithOptions(
+                                        decimal: true),
                                 inputFormatters: [
-                                  FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                                  FilteringTextInputFormatter.allow(
+                                      RegExp(r'^\d*\.?\d*')),
                                 ],
-                                style: TextStyle(color: textColor, fontSize: 17, fontWeight: FontWeight.w500),
+                                style: TextStyle(
+                                    color: textColor,
+                                    fontSize: 17,
+                                    fontWeight: FontWeight.w500),
                                 decoration: InputDecoration(
                                   hintText: 'Ej: 10',
-                                  hintStyle: TextStyle(color: subColor.withOpacity(0.7)),
+                                  hintStyle: TextStyle(
+                                      color: subColor.withOpacity(0.7)),
                                   filled: true,
                                   fillColor: fillField,
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 16, vertical: 14),
+                                  border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(14)),
                                   enabledBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(14),
                                     borderSide: BorderSide(color: borderColor),
                                   ),
                                   focusedBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(14),
-                                    borderSide: const BorderSide(color: AppTheme.primaryColor, width: 2),
+                                    borderSide: const BorderSide(
+                                        color: AppTheme.primaryColor, width: 2),
                                   ),
                                 ),
                               ),
@@ -709,14 +748,21 @@ class _SeleccionarProductosScreenState
                               TextField(
                                 controller: subtotalController,
                                 onChanged: (_) => setModalState(() {}),
-                                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                keyboardType:
+                                    const TextInputType.numberWithOptions(
+                                        decimal: true),
                                 inputFormatters: [
-                                  FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                                  FilteringTextInputFormatter.allow(
+                                      RegExp(r'^\d*\.?\d*')),
                                 ],
-                                style: TextStyle(color: textColor, fontSize: 17, fontWeight: FontWeight.w500),
+                                style: TextStyle(
+                                    color: textColor,
+                                    fontSize: 17,
+                                    fontWeight: FontWeight.w500),
                                 decoration: InputDecoration(
                                   hintText: '0.00',
-                                  hintStyle: TextStyle(color: subColor.withOpacity(0.7)),
+                                  hintStyle: TextStyle(
+                                      color: subColor.withOpacity(0.7)),
                                   prefixText: '\$ ',
                                   prefixStyle: TextStyle(
                                     fontSize: 17,
@@ -725,32 +771,39 @@ class _SeleccionarProductosScreenState
                                   ),
                                   filled: true,
                                   fillColor: fillField,
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 16, vertical: 14),
+                                  border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(14)),
                                   enabledBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(14),
                                     borderSide: BorderSide(color: borderColor),
                                   ),
                                   focusedBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(14),
-                                    borderSide: const BorderSide(color: AppTheme.primaryColor, width: 2),
+                                    borderSide: const BorderSide(
+                                        color: AppTheme.primaryColor, width: 2),
                                   ),
                                 ),
                               ),
                               if (cant > 0 && sub > 0) ...[
                                 const SizedBox(height: 16),
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 14, vertical: 10),
                                   decoration: BoxDecoration(
-                                    color: AppTheme.primaryColor.withOpacity(0.12),
+                                    color:
+                                        AppTheme.primaryColor.withOpacity(0.12),
                                     borderRadius: BorderRadius.circular(12),
                                     border: Border.all(
-                                      color: AppTheme.primaryColor.withOpacity(0.3),
+                                      color: AppTheme.primaryColor
+                                          .withOpacity(0.3),
                                       width: 1,
                                     ),
                                   ),
                                   child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
                                     children: [
                                       Text(
                                         'Costo unitario',
@@ -777,18 +830,25 @@ class _SeleccionarProductosScreenState
                                 children: [
                                   Expanded(
                                     child: TextButton(
-                                      onPressed: () => Navigator.pop(ctx, false),
+                                      onPressed: () =>
+                                          Navigator.pop(ctx, false),
                                       style: TextButton.styleFrom(
-                                        backgroundColor: isDark ? const Color(0xFF2A2A2A) : Colors.grey.shade200,
+                                        backgroundColor: isDark
+                                            ? const Color(0xFF2A2A2A)
+                                            : Colors.grey.shade200,
                                         foregroundColor: textColor,
                                         shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
+                                          borderRadius: BorderRadius.circular(
+                                              AppTheme.borderRadiusMainButtons),
                                         ),
-                                        padding: const EdgeInsets.symmetric(vertical: 14),
+                                        padding: const EdgeInsets.symmetric(
+                                            vertical: 14),
                                       ),
                                       child: const Text(
                                         'Cancelar',
-                                        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+                                        style: TextStyle(
+                                            fontWeight: FontWeight.w600,
+                                            fontSize: 16),
                                       ),
                                     ),
                                   ),
@@ -797,25 +857,40 @@ class _SeleccionarProductosScreenState
                                     child: ElevatedButton.icon(
                                       onPressed: isValid
                                           ? () {
-                                              final c = double.tryParse(cantidadController.text.replaceAll(',', '.')) ?? 0.0;
-                                              final s = double.tryParse(subtotalController.text.replaceAll(',', '.')) ?? 0.0;
+                                              final c = double.tryParse(
+                                                      cantidadController.text
+                                                          .replaceAll(
+                                                              ',', '.')) ??
+                                                  0.0;
+                                              final s = double.tryParse(
+                                                      subtotalController.text
+                                                          .replaceAll(
+                                                              ',', '.')) ??
+                                                  0.0;
                                               if (c <= 0 || s < 0) return;
                                               Navigator.pop(ctx, true);
                                             }
                                           : null,
-                                      icon: const Icon(Icons.add_rounded, size: 20),
+                                      icon: const Icon(Icons.add_rounded,
+                                          size: 20),
                                       label: const Text(
                                         'Agregar',
-                                        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+                                        style: TextStyle(
+                                            fontWeight: FontWeight.w600,
+                                            fontSize: 16),
                                       ),
                                       style: ElevatedButton.styleFrom(
                                         backgroundColor: AppTheme.primaryColor,
                                         foregroundColor: Colors.white,
-                                        disabledBackgroundColor: isDark ? Colors.grey.shade800 : Colors.grey.shade300,
+                                        disabledBackgroundColor: isDark
+                                            ? Colors.grey.shade800
+                                            : Colors.grey.shade300,
                                         shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
+                                          borderRadius: BorderRadius.circular(
+                                              AppTheme.borderRadiusMainButtons),
                                         ),
-                                        padding: const EdgeInsets.symmetric(vertical: 14),
+                                        padding: const EdgeInsets.symmetric(
+                                            vertical: 14),
                                         elevation: 2,
                                       ),
                                     ),
@@ -836,8 +911,10 @@ class _SeleccionarProductosScreenState
       },
     );
     // Leer valores antes de disponer; disponer en el siguiente frame para no usar el controller tras dispose
-    final cant = double.tryParse(cantidadController.text.replaceAll(',', '.')) ?? 0.0;
-    final sub = double.tryParse(subtotalController.text.replaceAll(',', '.')) ?? 0.0;
+    final cant =
+        double.tryParse(cantidadController.text.replaceAll(',', '.')) ?? 0.0;
+    final sub =
+        double.tryParse(subtotalController.text.replaceAll(',', '.')) ?? 0.0;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       cantidadController.dispose();
       subtotalController.dispose();
@@ -861,9 +938,11 @@ class _SeleccionarProductosScreenState
   /// Máximo permitido por stock (evita superar stock al agregar productos).
   /// En modo offline resta la cantidad ya reservada en ventas pendientes de sync.
   double _maxCantidadProducto(Producto producto) {
-    final reservada = context.read<VentasProvider>().cantidadReservadaOfflinePorProducto;
+    final reservada =
+        context.read<VentasProvider>().cantidadReservadaOfflinePorProducto;
     final base = (producto.stock ?? 999).toDouble();
-    final reservado = producto.id != null ? (reservada[producto.id!] ?? 0) : 0.0;
+    final reservado =
+        producto.id != null ? (reservada[producto.id!] ?? 0) : 0.0;
     return (base - reservado).clamp(0.0, double.infinity);
   }
 
@@ -876,12 +955,12 @@ class _SeleccionarProductosScreenState
 
     // Obtener el precio unitario promedio basado en la parte entera (sin decimales)
     final precioUnitarioPromedio = _getPrecioUnitarioPromedio(producto);
-    
+
     // Asegurar que el precio unitario no sea 0 (especialmente importante para mitades)
-    final precioFinal = precioUnitarioPromedio > 0 
+    final precioFinal = precioUnitarioPromedio > 0
         ? precioUnitarioPromedio * cantidad
-        : (_getPrecioUnitarioReal(producto) > 0 
-            ? _getPrecioUnitarioReal(producto) * cantidad 
+        : (_getPrecioUnitarioReal(producto) > 0
+            ? _getPrecioUnitarioReal(producto) * cantidad
             : producto.precio * cantidad);
 
     // El precio total es el precio unitario multiplicado por la cantidad completa (incluyendo decimales)
@@ -911,7 +990,7 @@ class _SeleccionarProductosScreenState
   double _getPrecioUnitarioReal(Producto producto) {
     // Este método devuelve el precio unitario base, considerando precios especiales y descuentos
     // El descuento global se aplica en el backend al confirmar la venta
-    
+
     // Primero verificar si hay precio especial para el cliente
     double precioBase;
     if (widget.cliente != null && preciosEspeciales.containsKey(producto.id)) {
@@ -919,13 +998,14 @@ class _SeleccionarProductosScreenState
     } else {
       precioBase = producto.precio;
     }
-    
+
     // Asegurar que el precio base no sea 0 o negativo
     if (precioBase <= 0) {
-      debugPrint('⚠️ ADVERTENCIA: Precio base 0 o negativo para producto ${producto.nombre}, usando precio del producto: ${producto.precio}');
+      debugPrint(
+          '⚠️ ADVERTENCIA: Precio base 0 o negativo para producto ${producto.nombre}, usando precio del producto: ${producto.precio}');
       precioBase = producto.precio > 0 ? producto.precio : 0.0;
     }
-    
+
     // Aplicar descuento del producto si está activo
     if (ProductoDescuentoHelper.tieneDescuentoActivo(producto)) {
       // Si hay precio especial, aplicar descuento sobre ese precio
@@ -934,7 +1014,7 @@ class _SeleccionarProductosScreenState
       // Asegurar que el precio con descuento no sea 0
       return precioConDescuento > 0 ? precioConDescuento : precioBase;
     }
-    
+
     return precioBase;
   }
 
@@ -949,7 +1029,7 @@ class _SeleccionarProductosScreenState
     // Calcular el precio unitario basándose solo en la parte entera de la cantidad
     // Esto asegura que las mitades no afecten el cálculo del precio unitario
     final cantidadEntera = cantidad.toInt();
-    
+
     // Si solo hay parte decimal (0.5, 1.5, etc.) sin parte entera, usar el precio base
     // para que cuando se multiplique por la cantidad decimal, dé el precio correcto
     if (cantidadEntera <= 0) {
@@ -957,12 +1037,14 @@ class _SeleccionarProductosScreenState
       // para que cuando se multiplique por 0.5, dé la mitad del precio
       // IMPORTANTE: Asegurar que siempre retorne un precio válido (no 0)
       final precioBase = _getPrecioUnitarioReal(producto);
-      debugPrint('🔍 _getPrecioUnitarioPromedio: cantidad=$cantidad, cantidadEntera=$cantidadEntera, precioBase=$precioBase, producto.precio=${producto.precio}');
-      
+      debugPrint(
+          '🔍 _getPrecioUnitarioPromedio: cantidad=$cantidad, cantidadEntera=$cantidadEntera, precioBase=$precioBase, producto.precio=${producto.precio}');
+
       if (precioBase <= 0) {
         // Si el precio base es 0 o negativo, usar el precio del producto directamente
         final precioFinal = producto.precio > 0 ? producto.precio : 0.0;
-        debugPrint('⚠️ Precio base 0, usando precio del producto: $precioFinal');
+        debugPrint(
+            '⚠️ Precio base 0, usando precio del producto: $precioFinal');
         return precioFinal;
       }
       debugPrint('✅ Retornando precio base: $precioBase');
@@ -975,13 +1057,13 @@ class _SeleccionarProductosScreenState
     if (pricingResults.containsKey(cacheKey)) {
       final precioTotalEntera = pricingResults[cacheKey]!.finalPrice;
       double precioUnitarioPromedio = precioTotalEntera / cantidadEntera;
-      
+
       // Aplicar descuento del producto si está activo (sobre el precio ya calculado con packs)
       if (ProductoDescuentoHelper.tieneDescuentoActivo(producto)) {
         final descuento = producto.descuento;
         precioUnitarioPromedio = precioUnitarioPromedio * (1 - descuento / 100);
       }
-      
+
       return precioUnitarioPromedio;
     }
 
@@ -1005,13 +1087,13 @@ class _SeleccionarProductosScreenState
 
       // Calcular el precio unitario promedio (precio total / cantidad entera)
       double precioUnitarioPromedio = pricingResult.finalPrice / cantidadEntera;
-      
+
       // Aplicar descuento del producto si está activo (sobre el precio ya calculado con packs)
       if (ProductoDescuentoHelper.tieneDescuentoActivo(producto)) {
         final descuento = producto.descuento;
         precioUnitarioPromedio = precioUnitarioPromedio * (1 - descuento / 100);
       }
-      
+
       return precioUnitarioPromedio;
     } catch (e) {
       // Fallback to old logic if there's an error
@@ -1024,16 +1106,20 @@ class _SeleccionarProductosScreenState
   }
 
   /// Widget para mostrar precio con descuento en ventas
-  Widget _buildPrecioConDescuentoEnVentas(BuildContext context, Producto producto) {
-    final tieneDescuentoActivo = ProductoDescuentoHelper.tieneDescuentoActivo(producto);
-    final precioBase = widget.cliente != null && preciosEspeciales.containsKey(producto.id)
-        ? preciosEspeciales[producto.id]!
-        : producto.precio;
+  Widget _buildPrecioConDescuentoEnVentas(
+      BuildContext context, Producto producto) {
+    final tieneDescuentoActivo =
+        ProductoDescuentoHelper.tieneDescuentoActivo(producto);
+    final precioBase =
+        widget.cliente != null && preciosEspeciales.containsKey(producto.id)
+            ? preciosEspeciales[producto.id]!
+            : producto.precio;
     final precioConDescuento = tieneDescuentoActivo
         ? precioBase * (1 - producto.descuento / 100)
         : precioBase;
     final precioUnitarioPromedio = _getPrecioUnitarioPromedio(producto);
-    final fechaExpiracion = ProductoDescuentoHelper.obtenerFechaExpiracionFormateada(producto);
+    final fechaExpiracion =
+        ProductoDescuentoHelper.obtenerFechaExpiracionFormateada(producto);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     // Si hay descuento activo y el precio promedio es diferente al precio base
@@ -1230,7 +1316,8 @@ class _SeleccionarProductosScreenState
 
   /// Total formateado para modo compra (verde, mismo estilo que venta).
   Widget _formatearTotalCompra() {
-    final total = _productosCompra.fold<double>(0, (s, p) => s + p.precio * p.cantidad);
+    final total =
+        _productosCompra.fold<double>(0, (s, p) => s + p.precio * p.cantidad);
     final totalStr = total.toStringAsFixed(2);
     final partes = totalStr.split('.');
     final parteEntera = partes[0];
@@ -1426,8 +1513,9 @@ class _SeleccionarProductosScreenState
                           final maxStock = _maxCantidadProducto(producto);
                           final q = (1.0).clamp(0.0, maxStock);
                           cantidades[producto.id!] = q;
-                          cantidadControllers[producto.id!]!.text =
-                              q % 1 == 0 ? q.toInt().toString() : q.toStringAsFixed(1);
+                          cantidadControllers[producto.id!]!.text = q % 1 == 0
+                              ? q.toInt().toString()
+                              : q.toStringAsFixed(1);
                         });
                         Navigator.pop(context);
                       },
@@ -1522,10 +1610,13 @@ class _SeleccionarProductosScreenState
                       onTap: () {
                         setState(() {
                           final maxStock = _maxCantidadProducto(producto);
-                          final q = quantityPrice.quantity.toDouble().clamp(0.0, maxStock);
+                          final q = quantityPrice.quantity
+                              .toDouble()
+                              .clamp(0.0, maxStock);
                           cantidades[producto.id!] = q;
-                          cantidadControllers[producto.id!]!.text =
-                              q % 1 == 0 ? q.toInt().toString() : q.toStringAsFixed(1);
+                          cantidadControllers[producto.id!]!.text = q % 1 == 0
+                              ? q.toInt().toString()
+                              : q.toStringAsFixed(1);
                         });
                         Navigator.pop(context);
                       },
@@ -1685,12 +1776,14 @@ class _SeleccionarProductosScreenState
         alignment: const Alignment(0, 0.35),
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: EdgeInsets.fromLTRB(padding, padding, padding, padding + bottomPadding),
+          padding: EdgeInsets.fromLTRB(
+              padding, padding, padding, padding + bottomPadding),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.inventory_2_outlined, size: iconSize, color: Colors.grey.shade400),
+              Icon(Icons.inventory_2_outlined,
+                  size: iconSize, color: Colors.grey.shade400),
               SizedBox(height: spacing1),
               Text(
                 hasFiltros
@@ -1740,10 +1833,14 @@ class _SeleccionarProductosScreenState
     // Lógica de filtrado: nombre + marca + categoría
     final filteredProductos = productos.where((producto) {
       final matchesSearch = searchQuery.isEmpty ||
-          producto.nombre.toLowerCase().contains(searchQuery.trim().toLowerCase());
+          producto.nombre
+              .toLowerCase()
+              .contains(searchQuery.trim().toLowerCase());
       final matchesMarca = searchMarca.isEmpty ||
           (producto.marca != null &&
-              producto.marca!.toLowerCase().contains(searchMarca.trim().toLowerCase()));
+              producto.marca!
+                  .toLowerCase()
+                  .contains(searchMarca.trim().toLowerCase()));
       final matchesCategory = selectedCategory == null ||
           producto.categoriaNombre == selectedCategory;
       return matchesSearch && matchesMarca && matchesCategory;
@@ -1758,7 +1855,8 @@ class _SeleccionarProductosScreenState
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         centerTitle: true,
-        title: Text(widget.appBarTitle ?? 'Nueva venta', style: AppTheme.appBarTitleStyle),
+        title: Text(widget.appBarTitle ?? 'Nueva venta',
+            style: AppTheme.appBarTitleStyle),
         actions: [],
       ),
       body: isLoading
@@ -1788,7 +1886,8 @@ class _SeleccionarProductosScreenState
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                              AppTheme.primaryColor),
                         ),
                         SizedBox(height: 16),
                         Text(
@@ -1810,7 +1909,7 @@ class _SeleccionarProductosScreenState
                 top: true,
                 bottom: false,
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 10),
                   child: Column(
                     mainAxisSize: MainAxisSize.max,
                     children: [
@@ -1821,844 +1920,1092 @@ class _SeleccionarProductosScreenState
                           child: Opacity(
                             opacity: _headerVisibility,
                             child: Padding(
-                              padding: const EdgeInsets.only(bottom: 6.0),
-                          child: Builder(
-                            builder: (context) {
-                        final screenHeight = MediaQuery.of(context).size.height;
-                        final headerNeedsLimit =
-                            isKeyboardVisible || _advancedSearchExpanded;
-                        final minListHeight = 360.0;
-                        final maxHeaderHeight = (screenHeight - minListHeight - 32)
-                            .clamp(120.0, double.infinity);
+                              padding: const EdgeInsets.only(bottom: 10.0),
+                              child: Builder(
+                                builder: (context) {
+                                  final screenHeight =
+                                      MediaQuery.of(context).size.height;
+                                  final headerNeedsLimit = isKeyboardVisible ||
+                                      _advancedSearchExpanded;
+                                  final minListHeight = 360.0;
+                                  final maxHeaderHeight =
+                                      (screenHeight - minListHeight - 32)
+                                          .clamp(120.0, double.infinity);
 
-                        Widget headerContent = Column(
-                          key: _headerKey,
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            // Barra de búsqueda usando HeaderConBuscador
-                            HeaderConBuscador(
-                              leadingIcon: Icons.inventory_2,
-                              title: 'Buscar Productos',
-                              subtitle: '${productos.length} productos disponibles',
-                              controller: _searchController,
-                              hintText: 'Buscar productos por nombre...',
-                              onChanged: (value) {
-                                setState(() {
-                                  searchQuery = value;
-                                  if (value.isNotEmpty) {
-                                    selectedCategory = null;
-                                  } else {
-                                    if (categorias.isNotEmpty) {
-                                      selectedCategory = categorias.first.nombre;
-                                    }
-                                  }
-                                });
-                              },
-                              onClear: () {
-                                setState(() {
-                                  searchQuery = '';
-                                  if (categorias.isNotEmpty) {
-                                    selectedCategory = categorias.first.nombre;
-                                  }
-                                });
-                                _searchController.clear();
-                              },
-                              trailing: IconButton(
-                                icon: Icon(
-                                  Icons.tune_rounded,
-                                  color: _advancedSearchExpanded
-                                      ? AppTheme.primaryColor
-                                      : (Theme.of(context).brightness == Brightness.dark
-                                          ? Colors.grey[400]
-                                          : Colors.grey[600]),
-                                  size: 22,
-                                ),
-                                onPressed: () {
-                                  setState(() => _advancedSearchExpanded = !_advancedSearchExpanded);
-                                },
-                                tooltip: 'Buscador avanzado',
-                              ),
-                            ),
-
-                            // Buscador avanzado (Marca + limpiar como icono en el input)
-                            AnimatedSize(
-                              duration: const Duration(milliseconds: 250),
-                              curve: Curves.easeInOut,
-                              child: _advancedSearchExpanded
-                                  ? Padding(
-                                      padding: EdgeInsets.only(
-                                        top: isSmallPhone ? 6 : 10,
-                                      ),
-                                      child: Builder(
-                                        builder: (context) {
-                                          final isDark = Theme.of(context).brightness == Brightness.dark;
-                                          return Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Text(
-                                                'Marca',
-                                                style: TextStyle(
-                                                  fontSize: isSmallPhone ? 11 : 12,
-                                                  fontWeight: FontWeight.w600,
-                                                  letterSpacing: 0.5,
-                                                  color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
-                                                ),
-                                              ),
-                                              SizedBox(height: isSmallPhone ? 4 : 6),
-                                              TextField(
-                                                controller: _marcaController,
-                                                onChanged: (value) => setState(() => searchMarca = value),
-                                                style: TextStyle(
-                                                  fontSize: isSmallPhone ? 14 : 15,
-                                                  color: isDark ? Colors.white : Colors.black87,
-                                                ),
-                                                decoration: InputDecoration(
-                                                  hintText: 'Filtrar por marca',
-                                                  hintStyle: TextStyle(
-                                                    color: Colors.grey.shade500,
-                                                    fontSize: isSmallPhone ? 13 : 14,
-                                                  ),
-                                                  filled: true,
-                                                  fillColor: isDark ? const Color(0xFF2A2A2A) : Colors.grey.shade50,
-                                                  contentPadding: EdgeInsets.symmetric(
-                                                    horizontal: 14,
-                                                    vertical: isSmallPhone ? 10 : 12,
-                                                  ),
-                                                  border: OutlineInputBorder(
-                                                    borderRadius: BorderRadius.circular(12),
-                                                    borderSide: BorderSide(
-                                                      color: isDark ? Colors.grey.shade600 : Colors.grey.shade300,
-                                                    ),
-                                                  ),
-                                                  enabledBorder: OutlineInputBorder(
-                                                    borderRadius: BorderRadius.circular(12),
-                                                    borderSide: BorderSide(
-                                                      color: isDark ? Colors.grey.shade600 : Colors.grey.shade300,
-                                                    ),
-                                                  ),
-                                                  focusedBorder: OutlineInputBorder(
-                                                    borderRadius: BorderRadius.circular(12),
-                                                    borderSide: const BorderSide(
-                                                      color: AppTheme.primaryColor,
-                                                      width: 2,
-                                                    ),
-                                                  ),
-                                                  prefixIcon: Icon(
-                                                    Icons.sell_outlined,
-                                                    size: 20,
-                                                    color: isDark ? Colors.grey.shade500 : Colors.grey.shade600,
-                                                  ),
-                                                  suffixIcon: IconButton(
-                                                    onPressed: () {
-                                                      setState(() {
-                                                        searchQuery = '';
-                                                        searchMarca = '';
-                                                        if (categorias.isNotEmpty) {
-                                                          selectedCategory = categorias.first.nombre;
-                                                        }
-                                                        _marcaController.clear();
-                                                        _searchController.clear();
-                                                      });
-                                                    },
-                                                    icon: Icon(
-                                                      Icons.clear_all_rounded,
-                                                      size: 20,
-                                                      color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
-                                                    ),
-                                                    tooltip: 'Limpiar filtros',
-                                                    style: IconButton.styleFrom(
-                                                      padding: const EdgeInsets.all(8),
-                                                      minimumSize: const Size(36, 36),
-                                                    ),
-                                                  ),
-                                                ),
-                                              ),
-                                            ],
-                                          );
-                                        },
-                                      ),
-                                    )
-                                  : const SizedBox.shrink(),
-                            ),
-
-                            SizedBox(height: isSmallPhone ? 8 : 12),
-
-                            // Filtros de categorías (solo cuando no hay búsqueda ni filtro por marca)
-                            if (searchQuery.isEmpty && searchMarca.isEmpty && categorias.isNotEmpty) ...[
-                              SizedBox(
-                                height: isCompactScreen ? 42 : 45,
-                                child: ListView.builder(
-                                  controller: _categoriesScrollController,
-                                  scrollDirection: Axis.horizontal,
-                                  itemCount: categorias.length,
-                                  itemBuilder: (context, index) {
-                                    final categoria = categorias[index];
-                                    final isSelected =
-                                        selectedCategory == categoria.nombre;
-                                    final categoriaColor =
-                                        _parseColor(categoria.colorHex);
-                                    return Padding(
-                                      padding: const EdgeInsets.only(right: 10),
-                                      child: GestureDetector(
-                                        onTap: () {
+                                  Widget headerContent = Column(
+                                    key: _headerKey,
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.stretch,
+                                    children: [
+                                      // Barra de búsqueda usando HeaderConBuscador
+                                      HeaderConBuscador(
+                                        leadingIcon: Icons.inventory_2,
+                                        title: 'Buscar Productos',
+                                        subtitle:
+                                            '${productos.length} productos disponibles',
+                                        controller: _searchController,
+                                        hintText:
+                                            'Buscar productos por nombre...',
+                                        onChanged: (value) {
                                           setState(() {
-                                            selectedCategory = categoria.nombre;
-                                          });
-                                          _centerCategoryButton(index, categorias);
-                                        },
-                                        child: Container(
-                                          padding: EdgeInsets.symmetric(
-                                              horizontal: 12,
-                                              vertical: isCompactScreen ? 10 : 12),
-                                          decoration: BoxDecoration(
-                                            color: isSelected
-                                                ? categoriaColor
-                                                : Theme.of(context).cardTheme.color,
-                                            borderRadius: BorderRadius.circular(8),
-                                            border: Border.all(
-                                              color: isSelected
-                                                  ? categoriaColor
-                                                  : Colors.grey.shade300,
-                                              width: 1,
-                                            ),
-                                          ),
-                                          child: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Text(
-                                                categoria.nombre[0].toUpperCase() +
-                                                    categoria.nombre.substring(1),
-                                                style: TextStyle(
-                                                  fontSize: 14,
-                                                  fontWeight: isSelected
-                                                      ? FontWeight.w600
-                                                      : FontWeight.normal,
-                                                  color: isSelected
-                                                      ? Colors.white
-                                                      : Theme.of(context)
-                                                          .textTheme
-                                                          .bodyLarge
-                                                          ?.color,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                ),
-                              )
-                            ],
-
-                            // Indicador de búsqueda global (nombre o marca)
-                            if (filteredProductos.isNotEmpty) ...[
-                              if (searchQuery.isNotEmpty || searchMarca.isNotEmpty) ...[
-                                Row(
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 12, vertical: 6),
-                                      decoration: BoxDecoration(
-                                        color: AppTheme.primaryColor.withOpacity(0.1),
-                                        borderRadius: BorderRadius.circular(20),
-                                        border: Border.all(
-                                          color:
-                                              AppTheme.primaryColor.withOpacity(0.3),
-                                          width: 1,
-                                        ),
-                                      ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Icon(
-                                            Icons.search,
-                                            size: 16,
-                                            color: AppTheme.primaryColor,
-                                          ),
-                                          const SizedBox(width: 6),
-                                          Text(
-                                            'Búsqueda global',
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              fontWeight: FontWeight.w600,
-                                              color: AppTheme.primaryColor,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Text(
-                                        '${filteredProductos.length} resultado${filteredProductos.length == 1 ? '' : 's'}',
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w500,
-                                          color: Colors.grey.shade600,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ]
-                            ],
-                          ],
-                        );
-
-                        if (headerNeedsLimit) {
-                          return ConstrainedBox(
-                            constraints: BoxConstraints(maxHeight: maxHeaderHeight),
-                            child: SingleChildScrollView(
-                              child: headerContent,
-                            ),
-                          );
-                        }
-
-                        return headerContent;
-                            },
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  // Lista de productos scrolleable (estado vacío igual que productos_screen)
-                  Expanded(
-                    child: filteredProductos.isEmpty
-                        ? _buildEmptyStateProductos(
-                            searchQuery: searchQuery,
-                            searchMarca: searchMarca,
-                            selectedCategory: selectedCategory,
-                            productosVacios: productos.isEmpty,
-                          )
-                        : ClipRRect(
-                              borderRadius: const BorderRadius.only(
-                                topLeft: Radius.circular(15),
-                                topRight: Radius.circular(15),
-                              ),
-                              child: ListView.builder(
-                                controller: _scrollController,
-                                itemCount: filteredProductos.length,
-                                itemBuilder: (context, index) {
-                                  final producto = filteredProductos[index];
-                                  final cantidad = cantidades[producto.id] ?? 0;
-                                  final isExpanded =
-                                      _expandedProducts.contains(producto.id);
-
-                                  // Crear o reutilizar GlobalKey para este producto
-                                  if (!_productKeys.containsKey(producto.id)) {
-                                    _productKeys[producto.id!] = GlobalKey();
-                                  }
-
-                                  if (!cantidadControllers
-                                      .containsKey(producto.id)) {
-                                    cantidadControllers[producto.id!] =
-                                        TextEditingController(
-                                      text: cantidad % 1 == 0
-                                          ? cantidad.toInt().toString()
-                                          : cantidad.toStringAsFixed(1),
-                                    );
-                                  } else {
-                                    cantidadControllers[producto.id!]!.text =
-                                        cantidad % 1 == 0
-                                            ? cantidad.toInt().toString()
-                                            : cantidad.toStringAsFixed(1);
-                                  }
-
-                                  return Container(
-                                    key: _productKeys[producto.id],
-                                    height:
-                                        80, // Altura fija para todos los items
-                                    margin: const EdgeInsets.only(bottom: 8), // Espacio entre items
-                                    child: ClipRRect(
-                                      borderRadius: BorderRadius.circular(12), // Border radius para todo el contenedor
-                                      child: Stack(children: [
-                                        // Contenedor principal clickeable
-                                        GestureDetector(
-                                          behavior: HitTestBehavior.opaque,
-                                          onTap: () {
-                                            if (widget.modoCompra) {
-                                              _showDialogCantidadSubtotalCompra(producto);
-                                              return;
-                                            }
-                                            setState(() {
-                                              if (isExpanded) {
-                                                _expandedProducts
-                                                    .remove(producto.id);
-                                              } else {
-                                                _expandedProducts
-                                                    .add(producto.id!);
+                                            searchQuery = value;
+                                            if (value.isNotEmpty) {
+                                              selectedCategory = null;
+                                            } else {
+                                              if (categorias.isNotEmpty) {
+                                                selectedCategory =
+                                                    categorias.first.nombre;
                                               }
-                                            });
+                                            }
+                                          });
+                                        },
+                                        onClear: () {
+                                          setState(() {
+                                            searchQuery = '';
+                                            if (categorias.isNotEmpty) {
+                                              selectedCategory =
+                                                  categorias.first.nombre;
+                                            }
+                                          });
+                                          _searchController.clear();
+                                        },
+                                        trailing: IconButton(
+                                          icon: Icon(
+                                            Icons.tune_rounded,
+                                            color: _advancedSearchExpanded
+                                                ? AppTheme.primaryColor
+                                                : (Theme.of(context)
+                                                            .brightness ==
+                                                        Brightness.dark
+                                                    ? Colors.grey[400]
+                                                    : Colors.grey[600]),
+                                            size: 22,
+                                          ),
+                                          onPressed: () {
+                                            setState(() =>
+                                                _advancedSearchExpanded =
+                                                    !_advancedSearchExpanded);
                                           },
-                                          child: Container(
-                                          decoration: BoxDecoration(
-                                            color: Theme.of(context)
-                                                        .brightness ==
-                                                    Brightness.dark
-                                                ? (index % 2 == 0
-                                                    ? const Color(0xFF1A1A1A)
-                                                    : const Color(0xFF252525))
-                                                : (index % 2 == 0
-                                                    ? Colors.white
-                                                    : Colors.grey.shade50),
-                                            // Agregar border radius
-                                            borderRadius: BorderRadius.circular(12),
-                                          ),
-                                          child: Padding(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 12,
-                                              vertical: 10,
-                                            ),
-                                            child: Row(
-                                              children: [
-                                                // Información del producto (siempre visible)
-                                                Expanded(
-                                                  child: Column(
-                                                    mainAxisAlignment:
-                                                        MainAxisAlignment
-                                                            .center,
-                                                    crossAxisAlignment:
-                                                        CrossAxisAlignment
-                                                            .start,
-                                                    children: [
-                                                      // Nombre del producto con animación si hay overflow
-                                                      AnimatedTextMarquee(
-                                                        text: producto.nombre,
-                                                        style: TextStyle(
-                                                          fontSize: 16,
-                                                          fontWeight:
-                                                              FontWeight.bold,
-                                                          color: Theme.of(context)
-                                                                      .brightness ==
-                                                                  Brightness
-                                                                      .dark
-                                                              ? Colors.white
-                                                              : AppTheme
-                                                                  .primaryColor,
-                                                        ),
-                                                      ),
-                                                      const SizedBox(height: 4),
-                                                      Row(
-                                                        children: [
-                                                          _formatearPrecioConDecimales(
-                                                              _getPrecioUnitarioPromedio(
-                                                                  producto)),
-                                                          const SizedBox(
-                                                              width: 4),
-                                                          Text(
-                                                            'c/u',
-                                                            style: TextStyle(
-                                                              fontSize: 14,
-                                                              color: Theme.of(context)
-                                                                          .brightness ==
-                                                                      Brightness
-                                                                          .dark
-                                                                  ? Colors.grey
-                                                                      .shade400
-                                                                  : Colors.grey
-                                                                      .shade600,
-                                                              fontWeight:
-                                                                  FontWeight
-                                                                      .w500,
-                                                            ),
-                                                          ),
-                                                          if (producto.stock != null && producto.stock! == 0) ...[
-                                                            const SizedBox(width: 8),
-                                                            Text(
-                                                              'Sin stock',
-                                                              style: TextStyle(
-                                                                fontSize: 12,
-                                                                fontWeight: FontWeight.w600,
-                                                                color: Colors.orange.shade700,
-                                                              ),
-                                                            ),
-                                                          ],
-                                                        ],
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ),
-                                                // Ícono indicador de expansión
-                                                Icon(
-                                                  Icons.more_vert,
-                                                  color: AppTheme.primaryColor,
-                                                  size: 24,
-                                                ),
-                                              ],
-                                            ),
-                                          ),
+                                          tooltip: 'Buscador avanzado',
                                         ),
                                       ),
-                                      // Controles de cantidad superpuestos (derecha) con animación
-                                      Positioned(
-                                        right: 0,
-                                        top: 0,
-                                        bottom: 0,
-                                        child: AnimatedSize(
-                                          duration:
-                                              const Duration(milliseconds: 300),
-                                          curve: Curves.easeInOut,
-                                          child: isExpanded
-                                              ? Container(
-                                                  decoration: BoxDecoration(
-                                                    color: Theme.of(context)
+
+                                      // Buscador avanzado (Marca + limpiar como icono en el input)
+                                      AnimatedSize(
+                                        duration:
+                                            const Duration(milliseconds: 250),
+                                        curve: Curves.easeInOut,
+                                        child: _advancedSearchExpanded
+                                            ? Padding(
+                                                padding: EdgeInsets.only(
+                                                  top: isSmallPhone ? 6 : 10,
+                                                ),
+                                                child: Builder(
+                                                  builder: (context) {
+                                                    final isDark =
+                                                        Theme.of(context)
                                                                 .brightness ==
-                                                            Brightness.dark
-                                                        ? (index % 2 == 0
-                                                            ? const Color(
-                                                                0xFF1A1A1A)
-                                                            : const Color(
-                                                                0xFF252525))
-                                                        : (index % 2 == 0
-                                                            ? Colors.white
-                                                            : Colors
-                                                                .grey.shade50),
-                                                    // Agregar border radius también al contenedor expandido
-                                                    borderRadius: BorderRadius.circular(12),
-                                                  ),
-                                                  padding:
-                                                      const EdgeInsets.only(
-                                                    left: 8,
-                                                    right: 12,
-                                                  ),
-                                                  child: Row(
-                                                    mainAxisSize:
-                                                        MainAxisSize.min,
-                                                    children: [
-                                                      // Botón para precios especiales/packs (solo si tiene)
-                                                      if (producto
-                                                              .quantityPrices
-                                                              .isNotEmpty ||
-                                                          _tienePrecioEspecial(
-                                                              producto))
-                                                        Padding(
-                                                          padding:
-                                                              const EdgeInsets
-                                                                  .only(
-                                                            right: 4,
-                                                          ),
-                                                          child: IconButton(
-                                                            icon: Icon(
-                                                              Icons.local_offer,
-                                                              color: producto
-                                                                      .quantityPrices
-                                                                      .isNotEmpty
-                                                                  ? Colors
-                                                                      .orange
-                                                                  : Colors.grey,
-                                                              size: 22,
-                                                            ),
-                                                            onPressed: producto
-                                                                    .quantityPrices
-                                                                    .isNotEmpty
-                                                                ? () {
-                                                                    _mostrarPacksDisponibles(
-                                                                        producto);
-                                                                  }
-                                                                : null,
-                                                            tooltip: producto
-                                                                    .quantityPrices
-                                                                    .isNotEmpty
-                                                                ? 'Ver Packs Disponibles'
-                                                                : 'Sin packs',
-                                                          ),
-                                                        ),
-                                                      // Botón 0.5 (solo si el producto permite mitades)
-                                                      if (producto.half)
-                                                        IconButton(
-                                                          icon: Icon(
-                                                            (cantidad % 1 == 0)
-                                                                ? Icons
-                                                                    .hide_source_outlined
-                                                                : Icons
-                                                                    .remove_circle_outline,
-                                                            color:
-                                                                Colors.orange,
-                                                            size: 26,
-                                                          ),
-                                                          onPressed: () {
-                                                            setState(() {
-                                                              final maxStock = _maxCantidadProducto(producto);
-                                                              double current =
-                                                                  cantidades[producto
-                                                                          .id!] ??
-                                                                      0;
-                                                              if (current % 1 ==
-                                                                  0) {
-                                                                if (current < maxStock) {
-                                                                  current = (current + 0.5).clamp(0.0, maxStock);
-                                                                }
-                                                              } else {
-                                                                if (current >= 0.5) {
-                                                                  current -= 0.5;
-                                                                }
-                                                              }
-                                                              cantidades[producto
-                                                                      .id!] =
-                                                                  current;
-                                                              cantidadControllers[
-                                                                      producto
-                                                                          .id!]!
-                                                                  .text = current %
-                                                                          1 ==
-                                                                      0
-                                                                  ? current
-                                                                      .toInt()
-                                                                      .toString()
-                                                                  : current
-                                                                      .toStringAsFixed(
-                                                                          1);
-                                                              _clearPricingCache();
-                                                            });
-                                                          },
-                                                        ),
-                                                      // Botón -1
-                                                      IconButton(
-                                                        icon: const Icon(
-                                                          Icons
-                                                              .remove_circle_outline,
-                                                          color: Colors.red,
-                                                          size: 26,
-                                                        ),
-                                                        onPressed: () {
-                                                          setState(() {
-                                                            double current =
-                                                                cantidades[producto
-                                                                        .id!] ??
-                                                                    0;
-                                                            if (current > 0) {
-                                                              current -= 1;
-                                                              cantidades[producto
-                                                                      .id!] =
-                                                                  current;
-                                                              cantidadControllers[
-                                                                      producto
-                                                                          .id!]!
-                                                                  .text = current %
-                                                                          1 ==
-                                                                      0
-                                                                  ? current
-                                                                      .toInt()
-                                                                      .toString()
-                                                                  : current
-                                                                      .toStringAsFixed(
-                                                                          1);
-                                                              _clearPricingCache();
-                                                            }
-                                                          });
-                                                        },
-                                                      ),
-                                                      // Campo cantidad
-                                                      Container(
-                                                        width: 55,
-                                                        height: 36,
-                                                        decoration:
-                                                            BoxDecoration(
-                                                          border: Border.all(
-                                                              color: Theme.of(context)
-                                                                          .brightness ==
-                                                                      Brightness
-                                                                          .dark
-                                                                  ? Colors.grey
-                                                                      .shade600
-                                                                  : Colors.grey
-                                                                      .shade300),
-                                                          borderRadius:
-                                                              BorderRadius
-                                                                  .circular(8),
-                                                          color: Theme.of(context)
-                                                                      .brightness ==
-                                                                  Brightness
-                                                                      .dark
-                                                              ? const Color(
-                                                                  0xFF2A2A2A)
-                                                              : Colors.white,
-                                                        ),
-                                                        child: TextField(
-                                                          controller:
-                                                              cantidadControllers[
-                                                                  producto.id!],
-                                                          keyboardType:
-                                                              TextInputType
-                                                                  .number,
-                                                          textAlign:
-                                                              TextAlign.center,
+                                                            Brightness.dark;
+                                                    return Column(
+                                                      crossAxisAlignment:
+                                                          CrossAxisAlignment
+                                                              .start,
+                                                      mainAxisSize:
+                                                          MainAxisSize.min,
+                                                      children: [
+                                                        Text(
+                                                          'Marca',
                                                           style: TextStyle(
-                                                            fontSize: 15,
+                                                            fontSize:
+                                                                isSmallPhone
+                                                                    ? 11
+                                                                    : 12,
                                                             fontWeight:
-                                                                FontWeight.bold,
-                                                            color: Theme.of(context)
-                                                                        .brightness ==
-                                                                    Brightness
-                                                                        .dark
+                                                                FontWeight.w600,
+                                                            letterSpacing: 0.5,
+                                                            color: isDark
+                                                                ? Colors.grey
+                                                                    .shade400
+                                                                : Colors.grey
+                                                                    .shade600,
+                                                          ),
+                                                        ),
+                                                        SizedBox(
+                                                            height: isSmallPhone
+                                                                ? 4
+                                                                : 6),
+                                                        TextField(
+                                                          controller:
+                                                              _marcaController,
+                                                          onChanged: (value) =>
+                                                              setState(() =>
+                                                                  searchMarca =
+                                                                      value),
+                                                          style: TextStyle(
+                                                            fontSize:
+                                                                isSmallPhone
+                                                                    ? 14
+                                                                    : 15,
+                                                            color: isDark
                                                                 ? Colors.white
-                                                                : Colors.black,
+                                                                : Colors
+                                                                    .black87,
                                                           ),
                                                           decoration:
                                                               InputDecoration(
+                                                            hintText:
+                                                                'Filtrar por marca',
+                                                            hintStyle:
+                                                                TextStyle(
+                                                              color: Colors.grey
+                                                                  .shade500,
+                                                              fontSize:
+                                                                  isSmallPhone
+                                                                      ? 13
+                                                                      : 14,
+                                                            ),
+                                                            filled: true,
+                                                            fillColor: isDark
+                                                                ? const Color(
+                                                                    0xFF2A2A2A)
+                                                                : Colors.grey
+                                                                    .shade50,
+                                                            contentPadding:
+                                                                EdgeInsets
+                                                                    .symmetric(
+                                                              horizontal: 14,
+                                                              vertical:
+                                                                  isSmallPhone
+                                                                      ? 10
+                                                                      : 12,
+                                                            ),
                                                             border:
                                                                 OutlineInputBorder(
                                                               borderRadius:
                                                                   BorderRadius
                                                                       .circular(
-                                                                          8),
+                                                                          12),
                                                               borderSide:
-                                                                  BorderSide
-                                                                      .none,
+                                                                  BorderSide(
+                                                                color: isDark
+                                                                    ? Colors
+                                                                        .grey
+                                                                        .shade600
+                                                                    : Colors
+                                                                        .grey
+                                                                        .shade300,
+                                                              ),
                                                             ),
                                                             enabledBorder:
                                                                 OutlineInputBorder(
                                                               borderRadius:
                                                                   BorderRadius
                                                                       .circular(
-                                                                          8),
+                                                                          12),
                                                               borderSide:
-                                                                  BorderSide
-                                                                      .none,
+                                                                  BorderSide(
+                                                                color: isDark
+                                                                    ? Colors
+                                                                        .grey
+                                                                        .shade600
+                                                                    : Colors
+                                                                        .grey
+                                                                        .shade300,
+                                                              ),
                                                             ),
                                                             focusedBorder:
                                                                 OutlineInputBorder(
                                                               borderRadius:
                                                                   BorderRadius
                                                                       .circular(
-                                                                          8),
+                                                                          12),
                                                               borderSide:
-                                                                  BorderSide
-                                                                      .none,
+                                                                  const BorderSide(
+                                                                color: AppTheme
+                                                                    .primaryColor,
+                                                                width: 2,
+                                                              ),
                                                             ),
-                                                            errorBorder:
-                                                                OutlineInputBorder(
-                                                              borderRadius:
-                                                                  BorderRadius
-                                                                      .circular(
-                                                                          8),
-                                                              borderSide:
-                                                                  BorderSide
-                                                                      .none,
+                                                            prefixIcon: Icon(
+                                                              Icons
+                                                                  .sell_outlined,
+                                                              size: 20,
+                                                              color: isDark
+                                                                  ? Colors.grey
+                                                                      .shade500
+                                                                  : Colors.grey
+                                                                      .shade600,
                                                             ),
-                                                            focusedErrorBorder:
-                                                                OutlineInputBorder(
-                                                              borderRadius:
-                                                                  BorderRadius
-                                                                      .circular(
-                                                                          8),
-                                                              borderSide:
-                                                                  BorderSide
-                                                                      .none,
+                                                            suffixIcon:
+                                                                IconButton(
+                                                              onPressed: () {
+                                                                setState(() {
+                                                                  searchQuery =
+                                                                      '';
+                                                                  searchMarca =
+                                                                      '';
+                                                                  if (categorias
+                                                                      .isNotEmpty) {
+                                                                    selectedCategory =
+                                                                        categorias
+                                                                            .first
+                                                                            .nombre;
+                                                                  }
+                                                                  _marcaController
+                                                                      .clear();
+                                                                  _searchController
+                                                                      .clear();
+                                                                });
+                                                              },
+                                                              icon: Icon(
+                                                                Icons
+                                                                    .clear_all_rounded,
+                                                                size: 20,
+                                                                color: isDark
+                                                                    ? Colors
+                                                                        .grey
+                                                                        .shade400
+                                                                    : Colors
+                                                                        .grey
+                                                                        .shade600,
+                                                              ),
+                                                              tooltip:
+                                                                  'Limpiar filtros',
+                                                              style: IconButton
+                                                                  .styleFrom(
+                                                                padding:
+                                                                    const EdgeInsets
+                                                                        .all(8),
+                                                                minimumSize:
+                                                                    const Size(
+                                                                        36, 36),
+                                                              ),
                                                             ),
-                                                            contentPadding:
-                                                                const EdgeInsets
-                                                                    .symmetric(
-                                                                    vertical:
-                                                                        6),
                                                           ),
-                                                          inputFormatters: [
-                                                            FilteringTextInputFormatter
-                                                                .allow(RegExp(
-                                                                    r'^\d{0,3}(\.\d{0,1})?$')),
-                                                          ],
-                                                          onChanged: (value) {
-                                                            final maxStock = _maxCantidadProducto(producto);
-                                                            double newCantidad =
-                                                                double.tryParse(
-                                                                        value) ??
-                                                                    0;
-                                                            newCantidad = newCantidad.clamp(0.0, maxStock);
-                                                            setState(() {
-                                                              cantidades[producto
-                                                                      .id!] =
-                                                                  newCantidad;
-                                                              _clearPricingCache();
-                                                            });
-                                                          },
                                                         ),
-                                                      ),
-                                                      // Botón +1
-                                                      IconButton(
-                                                        icon: const Icon(
-                                                          Icons
-                                                              .add_circle_outline,
-                                                          color: Colors.green,
-                                                          size: 26,
-                                                        ),
-                                                        onPressed: () {
-                                                          setState(() {
-                                                            final maxStock = _maxCantidadProducto(producto);
-                                                            double current =
-                                                                cantidades[producto
-                                                                        .id!] ??
-                                                                    0;
-                                                            if (current < maxStock) {
-                                                              current = (current + 1).clamp(0.0, maxStock);
-                                                              cantidades[producto
-                                                                      .id!] =
-                                                                  current;
-                                                              cantidadControllers[
-                                                                      producto
-                                                                          .id!]!
-                                                                  .text = current %
-                                                                          1 ==
-                                                                      0
-                                                                  ? current
-                                                                      .toInt()
-                                                                      .toString()
-                                                                  : current
-                                                                      .toStringAsFixed(
-                                                                          1);
-                                                              _clearPricingCache();
-                                                            }
-                                                          });
-                                                        },
-                                                      ),
-                                                    ],
-                                                  ),
-                                                )
-                                              : const SizedBox.shrink(),
-                                        ),
+                                                      ],
+                                                    );
+                                                  },
+                                                ),
+                                              )
+                                            : const SizedBox.shrink(),
                                       ),
-                                      // Ribbon "ESPECIAL" en la esquina superior derecha
-                                      if (_tienePrecioEspecial(producto))
-                                        Positioned(
-                                          top: 0,
-                                          right: 0,
-                                          child: Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 8,
-                                              vertical: 4,
-                                            ),
-                                            decoration: const BoxDecoration(
-                                              color: Colors.purple,
-                                              borderRadius: BorderRadius.only(
-                                                topRight: Radius.circular(12),
-                                                bottomLeft: Radius.circular(12),
-                                              ),
-                                            ),
-                                            child: const Text(
-                                              'ESPECIAL',
-                                              style: TextStyle(
-                                                color: Colors.white,
-                                                fontSize: 9,
-                                                fontWeight: FontWeight.bold,
-                                                letterSpacing: 0.5,
-                                              ),
-                                            ),
+
+                                      SizedBox(height: isSmallPhone ? 8 : 12),
+
+                                      // Filtros de categorías (solo cuando no hay búsqueda ni filtro por marca)
+                                      if (searchQuery.isEmpty &&
+                                          searchMarca.isEmpty &&
+                                          categorias.isNotEmpty) ...[
+                                        SizedBox(
+                                          height: isCompactScreen ? 42 : 46,
+                                          child: ListView.builder(
+                                            controller:
+                                                _categoriesScrollController,
+                                            scrollDirection: Axis.horizontal,
+                                            itemCount: categorias.length,
+                                            itemBuilder: (context, index) {
+                                              final categoria =
+                                                  categorias[index];
+                                              final isSelected =
+                                                  selectedCategory ==
+                                                      categoria.nombre;
+                                              final categoriaColor =
+                                                  _parseColor(
+                                                      categoria.colorHex);
+                                              final isDarkMode =
+                                                  Theme.of(context)
+                                                          .brightness ==
+                                                      Brightness.dark;
+                                              return Padding(
+                                                padding: EdgeInsets.only(
+                                                    right: index <
+                                                            categorias.length -
+                                                                1
+                                                        ? 10
+                                                        : 0),
+                                                child: Material(
+                                                  color: Colors.transparent,
+                                                  child: InkWell(
+                                                    onTap: () {
+                                                      final cambioDeCategoria =
+                                                          selectedCategory !=
+                                                              categoria.nombre;
+                                                      setState(() {
+                                                        selectedCategory =
+                                                            categoria.nombre;
+                                                      });
+                                                      _centerCategoryButton(
+                                                          index, categorias);
+                                                      if (cambioDeCategoria) {
+                                                        _scrollProductosToTop();
+                                                      }
+                                                    },
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            AppTheme
+                                                                .borderRadiusMainButtons),
+                                                    child: AnimatedContainer(
+                                                      duration: const Duration(
+                                                          milliseconds: 200),
+                                                      curve:
+                                                          Curves.easeOutCubic,
+                                                      padding: const EdgeInsets
+                                                          .symmetric(
+                                                          horizontal: 14,
+                                                          vertical: 10),
+                                                      decoration: BoxDecoration(
+                                                        color: isSelected
+                                                            ? categoriaColor
+                                                            : (isDarkMode
+                                                                ? const Color(
+                                                                    0xFF2A2A2A)
+                                                                : Colors.grey
+                                                                    .shade100),
+                                                        borderRadius:
+                                                            BorderRadius.circular(
+                                                                AppTheme
+                                                                    .borderRadiusMainButtons),
+                                                        boxShadow: isSelected
+                                                            ? [
+                                                                BoxShadow(
+                                                                  color: categoriaColor
+                                                                      .withOpacity(
+                                                                          0.35),
+                                                                  blurRadius: 8,
+                                                                  offset:
+                                                                      const Offset(
+                                                                          0, 2),
+                                                                ),
+                                                              ]
+                                                            : null,
+                                                      ),
+                                                      child: Center(
+                                                        child: Text(
+                                                          categoria.nombre[0]
+                                                                  .toUpperCase() +
+                                                              categoria.nombre
+                                                                  .substring(1),
+                                                          style: TextStyle(
+                                                            fontSize: 14,
+                                                            fontWeight:
+                                                                isSelected
+                                                                    ? FontWeight
+                                                                        .w600
+                                                                    : FontWeight
+                                                                        .w500,
+                                                            color: isSelected
+                                                                ? Colors.white
+                                                                : (isDarkMode
+                                                                    ? Colors
+                                                                        .grey
+                                                                        .shade400
+                                                                    : Colors
+                                                                        .grey
+                                                                        .shade700),
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ),
+                                              );
+                                            },
                                           ),
-                                        ),
-                                      ]),
-                                    ),
+                                        )
+                                      ],
+
+                                      // Indicador de búsqueda global (nombre o marca)
+                                      if (filteredProductos.isNotEmpty) ...[
+                                        if (searchQuery.isNotEmpty ||
+                                            searchMarca.isNotEmpty) ...[
+                                          Row(
+                                            children: [
+                                              Container(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                        horizontal: 12,
+                                                        vertical: 6),
+                                                decoration: BoxDecoration(
+                                                  color: AppTheme.primaryColor
+                                                      .withOpacity(0.1),
+                                                  borderRadius:
+                                                      BorderRadius.circular(20),
+                                                  border: Border.all(
+                                                    color: AppTheme.primaryColor
+                                                        .withOpacity(0.3),
+                                                    width: 1,
+                                                  ),
+                                                ),
+                                                child: Row(
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
+                                                  children: [
+                                                    Icon(
+                                                      Icons.search,
+                                                      size: 16,
+                                                      color:
+                                                          AppTheme.primaryColor,
+                                                    ),
+                                                    const SizedBox(width: 6),
+                                                    Text(
+                                                      'Búsqueda global',
+                                                      style: TextStyle(
+                                                        fontSize: 12,
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                        color: AppTheme
+                                                            .primaryColor,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                              const SizedBox(width: 12),
+                                              Expanded(
+                                                child: Text(
+                                                  '${filteredProductos.length} resultado${filteredProductos.length == 1 ? '' : 's'}',
+                                                  style: TextStyle(
+                                                    fontSize: 16,
+                                                    fontWeight: FontWeight.w500,
+                                                    color: Colors.grey.shade600,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ]
+                                      ],
+                                    ],
                                   );
+
+                                  if (headerNeedsLimit) {
+                                    return ConstrainedBox(
+                                      constraints: BoxConstraints(
+                                          maxHeight: maxHeaderHeight),
+                                      child: SingleChildScrollView(
+                                        child: headerContent,
+                                      ),
+                                    );
+                                  }
+
+                                  return headerContent;
                                 },
                               ),
                             ),
+                          ),
+                        ),
+                      ),
+
+                      // Lista de productos scrolleable (estado vacío igual que productos_screen)
+                      Expanded(
+                        child: filteredProductos.isEmpty
+                            ? _buildEmptyStateProductos(
+                                searchQuery: searchQuery,
+                                searchMarca: searchMarca,
+                                selectedCategory: selectedCategory,
+                                productosVacios: productos.isEmpty,
+                              )
+                            : ClipRRect(
+                                borderRadius: const BorderRadius.only(
+                                  topLeft: Radius.circular(15),
+                                  topRight: Radius.circular(15),
+                                  bottomLeft: Radius.circular(15),
+                                  bottomRight: Radius.circular(15),
+                                ),
+                                child: ListView.builder(
+                                  controller: _scrollController,
+                                  itemCount: filteredProductos.length,
+                                  itemBuilder: (context, index) {
+                                    final producto = filteredProductos[index];
+                                    final cantidad =
+                                        cantidades[producto.id] ?? 0;
+                                    final isExpanded =
+                                        _expandedProducts.contains(producto.id);
+
+                                    // Crear o reutilizar GlobalKey para este producto
+                                    if (!_productKeys
+                                        .containsKey(producto.id)) {
+                                      _productKeys[producto.id!] = GlobalKey();
+                                    }
+
+                                    if (!cantidadControllers
+                                        .containsKey(producto.id)) {
+                                      cantidadControllers[producto.id!] =
+                                          TextEditingController(
+                                        text: cantidad % 1 == 0
+                                            ? cantidad.toInt().toString()
+                                            : cantidad.toStringAsFixed(1),
+                                      );
+                                    } else {
+                                      cantidadControllers[producto.id!]!.text =
+                                          cantidad % 1 == 0
+                                              ? cantidad.toInt().toString()
+                                              : cantidad.toStringAsFixed(1);
+                                    }
+
+                                    return Container(
+                                      
+                                      key: _productKeys[producto.id],
+                                      height:
+                                          80, // Altura fija para todos los items
+                                      //margin: const EdgeInsets.only(bottom: 0), // Espacio entre items
+                                      child: ClipRRect(
+                                        //borderRadius: BorderRadius.circular(12), // Border radius para todo el contenedor
+                                        child: Stack(children: [
+                                          // Contenedor principal clickeable
+                                          GestureDetector(
+                                            behavior: HitTestBehavior.opaque,
+                                            onTap: () {
+                                              if (widget.modoCompra) {
+                                                _showDialogCantidadSubtotalCompra(
+                                                    producto);
+                                                return;
+                                              }
+                                              setState(() {
+                                                if (isExpanded) {
+                                                  _expandedProducts
+                                                      .remove(producto.id);
+                                                } else {
+                                                  _expandedProducts
+                                                      .add(producto.id!);
+                                                }
+                                              });
+                                            },
+                                            child: Container(
+                                              decoration: BoxDecoration(
+                                                color: Theme.of(context)
+                                                            .brightness ==
+                                                        Brightness.dark
+                                                    ? (index % 2 == 0
+                                                        ? const Color(
+                                                            0xFF1A1A1A)
+                                                        : const Color(
+                                                            0xFF252525))
+                                                    : (index % 2 == 0
+                                                        ? Colors.white
+                                                        : Colors.grey.shade50),
+                                                // Agregar border radius
+                                                //borderRadius: BorderRadius.circular(12),
+                                              ),
+                                              child: Padding(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                  horizontal: 12,
+                                                  vertical: 10,
+                                                ),
+                                                child: Row(
+                                                  children: [
+                                                    // Información del producto (siempre visible)
+                                                    Expanded(
+                                                      child: Column(
+                                                        mainAxisAlignment:
+                                                            MainAxisAlignment
+                                                                .center,
+                                                        crossAxisAlignment:
+                                                            CrossAxisAlignment
+                                                                .start,
+                                                        children: [
+                                                          // Nombre del producto con animación si hay overflow
+                                                          AnimatedTextMarquee(
+                                                            text:
+                                                                producto.nombre,
+                                                            style: TextStyle(
+                                                              fontSize: 16,
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .bold,
+                                                              color: Theme.of(context)
+                                                                          .brightness ==
+                                                                      Brightness
+                                                                          .dark
+                                                                  ? Colors.white
+                                                                  : AppTheme
+                                                                      .primaryColor,
+                                                            ),
+                                                          ),
+                                                          const SizedBox(
+                                                              height: 4),
+                                                          Row(
+                                                            children: [
+                                                              _formatearPrecioConDecimales(
+                                                                  _getPrecioUnitarioPromedio(
+                                                                      producto)),
+                                                              const SizedBox(
+                                                                  width: 4),
+                                                              Text(
+                                                                'c/u',
+                                                                style:
+                                                                    TextStyle(
+                                                                  fontSize: 14,
+                                                                  color: Theme.of(context)
+                                                                              .brightness ==
+                                                                          Brightness
+                                                                              .dark
+                                                                      ? Colors
+                                                                          .grey
+                                                                          .shade400
+                                                                      : Colors
+                                                                          .grey
+                                                                          .shade600,
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .w500,
+                                                                ),
+                                                              ),
+                                                              if (producto.stock !=
+                                                                      null &&
+                                                                  producto.stock! ==
+                                                                      0) ...[
+                                                                const SizedBox(
+                                                                    width: 8),
+                                                                Text(
+                                                                  'Sin stock',
+                                                                  style:
+                                                                      TextStyle(
+                                                                    fontSize:
+                                                                        12,
+                                                                    fontWeight:
+                                                                        FontWeight
+                                                                            .w600,
+                                                                    color: Colors
+                                                                        .orange
+                                                                        .shade700,
+                                                                  ),
+                                                                ),
+                                                              ],
+                                                            ],
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                    // Ícono indicador de expansión
+                                                    Icon(
+                                                      Icons.more_vert,
+                                                      color:
+                                                          AppTheme.primaryColor,
+                                                      size: 24,
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                          // Controles de cantidad superpuestos (derecha) con animación
+                                          Positioned(
+                                            right: 0,
+                                            top: 0,
+                                            bottom: 0,
+                                            child: AnimatedSize(
+                                              duration: const Duration(
+                                                  milliseconds: 300),
+                                              curve: Curves.easeInOut,
+                                              child: isExpanded
+                                                  ? Container(
+                                                      decoration: BoxDecoration(
+                                                        color: Theme.of(context)
+                                                                    .brightness ==
+                                                                Brightness.dark
+                                                            ? (index % 2 == 0
+                                                                ? const Color(
+                                                                    0xFF1A1A1A)
+                                                                : const Color(
+                                                                    0xFF252525))
+                                                            : (index % 2 == 0
+                                                                ? Colors.white
+                                                                : Colors.grey
+                                                                    .shade50),
+                                                        // Agregar border radius también al contenedor expandido
+                                                        borderRadius:
+                                                            BorderRadius
+                                                                .circular(12),
+                                                      ),
+                                                      padding:
+                                                          const EdgeInsets.only(
+                                                        left: 8,
+                                                        right: 12,
+                                                      ),
+                                                      child: Row(
+                                                        mainAxisSize:
+                                                            MainAxisSize.min,
+                                                        children: [
+                                                          // Botón para precios especiales/packs (solo si tiene)
+                                                          if (producto
+                                                                  .quantityPrices
+                                                                  .isNotEmpty ||
+                                                              _tienePrecioEspecial(
+                                                                  producto))
+                                                            Padding(
+                                                              padding:
+                                                                  const EdgeInsets
+                                                                      .only(
+                                                                right: 4,
+                                                              ),
+                                                              child: IconButton(
+                                                                icon: Icon(
+                                                                  Icons
+                                                                      .local_offer,
+                                                                  color: producto
+                                                                          .quantityPrices
+                                                                          .isNotEmpty
+                                                                      ? Colors
+                                                                          .orange
+                                                                      : Colors
+                                                                          .grey,
+                                                                  size: 22,
+                                                                ),
+                                                                onPressed: producto
+                                                                        .quantityPrices
+                                                                        .isNotEmpty
+                                                                    ? () {
+                                                                        _mostrarPacksDisponibles(
+                                                                            producto);
+                                                                      }
+                                                                    : null,
+                                                                tooltip: producto
+                                                                        .quantityPrices
+                                                                        .isNotEmpty
+                                                                    ? 'Ver Packs Disponibles'
+                                                                    : 'Sin packs',
+                                                              ),
+                                                            ),
+                                                          // Botón 0.5 (solo si el producto permite mitades)
+                                                          if (producto.half)
+                                                            IconButton(
+                                                              icon: Icon(
+                                                                (cantidad %
+                                                                            1 ==
+                                                                        0)
+                                                                    ? Icons
+                                                                        .hide_source_outlined
+                                                                    : Icons
+                                                                        .remove_circle_outline,
+                                                                color: Colors
+                                                                    .orange,
+                                                                size: 26,
+                                                              ),
+                                                              onPressed: () {
+                                                                setState(() {
+                                                                  final maxStock =
+                                                                      _maxCantidadProducto(
+                                                                          producto);
+                                                                  double
+                                                                      current =
+                                                                      cantidades[
+                                                                              producto.id!] ??
+                                                                          0;
+                                                                  if (current %
+                                                                          1 ==
+                                                                      0) {
+                                                                    if (current <
+                                                                        maxStock) {
+                                                                      current = (current +
+                                                                              0.5)
+                                                                          .clamp(
+                                                                              0.0,
+                                                                              maxStock);
+                                                                    }
+                                                                  } else {
+                                                                    if (current >=
+                                                                        0.5) {
+                                                                      current -=
+                                                                          0.5;
+                                                                    }
+                                                                  }
+                                                                  cantidades[producto
+                                                                          .id!] =
+                                                                      current;
+                                                                  cantidadControllers[
+                                                                          producto
+                                                                              .id!]!
+                                                                      .text = current %
+                                                                              1 ==
+                                                                          0
+                                                                      ? current
+                                                                          .toInt()
+                                                                          .toString()
+                                                                      : current
+                                                                          .toStringAsFixed(
+                                                                              1);
+                                                                  _clearPricingCache();
+                                                                });
+                                                              },
+                                                            ),
+                                                          // Botón -1
+                                                          IconButton(
+                                                            icon: const Icon(
+                                                              Icons
+                                                                  .remove_circle_outline,
+                                                              color: Colors.red,
+                                                              size: 26,
+                                                            ),
+                                                            onPressed: () {
+                                                              setState(() {
+                                                                double current =
+                                                                    cantidades[producto
+                                                                            .id!] ??
+                                                                        0;
+                                                                if (current >
+                                                                    0) {
+                                                                  current -= 1;
+                                                                  cantidades[producto
+                                                                          .id!] =
+                                                                      current;
+                                                                  cantidadControllers[
+                                                                          producto
+                                                                              .id!]!
+                                                                      .text = current %
+                                                                              1 ==
+                                                                          0
+                                                                      ? current
+                                                                          .toInt()
+                                                                          .toString()
+                                                                      : current
+                                                                          .toStringAsFixed(
+                                                                              1);
+                                                                  _clearPricingCache();
+                                                                }
+                                                              });
+                                                            },
+                                                          ),
+                                                          // Campo cantidad
+                                                          Container(
+                                                            width: 55,
+                                                            height: 36,
+                                                            decoration:
+                                                                BoxDecoration(
+                                                              border: Border.all(
+                                                                  color: Theme.of(context)
+                                                                              .brightness ==
+                                                                          Brightness
+                                                                              .dark
+                                                                      ? Colors
+                                                                          .grey
+                                                                          .shade600
+                                                                      : Colors
+                                                                          .grey
+                                                                          .shade300),
+                                                              borderRadius:
+                                                                  BorderRadius
+                                                                      .circular(
+                                                                          8),
+                                                              color: Theme.of(context)
+                                                                          .brightness ==
+                                                                      Brightness
+                                                                          .dark
+                                                                  ? const Color(
+                                                                      0xFF2A2A2A)
+                                                                  : Colors
+                                                                      .white,
+                                                            ),
+                                                            child: TextField(
+                                                              controller:
+                                                                  cantidadControllers[
+                                                                      producto
+                                                                          .id!],
+                                                              keyboardType:
+                                                                  TextInputType
+                                                                      .number,
+                                                              textAlign:
+                                                                  TextAlign
+                                                                      .center,
+                                                              style: TextStyle(
+                                                                fontSize: 15,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .bold,
+                                                                color: Theme.of(context)
+                                                                            .brightness ==
+                                                                        Brightness
+                                                                            .dark
+                                                                    ? Colors
+                                                                        .white
+                                                                    : Colors
+                                                                        .black,
+                                                              ),
+                                                              decoration:
+                                                                  InputDecoration(
+                                                                border:
+                                                                    OutlineInputBorder(
+                                                                  borderRadius:
+                                                                      BorderRadius
+                                                                          .circular(
+                                                                              8),
+                                                                  borderSide:
+                                                                      BorderSide
+                                                                          .none,
+                                                                ),
+                                                                enabledBorder:
+                                                                    OutlineInputBorder(
+                                                                  borderRadius:
+                                                                      BorderRadius
+                                                                          .circular(
+                                                                              8),
+                                                                  borderSide:
+                                                                      BorderSide
+                                                                          .none,
+                                                                ),
+                                                                focusedBorder:
+                                                                    OutlineInputBorder(
+                                                                  borderRadius:
+                                                                      BorderRadius
+                                                                          .circular(
+                                                                              8),
+                                                                  borderSide:
+                                                                      BorderSide
+                                                                          .none,
+                                                                ),
+                                                                errorBorder:
+                                                                    OutlineInputBorder(
+                                                                  borderRadius:
+                                                                      BorderRadius
+                                                                          .circular(
+                                                                              8),
+                                                                  borderSide:
+                                                                      BorderSide
+                                                                          .none,
+                                                                ),
+                                                                focusedErrorBorder:
+                                                                    OutlineInputBorder(
+                                                                  borderRadius:
+                                                                      BorderRadius
+                                                                          .circular(
+                                                                              8),
+                                                                  borderSide:
+                                                                      BorderSide
+                                                                          .none,
+                                                                ),
+                                                                contentPadding:
+                                                                    const EdgeInsets
+                                                                        .symmetric(
+                                                                        vertical:
+                                                                            6),
+                                                              ),
+                                                              inputFormatters: [
+                                                                FilteringTextInputFormatter
+                                                                    .allow(RegExp(
+                                                                        r'^\d{0,3}(\.\d{0,1})?$')),
+                                                              ],
+                                                              onChanged:
+                                                                  (value) {
+                                                                final maxStock =
+                                                                    _maxCantidadProducto(
+                                                                        producto);
+                                                                double
+                                                                    newCantidad =
+                                                                    double.tryParse(
+                                                                            value) ??
+                                                                        0;
+                                                                newCantidad =
+                                                                    newCantidad
+                                                                        .clamp(
+                                                                            0.0,
+                                                                            maxStock);
+                                                                setState(() {
+                                                                  cantidades[producto
+                                                                          .id!] =
+                                                                      newCantidad;
+                                                                  _clearPricingCache();
+                                                                });
+                                                              },
+                                                            ),
+                                                          ),
+                                                          // Botón +1
+                                                          IconButton(
+                                                            icon: const Icon(
+                                                              Icons
+                                                                  .add_circle_outline,
+                                                              color:
+                                                                  Colors.green,
+                                                              size: 26,
+                                                            ),
+                                                            onPressed: () {
+                                                              setState(() {
+                                                                final maxStock =
+                                                                    _maxCantidadProducto(
+                                                                        producto);
+                                                                double current =
+                                                                    cantidades[producto
+                                                                            .id!] ??
+                                                                        0;
+                                                                if (current <
+                                                                    maxStock) {
+                                                                  current = (current +
+                                                                          1)
+                                                                      .clamp(
+                                                                          0.0,
+                                                                          maxStock);
+                                                                  cantidades[producto
+                                                                          .id!] =
+                                                                      current;
+                                                                  cantidadControllers[
+                                                                          producto
+                                                                              .id!]!
+                                                                      .text = current %
+                                                                              1 ==
+                                                                          0
+                                                                      ? current
+                                                                          .toInt()
+                                                                          .toString()
+                                                                      : current
+                                                                          .toStringAsFixed(
+                                                                              1);
+                                                                  _clearPricingCache();
+                                                                }
+                                                              });
+                                                            },
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    )
+                                                  : const SizedBox.shrink(),
+                                            ),
+                                          ),
+                                          // Ribbon "ESPECIAL" en la esquina superior derecha
+                                          if (_tienePrecioEspecial(producto))
+                                            Positioned(
+                                              top: 0,
+                                              right: 0,
+                                              child: Container(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                  horizontal: 8,
+                                                  vertical: 4,
+                                                ),
+                                                decoration: const BoxDecoration(
+                                                  color: Colors.purple,
+                                                  borderRadius:
+                                                      BorderRadius.only(
+                                                    topRight:
+                                                        Radius.circular(12),
+                                                    bottomLeft:
+                                                        Radius.circular(12),
+                                                  ),
+                                                ),
+                                                child: const Text(
+                                                  'ESPECIAL',
+                                                  style: TextStyle(
+                                                    color: Colors.white,
+                                                    fontSize: 9,
+                                                    fontWeight: FontWeight.bold,
+                                                    letterSpacing: 0.5,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                        ]),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
             ),
-          ),
-        ),
       bottomNavigationBar: Container(
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
         decoration: BoxDecoration(
@@ -2686,7 +3033,8 @@ class _SeleccionarProductosScreenState
                               'Total',
                               style: TextStyle(
                                 fontSize: 14,
-                                color: Theme.of(context).brightness == Brightness.dark
+                                color: Theme.of(context).brightness ==
+                                        Brightness.dark
                                     ? Colors.grey.shade300
                                     : Colors.grey.shade600,
                                 fontWeight: FontWeight.w500,
@@ -2697,7 +3045,8 @@ class _SeleccionarProductosScreenState
                               '${_productosCompra.length} producto${_productosCompra.length == 1 ? '' : 's'}',
                               style: TextStyle(
                                 fontSize: 12,
-                                color: Theme.of(context).brightness == Brightness.dark
+                                color: Theme.of(context).brightness ==
+                                        Brightness.dark
                                     ? Colors.grey.shade400
                                     : Colors.grey.shade500,
                               ),
@@ -2712,7 +3061,8 @@ class _SeleccionarProductosScreenState
                               'Total',
                               style: TextStyle(
                                 fontSize: 14,
-                                color: Theme.of(context).brightness == Brightness.dark
+                                color: Theme.of(context).brightness ==
+                                        Brightness.dark
                                     ? Colors.grey.shade300
                                     : Colors.grey.shade600,
                                 fontWeight: FontWeight.w500,
@@ -2723,7 +3073,8 @@ class _SeleccionarProductosScreenState
                               '${cantidades.entries.where((e) => e.value > 0).length} producto${cantidades.entries.where((e) => e.value > 0).length == 1 ? '' : 's'}',
                               style: TextStyle(
                                 fontSize: 12,
-                                color: Theme.of(context).brightness == Brightness.dark
+                                color: Theme.of(context).brightness ==
+                                        Brightness.dark
                                     ? Colors.grey.shade400
                                     : Colors.grey.shade500,
                               ),
@@ -2755,26 +3106,29 @@ class _SeleccionarProductosScreenState
                         // Las cantidades decimales no afectan el precio unitario
                         final precioUnitarioPromedio =
                             _getPrecioUnitarioPromedio(producto);
-                        
+
                         // Asegurar que el precio no sea 0 (especialmente importante para mitades)
                         // Si el precio unitario promedio es 0 o negativo, usar el precio real del producto
                         double precioFinal = precioUnitarioPromedio;
-                        
+
                         if (precioFinal <= 0) {
                           precioFinal = _getPrecioUnitarioReal(producto);
                         }
-                        
+
                         if (precioFinal <= 0) {
                           precioFinal = producto.precio;
                         }
-                        
+
                         // Verificación final: si aún es 0, usar el precio del producto directamente
                         if (precioFinal <= 0) {
-                          debugPrint('⚠️ ADVERTENCIA: Precio 0 para producto ${producto.nombre}, usando precio base: ${producto.precio}');
-                          precioFinal = producto.precio > 0 ? producto.precio : 0.0;
+                          debugPrint(
+                              '⚠️ ADVERTENCIA: Precio 0 para producto ${producto.nombre}, usando precio base: ${producto.precio}');
+                          precioFinal =
+                              producto.precio > 0 ? producto.precio : 0.0;
                         }
-                        
-                        debugPrint('✅ ProductoSeleccionado: ${producto.nombre}, cantidad=${e.value}, precioUnitario=$precioFinal, total=${precioFinal * e.value}');
+
+                        debugPrint(
+                            '✅ ProductoSeleccionado: ${producto.nombre}, cantidad=${e.value}, precioUnitario=$precioFinal, total=${precioFinal * e.value}');
 
                         return ProductoSeleccionado(
                             id: producto.id!,
@@ -2805,7 +3159,7 @@ class _SeleccionarProductosScreenState
                     label: FittedBox(
                       fit: BoxFit.scaleDown,
                       child: Text(
-                        widget.modoCompra ? 'Confirmar compra' : 'Confirmar Venta',
+                        widget.modoCompra ? 'Confirmar' : 'Confirmar',
                         style: TextStyle(
                           fontSize: AppTheme.ventasButtonFontSize(context),
                           color: Colors.white,

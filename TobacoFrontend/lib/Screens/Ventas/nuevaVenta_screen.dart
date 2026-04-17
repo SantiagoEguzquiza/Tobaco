@@ -2269,8 +2269,10 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                                 AgregarProductoButton(
                                   onPressed: () async {
                                     try {
-                                      final resultado = await Navigator.push(
-                                        context,
+                                      final resultado = await Navigator.of(
+                                              context,
+                                              rootNavigator: true)
+                                          .push(
                                         MaterialPageRoute(
                                           builder: (context) =>
                                               SeleccionarProductosScreen(

@@ -139,6 +139,21 @@ class _ProductosScreenState extends State<ProductosScreen> {
     }
   }
 
+  void _scrollProductosToTop() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (_scrollController.hasClients) {
+        _scrollController.jumpTo(0);
+      }
+      if (_headerVisibility != 1.0) {
+        setState(() {
+          _headerVisibility = 1.0;
+          _lastScrollOffset = 0.0;
+        });
+      }
+    });
+  }
+
   void _centerCategoryButton(int index, List<Categoria> categorias) {
     if (!_categoriesScrollController.hasClients || !mounted) return;
     
@@ -555,7 +570,7 @@ class _ProductosScreenState extends State<ProductosScreen> {
               vertical: MediaQuery.of(context).size.height < 680 ? 2 : 3,
             ),
             child: SizedBox(
-              height: MediaQuery.of(context).size.height < 680 ? 38 : 42,
+              height: MediaQuery.of(context).size.height < 680 ? 40 : 44,
               child: ListView.builder(
                 controller: _categoriesScrollController,
                 scrollDirection: Axis.horizontal,
@@ -565,34 +580,64 @@ class _ProductosScreenState extends State<ProductosScreen> {
                   final categoria = categorias[index];
                   final isSelected = selectedCategory == categoria.nombre;
                   final categoriaColor = _parseColor(categoria.colorHex);
-                  final isCompact = MediaQuery.of(context).size.height < 680;
+                  final isDarkMode =
+                      Theme.of(context).brightness == Brightness.dark;
                   return Padding(
-                    padding: const EdgeInsets.only(right: 10),
-                    child: GestureDetector(
-                      onTap: () {
-                        prov.seleccionarCategoria(categoria.nombre);
-                        _centerCategoryButton(index, categorias);
-                      },
-                      child: Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: isCompact ? 6 : 8,
-                        ),
-                        decoration: BoxDecoration(
-                          color: isSelected ? categoriaColor : Theme.of(context).cardTheme.color,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: isSelected ? categoriaColor : Colors.grey.shade300,
-                            width: 1,
+                    padding: EdgeInsets.only(
+                        right: index < categorias.length - 1 ? 10 : 0),
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () {
+                          final cambioDeCategoria =
+                              selectedCategory != categoria.nombre;
+                          prov.seleccionarCategoria(categoria.nombre);
+                          _centerCategoryButton(index, categorias);
+                          if (cambioDeCategoria) {
+                            _scrollProductosToTop();
+                          }
+                        },
+                        borderRadius: BorderRadius.circular(
+                            AppTheme.borderRadiusMainButtons),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          curve: Curves.easeOutCubic,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: isSelected
+                                ? categoriaColor
+                                : (isDarkMode
+                                    ? const Color(0xFF2A2A2A)
+                                    : Colors.grey.shade100),
+                            borderRadius: BorderRadius.circular(
+                                AppTheme.borderRadiusMainButtons),
+                            boxShadow: isSelected
+                                ? [
+                                    BoxShadow(
+                                      color:
+                                          categoriaColor.withOpacity(0.35),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ]
+                                : null,
                           ),
-                        ),
-                        child: Center(
-                          child: Text(
-                            categoria.nombre[0].toUpperCase() + categoria.nombre.substring(1),
-                            style: TextStyle(
-                              fontSize: isCompact ? 13 : 14,
-                              fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                              color: isSelected ? Colors.white : Theme.of(context).textTheme.bodyLarge?.color,
+                          child: Center(
+                            child: Text(
+                              categoria.nombre[0].toUpperCase() +
+                                  categoria.nombre.substring(1),
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: isSelected
+                                    ? FontWeight.w600
+                                    : FontWeight.w500,
+                                color: isSelected
+                                    ? Colors.white
+                                    : (isDarkMode
+                                        ? Colors.grey.shade400
+                                        : Colors.grey.shade700),
+                              ),
                             ),
                           ),
                         ),

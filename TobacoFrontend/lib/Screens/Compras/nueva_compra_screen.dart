@@ -520,8 +520,8 @@ class _NuevaCompraScreenState extends State<NuevaCompraScreen> {
       return;
     }
 
-    final resultado = await Navigator.push<List<ProductoSeleccionado>>(
-      context,
+    final resultado = await Navigator.of(context, rootNavigator: true)
+        .push<List<ProductoSeleccionado>>(
       MaterialPageRoute(
         builder: (context) => SeleccionarProductosScreen(
           productosYaSeleccionados: _itemsToProductoSeleccionado(),
