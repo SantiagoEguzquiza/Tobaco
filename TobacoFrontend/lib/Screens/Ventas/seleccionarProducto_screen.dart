@@ -560,6 +560,300 @@ class _SeleccionarProductosScreenState
     }
   }
 
+  /// Abre un diálogo centrado en pantalla para que el usuario ingrese la
+  /// cantidad manualmente. Se usa en lugar de un TextField inline en la lista
+  /// porque el Scaffold tiene `resizeToAvoidBottomInset: false` y el
+  /// bottomNavigationBar se agranda cuando aparece el teclado, lo que dejaba
+  /// el campo inline oculto. El diálogo se posiciona por encima del teclado,
+  /// garantizando que el usuario vea qué número está ingresando.
+  Future<void> _mostrarDialogoCantidad(Producto producto) async {
+    final maxStock = _maxCantidadProducto(producto);
+    final currentValue = cantidades[producto.id] ?? 0.0;
+    final controller = TextEditingController(
+      text: currentValue > 0
+          ? (currentValue % 1 == 0
+              ? currentValue.toInt().toString()
+              : currentValue.toStringAsFixed(1))
+          : '',
+    );
+    controller.selection = TextSelection(
+      baseOffset: 0,
+      extentOffset: controller.text.length,
+    );
+
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bgDialog = isDark ? const Color(0xFF1A1A1A) : Colors.white;
+    final cardBg = isDark ? const Color(0xFF252525) : Colors.grey.shade50;
+    final textColor = isDark ? Colors.white : Colors.black87;
+    final subColor = isDark ? Colors.grey.shade400 : Colors.grey.shade600;
+    final fillField = isDark ? const Color(0xFF2A2A2A) : Colors.grey.shade100;
+    final borderColor = isDark ? Colors.grey.shade600 : Colors.grey.shade300;
+
+    final maxStockLabel = maxStock % 1 == 0
+        ? maxStock.toInt().toString()
+        : maxStock.toStringAsFixed(1);
+
+    final resultado = await showDialog<double>(
+      context: context,
+      barrierColor: Colors.black54,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx2, setModalState) {
+            final cantActual =
+                double.tryParse(controller.text.replaceAll(',', '.')) ?? 0.0;
+            final isValid = cantActual >= 0 && cantActual <= maxStock;
+            final excedeStock = cantActual > maxStock;
+            return Dialog(
+              backgroundColor: Colors.transparent,
+              insetPadding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Material(
+                borderRadius: BorderRadius.circular(24),
+                color: bgDialog,
+                elevation: 24,
+                shadowColor: Colors.black45,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+                        decoration: BoxDecoration(
+                          color: cardBg,
+                          border: Border(
+                            bottom: BorderSide(
+                              color: isDark
+                                  ? Colors.grey.shade800
+                                  : Colors.grey.shade200,
+                              width: 1,
+                            ),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: AppTheme.primaryColor.withOpacity(0.15),
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              child: const Icon(
+                                Icons.inventory_2_rounded,
+                                color: AppTheme.primaryColor,
+                                size: 26,
+                              ),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Text(
+                                producto.nombre,
+                                style: TextStyle(
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.w600,
+                                  color: textColor,
+                                  letterSpacing: 0.2,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+                        child: TextSelectionTheme(
+                          data: TextSelectionThemeData(
+                            cursorColor: AppTheme.primaryColor,
+                            selectionColor:
+                                AppTheme.primaryColor.withOpacity(0.3),
+                            selectionHandleColor: AppTheme.primaryColor,
+                          ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Text(
+                                'Cantidad',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
+                                  color: subColor,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              TextField(
+                                controller: controller,
+                                autofocus: true,
+                                textAlign: TextAlign.center,
+                                onChanged: (_) => setModalState(() {}),
+                                onSubmitted: isValid
+                                    ? (_) {
+                                        final v = double.tryParse(controller
+                                                .text
+                                                .replaceAll(',', '.')) ??
+                                            0.0;
+                                        Navigator.pop(
+                                            ctx, v.clamp(0.0, maxStock));
+                                      }
+                                    : null,
+                                keyboardType:
+                                    const TextInputType.numberWithOptions(
+                                        decimal: true),
+                                inputFormatters: [
+                                  FilteringTextInputFormatter.allow(
+                                      RegExp(r'^\d{0,3}(\.\d{0,1})?$')),
+                                ],
+                                style: TextStyle(
+                                  color: textColor,
+                                  fontSize: 30,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 0.5,
+                                ),
+                                decoration: InputDecoration(
+                                  hintText: '0',
+                                  hintStyle: TextStyle(
+                                    color: subColor.withOpacity(0.5),
+                                    fontSize: 30,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  filled: true,
+                                  fillColor: fillField,
+                                  contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 16, vertical: 16),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                    borderSide: BorderSide(
+                                      color: excedeStock
+                                          ? Colors.redAccent
+                                          : borderColor,
+                                    ),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                    borderSide: BorderSide(
+                                      color: excedeStock
+                                          ? Colors.redAccent
+                                          : AppTheme.primaryColor,
+                                      width: 2,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              Text(
+                                excedeStock
+                                    ? 'Supera el stock disponible ($maxStockLabel)'
+                                    : 'Stock disponible: $maxStockLabel',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                  color: excedeStock
+                                      ? Colors.redAccent
+                                      : subColor,
+                                ),
+                              ),
+                              const SizedBox(height: 22),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: TextButton(
+                                      onPressed: () => Navigator.pop(ctx),
+                                      style: TextButton.styleFrom(
+                                        backgroundColor: isDark
+                                            ? const Color(0xFF2A2A2A)
+                                            : Colors.grey.shade200,
+                                        foregroundColor: textColor,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                              AppTheme
+                                                  .borderRadiusMainButtons),
+                                        ),
+                                        padding: const EdgeInsets.symmetric(
+                                            vertical: 14),
+                                      ),
+                                      child: const Text(
+                                        'Cancelar',
+                                        style: TextStyle(
+                                            fontWeight: FontWeight.w600,
+                                            fontSize: 16),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: ElevatedButton(
+                                      onPressed: isValid
+                                          ? () {
+                                              final v = double.tryParse(
+                                                      controller.text
+                                                          .replaceAll(
+                                                              ',', '.')) ??
+                                                  0.0;
+                                              Navigator.pop(
+                                                  ctx, v.clamp(0.0, maxStock));
+                                            }
+                                          : null,
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: AppTheme.primaryColor,
+                                        foregroundColor: Colors.white,
+                                        disabledBackgroundColor: isDark
+                                            ? Colors.grey.shade800
+                                            : Colors.grey.shade300,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                              AppTheme
+                                                  .borderRadiusMainButtons),
+                                        ),
+                                        padding: const EdgeInsets.symmetric(
+                                            vertical: 14),
+                                        elevation: 2,
+                                      ),
+                                      child: const Text(
+                                        'Aceptar',
+                                        style: TextStyle(
+                                            fontWeight: FontWeight.w600,
+                                            fontSize: 16),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      controller.dispose();
+    });
+
+    if (resultado == null || !mounted) return;
+
+    setState(() {
+      final nuevaCantidad = resultado.clamp(0.0, maxStock);
+      cantidades[producto.id!] = nuevaCantidad;
+      final nuevoTexto = nuevaCantidad % 1 == 0
+          ? nuevaCantidad.toInt().toString()
+          : nuevaCantidad.toStringAsFixed(1);
+      if (cantidadControllers.containsKey(producto.id!)) {
+        cantidadControllers[producto.id!]!.text = nuevoTexto;
+      }
+      _clearPricingCache();
+    });
+  }
+
   Future<void> _loadPreciosEspeciales() async {
     if (widget.cliente == null) return;
 
@@ -2799,116 +3093,42 @@ class _SeleccionarProductosScreenState
                                                                   : Colors
                                                                       .white,
                                                             ),
-                                                            child: TextField(
-                                                              controller:
-                                                                  cantidadControllers[
-                                                                      producto
-                                                                          .id!],
-                                                              keyboardType:
-                                                                  TextInputType
-                                                                      .number,
-                                                              textAlign:
-                                                                  TextAlign
-                                                                      .center,
-                                                              style: TextStyle(
-                                                                fontSize: 15,
-                                                                fontWeight:
-                                                                    FontWeight
-                                                                        .bold,
-                                                                color: Theme.of(context)
-                                                                            .brightness ==
-                                                                        Brightness
-                                                                            .dark
-                                                                    ? Colors
-                                                                        .white
-                                                                    : Colors
-                                                                        .black,
+                                                            child: Material(
+                                                              color: Colors
+                                                                  .transparent,
+                                                              child: InkWell(
+                                                                borderRadius:
+                                                                    BorderRadius
+                                                                        .circular(
+                                                                            8),
+                                                                onTap: () =>
+                                                                    _mostrarDialogoCantidad(
+                                                                        producto),
+                                                                child: Center(
+                                                                  child: Text(
+                                                                    cantidad %
+                                                                                1 ==
+                                                                            0
+                                                                        ? cantidad
+                                                                            .toInt()
+                                                                            .toString()
+                                                                        : cantidad
+                                                                            .toStringAsFixed(1),
+                                                                    style:
+                                                                        TextStyle(
+                                                                      fontSize:
+                                                                          15,
+                                                                      fontWeight:
+                                                                          FontWeight
+                                                                              .bold,
+                                                                      color: Theme.of(context).brightness ==
+                                                                              Brightness.dark
+                                                                          ? Colors.white
+                                                                          : Colors.black,
+                                                                    ),
+                                                                  ),
+                                                                ),
                                                               ),
-                                                              decoration:
-                                                                  InputDecoration(
-                                                                border:
-                                                                    OutlineInputBorder(
-                                                                  borderRadius:
-                                                                      BorderRadius
-                                                                          .circular(
-                                                                              8),
-                                                                  borderSide:
-                                                                      BorderSide
-                                                                          .none,
-                                                                ),
-                                                                enabledBorder:
-                                                                    OutlineInputBorder(
-                                                                  borderRadius:
-                                                                      BorderRadius
-                                                                          .circular(
-                                                                              8),
-                                                                  borderSide:
-                                                                      BorderSide
-                                                                          .none,
-                                                                ),
-                                                                focusedBorder:
-                                                                    OutlineInputBorder(
-                                                                  borderRadius:
-                                                                      BorderRadius
-                                                                          .circular(
-                                                                              8),
-                                                                  borderSide:
-                                                                      BorderSide
-                                                                          .none,
-                                                                ),
-                                                                errorBorder:
-                                                                    OutlineInputBorder(
-                                                                  borderRadius:
-                                                                      BorderRadius
-                                                                          .circular(
-                                                                              8),
-                                                                  borderSide:
-                                                                      BorderSide
-                                                                          .none,
-                                                                ),
-                                                                focusedErrorBorder:
-                                                                    OutlineInputBorder(
-                                                                  borderRadius:
-                                                                      BorderRadius
-                                                                          .circular(
-                                                                              8),
-                                                                  borderSide:
-                                                                      BorderSide
-                                                                          .none,
-                                                                ),
-                                                                contentPadding:
-                                                                    const EdgeInsets
-                                                                        .symmetric(
-                                                                        vertical:
-                                                                            6),
-                                                              ),
-                                                              inputFormatters: [
-                                                                FilteringTextInputFormatter
-                                                                    .allow(RegExp(
-                                                                        r'^\d{0,3}(\.\d{0,1})?$')),
-                                                              ],
-                                                              onChanged:
-                                                                  (value) {
-                                                                final maxStock =
-                                                                    _maxCantidadProducto(
-                                                                        producto);
-                                                                double
-                                                                    newCantidad =
-                                                                    double.tryParse(
-                                                                            value) ??
-                                                                        0;
-                                                                newCantidad =
-                                                                    newCantidad
-                                                                        .clamp(
-                                                                            0.0,
-                                                                            maxStock);
-                                                                setState(() {
-                                                                  cantidades[producto
-                                                                          .id!] =
-                                                                      newCantidad;
-                                                                  _clearPricingCache();
-                                                                });
-                                                              },
                                                             ),
                                                           ),
                                                           // Botón +1
@@ -3013,13 +3233,11 @@ class _SeleccionarProductosScreenState
               ? const Color(0xFF1A1A1A)
               : Colors.white,
         ),
-        child: Container(
-          padding: EdgeInsets.only(
-            bottom: isKeyboardVisible ? keyboardHeight : 0,
-          ),
-          child: SafeArea(
-            top: false,
-            child: Row(
+        // Al abrirse el teclado dejamos que el bottomNavigationBar quede
+        // escondido detrás del mismo (no lo empujamos hacia arriba).
+        child: SafeArea(
+          top: false,
+          child: Row(
               children: [
                 // Información de productos seleccionados
                 Expanded(
@@ -3172,7 +3390,6 @@ class _SeleccionarProductosScreenState
               ],
             ),
           ),
-        ),
       ),
     );
   }
