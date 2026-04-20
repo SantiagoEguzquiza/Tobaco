@@ -534,8 +534,10 @@ class _ProductosScreenState extends State<ProductosScreen> {
                       );
                       return;
                     }
-                    final result = await Navigator.push(
+                    final result = await Navigator.of(
                       context,
+                      rootNavigator: true,
+                    ).push(
                       MaterialPageRoute(
                         builder: (context) => const NuevoProductoScreen(),
                       ),
@@ -878,8 +880,10 @@ class _ProductosScreenState extends State<ProductosScreen> {
                                                       ),
                                                       onPressed: () async {
                                                         final result =
-                                                            await Navigator.push(
+                                                            await Navigator.of(
                                                           context,
+                                                          rootNavigator: true,
+                                                        ).push(
                                                           MaterialPageRoute(
                                                             builder: (context) =>
                                                                 EditarProductoScreen(

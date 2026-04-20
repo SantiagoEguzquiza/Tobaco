@@ -472,6 +472,7 @@ class EditarProductoScreenState extends State<EditarProductoScreen> {
                   children: [
                     QuantityPriceWidget(
                       quantityPrices: quantityPrices,
+                      basePrice: double.tryParse(precioController.text.trim()) ?? 0.0,
                       onChanged: (prices) {
                         setState(() {
                           quantityPrices = prices;

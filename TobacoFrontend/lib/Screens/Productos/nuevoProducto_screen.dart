@@ -685,7 +685,7 @@ class _NuevoProductoScreenState extends State<NuevoProductoScreen> {
           Padding(
             padding: const EdgeInsets.only(bottom: 16),
             child: Text(
-              'No hay packs configurados. El producto se venderá solo por unidad.',
+              'Aún no hay packs configurados para este producto.',
               style: TextStyle(
                 fontSize: 13,
                 color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
@@ -861,7 +861,7 @@ class _NuevoProductoScreenState extends State<NuevoProductoScreen> {
                           const SizedBox(width: 12),
                           const Expanded(
                             child: Text(
-                              'Precios por Cantidad (Packs)',
+                              'Precios por Packs',
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.w600,
@@ -882,6 +882,7 @@ class _NuevoProductoScreenState extends State<NuevoProductoScreen> {
                         padding: const EdgeInsets.all(20),
                         child: QuantityPriceWidget(
                           quantityPrices: tempPrices,
+                          basePrice: double.tryParse(precioController.text.trim()) ?? 0.0,
                           onChanged: (prices) {
                             setDialogState(() {
                               tempPrices.clear();

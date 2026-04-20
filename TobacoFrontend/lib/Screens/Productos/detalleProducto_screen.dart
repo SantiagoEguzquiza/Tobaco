@@ -299,8 +299,10 @@ class _DetalleProductoScreenState extends State<DetalleProductoScreen> {
                                 width: double.infinity,
                                 child: ElevatedButton.icon(
                                   onPressed: () async {
-                                    final result = await Navigator.push(
+                                    final result = await Navigator.of(
                                       context,
+                                      rootNavigator: true,
+                                    ).push(
                                       MaterialPageRoute(
                                         builder: (context) => EditarProductoScreen(
                                           producto: _producto,
