@@ -82,9 +82,14 @@ class TicketBuilder {
     // lines.add(_createSeparator('-'));
 
     for (var producto in venta.ventasProductos) {
-      final subtotal = producto.precioFinalCalculado > 0
+      final subtotalOriginal = producto.precio * producto.cantidad;
+      final subtotalFinal = producto.precioFinalCalculado > 0
           ? producto.precioFinalCalculado
-          : producto.precio * producto.cantidad;
+          : subtotalOriginal;
+      // Descuento total de la línea, cubre cualquier origen:
+      // precios especiales, packs, descuento del cliente, del producto, etc.
+      final descuento = subtotalOriginal - subtotalFinal;
+      final tieneDescuento = descuento > 0.009;
 
       lines.add('');
 
@@ -98,17 +103,41 @@ class TicketBuilder {
       // Cantidad y precio
       final cantidadStr = producto.cantidad.toStringAsFixed(2);
       final precioStr = _formatCurrency(producto.precio);
-      final subtotalStr = _formatCurrency(subtotal);
+      // Si hay descuento mostramos el subtotal sin descontar para que
+      // las cuentas cierren en la línea; el descuento va abajo.
+      final subtotalStr = _formatCurrency(
+          tieneDescuento ? subtotalOriginal : subtotalFinal);
 
       lines.add(_alignLeftRight('$cantidadStr x $precioStr', subtotalStr));
+
+      if (tieneDescuento) {
+        final descuentoStr = _formatCurrency(descuento);
+        lines.add(_alignLeftRight('  Descuento:', '-$descuentoStr'));
+      }
     }
 
     lines.add('');
     lines.add(_createSeparator('='));
 
-    // Total
-    final totalStr = _formatCurrency(venta.total);
-    lines.add(_alignLeftRight('TOTAL:', totalStr));
+    // Totales: subtotal (sin descuentos), descuentos y total final
+    double subtotalBruto = 0;
+    double descuentosTotales = 0;
+    for (var producto in venta.ventasProductos) {
+      final subtotalOriginal = producto.precio * producto.cantidad;
+      final subtotalFinal = producto.precioFinalCalculado > 0
+          ? producto.precioFinalCalculado
+          : subtotalOriginal;
+      subtotalBruto += subtotalOriginal;
+      final descuento = subtotalOriginal - subtotalFinal;
+      if (descuento > 0) descuentosTotales += descuento;
+    }
+
+    lines.add(_alignLeftRight('SUBTOTAL:', _formatCurrency(subtotalBruto)));
+    if (descuentosTotales > 0.009) {
+      lines.add(_alignLeftRight(
+          'DESCUENTOS:', '-${_formatCurrency(descuentosTotales)}'));
+    }
+    lines.add(_alignLeftRight('TOTAL:', _formatCurrency(venta.total)));
     lines.add('');
     lines.add(_centerText('Gracias por su compra'));
     lines.add('');
