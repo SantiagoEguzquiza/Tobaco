@@ -521,7 +521,13 @@ class VentasProvider with ChangeNotifier {
     }
   }
 
-  double _calcularMontoCuentaCorriente(Ventas venta) {
+  double _calcularMontoCuentaCorriente(Ventas venta) =>
+      calcularMontoCuentaCorriente(venta);
+
+  /// Calcula cuánto de la venta se financia con cuenta corriente.
+  /// Público para que las pantallas puedan propagar el incremento de deuda
+  /// al `ClienteProvider` inmediatamente tras crear la venta.
+  static double calcularMontoCuentaCorriente(Ventas venta) {
     if (venta.pagos != null && venta.pagos!.isNotEmpty) {
       return venta.pagos!
           .where((pago) => pago.metodo == MetodoPago.cuentaCorriente)

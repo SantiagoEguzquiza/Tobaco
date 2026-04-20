@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 import 'package:tobaco/Models/Cliente.dart';
 import 'package:tobaco/Models/Ventas.dart';
 import 'package:tobaco/Models/Abono.dart';
@@ -79,13 +80,18 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
 
   Future<void> _loadDetalleDeuda() async {
     try {
-      final clienteProvider = ClienteProvider();
+      final clienteProvider =
+          Provider.of<ClienteProvider>(context, listen: false);
       final detalle = await clienteProvider.obtenerDetalleDeuda(widget.cliente.id!);
       _safeSetState(() {
         detalleDeuda = detalle;
         _saldoDetalle = _obtenerSaldoDesdeDetalle(detalle);
         if (_saldoDetalle != null) {
           widget.cliente.deuda = _saldoDetalle!.toStringAsFixed(2);
+          // Sincroniza la deuda recién traída del server con la lista global
+          // y el caché, para que otras pantallas (ej. NuevaVenta) la vean.
+          clienteProvider.actualizarDeudaCliente(
+              widget.cliente.id!, _saldoDetalle!);
         }
         isLoadingDetalle = false;
       });
@@ -662,7 +668,16 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
         final deudaActual = _parsearDeuda(widget.cliente.deuda);
         final nuevaDeuda = deudaActual - monto;
         widget.cliente.deuda = nuevaDeuda.toStringAsFixed(2);
-        
+
+        // Propagar al ClienteProvider global para que otras pantallas
+        // (ej. NuevaVenta) y el caché SQLite queden sincronizados.
+        if (mounted) {
+          final clienteProvider =
+              Provider.of<ClienteProvider>(context, listen: false);
+          clienteProvider.actualizarDeudaCliente(
+              widget.cliente.id!, nuevaDeuda);
+        }
+
         // Recargar los datos para que ventas y abonos queden como historial (no se borran)
         await _loadData();
         
@@ -2006,8 +2021,17 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
         // Actualizar la deuda local del cliente
         final montoAbono = _parsearDeuda(abono.monto);
         final deudaActual = _parsearDeuda(widget.cliente.deuda);
-        widget.cliente.deuda = (deudaActual + montoAbono).toStringAsFixed(2);
-        
+        final nuevaDeuda = deudaActual + montoAbono;
+        widget.cliente.deuda = nuevaDeuda.toStringAsFixed(2);
+
+        // Propagar el cambio al ClienteProvider global (y al caché)
+        if (mounted) {
+          final clienteProvider =
+              Provider.of<ClienteProvider>(context, listen: false);
+          clienteProvider.actualizarDeudaCliente(
+              widget.cliente.id!, nuevaDeuda);
+        }
+
         // Recargar todos los datos
         await _loadData();
         

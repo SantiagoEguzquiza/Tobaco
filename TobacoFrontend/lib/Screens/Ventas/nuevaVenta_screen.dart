@@ -51,6 +51,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
   Timer? _debounceTimer;
   String? errorMessage;
   VentaBorradorProvider? _borradorProvider; // Referencia al provider
+  ClienteProvider? _clienteProvider; // Referencia al provider global de clientes
   bool _ventaCompletada = false; // Flag para saber si la venta se completó
 
   @override
@@ -75,6 +76,13 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
     // Guardar referencia al provider de manera segura
     _borradorProvider ??=
         Provider.of<VentaBorradorProvider>(context, listen: false);
+
+    // Suscribirse (una sola vez) al ClienteProvider global para reaccionar a
+    // cambios de deuda (ej. tras un abono en cuenta corriente).
+    if (_clienteProvider == null) {
+      _clienteProvider = Provider.of<ClienteProvider>(context, listen: false);
+      _clienteProvider!.addListener(_onClientesActualizados);
+    }
   }
 
   @override
@@ -84,11 +92,50 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
     for (final controller in _cantidadControllers.values) {
       controller.dispose();
     }
+    _clienteProvider?.removeListener(_onClientesActualizados);
     // Solo guardar borrador si la venta NO se completó
     if (!_ventaCompletada) {
       _guardarBorradorAlSalir();
     }
     super.dispose();
+  }
+
+  /// Handler que se dispara cuando el ClienteProvider global cambia
+  /// (ej. se registró un abono o se actualizó la deuda de un cliente).
+  /// Actualiza `clientesIniciales` y re-filtra si hay búsqueda activa.
+  void _onClientesActualizados() {
+    if (!mounted) return;
+    final provider = _clienteProvider;
+    if (provider == null) return;
+
+    final clientesProvider = provider.clientes;
+    if (clientesProvider.isEmpty) return;
+
+    final nuevosClientes = clientesProvider
+        .where((c) => !_esConsumidorFinal(c))
+        .toList()
+      ..sort((a, b) =>
+          a.nombre.toLowerCase().compareTo(b.nombre.toLowerCase()));
+
+    // Sincroniza también el cliente seleccionado (si corresponde) para que la
+    // deuda mostrada en el resumen quede actualizada.
+    Cliente? clienteSeleccionadoActualizado;
+    if (clienteSeleccionado?.id != null) {
+      final match = clientesProvider
+          .where((c) => c.id == clienteSeleccionado!.id)
+          .toList();
+      if (match.isNotEmpty) clienteSeleccionadoActualizado = match.first;
+    }
+
+    setState(() {
+      clientesIniciales = nuevosClientes;
+      if (clienteSeleccionadoActualizado != null) {
+        clienteSeleccionado = clienteSeleccionadoActualizado;
+      }
+      if (_searchController.text.trim().isNotEmpty) {
+        _filtrarClientesIniciales(_searchController.text);
+      }
+    });
   }
 
   /// Verifica si existe un borrador y muestra diálogo para recuperarlo
@@ -597,47 +644,63 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
       isLoadingClientesIniciales = true;
     });
 
+    final provider = Provider.of<ClienteProvider>(context, listen: false);
+
+    // 1) Mostrar de inmediato lo que haya en caché (rápido, sin red).
     try {
-      final provider = Provider.of<ClienteProvider>(context, listen: false);
-      
-      // 1. Intentar cargar primero del caché local (rápido)
-      var clientesCache = await provider.obtenerClientesDelCache();
-      
+      final clientesCache = await provider.obtenerClientesDelCache();
       if (mounted && clientesCache.isNotEmpty) {
         setState(() {
-          clientesIniciales = clientesCache.where((c) => !_esConsumidorFinal(c)).toList();
-          clientesIniciales.sort((a, b) => a.nombre.toLowerCase().compareTo(b.nombre.toLowerCase()));
+          clientesIniciales = clientesCache
+              .where((c) => !_esConsumidorFinal(c))
+              .toList()
+            ..sort((a, b) =>
+                a.nombre.toLowerCase().compareTo(b.nombre.toLowerCase()));
           isLoadingClientesIniciales = false;
         });
-        debugPrint('✅ Clientes iniciales cargados desde caché: ${clientesIniciales.length}');
-        return;
-      }
-      
-      // 2. Si el caché está vacío, cargar automáticamente desde el servidor
-      if (mounted && clientesCache.isEmpty) {
-        final clientes = await provider.obtenerClientes();
-        if (mounted) {
-          setState(() {
-            clientesIniciales = clientes.where((c) => !_esConsumidorFinal(c)).toList();
-            clientesIniciales.sort((a, b) => a.nombre.toLowerCase().compareTo(b.nombre.toLowerCase()));
-            isLoadingClientesIniciales = false;
-          });
-          debugPrint('✅ Clientes cargados desde servidor: ${clientesIniciales.length}');
-        }
-        return;
-      }
-      
-      if (mounted) {
-        setState(() => isLoadingClientesIniciales = false);
+        debugPrint(
+            '✅ Clientes iniciales cargados desde caché: ${clientesIniciales.length}');
       }
     } catch (e) {
-      if (mounted) {
+      debugPrint('⚠️ Error leyendo caché de clientes: $e');
+    }
+
+    // 2) Revalidar SIEMPRE contra el servidor en background para captar
+    // cambios hechos por otros usuarios (o desde otras pantallas). El
+    // provider global grabará caché y notificará: el listener actualiza la
+    // UI automáticamente.
+    unawaited(_refrescarClientesEnBackground(provider));
+  }
+
+  /// Trae la lista de clientes desde el servidor sin bloquear la UI.
+  /// El provider global grabará caché y notificará: el listener
+  /// `_onClientesActualizados` se encarga de refrescar la UI.
+  /// Solo maneja aquí el fallback de apagar el spinner si todavía no había
+  /// datos al momento del error.
+  Future<void> _refrescarClientesEnBackground(
+      ClienteProvider provider) async {
+    try {
+      final clientes = await provider.obtenerClientes();
+      if (!mounted) return;
+
+      // Apagar spinner si no estaba apagado (caché estaba vacío y recién
+      // llega el servidor). El listener ya habrá puesto la lista.
+      if (isLoadingClientesIniciales) {
         setState(() {
-          clientesIniciales = [];
           isLoadingClientesIniciales = false;
         });
       }
-      debugPrint('Error al cargar clientes: $e');
+
+      debugPrint(
+          '✅ Clientes revalidados desde servidor: ${clientes.length}');
+    } catch (e) {
+      debugPrint('⚠️ Error revalidando clientes en background: $e');
+      if (!mounted) return;
+      if (clientesIniciales.isEmpty) {
+        setState(() {
+          isLoadingClientesIniciales = false;
+        });
+      }
     }
   }
 
@@ -1921,6 +1984,18 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
       if (mounted) {
         if (!result['success']) {
           throw Exception(result['message']);
+        }
+
+        // Propagar el aumento de deuda al ClienteProvider global si la venta
+        // incluyó pagos con cuenta corriente. Esto mantiene la lista de
+        // clientes y el caché al día sin esperar al refresh periódico.
+        final montoCC =
+            VentasProvider.calcularMontoCuentaCorriente(ventaConPagos);
+        if (montoCC > 0 && ventaConPagos.clienteId > 0) {
+          final clienteProviderGlobal =
+              Provider.of<ClienteProvider>(context, listen: false);
+          clienteProviderGlobal.ajustarDeudaCliente(
+              ventaConPagos.clienteId, montoCC);
         }
 
         // Mensaje offline: se muestra en ResumenVentaScreen como "Guardada localmente"

@@ -376,8 +376,40 @@ class ClienteProvider with ChangeNotifier {
     final index = _clientes.indexWhere((c) => c.id == clienteActualizado.id);
     if (index != -1) {
       _clientes[index] = clienteActualizado;
+      _guardarCacheEnBackground();
       notifyListeners();
     }
+  }
+
+  /// Actualiza la deuda de un cliente en la lista en memoria y persiste en caché.
+  /// Útil tras registrar un abono/venta CC sin tener que refetchear toda la lista.
+  void actualizarDeudaCliente(int clienteId, double nuevaDeuda) {
+    final index = _clientes.indexWhere((c) => c.id == clienteId);
+    if (index == -1) return;
+
+    final actual = _clientes[index];
+    actual.deuda = nuevaDeuda.toStringAsFixed(2);
+    _clientes[index] = actual;
+    _guardarCacheEnBackground();
+    notifyListeners();
+  }
+
+  /// Ajusta la deuda de un cliente sumando (positivo) o restando (negativo)
+  /// `delta` a su deuda actual. Si el cliente no está en la lista, no hace
+  /// nada (la próxima revalidación traerá el valor correcto).
+  void ajustarDeudaCliente(int clienteId, double delta) {
+    if (delta == 0) return;
+    final index = _clientes.indexWhere((c) => c.id == clienteId);
+    if (index == -1) return;
+
+    final actual = _clientes[index];
+    final deudaActual =
+        double.tryParse((actual.deuda ?? '0').replaceAll(',', '.')) ?? 0.0;
+    final nueva = deudaActual + delta;
+    actual.deuda = nueva.toStringAsFixed(2);
+    _clientes[index] = actual;
+    _guardarCacheEnBackground();
+    notifyListeners();
   }
 
   Future<void> limpiarBusqueda() async {
