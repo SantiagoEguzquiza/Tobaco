@@ -2160,6 +2160,8 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                           onRefresh: actualizarClientesDesdeServidor,
                           child: SingleChildScrollView(
                             physics: const AlwaysScrollableScrollPhysics(),
+                            keyboardDismissBehavior:
+                                ScrollViewKeyboardDismissBehavior.onDrag,
                             child: Column(
                               children: [
                                 if (isSearching) ...[

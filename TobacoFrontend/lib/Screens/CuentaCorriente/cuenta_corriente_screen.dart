@@ -407,6 +407,7 @@ class _CuentaCorrienteScreenState extends State<CuentaCorrienteScreen> {
       child: ListView.builder(
         controller: _scrollController,
         physics: const AlwaysScrollableScrollPhysics(),
+        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
         padding: const EdgeInsets.only(bottom: 8),
         itemCount: filteredClientes.length + (_isLoadingMore ? 1 : 0),
         itemBuilder: (context, index) {
