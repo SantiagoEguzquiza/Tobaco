@@ -132,8 +132,8 @@ class TicketBuilder {
       if (descuento > 0) descuentosTotales += descuento;
     }
 
-    lines.add(_alignLeftRight('SUBTOTAL:', _formatCurrency(subtotalBruto)));
     if (descuentosTotales > 0.009) {
+      lines.add(_alignLeftRight('SUBTOTAL:', _formatCurrency(subtotalBruto)));
       lines.add(_alignLeftRight(
           'DESCUENTOS:', '-${_formatCurrency(descuentosTotales)}'));
     }
