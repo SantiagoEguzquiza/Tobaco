@@ -404,28 +404,18 @@ class _ClientesScreenState extends State<ClientesScreen> {
 
 
   Widget _buildClienteCard(Cliente cliente) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isCompact = AppTheme.isCompactVentasButton(context);
+    final direccion = cliente.direccion?.trim() ?? '';
+    final tieneDireccion = direccion.isNotEmpty;
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: Theme.of(context).brightness == Brightness.dark
-            ? const Color(0xFF1A1A1A)
-            : Colors.white,
-        borderRadius: BorderRadius.circular(AppTheme.borderRadiusCards),
-        boxShadow: [
-          BoxShadow(
-            color: Theme.of(context).brightness == Brightness.dark
-                ? Colors.black.withOpacity(0.3)
-                : Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
       child: Material(
-        color: Colors.transparent,
+        color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+        borderRadius: BorderRadius.circular(AppTheme.borderRadiusCards),
         child: InkWell(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(AppTheme.borderRadiusCards),
           onTap: () async {
             final result = await Navigator.push(
               context,
@@ -433,70 +423,86 @@ class _ClientesScreenState extends State<ClientesScreen> {
                 builder: (context) => DetalleClienteScreen(cliente: cliente),
               ),
             );
-            // Si se retorna true o un Cliente, significa que hubo cambios
             if (result == true) {
-              // Si es true (desde detalle), actualizar el cliente desde el servidor
               if (mounted && cliente.id != null) {
-                await context.read<ClienteProvider>().actualizarClienteEnLista(cliente.id!);
+                await context
+                    .read<ClienteProvider>()
+                    .actualizarClienteEnLista(cliente.id!);
               }
             } else if (result is Cliente) {
-              // Si es un Cliente actualizado, actualizar directamente en la lista sin cambiar posición
               if (mounted) {
                 context.read<ClienteProvider>().actualizarClienteDirecto(result);
               }
             }
           },
-          child: Padding(
-            padding: const EdgeInsets.all(16),
+          child: Container(
+            padding: EdgeInsets.all(isCompact ? 14 : 16),
+            decoration: BoxDecoration(
+              borderRadius:
+                  BorderRadius.circular(AppTheme.borderRadiusCards),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
             child: Row(
               children: [
-                // Indicador de estado del cliente
                 Container(
-                  width: 4,
-                  height: 60,
+                  padding: EdgeInsets.all(isCompact ? 8 : 10),
                   decoration: BoxDecoration(
-                    color: Colors.green,
-                    borderRadius: BorderRadius.circular(2),
+                    color: AppTheme.primaryColor.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    Icons.person_outline,
+                    color: AppTheme.primaryColor,
+                    size: isCompact ? 24 : 28,
                   ),
                 ),
-                const SizedBox(width: 16),
-
-                // Información del cliente
+                SizedBox(width: isCompact ? 12 : 16),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
                         cliente.nombre,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).brightness == Brightness.dark
-                              ? Colors.white
-                              : AppTheme.textColor,
+                          fontWeight: FontWeight.w600,
+                          fontSize: isCompact ? 15 : 16,
+                          color: isDark ? Colors.white : Colors.black87,
                         ),
                       ),
-                      const SizedBox(height: 4),
+                      SizedBox(height: isCompact ? 2 : 4),
                       Row(
                         children: [
                           Icon(
                             Icons.location_on_outlined,
-                            size: 16,
-                            color: Theme.of(context).brightness == Brightness.dark
+                            size: isCompact ? 13 : 14,
+                            color: isDark
                                 ? Colors.grey.shade400
                                 : Colors.grey.shade600,
                           ),
                           const SizedBox(width: 4),
                           Expanded(
                             child: Text(
-                              cliente.direccion!,
+                              tieneDireccion ? direccion : 'Sin dirección',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                               style: TextStyle(
-                                fontSize: 14,
-                                color: Theme.of(context).brightness == Brightness.dark
+                                fontSize: isCompact ? 13 : 14,
+                                fontStyle: tieneDireccion
+                                    ? FontStyle.normal
+                                    : FontStyle.italic,
+                                color: isDark
                                     ? Colors.grey.shade400
                                     : Colors.grey.shade600,
                               ),
-                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                         ],
@@ -504,90 +510,90 @@ class _ClientesScreenState extends State<ClientesScreen> {
                     ],
                   ),
                 ),
-
-                // Botones de acción
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Consumer<PermisosProvider>(
-                      builder: (context, permisosProvider, child) {
-                        // No mostrar botones de editar/eliminar para "Consumidor Final"
-                        if (_esConsumidorFinal(cliente)) {
-                          return const SizedBox.shrink();
-                        }
-
-                        final canEdit = permisosProvider.canEditClientes || permisosProvider.isAdmin;
-                        final canDelete = permisosProvider.canDeleteClientes || permisosProvider.isAdmin;
-                        
-                        // Si no tiene ningún permiso de acción, no mostrar nada
-                        if (!canEdit && !canDelete) {
-                          return const SizedBox.shrink();
-                        }
-                        
-                        return Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            // Botón Editar
-                            if (canEdit)
-                              Container(
-                                decoration: BoxDecoration(
-                                  color: AppTheme.primaryColor.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: IconButton(
-                                  icon: Icon(
-                                    Icons.edit_outlined,
-                                    color: AppTheme.primaryColor,
-                                    size: 20,
+                Consumer<PermisosProvider>(
+                  builder: (context, permisosProvider, child) {
+                    if (_esConsumidorFinal(cliente)) {
+                      return const SizedBox.shrink();
+                    }
+                    final canEdit = permisosProvider.canEditClientes ||
+                        permisosProvider.isAdmin;
+                    final canDelete = permisosProvider.canDeleteClientes ||
+                        permisosProvider.isAdmin;
+                    if (!canEdit && !canDelete) {
+                      return const SizedBox.shrink();
+                    }
+                    return Padding(
+                      padding: EdgeInsets.only(left: isCompact ? 8 : 10),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (canEdit)
+                            _buildActionIcon(
+                              icon: Icons.edit_outlined,
+                              color: AppTheme.primaryColor,
+                              isCompact: isCompact,
+                              onPressed: () async {
+                                final result = await Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        EditarClienteScreen(cliente: cliente),
                                   ),
-                                  onPressed: () async {
-                                    final result = await Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) => EditarClienteScreen(cliente: cliente),
-                                      ),
-                                    );
-                                    // Si se retorna un Cliente, significa que se guardó exitosamente
-                                    if (result is Cliente) {
-                                      // Actualizar directamente el cliente en la lista sin cambiar su posición
-                                      if (mounted) {
-                                        context.read<ClienteProvider>().actualizarClienteDirecto(result);
-                                        // Mostrar snackbar de éxito (el snackbar de editarCliente_screen ya se mostró, pero este es adicional en la pantalla principal)
-                                        AppTheme.showSnackBar(
-                                          context,
-                                          AppTheme.successSnackBar('Cliente actualizado exitosamente'),
-                                        );
-                                      }
-                                    }
-                                  },
-                                ),
-                              ),
-                            if (canEdit && canDelete)
-                              const SizedBox(width: 8),
-                            // Botón Eliminar
-                            if (canDelete)
-                              Container(
-                                decoration: BoxDecoration(
-                                  color: Colors.red.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: IconButton(
-                                  icon: Icon(
-                                    Icons.delete_outline,
-                                    color: Colors.red,
-                                    size: 20,
-                                  ),
-                                  onPressed: () => _eliminarCliente(cliente),
-                                ),
-                              ),
-                          ],
-                        );
-                      },
-                    ),
-                  ],
+                                );
+                                if (result is Cliente && mounted) {
+                                  context
+                                      .read<ClienteProvider>()
+                                      .actualizarClienteDirecto(result);
+                                  AppTheme.showSnackBar(
+                                    context,
+                                    AppTheme.successSnackBar(
+                                        'Cliente actualizado exitosamente'),
+                                  );
+                                }
+                              },
+                            ),
+                          if (canEdit && canDelete)
+                            SizedBox(width: isCompact ? 6 : 8),
+                          if (canDelete)
+                            _buildActionIcon(
+                              icon: Icons.delete_outline,
+                              color: Colors.red,
+                              isCompact: isCompact,
+                              onPressed: () => _eliminarCliente(cliente),
+                            ),
+                        ],
+                      ),
+                    );
+                  },
                 ),
               ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActionIcon({
+    required IconData icon,
+    required Color color,
+    required bool isCompact,
+    required VoidCallback onPressed,
+  }) {
+    final double size = isCompact ? 36 : 40;
+    return Material(
+      color: color.withOpacity(0.1),
+      borderRadius: BorderRadius.circular(10),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: onPressed,
+        child: SizedBox(
+          width: size,
+          height: size,
+          child: Icon(
+            icon,
+            color: color,
+            size: isCompact ? 18 : 20,
           ),
         ),
       ),

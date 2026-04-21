@@ -723,191 +723,169 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     );
   }
 
+  Widget _buildStatusChip({
+    required String label,
+    required Color color,
+    required IconData icon,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 11, color: color),
+          const SizedBox(width: 3),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 10,
+              color: color,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildUserCard(
       BuildContext context, User user, UserProvider userProvider, AuthProvider authProvider) {
-    final indicatorColor = user.isActive 
-        ? (user.isAdmin ? const Color(0xFF4CAF50) : AppTheme.primaryColor)
-        : Colors.red;
-    
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isCompact = AppTheme.isCompactVentasButton(context);
+
     final currentUser = authProvider.currentUser;
     final isCurrentUserSuperAdmin = currentUser?.isSuperAdmin ?? false;
     final isUserSuperAdmin = user.isSuperAdmin;
     final canModifySuperAdmin = isCurrentUserSuperAdmin || !isUserSuperAdmin;
-    
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: Theme.of(context).brightness == Brightness.dark
-            ? const Color(0xFF1A1A1A)
-            : Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Theme.of(context).brightness == Brightness.dark
-                ? Colors.black.withOpacity(0.3)
-                : Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
+
+    final Color estadoColor = !user.isActive
+        ? Colors.red.shade600
+        : (user.isAdmin ? const Color(0xFF4CAF50) : AppTheme.primaryColor);
+    final IconData estadoIcon = user.isAdmin
+        ? Icons.admin_panel_settings
+        : Icons.person_outline;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
       child: Material(
-        color: Colors.transparent,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
+        color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+        borderRadius: BorderRadius.circular(AppTheme.borderRadiusCards),
+        child: Container(
+          padding: EdgeInsets.all(isCompact ? 14 : 16),
+          decoration: BoxDecoration(
+            borderRadius:
+                BorderRadius.circular(AppTheme.borderRadiusCards),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
           child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Indicador lateral
               Container(
-                width: 4,
-                height: 60,
+                padding: EdgeInsets.all(isCompact ? 8 : 10),
                 decoration: BoxDecoration(
-                  color: indicatorColor,
-                  borderRadius: BorderRadius.circular(2),
+                  color: estadoColor.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  estadoIcon,
+                  color: estadoColor,
+                  size: isCompact ? 24 : 28,
                 ),
               ),
-              const SizedBox(width: 16),
-
-              // InformaciÃ³n del usuario
+              SizedBox(width: isCompact ? 12 : 16),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
                       user.userName,
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).brightness == Brightness.dark
-                            ? Colors.white
-                            : AppTheme.textColor,
-                      ),
+                      maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                    ),
-                    if (user.email != null) ...[
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.email_outlined,
-                            size: 16,
-                            color: Theme.of(context).brightness == Brightness.dark
-                                ? Colors.grey.shade400
-                                : Colors.grey.shade600,
-                          ),
-                          const SizedBox(width: 4),
-                          Expanded(
-                            child: Text(
-                              user.email!,
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Theme.of(context).brightness == Brightness.dark
-                                    ? Colors.grey.shade400
-                                    : Colors.grey.shade600,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: isCompact ? 15 : 16,
+                        color: isDark ? Colors.white : Colors.black87,
                       ),
-                    ],
-                    const SizedBox(height: 2),
+                    ),
+                    SizedBox(height: isCompact ? 2 : 4),
                     Row(
                       children: [
                         Icon(
-                          user.isAdmin ? Icons.admin_panel_settings : Icons.person,
-                          size: 16,
-                          color: Theme.of(context).brightness == Brightness.dark
+                          user.email != null && user.email!.isNotEmpty
+                              ? Icons.email_outlined
+                              : Icons.badge_outlined,
+                          size: isCompact ? 13 : 14,
+                          color: isDark
                               ? Colors.grey.shade400
                               : Colors.grey.shade600,
                         ),
                         const SizedBox(width: 4),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: user.isAdmin
-                                ? const Color(0xFF4CAF50).withOpacity(0.1)
-                                : Colors.grey.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color: user.isAdmin
-                                  ? const Color(0xFF4CAF50).withOpacity(0.3)
-                                  : Colors.grey.withOpacity(0.3),
-                            ),
-                          ),
+                        Expanded(
                           child: Text(
-                            _getRoleDisplayName(user.role),
+                            (user.email != null && user.email!.isNotEmpty)
+                                ? user.email!
+                                : _getRoleDisplayName(user.role),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                              fontSize: 10,
-                              color: user.isAdmin
-                                  ? const Color(0xFF4CAF50)
-                                  : Colors.grey.shade700,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                        if (_isLastAdmin(user, userProvider)) ...[
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.orange.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(
-                                color: Colors.orange.withOpacity(0.3),
-                              ),
-                            ),
-                            child: Text(
-                              'Ãšltimo Admin',
-                              style: TextStyle(
-                                fontSize: 10,
-                                color: Colors.orange.shade700,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                        ],
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: user.isActive
-                                ? Colors.green.withOpacity(0.1)
-                                : Colors.red.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color: user.isActive
-                                  ? Colors.green.withOpacity(0.3)
-                                  : Colors.red.withOpacity(0.3),
-                            ),
-                          ),
-                          child: Text(
-                            user.isActive ? 'Activo' : 'Inactivo',
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: user.isActive
-                                  ? Colors.green.shade700
-                                  : Colors.red.shade700,
-                              fontWeight: FontWeight.w500,
+                              fontSize: isCompact ? 13 : 14,
+                              color: isDark
+                                  ? Colors.grey.shade400
+                                  : Colors.grey.shade600,
                             ),
                           ),
                         ),
                       ],
                     ),
+                    SizedBox(height: isCompact ? 4 : 6),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      children: [
+                        _buildStatusChip(
+                          label: _getRoleDisplayName(user.role),
+                          color: user.isAdmin
+                              ? const Color(0xFF4CAF50)
+                              : (isDark
+                                  ? Colors.grey.shade400
+                                  : Colors.grey.shade700),
+                          icon: user.isAdmin
+                              ? Icons.admin_panel_settings
+                              : Icons.person,
+                        ),
+                        _buildStatusChip(
+                          label: user.isActive ? 'Activo' : 'Inactivo',
+                          color: user.isActive
+                              ? Colors.green.shade700
+                              : Colors.red.shade600,
+                          icon: user.isActive
+                              ? Icons.check_circle_outline
+                              : Icons.block,
+                        ),
+                        if (_isLastAdmin(user, userProvider))
+                          _buildStatusChip(
+                            label: 'Último Admin',
+                            color: Colors.orange.shade700,
+                            icon: Icons.warning_amber_rounded,
+                          ),
+                      ],
+                    ),
                   ],
                 ),
               ),
-
-              // Actions - menú modernizado
+              SizedBox(width: isCompact ? 6 : 8),
               PopupMenuButton<String>(
               onSelected: (value) {
                 WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -1065,15 +1043,16 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                 ];
               },
               child: Container(
-                padding: const EdgeInsets.all(8),
+                width: isCompact ? 36 : 40,
+                height: isCompact ? 36 : 40,
                 decoration: BoxDecoration(
                   color: AppTheme.primaryColor.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.more_vert,
                   color: AppTheme.primaryColor,
-                  size: 22,
+                  size: isCompact ? 18 : 20,
                 ),
               ),
             ),

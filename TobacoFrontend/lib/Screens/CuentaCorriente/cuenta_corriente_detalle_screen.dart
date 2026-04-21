@@ -1011,7 +1011,7 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
     }
 
     return ListView.builder(
-      padding: const EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 72),
+      padding: const EdgeInsets.only(left: 16, right: 16, top: 0, bottom: 72),
       itemCount: ventasCC.length + (_isLoadingMoreVentas ? 1 : 0),
       itemBuilder: (context, index) {
         if (index == ventasCC.length) {
@@ -1122,7 +1122,7 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
     }
 
     return ListView.builder(
-      padding: const EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 72),
+      padding: const EdgeInsets.only(left: 16, right: 16, top: 0, bottom: 72),
       itemCount: notasCredito.length,
       itemBuilder: (context, index) {
         final movimiento = notasCredito[index];
@@ -1155,7 +1155,7 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
     }
 
     return ListView.builder(
-      padding: const EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 72),
+      padding: const EdgeInsets.only(left: 16, right: 16, top: 0, bottom: 72),
       itemCount: productosAFavor.length,
       itemBuilder: (context, index) {
         final producto = productosAFavor[index];
@@ -1174,117 +1174,146 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
   }
 
   Widget _buildVentaCard(Ventas venta, bool isDarkMode) {
+    final isCompact = AppTheme.isCompactVentasButton(context);
     final totalVenta = _totalVentaConPrecioEspecial(venta);
-    // Monto en cuenta corriente: total de la venta (con precio especial) cuando es 100% CC
     double montoCuentaCorriente = 0.0;
     if (venta.pagos != null && venta.pagos!.isNotEmpty) {
       montoCuentaCorriente = venta.pagos!
           .where((pago) => pago.metodo.index == MetodoPago.cuentaCorriente.index)
           .fold(0.0, (sum, pago) => sum + pago.monto);
-      // Si hay pagos mixtos y el monto CC suma menos que el total, puede ser que los
-      // pagos no incluyan precio especial; usar totalVenta cuando toda la venta es CC
-      if (venta.metodoPago == MetodoPago.cuentaCorriente && montoCuentaCorriente < totalVenta - 0.01) {
+      if (venta.metodoPago == MetodoPago.cuentaCorriente &&
+          montoCuentaCorriente < totalVenta - 0.01) {
         montoCuentaCorriente = totalVenta;
       }
     } else if (venta.metodoPago == MetodoPago.cuentaCorriente) {
       montoCuentaCorriente = totalVenta;
     }
 
-    return GestureDetector(
-      onTap: () {
-        // Navegar a la pantalla de detalle de venta
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => DetalleVentaScreen(venta: venta),
-          ),
-        );
-      },
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
+    final bool hasMixedPayments =
+        venta.pagos != null && venta.pagos!.length > 1;
+    final Color accentColor = Colors.orange.shade700;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Material(
         color: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
-        borderRadius: BorderRadius.circular(15),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(isDarkMode ? 0.3 : 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.orange.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(
-                    Icons.receipt_long,
-                    color: Colors.orange.shade600,
-                    size: 20,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        venta.id != null ? 'Venta #${venta.numeroVisible}' : 'Venta Pendiente',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.primaryColor,
-                        ),
-                      ),
-                      Text(
-                        _formatearFecha(venta.fecha),
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: isDarkMode ? Colors.grey.shade300 : Colors.grey.shade600,
-                        ),
-                      ),
-                      if (venta.pagos != null && venta.pagos!.length > 1) ...[
-                        const SizedBox(height: 2),
-                        Text(
-                          'Total: \$${_formatearPrecio(totalVenta)}',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade500,
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.orange.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    '\$${_formatearPrecio(montoCuentaCorriente)}',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.orange.shade700,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
+        borderRadius: BorderRadius.circular(AppTheme.borderRadiusCards),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(AppTheme.borderRadiusCards),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => DetalleVentaScreen(venta: venta),
+              ),
+            );
+          },
+          child: Container(
+            padding: EdgeInsets.all(isCompact ? 14 : 16),
+            decoration: BoxDecoration(
+              borderRadius:
+                  BorderRadius.circular(AppTheme.borderRadiusCards),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(isDarkMode ? 0.3 : 0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 2),
                 ),
               ],
             ),
-          ],
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Container(
+                  padding: EdgeInsets.all(isCompact ? 8 : 10),
+                  decoration: BoxDecoration(
+                    color: accentColor.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    Icons.receipt_long,
+                    color: accentColor,
+                    size: isCompact ? 24 : 28,
+                  ),
+                ),
+                SizedBox(width: isCompact ? 12 : 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        venta.id != null
+                            ? 'Venta #${venta.numeroVisible}'
+                            : 'Venta Pendiente',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: isCompact ? 15 : 16,
+                          color: isDarkMode
+                              ? Colors.white
+                              : Colors.black87,
+                        ),
+                      ),
+                      SizedBox(height: isCompact ? 2 : 4),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.calendar_today_outlined,
+                            size: isCompact ? 13 : 14,
+                            color: isDarkMode
+                                ? Colors.grey.shade400
+                                : Colors.grey.shade600,
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              hasMixedPayments
+                                  ? '${_formatearFecha(venta.fecha)} · Total \$${_formatearPrecio(totalVenta)}'
+                                  : _formatearFecha(venta.fecha),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: isCompact ? 13 : 14,
+                                color: isDarkMode
+                                    ? Colors.grey.shade400
+                                    : Colors.grey.shade600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(width: isCompact ? 8 : 12),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      '\$${_formatearPrecio(montoCuentaCorriente)}',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: isCompact ? 14 : 16,
+                        color: accentColor,
+                      ),
+                    ),
+                    SizedBox(height: isCompact ? 2 : 4),
+                    Icon(
+                      Icons.chevron_right,
+                      color: isDarkMode
+                          ? Colors.grey.shade500
+                          : Colors.grey.shade400,
+                      size: isCompact ? 18 : 20,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
         ),
-      ),
       ),
     );
   }
@@ -1610,310 +1639,397 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
   }
 
   Widget _buildAbonoCard(Abono abono, bool isDarkMode) {
-    return GestureDetector(
-      onTap: () => _mostrarDetalleAbono(abono),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
+    final isCompact = AppTheme.isCompactVentasButton(context);
+    final Color accentColor = Colors.green.shade700;
+    final String subtitleText = abono.nota.isNotEmpty
+        ? '${_formatearFecha(abono.fecha)} · ${abono.nota}'
+        : _formatearFecha(abono.fecha);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Material(
         color: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
-        borderRadius: BorderRadius.circular(15),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(isDarkMode ? 0.3 : 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.green.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(
-                    Icons.payment,
-                    color: Colors.green.shade600,
-                    size: 20,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Abono #${abono.id}',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.primaryColor,
-                        ),
-                      ),
-                      Text(
-                        _formatearFecha(abono.fecha),
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: isDarkMode ? Colors.grey.shade300 : Colors.grey.shade600,
-                        ),
-                      ),
-                      if (abono.nota.isNotEmpty) ...[
-                        const SizedBox(height: 4),
-                        Text(
-                          abono.nota,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade500,
-                            fontStyle: FontStyle.italic,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.green.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        '\$${_formatearPrecio(_parsearDeuda(abono.monto))}',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.green.shade700,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    GestureDetector(
-                      onTap: () => _mostrarConfirmacionEliminarAbono(abono),
-                      child: Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: Colors.red.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Icon(
-                          Icons.delete_outline,
-                          color: Colors.red.shade600,
-                          size: 18,
-                        ),
-                      ),
-                    ),
-                  ],
+        borderRadius: BorderRadius.circular(AppTheme.borderRadiusCards),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(AppTheme.borderRadiusCards),
+          onTap: () => _mostrarDetalleAbono(abono),
+          child: Container(
+            padding: EdgeInsets.all(isCompact ? 14 : 16),
+            decoration: BoxDecoration(
+              borderRadius:
+                  BorderRadius.circular(AppTheme.borderRadiusCards),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(isDarkMode ? 0.3 : 0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 2),
                 ),
               ],
             ),
-          ],
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Container(
+                  padding: EdgeInsets.all(isCompact ? 8 : 10),
+                  decoration: BoxDecoration(
+                    color: accentColor.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    Icons.payment,
+                    color: accentColor,
+                    size: isCompact ? 24 : 28,
+                  ),
+                ),
+                SizedBox(width: isCompact ? 12 : 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Abono #${abono.id ?? "-"}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: isCompact ? 15 : 16,
+                          color: isDarkMode
+                              ? Colors.white
+                              : Colors.black87,
+                        ),
+                      ),
+                      SizedBox(height: isCompact ? 2 : 4),
+                      Row(
+                        children: [
+                          Icon(
+                            abono.nota.isNotEmpty
+                                ? Icons.sticky_note_2_outlined
+                                : Icons.calendar_today_outlined,
+                            size: isCompact ? 13 : 14,
+                            color: isDarkMode
+                                ? Colors.grey.shade400
+                                : Colors.grey.shade600,
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              subtitleText,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: isCompact ? 13 : 14,
+                                color: isDarkMode
+                                    ? Colors.grey.shade400
+                                    : Colors.grey.shade600,
+                                fontStyle: abono.nota.isNotEmpty
+                                    ? FontStyle.italic
+                                    : FontStyle.normal,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(width: isCompact ? 8 : 12),
+                Text(
+                  '\$${_formatearPrecio(_parsearDeuda(abono.monto))}',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: isCompact ? 14 : 16,
+                    color: accentColor,
+                  ),
+                ),
+                SizedBox(width: isCompact ? 6 : 8),
+                Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(10),
+                    onTap: () => _mostrarConfirmacionEliminarAbono(abono),
+                    child: Container(
+                      width: isCompact ? 36 : 40,
+                      height: isCompact ? 36 : 40,
+                      decoration: BoxDecoration(
+                        color: Colors.red.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(
+                        Icons.delete_outline,
+                        color: Colors.red.shade600,
+                        size: isCompact ? 18 : 20,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
-      ),
       ),
     );
   }
 
-  Widget _buildNotaCreditoCard(CuentaCorrienteMovimiento movimiento, bool isDarkMode) {
+  Widget _buildNotaCreditoCard(
+      CuentaCorrienteMovimiento movimiento, bool isDarkMode) {
+    final isCompact = AppTheme.isCompactVentasButton(context);
     final monto = movimiento.montoTotal != 0
         ? movimiento.montoTotal
         : movimiento.saldoDelta.abs();
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
+    final Color accentColor = Colors.orange.shade700;
+    final bool hasObs = movimiento.observacion?.isNotEmpty == true;
+    final String subtitleText = hasObs
+        ? '${_formatearFecha(movimiento.fecha)} · ${movimiento.observacion}'
+        : _formatearFecha(movimiento.fecha);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Material(
         color: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
-        borderRadius: BorderRadius.circular(15),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(isDarkMode ? 0.3 : 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
+        borderRadius: BorderRadius.circular(AppTheme.borderRadiusCards),
+        child: Container(
+          padding: EdgeInsets.all(isCompact ? 14 : 16),
+          decoration: BoxDecoration(
+            borderRadius:
+                BorderRadius.circular(AppTheme.borderRadiusCards),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(isDarkMode ? 0.3 : 0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: Colors.orange.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(
-                Icons.receipt_long,
-                color: Colors.orange.shade700,
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    movimiento.detalle ?? 'Nota de crédito',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: isDarkMode ? Colors.white : AppTheme.textColor,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    _formatearFecha(movimiento.fecha),
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
-                    ),
-                  ),
-                  if (movimiento.observacion?.isNotEmpty == true) ...[
-                    const SizedBox(height: 6),
-                    Text(
-                      movimiento.observacion ?? '',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade500,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: Colors.orange.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                '\$${_formatearPrecio(monto)}',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.orange.shade800,
-                  fontWeight: FontWeight.w600,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                padding: EdgeInsets.all(isCompact ? 8 : 10),
+                decoration: BoxDecoration(
+                  color: accentColor.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  Icons.receipt_long,
+                  color: accentColor,
+                  size: isCompact ? 24 : 28,
                 ),
               ),
-            ),
-          ],
+              SizedBox(width: isCompact ? 12 : 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      movimiento.detalle ?? 'Nota de crédito',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: isCompact ? 15 : 16,
+                        color: isDarkMode ? Colors.white : Colors.black87,
+                      ),
+                    ),
+                    SizedBox(height: isCompact ? 2 : 4),
+                    Row(
+                      children: [
+                        Icon(
+                          hasObs
+                              ? Icons.sticky_note_2_outlined
+                              : Icons.calendar_today_outlined,
+                          size: isCompact ? 13 : 14,
+                          color: isDarkMode
+                              ? Colors.grey.shade400
+                              : Colors.grey.shade600,
+                        ),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            subtitleText,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: isCompact ? 13 : 14,
+                              color: isDarkMode
+                                  ? Colors.grey.shade400
+                                  : Colors.grey.shade600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(width: isCompact ? 8 : 12),
+              Text(
+                '\$${_formatearPrecio(monto)}',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: isCompact ? 14 : 16,
+                  color: accentColor,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
   Widget _buildProductoAFavorCard(ProductoAFavor producto, bool isDarkMode) {
-    final entregado = producto.entregado;
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
+    final isCompact = AppTheme.isCompactVentasButton(context);
+    final bool entregado = producto.entregado;
+    final Color accentColor =
+        entregado ? Colors.green.shade700 : Colors.blue.shade700;
+    final Color statusColor =
+        entregado ? Colors.green.shade700 : Colors.amber.shade800;
+    final bool hasNota = producto.nota != null && producto.nota!.isNotEmpty;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Material(
         color: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
-        borderRadius: BorderRadius.circular(15),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(isDarkMode ? 0.3 : 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
+        borderRadius: BorderRadius.circular(AppTheme.borderRadiusCards),
+        child: Container(
+          padding: EdgeInsets.all(isCompact ? 14 : 16),
+          decoration: BoxDecoration(
+            borderRadius:
+                BorderRadius.circular(AppTheme.borderRadiusCards),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(isDarkMode ? 0.3 : 0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: Colors.blue.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(
-                    Icons.inventory_2,
-                    color: Colors.blue.shade700,
-                  ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                padding: EdgeInsets.all(isCompact ? 8 : 10),
+                decoration: BoxDecoration(
+                  color: accentColor.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        producto.producto?.nombre ?? 'Producto a favor',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: isDarkMode ? Colors.white : AppTheme.textColor,
-                        ),
+                child: Icon(
+                  Icons.inventory_2_outlined,
+                  color: accentColor,
+                  size: isCompact ? 24 : 28,
+                ),
+              ),
+              SizedBox(width: isCompact ? 12 : 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      producto.producto?.nombre ?? 'Producto a favor',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: isCompact ? 15 : 16,
+                        color: isDarkMode ? Colors.white : Colors.black87,
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Cantidad: ${producto.cantidad}',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
+                    ),
+                    SizedBox(height: isCompact ? 2 : 4),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.shopping_bag_outlined,
+                          size: isCompact ? 13 : 14,
+                          color: isDarkMode
+                              ? Colors.grey.shade400
+                              : Colors.grey.shade600,
                         ),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            'Cant: ${producto.cantidad} · ${_formatearFecha(producto.fechaRegistro)}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: isCompact ? 13 : 14,
+                              color: isDarkMode
+                                  ? Colors.grey.shade400
+                                  : Colors.grey.shade600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (hasNota) ...[
+                      SizedBox(height: isCompact ? 2 : 4),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.sticky_note_2_outlined,
+                            size: isCompact ? 13 : 14,
+                            color: isDarkMode
+                                ? Colors.grey.shade500
+                                : Colors.grey.shade500,
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              producto.nota!,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: isCompact ? 12 : 13,
+                                fontStyle: FontStyle.italic,
+                                color: isDarkMode
+                                    ? Colors.grey.shade500
+                                    : Colors.grey.shade500,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
-                  ),
+                  ],
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: (entregado ? Colors.green : Colors.amber).withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    entregado ? 'Entregado' : 'Pendiente',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: entregado ? Colors.green.shade700 : Colors.amber.shade800,
-                      fontWeight: FontWeight.w600,
+              ),
+              SizedBox(width: isCompact ? 8 : 12),
+              Container(
+                padding: EdgeInsets.symmetric(
+                  horizontal: isCompact ? 8 : 10,
+                  vertical: isCompact ? 4 : 6,
+                ),
+                decoration: BoxDecoration(
+                  color: statusColor.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: statusColor.withOpacity(0.3)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      entregado
+                          ? Icons.check_circle_outline
+                          : Icons.schedule,
+                      size: isCompact ? 12 : 14,
+                      color: statusColor,
                     ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Icon(
-                  Icons.calendar_today,
-                  size: 16,
-                  color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  _formatearFecha(producto.fechaRegistro),
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
-                  ),
-                ),
-              ],
-            ),
-            if (producto.nota != null && producto.nota!.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Text(
-                producto.nota!,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: isDarkMode ? Colors.grey.shade300 : Colors.grey.shade700,
+                    const SizedBox(width: 4),
+                    Text(
+                      entregado ? 'Entregado' : 'Pendiente',
+                      style: TextStyle(
+                        fontSize: isCompact ? 11 : 12,
+                        color: statusColor,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
-          ],
+          ),
         ),
       ),
     );

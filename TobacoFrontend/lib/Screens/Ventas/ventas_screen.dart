@@ -316,19 +316,26 @@ class _VentasScreenState extends State<VentasScreen> {
     );
   }
 
-  // Card individual de venta
+  // Card individual de venta (mismo estilo que la lista de compras)
   Widget _buildVentaCard(Ventas venta, VentasProvider provider, {bool isLast = false}) {
     final key = venta.id != null
         ? Key(venta.id.toString())
         : Key(
             'offline_${venta.clienteId}_${venta.fecha.millisecondsSinceEpoch}');
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isCompact = AppTheme.isCompactVentasButton(context);
+    final esPendiente = provider.esVentaPendiente(venta);
+    final fechaStr =
+        '${venta.fecha.day.toString().padLeft(2, '0')}/${venta.fecha.month.toString().padLeft(2, '0')}/${venta.fecha.year}';
+
     return Padding(
       padding: EdgeInsets.only(bottom: isLast ? 0 : 12),
       child: Consumer<PermisosProvider>(
         builder: (context, permisosProvider, child) {
-          final canDelete = permisosProvider.canDeleteVentas || permisosProvider.isAdmin;
-          
+          final canDelete =
+              permisosProvider.canDeleteVentas || permisosProvider.isAdmin;
+
           return Slidable(
             key: key,
             endActionPane: canDelete
@@ -342,143 +349,131 @@ class _VentasScreenState extends State<VentasScreen> {
                         icon: Icons.delete,
                         label: 'Eliminar',
                         borderRadius: const BorderRadius.only(
-                          topRight: Radius.circular(16),
-                          bottomRight: Radius.circular(16),
+                          topRight: Radius.circular(AppTheme.borderRadiusCards),
+                          bottomRight: Radius.circular(AppTheme.borderRadiusCards),
                         ),
                       ),
                     ],
                   )
                 : null,
-        child: Container(
-          decoration: BoxDecoration(
-            color: Theme.of(context).brightness == Brightness.dark
-                ? const Color(0xFF1A1A1A)
-                : Colors.white,
-            borderRadius: BorderRadius.circular(AppTheme.borderRadiusCards),
-            boxShadow: [
-              BoxShadow(
-                color: Theme.of(context).brightness == Brightness.dark
-                    ? Colors.black.withOpacity(0.3)
-                    : Colors.black.withOpacity(0.05),
-                blurRadius: 10,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              borderRadius: BorderRadius.circular(16),
-              onTap: () async {
-                final result = await Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => DetalleVentaScreen(venta: venta),
-                  ),
-                );
-                if (result == true || result == 'updated') {
-                  if (!mounted) return;
-                  await context.read<VentasProvider>().cargarVentas();
-                  Future.delayed(const Duration(milliseconds: 300), () {
-                    _syncButtonKey.currentState?.recargarPendientes();
-                  });
-                }
-              },
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 4,
-                      height: 60,
-                      decoration: BoxDecoration(
-                        color: provider.esVentaPendiente(venta) 
-                            ? Colors.orange 
-                            : Colors.green,
-                        borderRadius: BorderRadius.circular(2),
-                      ),
+            child: Material(
+              color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+              borderRadius: BorderRadius.circular(AppTheme.borderRadiusCards),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(AppTheme.borderRadiusCards),
+                onTap: () async {
+                  final result = await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => DetalleVentaScreen(venta: venta),
                     ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                  );
+                  if (result == true || result == 'updated') {
+                    if (!mounted) return;
+                    await context.read<VentasProvider>().cargarVentas();
+                    Future.delayed(const Duration(milliseconds: 300), () {
+                      _syncButtonKey.currentState?.recargarPendientes();
+                    });
+                  }
+                },
+                child: Container(
+                  padding: EdgeInsets.all(isCompact ? 14 : 16),
+                  decoration: BoxDecoration(
+                    borderRadius:
+                        BorderRadius.circular(AppTheme.borderRadiusCards),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
+                        blurRadius: 10,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: EdgeInsets.all(isCompact ? 8 : 10),
+                        decoration: BoxDecoration(
+                          color: (esPendiente
+                                  ? Colors.orange
+                                  : AppTheme.primaryColor)
+                              .withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(
+                          Icons.receipt_long,
+                          color: esPendiente
+                              ? Colors.orange
+                              : AppTheme.primaryColor,
+                          size: isCompact ? 24 : 28,
+                        ),
+                      ),
+                      SizedBox(width: isCompact ? 12 : 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              venta.cliente.nombre,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: isCompact ? 15 : 16,
+                                color: isDark ? Colors.white : Colors.black87,
+                              ),
+                            ),
+                            SizedBox(height: isCompact ? 2 : 4),
+                            Text(
+                              fechaStr,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: isCompact ? 13 : 14,
+                                color: isDark
+                                    ? Colors.grey.shade400
+                                    : Colors.grey.shade600,
+                              ),
+                            ),
+                            if (esPendiente)
+                              Text(
+                                'Pendiente de sincronizar',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: isCompact ? 11 : 12,
+                                  color: Colors.orange.shade700,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        mainAxisAlignment: MainAxisAlignment.end,
                         children: [
                           Text(
-                            venta.cliente.nombre,
+                            '\$${_formatearPrecioTexto(venta.total)}',
                             style: TextStyle(
-                              fontSize: 18,
                               fontWeight: FontWeight.bold,
-                              color:
-                                  Theme.of(context).brightness == Brightness.dark
-                                      ? Colors.white
-                                      : AppTheme.textColor,
+                              fontSize: isCompact ? 14 : 16,
+                              color: isDark ? Colors.white : Colors.black87,
                             ),
-                            overflow: TextOverflow.ellipsis,
                           ),
-                          const SizedBox(height: 4),
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.calendar_today_outlined,
-                                size: 16,
-                                color: Theme.of(context).brightness ==
-                                        Brightness.dark
-                                    ? Colors.grey.shade400
-                                    : Colors.grey.shade600,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                '${venta.fecha.day}/${venta.fecha.month}/${venta.fecha.year}',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: Theme.of(context).brightness ==
-                                          Brightness.dark
-                                      ? Colors.grey.shade400
-                                      : Colors.grey.shade600,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 2),
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.attach_money,
-                                size: 16,
-                                color: Theme.of(context).brightness ==
-                                        Brightness.dark
-                                    ? Colors.grey.shade400
-                                    : Colors.grey.shade600,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                _formatearPrecioTexto(venta.total),
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color: Theme.of(context).brightness ==
-                                          Brightness.dark
-                                      ? Colors.grey.shade400
-                                      : Colors.grey.shade600,
-                                ),
-                              ),
-                            ],
+                          SizedBox(width: isCompact ? 2 : 4),
+                          Icon(
+                            Icons.chevron_right,
+                            color: Colors.grey,
+                            size: isCompact ? 20 : 24,
                           ),
                         ],
                       ),
-                    ),
-                    Icon(
-                      Icons.chevron_right_rounded,
-                      color: Theme.of(context).brightness == Brightness.dark
-                          ? Colors.grey.shade600
-                          : Colors.grey.shade400,
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
-        ),
           );
         },
       ),

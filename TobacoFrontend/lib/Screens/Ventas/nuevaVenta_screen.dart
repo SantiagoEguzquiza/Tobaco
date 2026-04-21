@@ -732,155 +732,155 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
   }
 
   Widget _buildClientesList(List<Cliente> clientes, String title) {
-    bool tieneDeuda(String? deuda) {
-      if (deuda == null) return false;
-      return double.tryParse(deuda.toString()) != null &&
-          double.parse(deuda.toString()) > 0;
+    double parsearDeuda(String? deuda) {
+      if (deuda == null || deuda.isEmpty) return 0.0;
+      if (deuda.contains(',')) {
+        final partes = deuda.split(',');
+        if (partes.length == 2) {
+          final parteEntera = partes[0];
+          final parteDecimal = partes[1].length >= 2
+              ? partes[1].substring(0, 2)
+              : partes[1].padRight(2, '0');
+          return double.tryParse('$parteEntera.$parteDecimal') ?? 0.0;
+        }
+      }
+      return double.tryParse(deuda.replaceAll(',', '')) ?? 0.0;
     }
 
-    // Filtrar "Consumidor Final" de la lista antes de mostrar
-    final clientesFiltrados = clientes.where((c) => !_esConsumidorFinal(c)).toList();
+    final clientesFiltrados =
+        clientes.where((c) => !_esConsumidorFinal(c)).toList();
+    final isCompact = AppTheme.isCompactVentasButton(context);
 
     return ListView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-      itemCount: clientesFiltrados.length, // Mostrar TODOS los clientes
+      itemCount: clientesFiltrados.length,
       itemBuilder: (context, index) {
         final cliente = clientesFiltrados[index];
-        final tieneDeudaCliente = tieneDeuda(cliente.deuda);
+        return _buildClienteSeleccionCard(cliente, parsearDeuda, isCompact);
+      },
+    );
+  }
 
-        return Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          decoration: BoxDecoration(
-            color: Theme.of(context).brightness == Brightness.dark
-                ? const Color(0xFF1A1A1A)
-                : Colors.white,
-            borderRadius: BorderRadius.circular(8),
-            boxShadow: [
-              BoxShadow(
-                color: Theme.of(context).brightness == Brightness.dark
-                    ? Colors.black.withOpacity(0.3)
-                    : Colors.black.withOpacity(0.05),
-                blurRadius: 10,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              borderRadius: BorderRadius.circular(8),
-              onTap: () => _seleccionarCliente(cliente),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  children: [
-                    // Indicador lateral
-                    Container(
-                      width: 4,
-                      height: 60,
-                      decoration: BoxDecoration(
-                        color: tieneDeudaCliente
-                            ? Colors.red
-                            : AppTheme.primaryColor,
-                        borderRadius: BorderRadius.circular(8),
+  Widget _buildClienteSeleccionCard(
+      Cliente cliente, double Function(String?) parsearDeuda, bool isCompact) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final deuda = parsearDeuda(cliente.deuda);
+    final tieneDeuda = deuda > 0;
+    final direccion = cliente.direccion?.trim() ?? '';
+    final tieneDireccion = direccion.isNotEmpty;
+
+    final Color estadoColor =
+        tieneDeuda ? Colors.red.shade600 : AppTheme.primaryColor;
+    final IconData estadoIcon =
+        tieneDeuda ? Icons.person_off_outlined : Icons.person_outline;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Material(
+        color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+        borderRadius: BorderRadius.circular(AppTheme.borderRadiusCards),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(AppTheme.borderRadiusCards),
+          onTap: () => _seleccionarCliente(cliente),
+          child: Container(
+            padding: EdgeInsets.all(isCompact ? 14 : 16),
+            decoration: BoxDecoration(
+              borderRadius:
+                  BorderRadius.circular(AppTheme.borderRadiusCards),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: EdgeInsets.all(isCompact ? 8 : 10),
+                  decoration: BoxDecoration(
+                    color: estadoColor.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    estadoIcon,
+                    color: estadoColor,
+                    size: isCompact ? 24 : 28,
+                  ),
+                ),
+                SizedBox(width: isCompact ? 12 : 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        cliente.nombre,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: isCompact ? 15 : 16,
+                          color: isDark ? Colors.white : Colors.black87,
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 16),
-
-                    // Información del cliente
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      SizedBox(height: isCompact ? 2 : 4),
+                      Row(
                         children: [
-                          Text(
-                            cliente.nombre,
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Theme.of(context).brightness ==
-                                      Brightness.dark
-                                  ? Colors.white
-                                  : AppTheme.textColor,
+                          Icon(
+                            Icons.location_on_outlined,
+                            size: isCompact ? 13 : 14,
+                            color: isDark
+                                ? Colors.grey.shade400
+                                : Colors.grey.shade600,
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              tieneDireccion ? direccion : 'Sin dirección',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: isCompact ? 13 : 14,
+                                fontStyle: tieneDireccion
+                                    ? FontStyle.normal
+                                    : FontStyle.italic,
+                                color: isDark
+                                    ? Colors.grey.shade400
+                                    : Colors.grey.shade600,
+                              ),
                             ),
                           ),
-                          if (cliente.direccion != null &&
-                              cliente.direccion!.isNotEmpty) ...[
-                            const SizedBox(height: 4),
-                            Row(
-                              children: [
-                                Icon(
-                                  Icons.location_on_outlined,
-                                  size: 16,
-                                  color: Theme.of(context).brightness ==
-                                          Brightness.dark
-                                      ? Colors.grey.shade400
-                                      : Colors.grey.shade600,
-                                ),
-                                const SizedBox(width: 4),
-                                Expanded(
-                                  child: Text(
-                                    cliente.direccion!,
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      color: Theme.of(context).brightness ==
-                                              Brightness.dark
-                                          ? Colors.grey.shade400
-                                          : Colors.grey.shade600,
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                          if (tieneDeudaCliente) ...[
-                            const SizedBox(height: 2),
-                            Row(
-                              children: [
-                                Icon(
-                                  Icons.attach_money,
-                                  size: 16,
-                                  color: Theme.of(context).brightness ==
-                                          Brightness.dark
-                                      ? Colors.grey.shade400
-                                      : Colors.grey.shade600,
-                                ),
-                                const SizedBox(width: 4),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 6,
-                                    vertical: 2,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: Colors.red.shade50,
-                                    borderRadius: BorderRadius.circular(8),
-                                    border:
-                                        Border.all(color: Colors.red.shade200),
-                                  ),
-                                  child: Text(
-                                    'Deuda: \$${cliente.deuda}',
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      color: Colors.red.shade600,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
                         ],
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
+                if (tieneDeuda) ...[
+                  SizedBox(width: isCompact ? 8 : 10),
+                  Text(
+                    '\$${deuda.toStringAsFixed(2)}',
+                    style: TextStyle(
+                      fontSize: isCompact ? 14 : 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.red.shade600,
+                    ),
+                  ),
+                ],
+                SizedBox(width: isCompact ? 2 : 4),
+                Icon(
+                  Icons.chevron_right,
+                  color: Colors.grey,
+                  size: isCompact ? 20 : 24,
+                ),
+              ],
             ),
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 

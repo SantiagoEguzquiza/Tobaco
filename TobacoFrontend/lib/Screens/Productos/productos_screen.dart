@@ -729,208 +729,254 @@ class _ProductosScreenState extends State<ProductosScreen> {
         itemCount: filteredProductos.length,
         itemBuilder: (context, index) {
           final producto = filteredProductos[index];
-          return Container(
-                              margin: const EdgeInsets.only(bottom: 12),
-                              decoration: BoxDecoration(
-                                color: Theme.of(context).brightness ==
-                                        Brightness.dark
-                                    ? const Color(0xFF1A1A1A)
-                                    : Colors.white,
-                                borderRadius: BorderRadius.circular(AppTheme.borderRadiusCards),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Theme.of(context).brightness ==
-                                            Brightness.dark
-                                        ? Colors.black.withOpacity(0.3)
-                                        : Colors.black.withOpacity(0.05),
-                                    blurRadius: 10,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ],
-                              ),
-                              child: Material(
-                                color: Colors.transparent,
-                                child: InkWell(
-                                  borderRadius: BorderRadius.circular(16),
-                                  onTap: () async {
-                                    final result = await Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) =>
-                                            DetalleProductoScreen(
-                                          producto: producto,
-                                        ),
-                                      ),
-                                    );
-                                    // If a product was deleted, refresh the list
-                                    if (result == true) {
-                                    final categoriasProvider = context.read<CategoriasProvider>();
-                                    prov.recargarProductos(categoriasProvider);
-                                    }
-                                  },
-                                  child: Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 16, vertical: 16),
-                                    child: Row(
-                                      children: [
-                                        // Indicador de categoría
-                                        Container(
-                                          width: 4,
-                                          height: 60,
-                                          decoration: BoxDecoration(
-                                            color: _parseColor(
-                                              categorias
-                                                  .firstWhere(
-                                                    (c) =>
-                                                        c.nombre ==
-                                                        producto
-                                                            .categoriaNombre,
-                                                    orElse: () => Categoria(
-                                                        nombre: '',
-                                                        colorHex: '#9E9E9E'),
-                                                  )
-                                                  .colorHex,
-                                            ),
-                                            borderRadius:
-                                                BorderRadius.circular(2),
-                                          ),
-                                        ),
-                                        const SizedBox(width: 16),
-
-                                        // Información del producto
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                producto.nombre,
-                                                style: TextStyle(
-                                                  fontSize: 18,
-                                                  fontWeight: FontWeight.bold,
-                                                  color: Theme.of(context)
-                                                              .brightness ==
-                                                          Brightness.dark
-                                                      ? Colors.white
-                                                      : AppTheme.textColor,
-                                                ),
-                                              ),
-                                              const SizedBox(height: 4),
-                                              Row(
-                                                children: [
-                                                  Icon(
-                                                    Icons.inventory_2_outlined,
-                                                    size: 16,
-                                                    color: Theme.of(context)
-                                                                .brightness ==
-                                                            Brightness.dark
-                                                        ? Colors.grey.shade400
-                                                        : Colors.grey.shade600,
-                                                  ),
-                                                  const SizedBox(width: 4),
-                                                  Text(
-                                                    '${producto.stock?.toStringAsFixed(0)} unidades',
-                                                    style: TextStyle(
-                                                      fontSize: 14,
-                                                      color: Theme.of(context)
-                                                                  .brightness ==
-                                                              Brightness.dark
-                                                          ? Colors.grey.shade400
-                                                          : Colors
-                                                              .grey.shade600,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                              const SizedBox(height: 2),
-                                              _buildPrecioConDescuento(context, producto),
-                                              const SizedBox(height: 2),
-                                            ],
-                                          ),
-                                        ),
-
-                                        // Botones de acción - Ocultar según permisos
-                                        Consumer<PermisosProvider>(
-                                          builder: (context, permisosProvider, child) {
-                                            final canEdit = permisosProvider.canEditProductos || permisosProvider.isAdmin;
-                                            final canDelete = permisosProvider.canDeleteProductos || permisosProvider.isAdmin;
-                                            
-                                            // Si no tiene ningún permiso de acción, no mostrar la fila
-                                            if (!canEdit && !canDelete) {
-                                              return const SizedBox.shrink();
-                                            }
-                                            
-                                            return Row(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                // Botón Editar
-                                                if (canEdit)
-                                                  Container(
-                                                    decoration: BoxDecoration(
-                                                      color: AppTheme.primaryColor
-                                                          .withOpacity(0.1),
-                                                      borderRadius:
-                                                          BorderRadius.circular(8),
-                                                    ),
-                                                    child: IconButton(
-                                                      icon: Icon(
-                                                        Icons.edit_outlined,
-                                                        color: AppTheme.primaryColor,
-                                                        size: 20,
-                                                      ),
-                                                      onPressed: () async {
-                                                        final result =
-                                                            await Navigator.of(
-                                                          context,
-                                                          rootNavigator: true,
-                                                        ).push(
-                                                          MaterialPageRoute(
-                                                            builder: (context) =>
-                                                                EditarProductoScreen(
-                                                              producto: producto,
-                                                            ),
-                                                          ),
-                                                        );
-                                                        if (result == true) {
-                                                          final categoriasProvider = context.read<CategoriasProvider>();
-                                                          prov.recargarProductos(categoriasProvider);
-                                                        }
-                                                      },
-                                                    ),
-                                                  ),
-                                                if (canEdit && canDelete)
-                                                  const SizedBox(width: 8),
-                                                // Botón Eliminar
-                                                if (canDelete)
-                                                  Container(
-                                                    decoration: BoxDecoration(
-                                                      color:
-                                                          Colors.red.withOpacity(0.1),
-                                                      borderRadius:
-                                                          BorderRadius.circular(8),
-                                                    ),
-                                                    child: IconButton(
-                                                      icon: Icon(
-                                                        Icons.delete_outline,
-                                                        color: Colors.red,
-                                                        size: 20,
-                                                      ),
-                                                      onPressed: () =>
-                                                          _eliminarProducto(
-                                                              context, producto),
-                                                    ),
-                                                  ),
-                                              ],
-                                            );
-                                          },
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            );
+          return _buildProductoCard(producto, prov, categorias);
         },
+      ),
+    );
+  }
+
+  // Card individual de producto (mismo estilo que las listas de compras y ventas)
+  Widget _buildProductoCard(
+      Producto producto, ProductoProvider prov, List<Categoria> categorias) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isCompact = AppTheme.isCompactVentasButton(context);
+    final categoriaColor = _parseColor(
+      categorias
+          .firstWhere(
+            (c) => c.nombre == producto.categoriaNombre,
+            orElse: () => Categoria(nombre: '', colorHex: '#9E9E9E'),
+          )
+          .colorHex,
+    );
+    final tieneDescuento =
+        ProductoDescuentoHelper.tieneDescuentoActivo(producto);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Material(
+        color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+        borderRadius: BorderRadius.circular(AppTheme.borderRadiusCards),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(AppTheme.borderRadiusCards),
+          onTap: () async {
+            final result = await Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) =>
+                    DetalleProductoScreen(producto: producto),
+              ),
+            );
+            if (result == true) {
+              final categoriasProvider = context.read<CategoriasProvider>();
+              prov.recargarProductos(categoriasProvider);
+            }
+          },
+          child: Container(
+            padding: EdgeInsets.all(isCompact ? 14 : 16),
+            decoration: BoxDecoration(
+              borderRadius:
+                  BorderRadius.circular(AppTheme.borderRadiusCards),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: EdgeInsets.all(isCompact ? 8 : 10),
+                  decoration: BoxDecoration(
+                    color: categoriaColor.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    Icons.inventory_2_outlined,
+                    color: categoriaColor,
+                    size: isCompact ? 24 : 28,
+                  ),
+                ),
+                SizedBox(width: isCompact ? 12 : 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        producto.nombre,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: isCompact ? 15 : 16,
+                          color: isDark ? Colors.white : Colors.black87,
+                        ),
+                      ),
+                      SizedBox(height: isCompact ? 2 : 4),
+                      Text(
+                        '${producto.stock?.toStringAsFixed(0) ?? '0'} unidades',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: isCompact ? 13 : 14,
+                          color: isDark
+                              ? Colors.grey.shade400
+                              : Colors.grey.shade600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(width: isCompact ? 8 : 10),
+                _buildPrecioLateral(producto, isDark, isCompact, tieneDescuento),
+                Consumer<PermisosProvider>(
+                  builder: (context, permisosProvider, child) {
+                    final canEdit = permisosProvider.canEditProductos ||
+                        permisosProvider.isAdmin;
+                    final canDelete = permisosProvider.canDeleteProductos ||
+                        permisosProvider.isAdmin;
+                    if (!canEdit && !canDelete) {
+                      return const SizedBox.shrink();
+                    }
+                    return Padding(
+                      padding: EdgeInsets.only(left: isCompact ? 8 : 10),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (canEdit)
+                            _buildActionIcon(
+                              icon: Icons.edit_outlined,
+                              color: AppTheme.primaryColor,
+                              isCompact: isCompact,
+                              onPressed: () async {
+                                final result = await Navigator.of(
+                                  context,
+                                  rootNavigator: true,
+                                ).push(
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        EditarProductoScreen(
+                                            producto: producto),
+                                  ),
+                                );
+                                if (result == true) {
+                                  final categoriasProvider =
+                                      context.read<CategoriasProvider>();
+                                  prov.recargarProductos(categoriasProvider);
+                                }
+                              },
+                            ),
+                          if (canEdit && canDelete)
+                            SizedBox(width: isCompact ? 6 : 8),
+                          if (canDelete)
+                            _buildActionIcon(
+                              icon: Icons.delete_outline,
+                              color: Colors.red,
+                              isCompact: isCompact,
+                              onPressed: () =>
+                                  _eliminarProducto(context, producto),
+                            ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPrecioLateral(
+      Producto producto, bool isDark, bool isCompact, bool tieneDescuento) {
+    if (tieneDescuento) {
+      final precioConDescuento =
+          ProductoDescuentoHelper.calcularPrecioConDescuento(producto);
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            '\$${producto.precio.toStringAsFixed(2)}',
+            style: TextStyle(
+              fontSize: isCompact ? 12 : 13,
+              decoration: TextDecoration.lineThrough,
+              color: isDark ? Colors.grey.shade500 : Colors.grey.shade400,
+              height: 1.1,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                decoration: BoxDecoration(
+                  color: Colors.green.shade100,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  '-${producto.descuento.toStringAsFixed(0)}%',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.green.shade700,
+                    height: 1.1,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 4),
+              Text(
+                '\$${precioConDescuento.toStringAsFixed(2)}',
+                style: TextStyle(
+                  fontSize: isCompact ? 14 : 16,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.primaryColor,
+                  height: 1.1,
+                ),
+              ),
+            ],
+          ),
+        ],
+      );
+    }
+    return Text(
+      '\$${producto.precio.toStringAsFixed(2)}',
+      style: TextStyle(
+        fontSize: isCompact ? 14 : 16,
+        fontWeight: FontWeight.bold,
+        color: isDark ? Colors.white : Colors.black87,
+      ),
+    );
+  }
+
+  Widget _buildActionIcon({
+    required IconData icon,
+    required Color color,
+    required bool isCompact,
+    required VoidCallback onPressed,
+  }) {
+    final double size = isCompact ? 36 : 40;
+    return Material(
+      color: color.withOpacity(0.1),
+      borderRadius: BorderRadius.circular(10),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: onPressed,
+        child: SizedBox(
+          width: size,
+          height: size,
+          child: Icon(
+            icon,
+            color: color,
+            size: isCompact ? 18 : 20,
+          ),
+        ),
       ),
     );
   }
@@ -1096,109 +1142,6 @@ class _ProductosScreenState extends State<ProductosScreen> {
         ),
       ),
     );
-  }
-
-  /// Widget para mostrar precio con descuento
-  Widget _buildPrecioConDescuento(BuildContext context, Producto producto) {
-    final tieneDescuentoActivo = ProductoDescuentoHelper.tieneDescuentoActivo(producto);
-    final precioConDescuento = ProductoDescuentoHelper.calcularPrecioConDescuento(producto);
-    final fechaExpiracion = ProductoDescuentoHelper.obtenerFechaExpiracionFormateada(producto);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    if (tieneDescuentoActivo) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                Icons.attach_money,
-                size: 16,
-                color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
-              ),
-              const SizedBox(width: 4),
-              // Precio original tachado
-              Text(
-                producto.precio.toStringAsFixed(2),
-                style: TextStyle(
-                  fontSize: 14,
-                  decoration: TextDecoration.lineThrough,
-                  color: isDark ? Colors.grey.shade500 : Colors.grey.shade400,
-                ),
-              ),
-              const SizedBox(width: 8),
-              // Precio con descuento
-              Text(
-                precioConDescuento.toStringAsFixed(2),
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.primaryColor,
-                ),
-              ),
-              const SizedBox(width: 4),
-              // Badge de descuento
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Colors.green.shade100,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  '-${producto.descuento.toStringAsFixed(0)}%',
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.green.shade700,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          // Fecha de expiración si existe
-          if (fechaExpiracion != null) ...[
-            const SizedBox(height: 2),
-            Row(
-              children: [
-                Icon(
-                  Icons.calendar_today_outlined,
-                  size: 12,
-                  color: isDark ? Colors.grey.shade500 : Colors.grey.shade500,
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  'Vence: $fechaExpiracion',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: isDark ? Colors.grey.shade500 : Colors.grey.shade500,
-                    fontStyle: FontStyle.italic,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ],
-      );
-    } else {
-      // Precio normal sin descuento
-      return Row(
-        children: [
-          Icon(
-            Icons.attach_money,
-            size: 16,
-            color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
-          ),
-          const SizedBox(width: 4),
-          Text(
-            producto.precio.toStringAsFixed(2),
-            style: TextStyle(
-              fontSize: 14,
-              color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
-            ),
-          ),
-        ],
-      );
-    }
   }
 
   /// Función para eliminar un producto usando el diálogo centralizado

@@ -259,19 +259,19 @@ class _MenuScreenState extends State<MenuScreen> {
                 SizedBox(height: spacing),
                 if (permisosProvider.canCreateVentas || permisosProvider.isAdmin) ...[
                   SizedBox(
-                    width: isTablet ? 400 : double.infinity,
+                    width: double.infinity,
                     height: 56,
                     child: DecoratedBox(
                       decoration: BoxDecoration(
                         gradient: const LinearGradient(
-                          colors: [Color(0xFF22C55E), Color(0xFF16A34A)],
+                          colors: [Color(0xFF154D6C), Color(0xFF1CB5AC)],
                           begin: Alignment.centerLeft,
                           end: Alignment.centerRight,
                         ),
-                        borderRadius: BorderRadius.circular(28),
+                        borderRadius: BorderRadius.circular(16),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFF22C55E).withOpacity(0.35),
+                            color: const Color(0xFF1CB5AC).withOpacity(0.35),
                             blurRadius: 18,
                             offset: const Offset(0, 8),
                           ),

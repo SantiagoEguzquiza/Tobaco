@@ -84,39 +84,25 @@ class _NuevaCompraScreenState extends State<NuevaCompraScreen> {
 
   double get _total => _items.fold(0, (s, e) => s + e.subtotal);
 
-  /// Sección de productos con el mismo estilo que en nueva venta (card + header "Productos ( N )" + lista).
+  /// Sección de productos: header "Productos ( N )" + cards individuales con el
+  /// mismo patrón del resto de la app (ícono cuadrado + info + subtotal + eliminar).
   Widget _buildProductosSectionCompra(bool isDark) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-        border: Border.all(
-          color: isDark ? Colors.grey.shade700! : Colors.grey.shade200!,
-          width: 1,
-        ),
-      ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Column(
         mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF2A2A2A) : Colors.grey.shade50,
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(8),
-                topRight: Radius.circular(8),
-              ),
-            ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(4, 4, 4, 10),
             child: Row(
               children: [
+                Icon(
+                  Icons.inventory_2_outlined,
+                  size: 18,
+                  color: AppTheme.primaryColor,
+                ),
+                const SizedBox(width: 8),
                 Text(
                   'Productos ( ${_items.length} )',
                   style: TextStyle(
@@ -128,54 +114,144 @@ class _NuevaCompraScreenState extends State<NuevaCompraScreen> {
               ],
             ),
           ),
-          ClipRRect(
-            borderRadius: const BorderRadius.only(
-              bottomLeft: Radius.circular(AppTheme.borderRadiusCards),
-              bottomRight: Radius.circular(AppTheme.borderRadiusCards),
-            ),
-            child: ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: _items.length,
-              itemBuilder: (context, index) {
-                final i = index;
-                final line = _items[i];
-                final backgroundColor = isDark
-                    ? (index.isEven ? const Color(0xFF1A1A1A) : const Color(0xFF252525))
-                    : (index.isEven ? Colors.white : Colors.grey.shade50);
-                return Container(
-                  color: backgroundColor,
-                  child: ListTile(
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                    title: Text(
-                      line.productoNombre,
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        color: isDark ? Colors.white : Colors.black87,
-                      ),
-                    ),
-                    subtitle: Padding(
-                      padding: const EdgeInsets.only(top: 2),
-                      child: Text(
-                        '${line.cantidad} × \$${line.costoUnitario.toStringAsFixed(2)} = \$${line.subtotal.toStringAsFixed(2)}',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: isDark ? Colors.grey.shade400 : Colors.grey.shade700,
-                        ),
-                      ),
-                    ),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.delete_outline_rounded, color: Colors.red),
-                      onPressed: () => _removeItem(i),
-                    ),
-                  ),
-                );
-              },
-            ),
+          ListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            padding: EdgeInsets.zero,
+            itemCount: _items.length,
+            itemBuilder: (context, index) {
+              return _buildCompraItemCard(_items[index], index, isDark);
+            },
           ),
         ],
       ),
     );
+  }
+
+  Widget _buildCompraItemCard(
+      _CompraItemLine line, int index, bool isDark) {
+    final isCompact = AppTheme.isCompactVentasButton(context);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Material(
+        color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+        borderRadius: BorderRadius.circular(AppTheme.borderRadiusCards),
+        child: Container(
+          padding: EdgeInsets.all(isCompact ? 14 : 16),
+          decoration: BoxDecoration(
+            borderRadius:
+                BorderRadius.circular(AppTheme.borderRadiusCards),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                padding: EdgeInsets.all(isCompact ? 8 : 10),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryColor.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  Icons.inventory_2_outlined,
+                  color: AppTheme.primaryColor,
+                  size: isCompact ? 24 : 28,
+                ),
+              ),
+              SizedBox(width: isCompact ? 12 : 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      line.productoNombre,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: isCompact ? 15 : 16,
+                        color: isDark ? Colors.white : Colors.black87,
+                      ),
+                    ),
+                    SizedBox(height: isCompact ? 2 : 4),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.shopping_cart_outlined,
+                          size: isCompact ? 13 : 14,
+                          color: isDark
+                              ? Colors.grey.shade400
+                              : Colors.grey.shade600,
+                        ),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            '${_formatearCantidad(line.cantidad)} × \$${line.costoUnitario.toStringAsFixed(2)}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: isCompact ? 13 : 14,
+                              color: isDark
+                                  ? Colors.grey.shade400
+                                  : Colors.grey.shade600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(width: isCompact ? 8 : 12),
+              Text(
+                '\$${line.subtotal.toStringAsFixed(2)}',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: isCompact ? 14 : 16,
+                  color: AppTheme.primaryColor,
+                ),
+              ),
+              SizedBox(width: isCompact ? 6 : 8),
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(10),
+                  onTap: () => _removeItem(index),
+                  child: Container(
+                    width: isCompact ? 36 : 40,
+                    height: isCompact ? 36 : 40,
+                    decoration: BoxDecoration(
+                      color: Colors.red.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(
+                      Icons.delete_outline_rounded,
+                      color: Colors.red.shade600,
+                      size: isCompact ? 18 : 20,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _formatearCantidad(double cantidad) {
+    if (cantidad == cantidad.truncateToDouble()) {
+      return cantidad.toInt().toString();
+    }
+    return cantidad.toString();
   }
 
   /// Barra Total + Confirmar compra (reutilizada en scroll cuando hay productos).
@@ -723,6 +799,118 @@ class _NuevaCompraScreenState extends State<NuevaCompraScreen> {
     );
   }
 
+  Widget _buildProveedorCard(Proveedor p, bool isDark) {
+    final isCompact = AppTheme.isCompactVentasButton(context);
+    final String? contacto =
+        (p.contacto != null && p.contacto!.trim().isNotEmpty)
+            ? p.contacto!.trim()
+            : (p.email != null && p.email!.trim().isNotEmpty
+                ? p.email!.trim()
+                : null);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Material(
+        color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+        borderRadius: BorderRadius.circular(AppTheme.borderRadiusCards),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(AppTheme.borderRadiusCards),
+          onTap: () => setState(() => _proveedorId = p.id),
+          child: Container(
+            padding: EdgeInsets.all(isCompact ? 14 : 16),
+            decoration: BoxDecoration(
+              borderRadius:
+                  BorderRadius.circular(AppTheme.borderRadiusCards),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Container(
+                  padding: EdgeInsets.all(isCompact ? 8 : 10),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryColor.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    Icons.business_rounded,
+                    color: AppTheme.primaryColor,
+                    size: isCompact ? 24 : 28,
+                  ),
+                ),
+                SizedBox(width: isCompact ? 12 : 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        p.nombre,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: isCompact ? 15 : 16,
+                          color: isDark ? Colors.white : Colors.black87,
+                        ),
+                      ),
+                      SizedBox(height: isCompact ? 2 : 4),
+                      Row(
+                        children: [
+                          Icon(
+                            contacto == null
+                                ? Icons.badge_outlined
+                                : (p.contacto != null &&
+                                        p.contacto!.trim().isNotEmpty
+                                    ? Icons.phone_outlined
+                                    : Icons.email_outlined),
+                            size: isCompact ? 13 : 14,
+                            color: isDark
+                                ? Colors.grey.shade400
+                                : Colors.grey.shade600,
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              contacto ?? 'Sin contacto',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: isCompact ? 13 : 14,
+                                fontStyle: contacto == null
+                                    ? FontStyle.italic
+                                    : FontStyle.normal,
+                                color: isDark
+                                    ? Colors.grey.shade400
+                                    : Colors.grey.shade600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(width: isCompact ? 6 : 8),
+                Icon(
+                  Icons.chevron_right,
+                  color: isDark ? Colors.grey.shade500 : Colors.grey.shade400,
+                  size: isCompact ? 20 : 22,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildEmptyStateProveedores(bool sinFiltro, bool isDark) {
     final bottomPadding = MediaQuery.of(context).padding.bottom + 24;
     final titulo = sinFiltro ? 'No hay proveedores. Crea uno.' : 'No se encontraron proveedores';
@@ -842,58 +1030,7 @@ class _NuevaCompraScreenState extends State<NuevaCompraScreen> {
                             itemCount: _proveedoresFiltrados.length,
                             itemBuilder: (_, i) {
                               final p = _proveedoresFiltrados[i];
-                              return Container(
-                                margin: const EdgeInsets.only(bottom: 12),
-                                decoration: BoxDecoration(
-                                  color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
-                                  borderRadius: BorderRadius.circular(8),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: isDark ? Colors.black.withOpacity(0.3) : Colors.black.withOpacity(0.05),
-                                      blurRadius: 10,
-                                      offset: const Offset(0, 2),
-                                    ),
-                                  ],
-                                ),
-                                child: Material(
-                                  color: Colors.transparent,
-                                  child: InkWell(
-                                    borderRadius: BorderRadius.circular(8),
-                                    onTap: () => setState(() => _proveedorId = p.id),
-                                    child: Padding(
-                                      padding: const EdgeInsets.all(16),
-                                      child: Row(
-                                        children: [
-                                          Container(
-                                            width: 4,
-                                            height: 60,
-                                            decoration: BoxDecoration(
-                                              color: AppTheme.primaryColor,
-                                              borderRadius: BorderRadius.circular(8),
-                                            ),
-                                          ),
-                                          const SizedBox(width: 16),
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                  p.nombre,
-                                                  style: TextStyle(
-                                                    fontSize: 18,
-                                                    fontWeight: FontWeight.bold,
-                                                    color: isDark ? Colors.white : AppTheme.textColor,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              );
+                              return _buildProveedorCard(p, isDark);
                             },
                           ),
               ),
