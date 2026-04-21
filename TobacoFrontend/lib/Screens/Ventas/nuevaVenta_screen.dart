@@ -2340,6 +2340,9 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                                 ClienteSection(
                                   cliente: clienteSeleccionado!,
                                   onCambiarCliente: cambiarCliente,
+                                  onAbonoRegistrado: () {
+                                    if (mounted) setState(() {});
+                                  },
                                 ),
 
                                 // Botón agregar productos

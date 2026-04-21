@@ -419,66 +419,102 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Cliente y saldo
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: cardBg,
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(
-                            color: AppTheme.primaryColor.withOpacity(0.2),
-                            width: 1,
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: AppTheme.primaryColor.withOpacity(0.15),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: const Icon(
-                                Icons.person_rounded,
-                                color: AppTheme.primaryColor,
-                                size: 22,
+                      // Cliente y saldo (tappable para autocompletar monto)
+                      Builder(
+                        builder: (context) {
+                          final deudaActual =
+                              _parsearDeuda(widget.cliente.deuda);
+                          return Material(
+                            color: cardBg,
+                            borderRadius: BorderRadius.circular(14),
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(14),
+                              onTap: deudaActual > 0
+                                  ? () {
+                                      final valor =
+                                          deudaActual.toStringAsFixed(2);
+                                      montoController.value =
+                                          TextEditingValue(
+                                        text: valor,
+                                        selection: TextSelection.collapsed(
+                                            offset: valor.length),
+                                      );
+                                      setState(() => errorMessage = null);
+                                    }
+                                  : null,
+                              child: Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(
+                                    color: AppTheme.primaryColor
+                                        .withOpacity(0.2),
+                                    width: 1,
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color: AppTheme.primaryColor
+                                            .withOpacity(0.15),
+                                        borderRadius:
+                                            BorderRadius.circular(10),
+                                      ),
+                                      child: const Icon(
+                                        Icons.person_rounded,
+                                        color: AppTheme.primaryColor,
+                                        size: 22,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 14),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            widget.cliente.nombre,
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w600,
+                                              color: textColor,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            deudaActual > 0
+                                                ? 'Saldo: \$${_formatearPrecio(deudaActual)}'
+                                                : deudaActual < 0
+                                                    ? 'Saldo a favor: \$${_formatearPrecio(-deudaActual)}'
+                                                    : 'Sin deuda actualmente',
+                                            style: TextStyle(
+                                              fontSize: 14,
+                                              color: deudaActual > 0
+                                                  ? Colors.red.shade600
+                                                  : Colors.green.shade600,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    if (deudaActual > 0) ...[
+                                      const SizedBox(width: 8),
+                                      Icon(
+                                        Icons.touch_app_rounded,
+                                        size: 20,
+                                        color: Colors.red.shade600
+                                            .withOpacity(0.7),
+                                      ),
+                                    ],
+                                  ],
+                                ),
                               ),
                             ),
-                            const SizedBox(width: 14),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    widget.cliente.nombre,
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                      color: textColor,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    () {
-                                      final d = _parsearDeuda(widget.cliente.deuda);
-                                      if (d > 0) return 'Saldo: \$${_formatearPrecio(d)}';
-                                      if (d < 0) return 'Saldo a favor: \$${_formatearPrecio(-d)}';
-                                      return 'Sin deuda actualmente';
-                                    }(),
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      color: () {
-                                        final d = _parsearDeuda(widget.cliente.deuda);
-                                        return d > 0 ? Colors.red.shade600 : Colors.green.shade600;
-                                      }(),
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
+                          );
+                        },
                       ),
                       const SizedBox(height: 16),
 
