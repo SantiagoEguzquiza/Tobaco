@@ -183,6 +183,8 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
                                           final isCompact = MediaQuery.of(context).size.height < 680;
                                           return ElevatedButton.icon(
                                             onPressed: () async {
+                                              final categoriasProvider =
+                                                  context.read<CategoriasProvider>();
                                               final result = await Navigator.push<bool>(
                                                 context,
                                                 MaterialPageRoute(
@@ -190,7 +192,7 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
                                                 ),
                                               );
                                               if (result == true && mounted) {
-                                                context.read<CategoriasProvider>().cargarCategorias();
+                                                categoriasProvider.cargarCategorias();
                                               }
                                             },
                                             icon: Icon(Icons.add_circle_outline, size: isCompact ? 18 : 20),
@@ -351,6 +353,8 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
                                       onDelete: (categoria) =>
                                           _eliminarCategoria(categoria),
                                       onEdit: (categoria) async {
+                                        final categoriasProvider =
+                                            context.read<CategoriasProvider>();
                                         final result = await Navigator.push<bool>(
                                           context,
                                           MaterialPageRoute(
@@ -358,7 +362,7 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
                                           ),
                                         );
                                         if (result == true && mounted) {
-                                          context.read<CategoriasProvider>().cargarCategorias();
+                                          categoriasProvider.cargarCategorias();
                                         }
                                       },
                                     ),

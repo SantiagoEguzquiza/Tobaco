@@ -786,19 +786,19 @@ class _ProductosScreenState extends State<ProductosScreen> {
             ),
             child: Row(
               children: [
-                Container(
-                  padding: EdgeInsets.all(isCompact ? 8 : 10),
-                  decoration: BoxDecoration(
-                    color: categoriaColor.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(
-                    Icons.inventory_2_outlined,
-                    color: categoriaColor,
-                    size: isCompact ? 24 : 28,
-                  ),
-                ),
-                SizedBox(width: isCompact ? 12 : 16),
+                // Container(
+                //   padding: EdgeInsets.all(isCompact ? 8 : 10),
+                //   decoration: BoxDecoration(
+                //     color: categoriaColor.withOpacity(0.15),
+                //     borderRadius: BorderRadius.circular(12),
+                //   ),
+                //   child: Icon(
+                //     Icons.inventory_2_outlined,
+                //     color: categoriaColor,
+                //     size: isCompact ? 24 : 28,
+                //   ),
+                // ),
+                // SizedBox(width: isCompact ? 12 : 16),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -831,58 +831,60 @@ class _ProductosScreenState extends State<ProductosScreen> {
                 ),
                 SizedBox(width: isCompact ? 8 : 10),
                 _buildPrecioLateral(producto, isDark, isCompact, tieneDescuento),
-                Consumer<PermisosProvider>(
-                  builder: (context, permisosProvider, child) {
-                    final canEdit = permisosProvider.canEditProductos ||
-                        permisosProvider.isAdmin;
-                    final canDelete = permisosProvider.canDeleteProductos ||
-                        permisosProvider.isAdmin;
-                    if (!canEdit && !canDelete) {
-                      return const SizedBox.shrink();
-                    }
-                    return Padding(
-                      padding: EdgeInsets.only(left: isCompact ? 8 : 10),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (canEdit)
-                            _buildActionIcon(
-                              icon: Icons.edit_outlined,
-                              color: AppTheme.primaryColor,
-                              isCompact: isCompact,
-                              onPressed: () async {
-                                final result = await Navigator.of(
-                                  context,
-                                  rootNavigator: true,
-                                ).push(
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        EditarProductoScreen(
-                                            producto: producto),
-                                  ),
-                                );
-                                if (result == true) {
-                                  final categoriasProvider =
-                                      context.read<CategoriasProvider>();
-                                  prov.recargarProductos(categoriasProvider);
-                                }
-                              },
-                            ),
-                          if (canEdit && canDelete)
-                            SizedBox(width: isCompact ? 6 : 8),
-                          if (canDelete)
-                            _buildActionIcon(
-                              icon: Icons.delete_outline,
-                              color: Colors.red,
-                              isCompact: isCompact,
-                              onPressed: () =>
-                                  _eliminarProducto(context, producto),
-                            ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
+
+                
+                // Consumer<PermisosProvider>(
+                //   builder: (context, permisosProvider, child) {
+                //     final canEdit = permisosProvider.canEditProductos ||
+                //         permisosProvider.isAdmin;
+                //     final canDelete = permisosProvider.canDeleteProductos ||
+                //         permisosProvider.isAdmin;
+                //     if (!canEdit && !canDelete) {
+                //       return const SizedBox.shrink();
+                //     }
+                //     return Padding(
+                //       padding: EdgeInsets.only(left: isCompact ? 8 : 10),
+                //       child: Row(
+                //         mainAxisSize: MainAxisSize.min,
+                //         children: [
+                //           if (canEdit)
+                //             _buildActionIcon(
+                //               icon: Icons.edit_outlined,
+                //               color: AppTheme.primaryColor,
+                //               isCompact: isCompact,
+                //               onPressed: () async {
+                //                 final result = await Navigator.of(
+                //                   context,
+                //                   rootNavigator: true,
+                //                 ).push(
+                //                   MaterialPageRoute(
+                //                     builder: (context) =>
+                //                         EditarProductoScreen(
+                //                             producto: producto),
+                //                   ),
+                //                 );
+                //                 if (result == true) {
+                //                   final categoriasProvider =
+                //                       context.read<CategoriasProvider>();
+                //                   prov.recargarProductos(categoriasProvider);
+                //                 }
+                //               },
+                //             ),
+                //           if (canEdit && canDelete)
+                //             SizedBox(width: isCompact ? 6 : 8),
+                //           if (canDelete)
+                //             _buildActionIcon(
+                //               icon: Icons.delete_outline,
+                //               color: Colors.red,
+                //               isCompact: isCompact,
+                //               onPressed: () =>
+                //                   _eliminarProducto(context, producto),
+                //             ),
+                //         ],
+                //       ),
+                //     );
+                //   },
+                // ),
               ],
             ),
           ),
