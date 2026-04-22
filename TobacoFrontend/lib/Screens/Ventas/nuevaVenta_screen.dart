@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' show max, min;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
@@ -163,9 +164,28 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
       context: context,
       barrierDismissible: false,
       builder: (BuildContext context) {
-        final screenHeight = MediaQuery.of(context).size.height;
-        final maxHeight = (screenHeight * 0.85).clamp(280.0, 500.0);
+        final mq = MediaQuery.of(context);
+        final screenH = mq.size.height;
+        final screenW = mq.size.width;
+        final viewInsets = mq.viewInsets.bottom;
+        // Altura útil: sin tope bajo fijo (p. ej. 500) que forzaba scroll en pantallas altas.
+        final maxDialogH = min(
+          (screenH - mq.padding.vertical - 24 - viewInsets) * 0.92,
+          screenH - mq.padding.vertical - 16,
+        );
+        final maxDialogW = min(380.0, screenW - 32);
+        final compact = AppTheme.isCompactVentasButton(context) ||
+            mq.textScaler.scale(14) > 19;
+        final headerPad = compact ? 14.0 : 20.0;
+        final bodyPad = compact ? 14.0 : 20.0;
+        final gapCards = compact ? 8.0 : 12.0;
+        final btnHeight = compact ? 48.0 : 52.0;
+        final titleSize = compact ? 18.0 : 22.0;
+        final leadSize = compact ? 15.0 : 16.0;
+
         return Dialog(
+          insetPadding:
+              EdgeInsets.symmetric(horizontal: 16, vertical: compact ? 16 : 24),
           backgroundColor: Theme.of(context).brightness == Brightness.dark
               ? const Color(0xFF1E1E1E)
               : Colors.white,
@@ -174,7 +194,10 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
           ),
           elevation: 8,
           child: Container(
-            constraints: BoxConstraints(maxWidth: 380, maxHeight: maxHeight),
+            constraints: BoxConstraints(
+              maxWidth: maxDialogW,
+              maxHeight: max(120.0, maxDialogH),
+            ),
             decoration: BoxDecoration(
               color: Theme.of(context).brightness == Brightness.dark
                   ? const Color(0xFF1E1E1E)
@@ -183,272 +206,336 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(12),
-              child: Column(
-              mainAxisSize: MainAxisSize.max,
-              children: [
-                // Header con gradiente
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        AppTheme.primaryColor,
-                        AppTheme.primaryColor.withOpacity(0.8),
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.zero,
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Icon(
-                          Icons.restore,
-                          color: Colors.white,
-                          size: 28,
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      const Expanded(
-                        child: Text(
-                          'Venta en Curso',
-                          style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                            fontFamily: 'Shippori',
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Contenido scrollable para evitar overflow en pantallas pequeñas
-                Flexible(
-                  child: Container(
-                    color: Theme.of(context).brightness == Brightness.dark
-                        ? const Color(0xFF1E1E1E)
-                        : Colors.white,
-                    child: SingleChildScrollView(
-                      child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                Padding(
-                  padding: const EdgeInsets.all(20),
+              // Sin scroll interno: si el contenido natural no cabe, escala todo
+              // el popup de forma uniforme (mantiene proporciones del diseño).
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.topCenter,
+                child: SizedBox(
+                  width: maxDialogW,
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Text(
-                        'Tienes una venta sin completar.',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                          color: Theme.of(context).brightness == Brightness.dark
-                              ? Colors.grey.shade300
-                              : Colors.grey.shade700,
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-
-                      // Información del borrador con tarjetas
-                      if (borrador.cliente != null) ...[
-                        _buildInfoCard(
-                          context,
-                          Icons.person,
-                          'Cliente',
-                          borrador.cliente!.nombre,
-                          AppTheme.primaryColor,
-                        ),
-                        const SizedBox(height: 12),
-                      ],
-                      if (borrador.productosSeleccionados.isNotEmpty) ...[
-                        _buildInfoCard(
-                          context,
-                          Icons.shopping_cart,
-                          'Productos',
-                          '${borrador.productosSeleccionados.length} producto${borrador.productosSeleccionados.length > 1 ? 's' : ''}',
-                          Colors.blue.shade600,
-                        ),
-                        const SizedBox(height: 12),
-                      ],
-                      _buildInfoCard(
-                        context,
-                        Icons.access_time,
-                        'Última modificación',
-                        tiempoTranscurrido,
-                        Colors.orange.shade600,
-                      ),
-
-                      const SizedBox(height: 24),
-
-                      // Pregunta
                       Container(
-                        padding: const EdgeInsets.all(16),
+                        padding: EdgeInsets.all(headerPad),
                         decoration: BoxDecoration(
-                          color: Theme.of(context).brightness == Brightness.dark
-                              ? Colors.grey.shade800.withOpacity(0.5)
-                              : Colors.grey.shade50,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color:
-                                Theme.of(context).brightness == Brightness.dark
-                                    ? Colors.grey.shade700
-                                    : Colors.grey.shade200,
+                          gradient: LinearGradient(
+                            colors: [
+                              AppTheme.primaryColor,
+                              AppTheme.primaryColor.withOpacity(0.8),
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
                           ),
                         ),
-                        child: Text(
-                          '¿Deseas continuar con esta venta o empezar una nueva?',
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                            color:
-                                Theme.of(context).brightness == Brightness.dark
-                                    ? Colors.grey.shade300
-                                    : Colors.grey.shade800,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Botones: en ancho chico se apilan para evitar texto truncado
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      final stackButtons = constraints.maxWidth < 280;
-
-                      Widget nuevaVentaButton() {
-                        return SizedBox(
-                          height: 52,
-                          child: OutlinedButton(
-                            onPressed: () => Navigator.of(context).pop('nueva'),
-                            style: OutlinedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(
-                                vertical: 16,
-                                horizontal: 12,
-                              ),
-                              side: BorderSide(
-                                color: Theme.of(context).brightness == Brightness.dark
-                                    ? Colors.grey.shade600
-                                    : Colors.grey.shade400,
-                                width: 1.5,
-                              ),
-                              shape: RoundedRectangleBorder(
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: EdgeInsets.all(compact ? 8 : 12),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.2),
                                 borderRadius: BorderRadius.circular(8),
                               ),
+                              child: Icon(
+                                Icons.restore,
+                                color: Colors.white,
+                                size: compact ? 24 : 28,
+                              ),
                             ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  Icons.add_circle_outline,
-                                  size: 18,
-                                  color: Theme.of(context).brightness == Brightness.dark
-                                      ? Colors.grey.shade400
-                                      : Colors.grey.shade700,
+                            SizedBox(width: compact ? 12 : 16),
+                            Expanded(
+                              child: Text(
+                                'Venta en Curso',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: titleSize,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                  fontFamily: 'Shippori',
                                 ),
-                                const SizedBox(width: 6),
-                                Flexible(
-                                  child: Text(
-                                    'Nueva Venta',
-                                    maxLines: 1,
-                                    textAlign: TextAlign.center,
+                              ),
+                            ),
+                            IconButton(
+                              onPressed: () => Navigator.of(context).pop(),
+                              tooltip: 'Cerrar',
+                              padding: EdgeInsets.zero,
+                              constraints: BoxConstraints.tightFor(
+                                width: compact ? 36 : 40,
+                                height: compact ? 36 : 40,
+                              ),
+                              visualDensity: VisualDensity.compact,
+                              style: IconButton.styleFrom(
+                                foregroundColor: Colors.white,
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              ),
+                              icon: Icon(
+                                Icons.close,
+                                size: compact ? 22 : 24,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      ColoredBox(
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? const Color(0xFF1E1E1E)
+                            : Colors.white,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Padding(
+                              padding: EdgeInsets.fromLTRB(
+                                bodyPad,
+                                bodyPad,
+                                bodyPad,
+                                compact ? 12 : 16,
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    'Tienes una venta sin completar.',
                                     style: TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w600,
-                                      color: Theme.of(context).brightness == Brightness.dark
+                                      fontSize: leadSize,
+                                      fontWeight: FontWeight.w500,
+                                      color: Theme.of(context).brightness ==
+                                              Brightness.dark
                                           ? Colors.grey.shade300
                                           : Colors.grey.shade700,
                                     ),
                                   ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      }
-
-                      Widget continuarButton() {
-                        return SizedBox(
-                          height: 52,
-                          child: ElevatedButton(
-                            onPressed: () => Navigator.of(context).pop('continuar'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppTheme.primaryColor,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(
-                                vertical: 16,
-                                horizontal: 12,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              elevation: 2,
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Icon(Icons.play_arrow, color: Colors.white, size: 18),
-                                const SizedBox(width: 6),
-                                const Flexible(
-                                  child: Text(
-                                    'Continuar',
-                                    maxLines: 1,
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w600,
+                                  SizedBox(height: compact ? 14 : 20),
+                                  if (borrador.cliente != null) ...[
+                                    _buildInfoCard(
+                                      context,
+                                      Icons.person,
+                                      'Cliente',
+                                      borrador.cliente!.nombre,
+                                      AppTheme.primaryColor,
+                                      dense: compact,
+                                    ),
+                                    SizedBox(height: gapCards),
+                                  ],
+                                  if (borrador.productosSeleccionados
+                                      .isNotEmpty) ...[
+                                    _buildInfoCard(
+                                      context,
+                                      Icons.shopping_cart,
+                                      'Productos',
+                                      '${borrador.productosSeleccionados.length} producto${borrador.productosSeleccionados.length > 1 ? 's' : ''}',
+                                      Colors.blue.shade600,
+                                      dense: compact,
+                                    ),
+                                    SizedBox(height: gapCards),
+                                  ],
+                                  _buildInfoCard(
+                                    context,
+                                    Icons.access_time,
+                                    'Última modificación',
+                                    tiempoTranscurrido,
+                                    Colors.orange.shade600,
+                                    dense: compact,
+                                  ),
+                                  SizedBox(height: compact ? 16 : 24),
+                                  Container(
+                                    padding:
+                                        EdgeInsets.all(compact ? 12 : 16),
+                                    decoration: BoxDecoration(
+                                      color: Theme.of(context).brightness ==
+                                              Brightness.dark
+                                          ? Colors.grey.shade800
+                                              .withOpacity(0.5)
+                                          : Colors.grey.shade50,
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(
+                                        color: Theme.of(context).brightness ==
+                                                Brightness.dark
+                                            ? Colors.grey.shade700
+                                            : Colors.grey.shade200,
+                                      ),
+                                    ),
+                                    child: Text(
+                                      '¿Deseas continuar con esta venta o empezar una nueva?',
+                                      style: TextStyle(
+                                        fontSize: compact ? 14 : 15,
+                                        fontWeight: FontWeight.w600,
+                                        height: 1.25,
+                                        color: Theme.of(context).brightness ==
+                                                Brightness.dark
+                                            ? Colors.grey.shade300
+                                            : Colors.grey.shade800,
+                                      ),
+                                      textAlign: TextAlign.center,
                                     ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
-                          ),
-                        );
-                      }
+                            Padding(
+                              padding: EdgeInsets.fromLTRB(
+                                bodyPad,
+                                compact ? 8 : 10,
+                                bodyPad,
+                                bodyPad + mq.padding.bottom,
+                              ),
+                              child: LayoutBuilder(
+                                builder: (context, constraints) {
+                                  final stackButtons =
+                                      constraints.maxWidth < 280;
 
-                      if (stackButtons) {
-                        return Column(
-                          children: [
-                            SizedBox(width: double.infinity, child: nuevaVentaButton()),
-                            const SizedBox(height: 12),
-                            SizedBox(width: double.infinity, child: continuarButton()),
-                          ],
-                        );
-                      }
+                                  Widget nuevaVentaButton() {
+                                    return SizedBox(
+                                      height: btnHeight,
+                                      child: OutlinedButton(
+                                        onPressed: () =>
+                                            Navigator.of(context).pop('nueva'),
+                                        style: OutlinedButton.styleFrom(
+                                          padding: EdgeInsets.symmetric(
+                                            vertical: compact ? 12 : 16,
+                                            horizontal: 12,
+                                          ),
+                                          side: BorderSide(
+                                            color: Theme.of(context)
+                                                        .brightness ==
+                                                    Brightness.dark
+                                                ? Colors.grey.shade600
+                                                : Colors.grey.shade400,
+                                            width: 1.5,
+                                          ),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(8),
+                                          ),
+                                        ),
+                                        child: Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          children: [
+                                            Icon(
+                                              Icons.add_circle_outline,
+                                              size: compact ? 17 : 18,
+                                              color: Theme.of(context)
+                                                          .brightness ==
+                                                      Brightness.dark
+                                                  ? Colors.grey.shade400
+                                                  : Colors.grey.shade700,
+                                            ),
+                                            const SizedBox(width: 6),
+                                            Flexible(
+                                              child: Text(
+                                                'Nueva Venta',
+                                                maxLines: 1,
+                                                overflow:
+                                                    TextOverflow.ellipsis,
+                                                textAlign: TextAlign.center,
+                                                style: TextStyle(
+                                                  fontSize:
+                                                      compact ? 14 : 15,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: Theme.of(context)
+                                                              .brightness ==
+                                                          Brightness.dark
+                                                      ? Colors.grey.shade300
+                                                      : Colors.grey.shade700,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    );
+                                  }
 
-                      return SizedBox(
-                        height: 52,
-                        child: Row(
-                          children: [
-                            Expanded(child: nuevaVentaButton()),
-                            const SizedBox(width: 12),
-                            Expanded(child: continuarButton()),
+                                  Widget continuarButton() {
+                                    return SizedBox(
+                                      height: btnHeight,
+                                      child: ElevatedButton(
+                                        onPressed: () => Navigator.of(context)
+                                            .pop('continuar'),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor:
+                                              AppTheme.primaryColor,
+                                          foregroundColor: Colors.white,
+                                          padding: EdgeInsets.symmetric(
+                                            vertical: compact ? 12 : 16,
+                                            horizontal: 12,
+                                          ),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(8),
+                                          ),
+                                          elevation: 2,
+                                        ),
+                                        child: Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          children: [
+                                            Icon(
+                                              Icons.play_arrow,
+                                              color: Colors.white,
+                                              size: compact ? 17 : 18,
+                                            ),
+                                            const SizedBox(width: 6),
+                                            Flexible(
+                                              child: Text(
+                                                'Continuar',
+                                                maxLines: 1,
+                                                overflow:
+                                                    TextOverflow.ellipsis,
+                                                textAlign: TextAlign.center,
+                                                style: TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize:
+                                                      compact ? 14 : 15,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    );
+                                  }
+
+                                  if (stackButtons) {
+                                    return Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        SizedBox(
+                                          width: double.infinity,
+                                          child: nuevaVentaButton(),
+                                        ),
+                                        SizedBox(
+                                            height: compact ? 10 : 12),
+                                        SizedBox(
+                                          width: double.infinity,
+                                          child: continuarButton(),
+                                        ),
+                                      ],
+                                    );
+                                  }
+
+                                  return Row(
+                                    children: [
+                                      Expanded(child: nuevaVentaButton()),
+                                      SizedBox(width: compact ? 10 : 12),
+                                      Expanded(child: continuarButton()),
+                                    ],
+                                  );
+                                },
+                              ),
+                            ),
                           ],
                         ),
-                      );
-                    },
+                      ),
+                    ],
                   ),
                 ),
-                      ],
-                    ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+              ),
             ),
           ),
         );
@@ -468,10 +555,18 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
     IconData icon,
     String label,
     String value,
-    Color iconColor,
-  ) {
+    Color iconColor, {
+    bool dense = false,
+  }) {
+    final pad = dense ? 10.0 : 16.0;
+    final iconPad = dense ? 8.0 : 10.0;
+    final iconSize = dense ? 18.0 : 20.0;
+    final labelSize = dense ? 12.0 : 13.0;
+    final valueSize = dense ? 14.0 : 16.0;
+    final gap = dense ? 12.0 : 16.0;
+
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(pad),
       decoration: BoxDecoration(
         color: Theme.of(context).brightness == Brightness.dark
             ? Colors.grey.shade800.withOpacity(0.3)
@@ -488,46 +583,51 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
             color: Colors.black.withOpacity(
               Theme.of(context).brightness == Brightness.dark ? 0.2 : 0.05,
             ),
-            blurRadius: 8,
+            blurRadius: dense ? 6 : 8,
             offset: const Offset(0, 2),
           ),
         ],
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            padding: const EdgeInsets.all(10),
+            padding: EdgeInsets.all(iconPad),
             decoration: BoxDecoration(
               color: iconColor.withOpacity(0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(
               icon,
-              size: 20,
+              size: iconSize,
               color: iconColor,
             ),
           ),
-          const SizedBox(width: 16),
+          SizedBox(width: gap),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
                   label,
                   style: TextStyle(
-                    fontSize: 13,
+                    fontSize: labelSize,
                     color: Theme.of(context).brightness == Brightness.dark
                         ? Colors.grey.shade400
                         : Colors.grey.shade600,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
-                const SizedBox(height: 4),
+                SizedBox(height: dense ? 2 : 4),
                 Text(
                   value,
+                  maxLines: dense ? 3 : 4,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: 16,
+                    fontSize: valueSize,
                     fontWeight: FontWeight.bold,
+                    height: 1.2,
                     color: Theme.of(context).brightness == Brightness.dark
                         ? Colors.white
                         : Colors.black87,
