@@ -13,6 +13,22 @@ class AppTheme {
   static const double borderRadiusMainButtons = 8;
   static const double borderRadiusCards = 8;
 
+  static bool isCompactVentasButton(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    return size.height < 680 || size.width < 380;
+  }
+
+  static double ventasButtonFontSize(BuildContext context) =>
+      isCompactVentasButton(context) ? 14 : 16;
+
+  static double ventasButtonIconSize(BuildContext context) =>
+      isCompactVentasButton(context) ? 18 : 20;
+
+  static EdgeInsets ventasButtonPadding(BuildContext context) =>
+      EdgeInsets.symmetric(
+        vertical: isCompactVentasButton(context) ? 12 : 16,
+      );
+
   static const TextStyle inputLabelStyle = TextStyle(
     fontSize: 16,
     color: Colors.black,
@@ -273,12 +289,19 @@ class AppTheme {
   static ThemeData get theme {
     return ThemeData(
       scaffoldBackgroundColor: Colors.white,
-      primarySwatch: Colors.green,
       primaryColor: primaryColor,
+      colorScheme: ColorScheme.light(
+        primary: primaryColor,
+        onPrimary: Colors.white,
+        surface: Colors.white,
+        onSurface: Colors.black87,
+      ),
       appBarTheme: AppBarTheme(
         backgroundColor: primaryColor,
         foregroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
         elevation: 0,
+        scrolledUnderElevation: 0,
         systemOverlayStyle: const SystemUiOverlayStyle(
           statusBarBrightness: Brightness.light,
           systemNavigationBarColor: Colors.transparent,
@@ -304,7 +327,7 @@ class AppTheme {
       ),
       textSelectionTheme: TextSelectionThemeData(
         cursorColor: primaryColor,
-        selectionColor: primaryColor.withOpacity(0.25),
+        selectionColor: primaryColor.withValues(alpha: 0.25),
         selectionHandleColor: primaryColor,
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
@@ -403,7 +426,7 @@ class AppTheme {
         style: ElevatedButton.styleFrom(
           backgroundColor: const Color(0xFF4CAF50),
           foregroundColor: Colors.white,
-          shadowColor: const Color(0xFF4CAF50).withOpacity(0.3),
+          shadowColor: const Color(0xFF4CAF50).withValues(alpha: 0.3),
           elevation: 4,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(10),
@@ -495,7 +518,7 @@ class AppTheme {
           horizontal: 15,
         ),
       ),
-      cardTheme: const CardTheme(
+      cardTheme: const CardThemeData(
         color: Color(0xFF1A1A1A),
         elevation: 2,
         shadowColor: Colors.black26,
@@ -503,7 +526,7 @@ class AppTheme {
           borderRadius: BorderRadius.all(Radius.circular(12)),
         ),
       ),
-      dialogTheme: const DialogTheme(
+      dialogTheme: const DialogThemeData(
         backgroundColor: Color(0xFF1A1A1A),
         titleTextStyle: TextStyle(
           color: Color(0xFFE0E0E0),
@@ -531,7 +554,7 @@ class AppTheme {
         }),
         trackColor: WidgetStateProperty.resolveWith<Color>((states) {
           if (states.contains(WidgetState.selected)) {
-            return const Color(0xFF4CAF50).withOpacity(0.3);
+            return const Color(0xFF4CAF50).withValues(alpha: 0.3);
           }
           return const Color(0xFF404040);
         }),
@@ -603,16 +626,23 @@ class AppTheme {
     return Builder(
       builder: (context) {
         final isDark = Theme.of(context).brightness == Brightness.dark;
+        final mq = MediaQuery.of(context);
+        // Redondear el inset del teclado para evitar que la altura cambie en cada frame
+        // y se produzca el efecto de teclado subiendo/bajando rápido
+        final keyboardInset = (mq.viewInsets.bottom / 60).round() * 60.0;
+        final maxDialogHeight = (mq.size.height - keyboardInset - 32)
+            .clamp(280.0, 560.0);
         return Dialog(
           backgroundColor: Colors.transparent,
           elevation: 0,
           child: Container(
+            constraints: BoxConstraints(maxHeight: maxDialogHeight),
             decoration: BoxDecoration(
               color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
               borderRadius: BorderRadius.circular(24),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(isDark ? 0.5 : 0.15),
+                  color: Colors.black.withValues(alpha: isDark ? 0.5 : 0.15),
                   blurRadius: 20,
                   spreadRadius: 0,
                   offset: const Offset(0, 8),
@@ -623,14 +653,15 @@ class AppTheme {
               borderRadius: BorderRadius.circular(24),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.start,
                 children: [
-                  // Header con título
+                  // Header con título (tamaño fijo)
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
                     decoration: BoxDecoration(
                       color: isDark 
-                          ? const Color(0xFF2A2A2A).withOpacity(0.5) 
+                          ? const Color(0xFF2A2A2A).withValues(alpha: 0.5)
                           : Colors.grey.shade50,
                       border: Border(
                         bottom: BorderSide(
@@ -652,67 +683,62 @@ class AppTheme {
                     ),
                   ),
                   
-                  // Contenido
+                  // Contenido (altura limitada y scroll si no cabe)
+                  // Sin Key en viewInsets para evitar que el teclado suba/baje rápido (rebuilds por frame)
                   Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: content,
+                    padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxHeight: maxDialogHeight - 220,
+                      ),
+                      child: SingleChildScrollView(
+                        child: content,
+                      ),
+                    ),
                   ),
                   
-                  // Botones
-                  Container(
-                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                  // Botones (mismo estilo que popup fecha de expiración: sin borde, border radius 8)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 4, 24, 16),
                     child: Row(
                       children: [
                         Expanded(
-                          child: OutlinedButton(
+                          child: TextButton(
                             onPressed: onCancel,
-                            style: OutlinedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              backgroundColor: isDark 
-                                  ? const Color(0xFF2A2A2A) 
-                                  : Colors.transparent,
-                              side: BorderSide(
-                                color: isDark 
-                                    ? Colors.grey.shade700 
-                                    : Colors.grey.shade300,
-                                width: 1.5,
-                              ),
+                            style: TextButton.styleFrom(
+                              backgroundColor: isDark ? const Color(0xFF2A2A2A) : Colors.grey.shade200,
+                              foregroundColor: isDark ? Colors.white : Colors.black87,
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(borderRadiusMainButtons),
                               ),
-                              elevation: 0,
+                              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                             ),
                             child: Text(
                               cancelText,
-                              style: TextStyle(
-                                color: Colors.white,
+                              style: const TextStyle(
                                 fontWeight: FontWeight.w600,
                                 fontSize: 15,
-                                letterSpacing: 0.2,
                               ),
                             ),
                           ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
-                          child: ElevatedButton(
+                          child: TextButton(
                             onPressed: onConfirm,
-                            style: ElevatedButton.styleFrom(
+                            style: TextButton.styleFrom(
                               backgroundColor: AppTheme.primaryColor,
-                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              foregroundColor: Colors.white,
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(borderRadiusMainButtons),
                               ),
-                              elevation: 0,
-                              shadowColor: AppTheme.primaryColor.withOpacity(0.3),
+                              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                             ),
                             child: Text(
                               confirmText,
                               style: const TextStyle(
-                                color: Colors.white,
                                 fontWeight: FontWeight.w600,
                                 fontSize: 15,
-                                letterSpacing: 0.2,
                               ),
                             ),
                           ),

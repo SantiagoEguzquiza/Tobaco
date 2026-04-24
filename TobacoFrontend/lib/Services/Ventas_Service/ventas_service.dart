@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:tobaco/Helpers/api_handler.dart';
+import 'package:tobaco/Helpers/http_interceptor.dart';
 import 'package:tobaco/Models/Ventas.dart';
 import 'package:tobaco/Models/VentasProductos.dart';
 import 'package:tobaco/Services/Auth_Service/auth_service.dart';
@@ -8,26 +9,48 @@ import 'package:tobaco/Services/Auth_Service/auth_service.dart';
 class VentasService {
   final Uri baseUrl = Apihandler.baseUrl;
   static const Duration _timeoutDuration = Duration(seconds: 30); // Timeout normal para operaciones (aumentado para sincronización)
-  static const Duration _timeoutRapidoDuration = Duration(milliseconds: 500); // Timeout rápido para detección offline
+  static const Duration _timeoutRapidoDuration = Duration(seconds: 5); // Timeout más corto para refrescos rápidos (pull-to-refresh)
+
+  /// Verifica si el backend está prendido con GET /api/Health (sin auth).
+  /// Usa HealthController que siempre devuelve 200 si la API responde (más fiable que /health que verifica BD).
+  static const Duration _timeoutHealth = Duration(seconds: 5);
+
+  Future<bool> get backendDisponible async {
+    try {
+      final response = await Apihandler.client
+          .get(baseUrl.resolve('/api/Health'))
+          .timeout(_timeoutHealth);
+      return response.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
 
   Future<List<Ventas>> obtenerVentas({bool timeoutRapido = false, bool timeoutNormal = false}) async {
     try {
-      
-      
-      final headers = await AuthService.getAuthHeaders();
-      
       Duration timeout = timeoutNormal ? _timeoutDuration : (timeoutRapido ? _timeoutRapidoDuration : _timeoutDuration);
-      final response = await Apihandler.client.get(
-        Uri.parse('$baseUrl/Ventas'),
-        headers: headers,
-      ).timeout(timeout);
+      
+      // Usar HttpInterceptor para manejar automáticamente refresh de token en caso de 401/403
+      final response = await HttpInterceptor.interceptRequest(() async {
+        final headers = await AuthService.getAuthHeaders();
+        return await Apihandler.client.get(
+          Uri.parse('$baseUrl/Ventas'),
+          headers: headers,
+        ).timeout(timeout);
+      });
 
       
 
+      // El interceptor debería haber manejado 401/403 antes de llegar aquí
+      // Si llegamos aquí con 401/403, significa que el refresh falló
+      if (response.statusCode == 401 || response.statusCode == 403) {
+        debugPrint('⚠️ VentasService: Recibido ${response.statusCode} después del interceptor - refresh falló');
+        // El interceptor ya debería haber hecho logout, pero por si acaso
+        throw Exception('Sesión expirada. Por favor, inicia sesión nuevamente.');
+      }
+      
       if (response.statusCode == 200) {
         final List<dynamic> ventasJson = jsonDecode(response.body);
-        
-        
         
         if (ventasJson.isEmpty) {
         }
@@ -36,10 +59,8 @@ class VentasService {
           return Ventas.fromJson(json);
         }).toList();
         
-        
         return ventas;
       } else {
-        
         throw Exception(
           'Error al obtener las ventas. Código de estado: ${response.statusCode}',
         );
@@ -55,50 +76,45 @@ class VentasService {
     try {
       final headers = await AuthService.getAuthHeaders();
       headers['Content-Type'] = 'application/json';
-      
-      // Debug: Imprimir los datos que se están enviando
+
       final ventaJson = venta.toJson();
-      
+
+      // El backend exige Cliente.Direccion. Si es null/vacío (ej. Consumidor Final offline),
+      // enviar un valor por defecto para que la validación pase.
+      if (ventaJson['cliente'] != null && ventaJson['cliente'] is Map) {
+        final clienteJson = ventaJson['cliente'] as Map<String, dynamic>;
+        final dir = clienteJson['direccion'];
+        if (dir == null || dir.toString().trim().isEmpty) {
+          clienteJson['direccion'] = 'Sin especificar';
+        }
+      }
+
       // Asegurar que los pagos tengan id: 0 y ventaId: 0 para nuevas ventas
       if (ventaJson['ventaPagos'] != null && ventaJson['ventaPagos'] is List) {
         final pagos = ventaJson['ventaPagos'] as List;
-        debugPrint('💰 VentasService: Normalizando ${pagos.length} pago(s)...');
         for (var i = 0; i < pagos.length; i++) {
-          var pago = pagos[i];
+          final pago = pagos[i];
           if (pago is Map<String, dynamic>) {
-            debugPrint('   Pago $i antes: $pago');
-            pago['id'] = 0; // Asegurar que el ID sea 0
-            pago['ventaId'] = 0; // Asegurar que ventaId sea 0
-            debugPrint('   Pago $i después: $pago');
+            pago['id'] = 0;
+            pago['ventaId'] = 0;
           }
         }
-        debugPrint('✅ VentasService: Pagos normalizados para creación (todos con id=0 y ventaId=0)');
-      } else {
-        debugPrint('⚠️ VentasService: No hay ventaPagos en el JSON o no es una lista');
-        debugPrint('   ventaPagos: ${ventaJson['ventaPagos']}');
-        debugPrint('   Tipo: ${ventaJson['ventaPagos']?.runtimeType}');
       }
-      
+
       debugPrint('📤 VentasService: Enviando POST a $baseUrl/Ventas');
-      debugPrint('   VentasPagos en JSON: ${ventaJson['ventaPagos']}');
-      debugPrint('   VentasPagos length: ${(ventaJson['ventaPagos'] as List?)?.length ?? 0}');
-      debugPrint('   Headers: ${headers.keys.toList()}');
-      debugPrint('   Timeout configurado: ${customTimeout ?? _timeoutDuration}');
-      
+      debugPrint('   fecha (UTC): ${ventaJson['fecha']}'); // Debe terminar en 'Z' para indicar UTC
+      debugPrint('   ventaPagos: ${ventaJson['ventaPagos']}');
+      debugPrint('   Timeout: ${customTimeout ?? _timeoutDuration}');
+
       final jsonBody = jsonEncode(ventaJson);
       debugPrint('   Tamaño del body: ${jsonBody.length} bytes');
-      debugPrint('   Body completo (primeros 500 chars): ${jsonBody.length > 500 ? "${jsonBody.substring(0, 500)}..." : jsonBody}');
+      debugPrint('   Body (primeros 500 chars): ${jsonBody.length > 500 ? "${jsonBody.substring(0, 500)}..." : jsonBody}');
       
-      // Verificar específicamente los pagos en el JSON
-      try {
-        final bodyParsed = jsonDecode(jsonBody);
-        if (bodyParsed['ventaPagos'] != null) {
-          debugPrint('   ✅ ventaPagos encontrado en JSON: ${bodyParsed['ventaPagos']}');
-        } else {
-          debugPrint('   ❌ ventaPagos NO encontrado en JSON');
-        }
-      } catch (e) {
-        debugPrint('   ⚠️ Error parseando JSON: $e');
+      // Validación adicional: verificar que la fecha termine en 'Z'
+      if (ventaJson['fecha'] != null && !ventaJson['fecha'].toString().endsWith('Z')) {
+        debugPrint('⚠️ ADVERTENCIA: La fecha NO está en formato UTC (no termina en Z): ${ventaJson['fecha']}');
+      } else {
+        debugPrint('✅ Fecha correctamente formateada en UTC: ${ventaJson['fecha']}');
       }
       
       final stopwatch = Stopwatch()..start();
@@ -126,6 +142,7 @@ class VentasService {
         
         final result = {
           'ventaId': responseData['ventaId'],
+          'numeroVenta': responseData['numeroVenta'],
           'message': responseData['message'] ?? 'Venta creada exitosamente',
           'asignada': responseData['asignada'] ?? false,
           'usuarioAsignadoId': responseData['usuarioAsignadoId'],
@@ -138,30 +155,65 @@ class VentasService {
         debugPrint('❌ VentasService: Status code NO es 200/201');
         debugPrint('   Status Code recibido: ${response.statusCode}');
         debugPrint('   Body completo: ${response.body}');
-        
+
         // Intentar parsear el error para obtener más detalles
         String errorDetails = response.body;
+        String? innerException;
+        String? validationErrorsText;
         try {
           final errorJson = jsonDecode(response.body);
-          if (errorJson is Map && errorJson.containsKey('message')) {
-            errorDetails = errorJson['message'] as String;
-            debugPrint('   Mensaje de error parseado: $errorDetails');
-          }
-          if (errorJson is Map && errorJson.containsKey('innerException')) {
-            debugPrint('   Inner Exception: ${errorJson['innerException']}');
+          if (errorJson is Map<String, dynamic>) {
+            if (errorJson.containsKey('message')) {
+              errorDetails = errorJson['message'] as String;
+              debugPrint('   Mensaje de error parseado: $errorDetails');
+            }
+            if (errorJson.containsKey('innerException')) {
+              final inner = errorJson['innerException'];
+              innerException = inner is String ? inner : inner.toString();
+              debugPrint('   Inner Exception: $innerException');
+            }
+            if (errorJson.containsKey('errors') && errorJson['errors'] is Map) {
+              final errors = errorJson['errors'] as Map<String, dynamic>;
+              debugPrint('   Validation errors: $errors');
+              final parts = <String>[];
+              for (final entry in errors.entries) {
+                final key = entry.key;
+                final value = entry.value;
+                if (value is List && value.isNotEmpty) {
+                  parts.add('$key: ${value.join(', ')}');
+                } else {
+                  parts.add('$key: $value');
+                }
+              }
+              validationErrorsText = parts.join('. ');
+            }
           }
         } catch (parseError) {
           debugPrint('   No se pudo parsear el error: $parseError');
         }
-        
-        final errorMsg = 'Error al guardar la venta. Código de estado: ${response.statusCode}, Respuesta: $errorDetails';
-        debugPrint('   Error final: $errorMsg');
-        throw Exception(errorMsg);
+
+        final bool isGenericEfMessage = errorDetails.contains('inner exception') &&
+            errorDetails.contains('saving the entity changes');
+        final String userMessage = validationErrorsText != null && validationErrorsText.isNotEmpty
+            ? validationErrorsText
+            : innerException != null && innerException.isNotEmpty
+                ? innerException
+                : isGenericEfMessage
+                    ? 'No se pudo guardar en el servidor. La venta se guardó localmente; puedes sincronizar después.'
+                    : errorDetails;
+        final String fullMsg = (validationErrorsText != null || innerException != null || isGenericEfMessage)
+            ? userMessage
+            : 'Error al guardar la venta (${response.statusCode}). $userMessage';
+        debugPrint('   Error final: $fullMsg');
+        throw Exception(fullMsg);
       }
     } catch (e) {
-      debugPrint('❌ VentasService: Excepción capturada al guardar venta');
-      debugPrint('   Error: $e');
-      debugPrint('   Tipo: ${e.runtimeType}');
+      final msg = e.toString();
+      if (msg.contains('guardó localmente') || msg.contains('guardar en el servidor')) {
+        debugPrint('VentasService: Servidor rechazó la venta (se guardará local). $msg');
+      } else {
+        debugPrint('❌ VentasService: Excepción al guardar venta: $e');
+      }
       rethrow;
     }
   }
@@ -244,13 +296,15 @@ class VentasService {
     }
   }
 
-  Future<Map<String, dynamic>> obtenerVentasPaginadas(int page, int pageSize) async {
+  /// [timeout] opcional: si se pasa, se usa en lugar de _timeoutDuration (útil para fallar rápido en carga inicial sin backend).
+  Future<Map<String, dynamic>> obtenerVentasPaginadas(int page, int pageSize, {Duration? timeout}) async {
     try {
       final headers = await AuthService.getAuthHeaders();
+      final effectiveTimeout = timeout ?? _timeoutDuration;
       final response = await Apihandler.client.get(
         Uri.parse('$baseUrl/Ventas/paginados?page=$page&pageSize=$pageSize'),
         headers: headers,
-      ).timeout(_timeoutDuration);
+      ).timeout(effectiveTimeout);
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = jsonDecode(response.body);
@@ -266,10 +320,12 @@ class VentasService {
           'hasNextPage': data['hasNextPage'],
           'hasPreviousPage': data['hasPreviousPage'],
         };
-      } else {
-        throw Exception(
-            'Error al obtener las ventas paginadas. Código de estado: ${response.statusCode}');
       }
+      if (response.statusCode == 401 || response.statusCode == 403) {
+        throw Exception('Sesión expirada. Por favor, inicia sesión nuevamente.');
+      }
+      throw Exception(
+          'Error al obtener las ventas paginadas. Código de estado: ${response.statusCode}');
     } catch (e) {
       debugPrint('Error al obtener las ventas paginadas: $e');
       rethrow;
@@ -345,8 +401,8 @@ class VentasService {
         queryParameters: {
           'pageNumber': pageNumber.toString(),
           'pageSize': pageSize.toString(),
-          if (dateFrom != null) 'dateFrom': dateFrom.toIso8601String(),
-          if (dateTo != null) 'dateTo': dateTo.toIso8601String(),
+          if (dateFrom != null) 'dateFrom': dateFrom.toUtc().toIso8601String(),
+          if (dateTo != null) 'dateTo': dateTo.toUtc().toIso8601String(),
         },
       );
       

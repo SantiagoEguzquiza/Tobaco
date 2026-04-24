@@ -1,5 +1,8 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:tobaco/Models/Ventas.dart';
 import 'package:tobaco/Models/metodoPago.dart';
 import 'package:tobaco/Theme/app_theme.dart';
@@ -8,7 +11,6 @@ import 'package:tobaco/Helpers/api_handler.dart';
 import 'package:printing/printing.dart';
 import 'package:tobaco/Utils/pdf_generator/venta_pdf_builder.dart';
 import 'package:tobaco/Services/Printer_Service/bluetooth_printer_service.dart';
-import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
 class ResumenVentaScreen extends StatefulWidget {
   final Ventas? venta; // Recibir la venta como parámetro opcional
@@ -28,6 +30,7 @@ class _ResumenVentaScreenState extends State<ResumenVentaScreen> {
   Ventas? ventaCargadaBD;
   bool isLoading = true;
   String? errorMessage;
+  bool _isPrinting = false;
 
   @override
   void initState() {
@@ -40,6 +43,17 @@ class _ResumenVentaScreenState extends State<ResumenVentaScreen> {
         setState(() {
           venta = widget.venta;
           isLoading = false;
+        });
+        // SnackBar después del primer frame (ya no tapado por la animación verde)
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            AppTheme.showSnackBar(
+              context,
+              AppTheme.warningSnackBar(
+                'Venta guardada localmente. Se sincronizará cuando haya conexión.',
+              ),
+            );
+          }
         });
         return; // No intentar cargar del servidor
       }
@@ -119,75 +133,6 @@ class _ResumenVentaScreenState extends State<ResumenVentaScreen> {
     }
   }
 
-  Future<void> _cargarVentaPorId(int id) async {
-    try {
-      setState(() {
-        isLoading = true;
-        errorMessage = null;
-      });
-
-      final ventaCargada = await _ventasService.obtenerVentaPorId(id);
-      
-      if (!mounted) return;
-      setState(() {
-        venta = ventaCargada;
-        isLoading = false;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      
-      if (Apihandler.isConnectionError(e)) {
-        setState(() {
-          isLoading = false;
-          // Si falla cargar del servidor, usar la venta local como respaldo
-          venta = widget.venta;
-        });
-        await Apihandler.handleConnectionError(context, e);
-      } else {
-        setState(() {
-          errorMessage = 'Error al cargar la venta: ${e.toString().replaceFirst('Exception: ', '')}';
-          isLoading = false;
-          venta = widget.venta;
-        });
-      }
-    }
-  }
-
-  Future<void> _cargarUltimaVentaConRespaldo(Ventas ventaRespaldo) async {
-    try {
-      setState(() {
-        isLoading = true;
-        errorMessage = null;
-      });
-
-      final ultimaVenta = await _ventasService.obtenerUltimaVenta();
-      
-      if (!mounted) return;
-      setState(() {
-        venta = ultimaVenta;
-        isLoading = false;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      
-      if (Apihandler.isConnectionError(e)) {
-        setState(() {
-          // Si falla cargar del servidor, usar la venta local como respaldo
-          venta = ventaRespaldo;
-          isLoading = false;
-        });
-        await Apihandler.handleConnectionError(context, e);
-      } else {
-        setState(() {
-          errorMessage = 'Error al cargar la venta: ${e.toString().replaceFirst('Exception: ', '')}';
-          // Usar la venta de respaldo
-          venta = ventaRespaldo;
-          isLoading = false;
-        });
-      }
-    }
-  }
-
   Future<void> _cargarUltimaVenta() async {
     try {
       setState(() {
@@ -264,7 +209,7 @@ class _ResumenVentaScreenState extends State<ResumenVentaScreen> {
       ),
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
           child: Column(
             children: [
               Expanded(
@@ -329,7 +274,7 @@ class _ResumenVentaScreenState extends State<ResumenVentaScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.primaryColor,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
                 ),
               ),
             ),
@@ -357,6 +302,8 @@ class _ResumenVentaScreenState extends State<ResumenVentaScreen> {
 
           // Resumen de totales
           _buildSummarySection(),
+          // Separación al final (parte del scroll, no genera franja)
+          const SizedBox(height: 16),
         ],
       ),
     );
@@ -411,7 +358,7 @@ class _ResumenVentaScreenState extends State<ResumenVentaScreen> {
                     ),
                     Text(
                       venta!.id != null 
-                        ? 'Venta #${venta!.id}' 
+                        ? 'Venta #${venta!.numeroVisible}' 
                         : 'Guardada localmente',
                       style: TextStyle(
                         fontSize: 16,
@@ -650,85 +597,159 @@ class _ResumenVentaScreenState extends State<ResumenVentaScreen> {
   // Botones de acción en la parte inferior
   Widget _buildBottomActions(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+      padding: const EdgeInsets.fromLTRB(18, 20, 18, 26),
       decoration: BoxDecoration(
         color: Theme.of(context).brightness == Brightness.dark
             ? const Color(0xFF1A1A1A)
             : Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Theme.of(context).brightness == Brightness.dark
-                ? Colors.black.withOpacity(0.3)
-                : Colors.black.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, -2),
-          ),
-        ],
       ),
       child: SafeArea(
         child: Row(
           children: [
                         Expanded(
               child: ElevatedButton.icon(
-                onPressed: () {
-                  showModalBottomSheet(
-                    context: context,
-                    shape: const RoundedRectangleBorder(
-                      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-                    ),
-                    builder: (context) {
-                      return SafeArea(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            ListTile(
-                              leading: const Icon(Icons.picture_as_pdf, color: AppTheme.primaryColor),
-                              title: const Text('Imprimir PDF'),
-                              onTap: () async {
-                                Navigator.of(context).pop();
-                                try {
-                                  final ventaParaPdf = ventaCargadaBD ?? venta;
-                                  if (ventaParaPdf == null) return;
-                                  final bytes = await buildVentaPdf(ventaParaPdf);
-                                  await Printing.layoutPdf(onLayout: (_) async => bytes);
-                                } catch (e) {
-                                  // ignore: use_build_context_synchronously
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text('Error al generar PDF: $e')),
-                                  );
-                                }
-                              },
-                            ),
-                            ListTile(
-                              leading: const Icon(Icons.receipt_long, color: AppTheme.primaryColor),
-                              title: const Text('Imprimir ticket'),
-                              onTap: () async {
-                                Navigator.of(context).pop();
-                                await _imprimirTicketTermico(context);
-                              },
-                            ),
-                            ListTile(
-                              leading: const Icon(Icons.share, color: AppTheme.primaryColor),
-                              title: const Text('Compartir PDF por WhatsApp'),
-                              onTap: () {
-                                Navigator.of(context).pop();
-                              },
-                            ),
-                            const SizedBox(height: 8),
-                          ],
+                onPressed: _isPrinting
+                    ? null
+                    : () {
+                        showModalBottomSheet(
+                          context: context,
+                          backgroundColor: Colors.transparent,
+                          isScrollControlled: true,
+                          builder: (sheetContext) {
+                            final isDark = Theme.of(sheetContext).brightness == Brightness.dark;
+                            final bg = isDark ? const Color(0xFF1E1E1E) : Colors.white;
+                            final cardBg = isDark ? const Color(0xFF2A2A2A) : const Color(0xFFF8F8F8);
+                            final textColor = isDark ? Colors.white : Colors.black87;
+                            final subColor = isDark ? Colors.grey.shade400 : Colors.grey.shade600;
+                            final maxHeight = MediaQuery.of(sheetContext).size.height * 0.7;
+                            return Container(
+                              decoration: BoxDecoration(
+                                color: bg,
+                                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.15),
+                                    blurRadius: 20,
+                                    offset: const Offset(0, -4),
+                                  ),
+                                ],
+                              ),
+                              child: SafeArea(
+                                top: false,
+                                child: ConstrainedBox(
+                                  constraints: BoxConstraints(maxHeight: maxHeight),
+                                  child: Padding(
+                                    padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
+                                    child: SingleChildScrollView(
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Container(
+                                            width: 40,
+                                            height: 4,
+                                            decoration: BoxDecoration(
+                                              color: subColor,
+                                              borderRadius: BorderRadius.circular(2),
+                                            ),
+                                          ),
+                                          const SizedBox(height: 20),
+                                          Text(
+                                            'Opciones de impresión',
+                                            style: TextStyle(
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.w600,
+                                              color: textColor,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 20),
+                                          _PrintOptionTile(
+                                        icon: Icons.picture_as_pdf_rounded,
+                                        title: 'Imprimir PDF',
+                                        subtitle: 'Vista previa e impresión del comprobante',
+                                        backgroundColor: cardBg,
+                                        onTap: () async {
+                                          Navigator.of(sheetContext).pop();
+                                          try {
+                                            final ventaParaPdf = ventaCargadaBD ?? venta;
+                                            if (ventaParaPdf == null) return;
+                                            final bytes = await buildVentaPdf(ventaParaPdf);
+                                            await Printing.layoutPdf(onLayout: (_) async => bytes);
+                                          } catch (e) {
+                                            if (!context.mounted) return;
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              SnackBar(content: Text('Error al generar PDF: $e')),
+                                            );
+                                          }
+                                        },
+                                      ),
+                                      const SizedBox(height: 10),
+                                      _PrintOptionTile(
+                                        icon: Icons.receipt_long_rounded,
+                                        title: 'Imprimir ticket',
+                                        subtitle: 'Enviar a impresora térmica por Bluetooth',
+                                        backgroundColor: cardBg,
+                                        onTap: () async {
+                                          Navigator.of(sheetContext).pop();
+                                          await _imprimirTicketTermico(context);
+                                        },
+                                      ),
+                                      const SizedBox(height: 10),
+                                      _PrintOptionTile(
+                                        icon: Icons.share_rounded,
+                                        title: 'Compartir PDF',
+                                        subtitle: 'Enviar por WhatsApp, correo o otras apps',
+                                        backgroundColor: cardBg,
+                                        onTap: () async {
+                                          Navigator.of(sheetContext).pop();
+                                          try {
+                                            final ventaParaPdf = ventaCargadaBD ?? venta;
+                                            if (ventaParaPdf == null) return;
+                                            final bytes = await buildVentaPdf(ventaParaPdf);
+                                            final dir = await getTemporaryDirectory();
+                                            final ventaLabel = ventaParaPdf.id != null
+                                                ? 'Venta_${ventaParaPdf.id}'
+                                                : 'Venta_pendiente';
+                                            final file = File('${dir.path}/$ventaLabel.pdf');
+                                            await file.writeAsBytes(bytes);
+                                            await Share.shareXFiles(
+                                              [XFile(file.path)],
+                                              text: 'Comprobante de venta - $ventaLabel',
+                                            );
+                                          } catch (e) {
+                                            if (!context.mounted) return;
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              SnackBar(content: Text('Error al compartir PDF: $e')),
+                                            );
+                                          }
+                                        },
+                                      ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        );
+                      },
+                icon: _isPrinting
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
                         ),
-                      );
-                    },
-                  );
-                },
-                icon: const Icon(Icons.print, size: 20),
-                label: const Text('Imprimir'),
+                      )
+                    : const Icon(Icons.print, size: 20),
+                label: Text(_isPrinting ? 'Imprimiendo...' : 'Imprimir'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.primaryColor,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
                   ),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
                   elevation: 2,
                 ),
               ),
@@ -736,14 +757,23 @@ class _ResumenVentaScreenState extends State<ResumenVentaScreen> {
             const SizedBox(width: 12),
             Expanded(
               child: OutlinedButton(
-                onPressed: () => Navigator.of(context).popUntil((route) => route.isFirst),
+                onPressed: () {
+                  // Navegación dentro del shell (navbar): ir a Inicio = primera ruta del navigator anidado
+                  final nav = Navigator.of(context, rootNavigator: false);
+                  if (nav.canPop()) {
+                    nav.popUntil((route) => route.isFirst);
+                  } else {
+                    // Por si el contexto apuntara al navigator raíz, ir al menú por nombre
+                    Navigator.of(context).pushNamedAndRemoveUntil('/menu', (_) => false);
+                  }
+                },
                 style: OutlinedButton.styleFrom(
                   backgroundColor: Theme.of(context).cardTheme.color,
                   side: const BorderSide(color: Colors.grey, width: 1.5),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
                   ),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
                 ),
                 child: Text(
                   'Volver al Inicio',
@@ -786,6 +816,7 @@ class _ResumenVentaScreenState extends State<ResumenVentaScreen> {
             ),
           ),
         ),
+        const SizedBox(width: 16),
         Expanded(
           flex: 3,
           child: Text(
@@ -895,97 +926,125 @@ class _ResumenVentaScreenState extends State<ResumenVentaScreen> {
   }
 
   Future<void> _imprimirTicketTermico(BuildContext context) async {
+    if (_isPrinting) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Impresión en curso, por favor esperá...')),
+      );
+      return;
+    }
+
+    setState(() => _isPrinting = true);
+
     try {
       final ventaParaImprimir = ventaCargadaBD ?? venta;
       if (ventaParaImprimir == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No hay información de venta para imprimir')),
+          const SnackBar(
+              content: Text('No hay información de venta para imprimir')),
         );
         return;
       }
 
       final printerService = BluetoothPrinterService.instance;
 
-      // Verificar si ya está conectada una impresora
-      if (printerService.isConnected) {
-        // Imprimir directamente
-        await printerService.printTicket(ventaParaImprimir);
+      // Try the previously-known device first (probe verifies it's alive).
+      if (printerService.connectedDevice != null) {
+        try {
+          await printerService.printTicket(ventaParaImprimir);
+          if (!context.mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Ticket enviado a la impresora')),
+          );
+          return;
+        } catch (_) {
+          // Known device unreachable — fall through to device selection
+        }
+      }
+
+      // Show printer selection in a loop until success or cancel.
+      while (true) {
         if (!context.mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Ticket enviado a la impresora')),
+
+        final selectedPrinter = await showDialog<BluetoothDevice>(
+          context: context,
+          barrierDismissible: false,
+          builder: (dialogContext) => _PrinterSelectionDialog(),
         );
-        return;
+
+        if (selectedPrinter == null) return;
+
+        try {
+          await printerService.connectToDevice(selectedPrinter);
+          await printerService.printTicket(ventaParaImprimir);
+
+          if (!context.mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Ticket enviado a la impresora')),
+          );
+          return;
+        } catch (_) {
+          if (!context.mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'No se pudo conectar. Verificá que la impresora esté encendida.',
+              ),
+            ),
+          );
+        }
       }
-
-      // Mostrar diálogo de selección de impresora
-      if (!context.mounted) return;
-      
-      final selectedPrinter = await showDialog<BluetoothDevice>(
-        context: context,
-        barrierDismissible: false,
-        builder: (dialogContext) => _PrinterSelectionDialog(),
-      );
-
-      if (selectedPrinter == null) {
-        return;
-      }
-
-      // Conectar e imprimir
-      await printerService.connectToDevice(selectedPrinter);
-      
-      if (!context.mounted) return;
-      
-      await printerService.printTicket(ventaParaImprimir);
-      
-      if (!context.mounted) return;
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Ticket enviado a la impresora')),
-      );
     } catch (e) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error al imprimir ticket: $e')),
+        SnackBar(
+          content: Text(
+            e.toString().replaceFirst('Exception: ', ''),
+          ),
+        ),
       );
+    } finally {
+      if (mounted) setState(() => _isPrinting = false);
     }
   }
-
 }
 
-// Diálogo para seleccionar impresora
 class _PrinterSelectionDialog extends StatefulWidget {
   @override
-  State<_PrinterSelectionDialog> createState() => _PrinterSelectionDialogState();
+  State<_PrinterSelectionDialog> createState() =>
+      _PrinterSelectionDialogState();
 }
 
 class _PrinterSelectionDialogState extends State<_PrinterSelectionDialog> {
-  List<BluetoothDevice> printers = [];
+  List<BluetoothDevice> devices = [];
   bool isLoading = true;
   String? errorMessage;
 
   @override
   void initState() {
     super.initState();
-    _scanForPrinters();
+    _loadBondedDevices();
   }
 
-  Future<void> _scanForPrinters() async {
+  Future<void> _loadBondedDevices() async {
     try {
+      if (!mounted) return;
       setState(() {
         isLoading = true;
         errorMessage = null;
       });
 
       final printerService = BluetoothPrinterService.instance;
-      final foundPrinters = await printerService.scanForPrinters();
+      final bonded = await printerService.getBondedDevices();
 
+      if (!mounted) return;
       setState(() {
-        printers = foundPrinters;
+        devices = bonded;
         isLoading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
-        errorMessage = 'Error al buscar impresoras: $e';
+        errorMessage = e.toString().replaceFirst('Exception: ', '');
         isLoading = false;
       });
     }
@@ -993,51 +1052,239 @@ class _PrinterSelectionDialogState extends State<_PrinterSelectionDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : Colors.black87;
+    final subColor = isDark ? Colors.grey.shade400 : Colors.grey.shade600;
     return AlertDialog(
-      title: const Text('Seleccionar Impresora'),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      title: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppTheme.primaryColor.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(Icons.print_rounded, color: AppTheme.primaryColor, size: 22),
+          ),
+          const SizedBox(width: 12),
+          Text(
+            'Seleccionar impresora',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: textColor),
+          ),
+        ],
+      ),
       content: SizedBox(
         width: double.maxFinite,
-        child: isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : errorMessage != null
-                ? Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(errorMessage!),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: _scanForPrinters,
-                        child: const Text('Reintentar'),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Asegurate de que la impresora esté encendida.',
+              style: TextStyle(fontSize: 14, color: subColor),
+            ),
+            const SizedBox(height: 16),
+            if (isLoading)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 24),
+                child: Center(child: CircularProgressIndicator(color: AppTheme.primaryColor)),
+              )
+            else if (errorMessage != null)
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.error_outline_rounded, size: 40, color: Colors.red.shade400),
+                  const SizedBox(height: 12),
+                  Text(errorMessage!, style: TextStyle(color: textColor), textAlign: TextAlign.center),
+                  const SizedBox(height: 16),
+                  ElevatedButton.icon(
+                    onPressed: _loadBondedDevices,
+                    icon: const Icon(Icons.refresh_rounded, size: 20),
+                    label: const Text('Reintentar'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryColor,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons)),
+                    ),
+                  ),
+                ],
+              )
+            else if (devices.isEmpty)
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.bluetooth_disabled_rounded, size: 48, color: subColor),
+                  const SizedBox(height: 12),
+                  Text(
+                    'No hay dispositivos emparejados',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15, color: textColor),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Para vincular la impresora:\n'
+                    '1. Andá a Ajustes > Bluetooth\n'
+                    '2. Buscá y vinculá la impresora\n'
+                    '3. Volvé a la app y tocá "Actualizar"',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 13, color: subColor),
+                  ),
+                ],
+              )
+            else
+              Flexible(
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: devices.length,
+                  itemBuilder: (context, index) {
+                    final device = devices[index];
+                    return Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () => Navigator.of(context).pop(device),
+                        borderRadius: BorderRadius.circular(12),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.primaryColor.withOpacity(0.12),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: const Icon(Icons.print_rounded, color: AppTheme.primaryColor, size: 20),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      (device.name?.isNotEmpty == true) ? device.name! : 'Dispositivo desconocido',
+                                      style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15, color: textColor),
+                                    ),
+                                    if (device.address != null && device.address!.isNotEmpty)
+                                      Text(
+                                        device.address!,
+                                        style: TextStyle(fontSize: 12, color: subColor),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                              Icon(Icons.chevron_right_rounded, color: subColor, size: 22),
+                            ],
+                          ),
+                        ),
                       ),
-                    ],
-                  )
-                : printers.isEmpty
-                    ? const Text('No se encontraron impresoras')
-                    : ListView.builder(
-                        shrinkWrap: true,
-                        itemCount: printers.length,
-                        itemBuilder: (context, index) {
-                          final printer = printers[index];
-                          return ListTile(
-                            leading: const Icon(Icons.print),
-                            title: Text(printer.name.isEmpty ? 'Impresora desconocida' : printer.name),
-                            subtitle: Text(printer.remoteId.toString()),
-                            onTap: () => Navigator.of(context).pop(printer),
-                          );
-                        },
-                      ),
+                    );
+                  },
+                ),
+              ),
+          ],
+        ),
       ),
+      actionsPadding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancelar'),
+          style: TextButton.styleFrom(
+            backgroundColor: isDark ? const Color(0xFF2A2A2A) : Colors.grey.shade200,
+            foregroundColor: isDark ? Colors.white : Colors.black87,
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
+            ),
+          ),
+          child: const Text('Cancelar', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
         ),
-        if (!isLoading && printers.isEmpty)
+        if (!isLoading)
           TextButton(
-            onPressed: _scanForPrinters,
-            child: const Text('Buscar de nuevo'),
+            onPressed: _loadBondedDevices,
+            style: TextButton.styleFrom(
+              backgroundColor: AppTheme.primaryColor,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
+              ),
+            ),
+            child: const Text('Actualizar', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
           ),
       ],
+    );
+  }
+}
+
+class _PrintOptionTile extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final Color backgroundColor;
+  final VoidCallback onTap;
+
+  const _PrintOptionTile({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.backgroundColor,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : Colors.black87;
+    final subColor = isDark ? Colors.grey.shade400 : Colors.grey.shade600;
+    return Material(
+      color: backgroundColor,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryColor.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: AppTheme.primaryColor, size: 24),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: textColor,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: TextStyle(fontSize: 13, color: subColor),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right_rounded, color: subColor, size: 24),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

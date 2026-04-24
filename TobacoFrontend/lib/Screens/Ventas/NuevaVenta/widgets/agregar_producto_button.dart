@@ -5,26 +5,35 @@ import 'package:tobaco/Theme/app_theme.dart';
 class AgregarProductoButton extends StatelessWidget {
   final VoidCallback onPressed;
   final bool enabled;
+  /// Si true, el botón ocupa todo el ancho del padre (sin padding horizontal extra).
+  final bool fullWidth;
 
   const AgregarProductoButton({
     super.key,
     required this.onPressed,
     this.enabled = true,
+    this.fullWidth = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    final isCompact = AppTheme.isCompactVentasButton(context);
+
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: fullWidth ? EdgeInsets.zero : const EdgeInsets.symmetric(horizontal: 16),
       child: SizedBox(
         width: double.infinity,
+        height: isCompact ? 48 : null,
         child: ElevatedButton.icon(
           onPressed: enabled ? onPressed : null,
-          icon: const Icon(Icons.add_shopping_cart, size: 20),
-          label: const Text(
+          icon: Icon(
+            Icons.add_shopping_cart,
+            size: AppTheme.ventasButtonIconSize(context),
+          ),
+          label: Text(
             'Agregar Productos',
             style: TextStyle(
-              fontSize: 16,
+              fontSize: AppTheme.ventasButtonFontSize(context),
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -36,7 +45,7 @@ class AgregarProductoButton extends StatelessWidget {
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(8),
             ),
-            padding: const EdgeInsets.symmetric(vertical: 16),
+            padding: AppTheme.ventasButtonPadding(context),
             elevation: enabled ? 2 : 0,
           ),
         ),

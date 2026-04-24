@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:tobaco/Services/Auth_Service/auth_provider.dart';
-import 'package:tobaco/Screens/Auth/login_screen.dart';
 import 'package:tobaco/Theme/app_theme.dart';
 import 'package:tobaco/Theme/dialogs.dart';
 import 'package:tobaco/Screens/SuperAdmin/tenants_management_screen.dart';
@@ -202,11 +201,9 @@ class SuperAdminMenuScreen extends StatelessWidget {
 
     if (confirmado) {
       await context.read<AuthProvider>().logout();
-      if (context.mounted) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const LoginScreen()),
-        );
-      }
+      // No navegar manualmente: AuthWrapper escucha AuthProvider y mostrará LoginScreen
+      // automáticamente cuando isAuthenticated sea false. Si navegáramos con pushReplacement,
+      // perderíamos AuthWrapper del árbol y al loguear de nuevo no habría quien mostrara el menú.
     }
   }
 }

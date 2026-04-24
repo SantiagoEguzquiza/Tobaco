@@ -235,7 +235,7 @@ class CuentaCorrienteCacheService {
         saldoDelta: deuda,
         fecha: venta.fecha,
         tipo: TipoMovimientoCuentaCorriente.venta,
-        detalle: 'Venta #${venta.id ?? ''}',
+        detalle: 'Venta #${venta.numeroVisible}',
         metadataJson: jsonEncode(venta.toJson()),
       );
     }).toList();
@@ -685,7 +685,7 @@ class CuentaCorrienteCacheService {
           'cliente_id': clienteId,
           'cliente_nombre': clienteNombre ?? 'Cliente #$clienteId',
           'cliente_json': cliente != null ? jsonEncode(cliente.toJsonId()) : null,
-          'saldo_actual': delta.clamp(0, double.infinity),
+          'saldo_actual': delta,
           'total_ventas': delta > 0 ? 1 : 0,
           'total_abonos': delta < 0 ? 1 : 0,
           'total_notas_credito': 0,
@@ -699,7 +699,7 @@ class CuentaCorrienteCacheService {
 
     final row = existing.first;
     final resumen = CuentaCorrienteClienteResumen.fromMap(row);
-    final nuevoSaldo = (resumen.saldoActual + delta).clamp(0, double.infinity);
+    final nuevoSaldo = resumen.saldoActual + delta;
     await db.update(
       _clientesTable,
       {
@@ -736,13 +736,31 @@ class CuentaCorrienteCacheService {
   Future<Map<String, dynamic>?> obtenerDetalleDeudaOffline(int clienteId) async {
     final resumen = await obtenerResumenCliente(clienteId);
     if (resumen == null) return null;
+    final sa = resumen.saldoActual;
+    final deudaActual = sa > 0 ? sa : 0.0;
+    final saldoAFavor = sa < 0 ? -sa : 0.0;
     return {
       'clienteId': resumen.clienteId,
       'clienteNombre': resumen.clienteNombre,
-      'deudaActual': resumen.saldoActual,
-      'deudaFormateada': resumen.saldoActual.toStringAsFixed(2),
+      'deudaActual': deudaActual,
+      'deudaFormateada': deudaActual.toStringAsFixed(2),
+      if (saldoAFavor > 0) 'saldoAFavor': saldoAFavor,
+      if (saldoAFavor > 0) 'saldoAFavorFormateado': saldoAFavor.toStringAsFixed(2),
       'fechaConsulta': DateTime.now().toIso8601String(),
     };
+  }
+
+  /// Limpia todo el caché de cuenta corriente (clientes y movimientos).
+  /// Se invoca al cambiar de usuario para evitar mostrar datos de otro tenant.
+  Future<void> limpiarCache() async {
+    try {
+      final db = await database;
+      await db.delete(_clientesTable);
+      await db.delete(_movimientosTable);
+      debugPrint('🧹 CuentaCorrienteCacheService: Caché limpiado (cambio de usuario)');
+    } catch (e) {
+      debugPrint('❌ CuentaCorrienteCacheService: Error limpiando caché: $e');
+    }
   }
 
   /// Elimina TODAS las ventas de cuenta corriente de un cliente

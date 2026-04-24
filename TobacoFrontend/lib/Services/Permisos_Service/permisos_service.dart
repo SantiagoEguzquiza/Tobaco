@@ -6,7 +6,7 @@ import '../Auth_Service/auth_service.dart';
 
 class PermisosService {
   static const String _permisosEndpoint = '/api/PermisosEmpleado';
-  static const Duration _timeoutDuration = Duration(seconds: 10);
+  static const Duration _timeoutDuration = Duration(seconds: 8);
 
   /// Obtener permisos de un usuario (Admin only)
   static Future<PermisosEmpleado> getPermisosByUserId(int userId) async {

@@ -292,7 +292,7 @@ class DatosCacheService {
       
       final List<Map<String, dynamic>> maps = await db.query(
         'categorias_cache',
-        orderBy: 'categoria_json DESC',
+        orderBy: 'id ASC',
       );
 
       if (maps.isEmpty) {

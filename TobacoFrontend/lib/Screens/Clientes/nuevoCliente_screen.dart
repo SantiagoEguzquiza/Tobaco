@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:provider/provider.dart';
 import '../../Models/Cliente.dart';
 import '../../Services/Clientes_Service/clientes_provider.dart';
@@ -23,46 +24,46 @@ class _NuevoClienteScreenState extends State<NuevoClienteScreen> {
   final _direccionController = TextEditingController();
   double? _latitud;
   double? _longitud;
-  final _deudaController = TextEditingController();
   final _descuentoGlobalController = TextEditingController();
   
   Cliente? _clienteCreado;
   bool _isLoading = false;
   String? _errorMessage;
-
-  /// Normaliza el valor de deuda: convierte comas a puntos y formatea correctamente
-  String _normalizarDeuda(String? valor) {
-    if (valor == null || valor.trim().isEmpty) {
-      return "0";
-    }
-    
-    // Reemplazar coma por punto y eliminar espacios
-    String normalizado = valor.trim().replaceAll(',', '.').replaceAll(' ', '');
-    
-    // Intentar parsear como double
-    final double? numero = double.tryParse(normalizado);
-    
-    if (numero == null || numero < 0) {
-      return "0";
-    }
-    
-    // Si es un número entero, retornarlo sin decimales
-    if (numero == numero.truncateToDouble()) {
-      return numero.toInt().toString();
-    }
-    
-    // Si tiene decimales, retornarlo con punto como separador
-    return numero.toString();
-  }
+  bool _hasCCTE = false;
 
   @override
   void dispose() {
     _nombreController.dispose();
     _telefonoController.dispose();
     _direccionController.dispose();
-    _deudaController.dispose();
     _descuentoGlobalController.dispose();
     super.dispose();
+  }
+
+  /// Extrae el mensaje del backend y lo recorta si es muy largo (para que se entienda el error sin desbordar la UI).
+  String _mensajeErrorCorto(dynamic e) {
+    const int maxLength = 120;
+    String msg = 'Revisa los datos (nombre, teléfono, dirección).';
+    final str = e.toString();
+    if (str.contains('Respuesta:')) {
+      try {
+        final jsonStart = str.indexOf('{');
+        if (jsonStart != -1) {
+          final jsonString = str.substring(jsonStart);
+          final jsonData = jsonDecode(jsonString);
+          if (jsonData is Map && jsonData.containsKey('message')) {
+            msg = jsonData['message'].toString().trim();
+          }
+        }
+      } catch (_) {}
+    } else {
+      msg = str.replaceFirst('Exception: ', '').trim();
+      if (msg.contains('Respuesta:')) msg = msg.split('Respuesta:').last.trim();
+    }
+    if (msg.length > maxLength) {
+      msg = '${msg.substring(0, maxLength).trim()}...';
+    }
+    return msg.isEmpty ? 'Revisa los datos (nombre, teléfono, dirección).' : msg;
   }
 
   Future<void> _crearCliente() async {
@@ -84,13 +85,14 @@ class _NuevoClienteScreenState extends State<NuevoClienteScreen> {
         nombre: _nombreController.text.trim(),
         telefono: int.tryParse(_telefonoController.text.trim()),
         direccion: _direccionController.text.trim(),
-        deuda: _normalizarDeuda(_deudaController.text),
+        deuda: '0',
         descuentoGlobal: _descuentoGlobalController.text.trim().isEmpty 
             ? 0.0 
             : double.tryParse(_descuentoGlobalController.text.trim()) ?? 0.0,
         preciosEspeciales: [],
         latitud: _latitud,
         longitud: _longitud,
+        hasCCTE: _hasCCTE,
       );
 
       final clienteProvider = Provider.of<ClienteProvider>(context, listen: false);
@@ -123,33 +125,9 @@ class _NuevoClienteScreenState extends State<NuevoClienteScreen> {
         setState(() {
           _isLoading = false;
         });
-        // Extraer el mensaje de error del backend si está disponible
-        String errorMessage = 'Error al crear el cliente';
-        final errorString = e.toString();
-        if (errorString.contains('Respuesta:')) {
-          try {
-            final jsonStart = errorString.indexOf('{');
-            if (jsonStart != -1) {
-              final jsonString = errorString.substring(jsonStart);
-              final jsonData = jsonDecode(jsonString);
-              if (jsonData is Map && jsonData.containsKey('message')) {
-                errorMessage = jsonData['message'].toString();
-              } else {
-                errorMessage = errorString.replaceAll('Exception: ', '');
-              }
-            } else {
-              errorMessage = errorString.replaceAll('Exception: ', '');
-            }
-          } catch (_) {
-            errorMessage = errorString.replaceAll('Exception: ', '');
-          }
-        } else {
-          errorMessage = errorString.replaceAll('Exception: ', '');
-        }
-        
         AppTheme.showSnackBar(
           context,
-          AppTheme.errorSnackBar(errorMessage),
+          AppTheme.errorSnackBar(_mensajeErrorCorto(e)),
         );
       }
     }
@@ -177,13 +155,14 @@ class _NuevoClienteScreenState extends State<NuevoClienteScreen> {
           nombre: _nombreController.text.trim(),
           telefono: int.tryParse(_telefonoController.text.trim()),
           direccion: _direccionController.text.trim(),
-          deuda: _normalizarDeuda(_deudaController.text),
+          deuda: '0',
           descuentoGlobal: _descuentoGlobalController.text.trim().isEmpty 
               ? 0.0 
               : double.tryParse(_descuentoGlobalController.text.trim()) ?? 0.0,
           preciosEspeciales: [],
           latitud: _latitud,
           longitud: _longitud,
+          hasCCTE: _hasCCTE,
         );
 
         final clienteProvider = Provider.of<ClienteProvider>(context, listen: false);
@@ -203,33 +182,9 @@ class _NuevoClienteScreenState extends State<NuevoClienteScreen> {
         if (mounted && Apihandler.isConnectionError(e)) {
           await Apihandler.handleConnectionError(context, e);
         } else if (mounted) {
-          // Extraer el mensaje de error del backend si está disponible
-          String errorMessage = 'Error al crear el cliente';
-          final errorString = e.toString();
-          if (errorString.contains('Respuesta:')) {
-            try {
-              final jsonStart = errorString.indexOf('{');
-              if (jsonStart != -1) {
-                final jsonString = errorString.substring(jsonStart);
-                final jsonData = jsonDecode(jsonString);
-                if (jsonData is Map && jsonData.containsKey('message')) {
-                  errorMessage = jsonData['message'].toString();
-                } else {
-                  errorMessage = errorString.replaceAll('Exception: ', '');
-                }
-              } else {
-                errorMessage = errorString.replaceAll('Exception: ', '');
-              }
-            } catch (_) {
-              errorMessage = errorString.replaceAll('Exception: ', '');
-            }
-          } else {
-            errorMessage = errorString.replaceAll('Exception: ', '');
-          }
-          
           AppTheme.showSnackBar(
             context,
-            AppTheme.errorSnackBar(errorMessage),
+            AppTheme.errorSnackBar(_mensajeErrorCorto(e)),
           );
         }
         return;
@@ -259,325 +214,342 @@ class _NuevoClienteScreenState extends State<NuevoClienteScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          'Nuevo Cliente',
-          style: AppTheme.appBarTitleStyle,
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bottomActionSpacing = 88.0 + MediaQuery.of(context).padding.bottom;
+    return Theme(
+      data: Theme.of(context).copyWith(
+        textSelectionTheme: TextSelectionThemeData(
+          cursorColor: AppTheme.primaryColor,
+          selectionColor: AppTheme.primaryColor.withOpacity(0.3),
+          selectionHandleColor: AppTheme.primaryColor,
         ),
-        backgroundColor: null, // Usar el tema
-        foregroundColor: Colors.white,
-        elevation: 0,
-        centerTitle: true,
       ),
-      body: _buildPasoDatosBasicos(),
+      child: Scaffold(
+        backgroundColor: isDark ? const Color(0xFF121212) : const Color(0xFFF5F5F5),
+        appBar: AppBar(
+          title: const Text('Nuevo Cliente', style: AppTheme.appBarTitleStyle),
+          backgroundColor: null,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          centerTitle: true,
+        ),
+        body: Stack(
+          children: [
+            SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildSectionCard(
+                      isDark: isDark,
+                      title: 'Información Básica',
+                      icon: Icons.person_outline,
+                      children: [
+                        _buildTextFormField(
+                          controller: _nombreController,
+                          label: 'Nombre *',
+                          hint: 'Ingresa el nombre del cliente',
+                          icon: Icons.person_outlined,
+                          isDark: isDark,
+                          validator: (v) => (v == null || v.trim().isEmpty) ? 'El nombre es obligatorio' : null,
+                        ),
+                        const SizedBox(height: 16),
+                        _buildTextFormField(
+                          controller: _telefonoController,
+                          label: 'Teléfono *',
+                          hint: 'Ingresa el teléfono',
+                          icon: Icons.phone_outlined,
+                          isDark: isDark,
+                          keyboardType: TextInputType.phone,
+                          validator: (v) {
+                            if (v == null || v.trim().isEmpty) return 'El teléfono es obligatorio';
+                            if (int.tryParse(v.trim()) == null) return 'Ingresa un teléfono válido';
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        _buildTextFormField(
+                          controller: _direccionController,
+                          label: 'Dirección *',
+                          hint: 'Ingresa la dirección',
+                          icon: Icons.location_on_outlined,
+                          isDark: isDark,
+                          maxLines: 2,
+                          validator: (v) => (v == null || v.trim().isEmpty) ? 'La dirección es obligatoria' : null,
+                        ),
+                        const SizedBox(height: 16),
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton.icon(
+                            onPressed: () async {
+                              final result = await Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => MapPickerScreen(
+                                    initial: (_latitud != null && _longitud != null)
+                                        ? LatLng(_latitud!, _longitud!)
+                                        : null,
+                                  ),
+                                ),
+                              );
+                              if (result is List && result.length == 2 && mounted) {
+                                setState(() {
+                                  _latitud = result[0] as double;
+                                  _longitud = result[1] as double;
+                                });
+                              }
+                            },
+                            icon: const Icon(Icons.place, size: 20, color: AppTheme.primaryColor),
+                            label: const Text('Editar ubicación en mapa'),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: isDark ? Colors.white : Colors.black87,
+                              side: BorderSide(color: isDark ? const Color(0xFF404040) : Colors.grey.shade300),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(
+                                    AppTheme.borderRadiusMainButtons),
+                              ),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    _buildSectionCard(
+                      isDark: isDark,
+                      title: 'Finanzas',
+                      icon: Icons.account_balance_wallet_outlined,
+                      children: [
+                        _buildTextFormField(
+                          controller: _descuentoGlobalController,
+                          label: 'Descuento global (%)',
+                          hint: '0',
+                          icon: Icons.percent,
+                          isDark: isDark,
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          validator: (v) {
+                            if (v != null && v.trim().isNotEmpty) {
+                              final d = double.tryParse(v.trim());
+                              if (d == null) return 'Ingresa un porcentaje válido';
+                              if (d < 0 || d > 100) return 'Entre 0 y 100';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: isDark ? const Color(0xFF2A2A2A) : Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: isDark ? const Color(0xFF404040) : Colors.grey.shade300,
+                            ),
+                          ),
+                          child: SwitchListTile.adaptive(
+                            value: _hasCCTE,
+                            onChanged: (value) => setState(() => _hasCCTE = value),
+                            contentPadding: EdgeInsets.zero,
+                            title: Text(
+                              'Habilitar Cuenta Corriente',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                                color: isDark ? Colors.white : Colors.black87,
+                              ),
+                            ),
+                            activeColor: AppTheme.primaryColor,
+                            secondary: Icon(Icons.account_balance_wallet_rounded, size: 20, color: AppTheme.primaryColor),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    _buildSectionCard(
+                      isDark: isDark,
+                      title: 'Precios Especiales',
+                      icon: Icons.local_offer_outlined,
+                      children: [
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton.icon(
+                            onPressed: _isLoading ? null : _editarPreciosEspeciales,
+                            icon: const Icon(Icons.local_offer, size: 20, color: AppTheme.primaryColor),
+                            label: const Text('Configurar precios especiales'),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: isDark ? Colors.white : Colors.black87,
+                              side: BorderSide(color: isDark ? const Color(0xFF404040) : Colors.grey.shade300),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: bottomActionSpacing),
+                  ],
+                ),
+              ),
+            ),
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+                ),
+                child: SafeArea(
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: _isLoading
+                        ? Container(
+                            height: 56,
+                            decoration: BoxDecoration(
+                              color: AppTheme.primaryColor,
+                              borderRadius: BorderRadius.circular(
+                                  AppTheme.borderRadiusMainButtons),
+                            ),
+                            child: const Center(
+                              child: SizedBox(
+                                width: 24,
+                                height: 24,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 3,
+                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                ),
+                              ),
+                            ),
+                          )
+                        : ElevatedButton.icon(
+                            onPressed: _crearCliente,
+                            icon: const Icon(Icons.person_add_outlined, size: 24),
+                            label: const Text('Crear Cliente', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.primaryColor,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(
+                                    AppTheme.borderRadiusMainButtons),
+                              ),
+                            ),
+                          ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
-
-  Widget _buildPasoDatosBasicos() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
-      child: Theme(
-        data: Theme.of(context).copyWith(
-          textSelectionTheme: TextSelectionThemeData(
-            selectionColor: AppTheme.primaryColor.withOpacity(0.3),
-            selectionHandleColor: AppTheme.primaryColor,
-            cursorColor: AppTheme.primaryColor,
+  Widget _buildSectionCard({
+    required bool isDark,
+    required String title,
+    required IconData icon,
+    required List<Widget> children,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: isDark ? Colors.black.withOpacity(0.3) : Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
-        ),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-            Text(
-              'Información del Cliente',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).brightness == Brightness.dark
-                    ? Colors.white
-                    : AppTheme.primaryColor,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Completa los datos básicos del cliente',
-              style: TextStyle(
-                fontSize: 16,
-                color: Theme.of(context).brightness == Brightness.dark
-                    ? Colors.grey.shade400
-                    : Colors.grey.shade600,
-              ),
-            ),
-            const SizedBox(height: 30),
-            
-            // Campo Nombre
-            TextFormField(
-              controller: _nombreController,
-              style: TextStyle(
-                color: Theme.of(context).brightness == Brightness.dark
-                    ? Colors.white
-                    : Colors.black,
-              ),
-              decoration: const InputDecoration(
-                labelText: 'Nombre *',
-                hintText: 'Ingresa el nombre del cliente',
-                prefixIcon: Icon(Icons.person),
-                border: OutlineInputBorder(),
-              ),
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return 'El nombre es obligatorio';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 20),
-            // Coordenadas seleccionadas
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
             Row(
               children: [
-                Expanded(
-                  child: TextFormField(
-                    readOnly: true,
-                    decoration: const InputDecoration(
-                      labelText: 'Latitud',
-                      prefixIcon: Icon(Icons.map),
-                      border: OutlineInputBorder(),
-                    ),
-                    controller: TextEditingController(text: _latitud?.toStringAsFixed(6) ?? ''),
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
                   ),
+                  child: Icon(icon, color: AppTheme.primaryColor, size: 20),
                 ),
                 const SizedBox(width: 12),
-                Expanded(
-                  child: TextFormField(
-                    readOnly: true,
-                    decoration: const InputDecoration(
-                      labelText: 'Longitud',
-                      prefixIcon: Icon(Icons.map),
-                      border: OutlineInputBorder(),
-                    ),
-                    controller: TextEditingController(text: _longitud?.toStringAsFixed(6) ?? ''),
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: isDark ? Colors.white : Colors.black87,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: () async {
-                  final result = await Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const MapPickerScreen(),
-                    ),
-                  );
-                  if (result is List && result.length == 2) {
-                    setState(() {
-                      _latitud = result[0] as double;
-                      _longitud = result[1] as double;
-                    });
-                  }
-                },
-                icon: const Icon(Icons.place),
-                label: const Text('Elegir ubicación en mapa'),
-              ),
-            ),
-            const SizedBox(height: 20),
-            
-            // Campo Teléfono
-            TextFormField(
-              controller: _telefonoController,
-              style: TextStyle(
-                color: Theme.of(context).brightness == Brightness.dark
-                    ? Colors.white
-                    : Colors.black,
-              ),
-              decoration: const InputDecoration(
-                labelText: 'Teléfono *',
-                hintText: 'Ingresa el teléfono del cliente',
-                prefixIcon: Icon(Icons.phone),
-                border: OutlineInputBorder(),
-              ),
-              keyboardType: TextInputType.phone,
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return 'El teléfono es obligatorio';
-                }
-                if (int.tryParse(value.trim()) == null) {
-                  return 'Ingresa un teléfono válido';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 20),
-            
-            // Campo Dirección
-            TextFormField(
-              controller: _direccionController,
-              style: TextStyle(
-                color: Theme.of(context).brightness == Brightness.dark
-                    ? Colors.white
-                    : Colors.black,
-              ),
-              decoration: const InputDecoration(
-                labelText: 'Dirección *',
-                hintText: 'Ingresa la dirección del cliente',
-                prefixIcon: Icon(Icons.location_on),
-                border: OutlineInputBorder(),
-              ),
-              maxLines: 2,
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return 'La dirección es obligatoria';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 20),
-            
-            // Campo Deuda
-            TextFormField(
-              controller: _deudaController,
-              style: TextStyle(
-                color: Theme.of(context).brightness == Brightness.dark
-                    ? Colors.white
-                    : Colors.black,
-              ),
-              decoration: const InputDecoration(
-                labelText: 'Deuda',
-                hintText: 'Ingresa el monto de la deuda',
-                prefixIcon: Icon(Icons.attach_money),
-                border: OutlineInputBorder(),
-              ),
-              keyboardType: TextInputType.number,
-              validator: (value) {
-                if (value != null && value.isNotEmpty) {
-                  // Normalizar el valor (reemplazar coma por punto)
-                  final normalizado = value.trim().replaceAll(',', '.').replaceAll(' ', '');
-                  if (double.tryParse(normalizado) == null) {
-                    return 'Ingresa un monto válido';
-                  }
-                  // Validar que no sea negativo
-                  final numero = double.tryParse(normalizado);
-                  if (numero != null && numero < 0) {
-                    return 'La deuda no puede ser negativa';
-                  }
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 20),
-            
-            // Campo Descuento Global
-            TextFormField(
-              controller: _descuentoGlobalController,
-              style: TextStyle(
-                color: Theme.of(context).brightness == Brightness.dark
-                    ? Colors.white
-                    : Colors.black,
-              ),
-              decoration: const InputDecoration(
-                labelText: 'Descuento Global (%)',
-                hintText: 'Ingresa el porcentaje de descuento global',
-                prefixIcon: Icon(Icons.percent),
-                border: OutlineInputBorder(),
-                suffixText: '%',
-              ),
-              keyboardType: TextInputType.numberWithOptions(decimal: true),
-              validator: (value) {
-                if (value != null && value.trim().isNotEmpty) {
-                  final descuento = double.tryParse(value.trim());
-                  if (descuento == null) {
-                    return 'Ingresa un porcentaje válido';
-                  }
-                  if (descuento < 0 || descuento > 100) {
-                    return 'El descuento debe estar entre 0 y 100';
-                  }
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 30),
-            
-            
-            const SizedBox(height: 30),
-            
-            // Botón Crear Cliente
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: ElevatedButton(
-                onPressed: _isLoading ? null : _crearCliente,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primaryColor,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                child: _isLoading
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          color: Colors.white,
-                          strokeWidth: 2,
-                        ),
-                      )
-                    : const Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.person_add),
-                          SizedBox(width: 8),
-                          Text(
-                            'Crear Cliente',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-              ),
-            ),
             const SizedBox(height: 16),
-            
-            // Botón Precios Especiales (opcional)
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: OutlinedButton.icon(
-                onPressed: _isLoading ? null : _editarPreciosEspeciales,
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.white,
-                  backgroundColor: Theme.of(context).brightness == Brightness.dark
-                      ? const Color(0xFF333333)
-                      : Colors.transparent,
-                  side: const BorderSide(color: Colors.white, width: 2),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                icon: const Icon(Icons.local_offer, color: Colors.white),
-                label: const Text(
-                  'Precios Especiales',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
+            ...children,
           ],
-        ),
         ),
       ),
     );
   }
 
+  Widget _buildTextFormField({
+    required TextEditingController controller,
+    required String label,
+    required String hint,
+    required IconData icon,
+    required bool isDark,
+    TextInputType? keyboardType,
+    int maxLines = 1,
+    String? Function(String?)? validator,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: isDark ? Colors.grey.shade300 : Colors.grey.shade700,
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextFormField(
+          controller: controller,
+          keyboardType: keyboardType,
+          maxLines: maxLines,
+          validator: validator,
+          style: TextStyle(color: isDark ? Colors.white : Colors.black87, fontSize: 16),
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: TextStyle(color: isDark ? Colors.grey.shade600 : Colors.grey.shade400),
+            prefixIcon: Icon(icon, color: AppTheme.primaryColor, size: 20),
+            filled: true,
+            fillColor: isDark ? const Color(0xFF2A2A2A) : Colors.white,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: isDark ? const Color(0xFF404040) : Colors.grey.shade300),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: isDark ? const Color(0xFF404040) : Colors.grey.shade300),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: AppTheme.primaryColor, width: 2),
+            ),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          ),
+        ),
+      ],
+    );
+  }
 }

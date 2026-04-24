@@ -7,7 +7,7 @@ import 'package:tobaco/Services/Cache/datos_cache_service.dart';
 
 class ClienteService {
   final Uri baseUrl = Apihandler.baseUrl;
-  static const Duration _timeoutDuration = Duration(seconds: 3); // Timeout razonable para detectar offline
+  static const Duration _timeoutDuration = Duration(seconds: 15); // Alineado con Auth/Ventas; 3s era poco en redes lentas
   final DatosCacheService _cacheService = DatosCacheService();
 
   Future<List<Cliente>> obtenerClientes() async {
@@ -63,8 +63,38 @@ class ClienteService {
       ).timeout(_timeoutDuration);
 
       if (response.statusCode != 200 && response.statusCode != 201) {
-        throw Exception(
-            'Error al guardar el cliente. Código de estado: ${response.statusCode}, Respuesta: ${response.body}');
+        debugPrint('ClienteService.crearCliente: ${response.statusCode} body=${response.body}');
+        String message = 'Error al guardar el cliente.';
+        final bodyStr = response.body.trim();
+        if (bodyStr.isNotEmpty) {
+          try {
+            final body = jsonDecode(bodyStr);
+            if (body is Map) {
+              final msg = body['message'] ?? body['Message'];
+              if (msg != null && msg.toString().trim().isNotEmpty) {
+                message = msg.toString().trim();
+              } else if (body['errors'] is Map) {
+                final errors = body['errors'] as Map;
+                // Preferir mensaje de Direccion, luego Nombre, luego el primero que venga
+                final dirList = errors['Direccion'];
+                final nomList = errors['Nombre'];
+                if (dirList is List && dirList.isNotEmpty) {
+                  message = dirList.first.toString().trim();
+                } else if (nomList is List && nomList.isNotEmpty) {
+                  message = nomList.first.toString().trim();
+                } else {
+                  for (final entry in errors.entries) {
+                    if (entry.value is List && (entry.value as List).isNotEmpty) {
+                      message = (entry.value as List).first.toString().trim();
+                      break;
+                    }
+                  }
+                }
+              }
+            }
+          } catch (_) {}
+        }
+        throw Exception(message);
       } else {
         debugPrint('Cliente guardado exitosamente');
         // Parsear la respuesta para obtener el cliente creado con el ID
@@ -88,8 +118,35 @@ class ClienteService {
       ).timeout(_timeoutDuration);
 
       if (response.statusCode != 200) {
-        throw Exception(
-            'Error al editar el cliente. Código de estado: ${response.statusCode}');
+        String message = 'Revisa los datos del cliente.';
+        if (response.statusCode == 403) message = 'No tienes permiso para editar clientes.';
+        if (response.statusCode == 401) message = 'Sesión expirada. Vuelve a iniciar sesión.';
+        final bodyStr = response.body.trim();
+        if (bodyStr.isNotEmpty) {
+          try {
+            final body = jsonDecode(bodyStr);
+            if (body is Map) {
+              var msg = body['message'] ?? body['Message'] ?? body['detail'] ?? body['title'];
+              if (msg != null && msg.toString().trim().isNotEmpty) {
+                message = msg.toString().trim();
+              }
+              if (message.toLowerCase().contains('one or more validation') && body['errors'] is Map) {
+                final errors = body['errors'] as Map;
+                for (final entry in errors.entries) {
+                  if (entry.value is List && (entry.value as List).isNotEmpty) {
+                    message = (entry.value as List).first.toString().trim();
+                    break;
+                  }
+                }
+              }
+            }
+          } catch (_) {
+            if (bodyStr.length < 200 && !bodyStr.startsWith('{')) {
+              message = bodyStr;
+            }
+          }
+        }
+        throw Exception(message);
       } else {
         debugPrint('Cliente editado exitosamente');
       }
@@ -107,12 +164,19 @@ class ClienteService {
         headers: headers,
       ).timeout(_timeoutDuration);
 
-      if (response.statusCode != 200) {
-        throw Exception(
-            'Error al eliminar el cliente. Código de estado: ${response.statusCode}');
-      } else {
+      if (response.statusCode == 200) {
         debugPrint('Cliente eliminado exitosamente');
+        return;
       }
+      // Leer mensaje del backend (400/404 suelen traer { "message": "..." })
+      String message = 'Error al eliminar el cliente. Código de estado: ${response.statusCode}';
+      try {
+        final body = jsonDecode(response.body);
+        if (body is Map && body['message'] != null) {
+          message = body['message'] as String;
+        }
+      } catch (_) {}
+      throw Exception(message);
     } catch (e) {
       debugPrint('Error al eliminar el cliente: $e');
       rethrow;
@@ -123,7 +187,7 @@ class ClienteService {
     try {
       final headers = await AuthService.getAuthHeaders();
       final response = await Apihandler.client.get(
-        Uri.parse('$baseUrl/Clientes/buscar?query=$nombre'),
+        Uri.parse('$baseUrl/Clientes/buscar?query=${Uri.encodeComponent(nombre)}'),
         headers: headers,
       ).timeout(_timeoutDuration);
 
@@ -135,6 +199,26 @@ class ClienteService {
       }
     } catch (e) {
       debugPrint('Error al buscar clientes: $e');
+      rethrow;
+    }
+  }
+
+  Future<List<Cliente>> buscarClientesConDeuda(String query) async {
+    try {
+      final headers = await AuthService.getAuthHeaders();
+      final response = await Apihandler.client.get(
+        Uri.parse('$baseUrl/Clientes/con-deuda/buscar?query=${Uri.encodeComponent(query)}'),
+        headers: headers,
+      ).timeout(_timeoutDuration);
+
+      if (response.statusCode == 200) {
+        final List<dynamic> jsonList = jsonDecode(response.body);
+        return jsonList.map((json) => Cliente.fromJson(json)).toList();
+      } else {
+        throw Exception('Error al buscar clientes con cuenta corriente');
+      }
+    } catch (e) {
+      debugPrint('Error al buscar clientes con deuda: $e');
       rethrow;
     }
   }
@@ -281,22 +365,29 @@ class ClienteService {
     }
   }
 
-  /// Obtiene o crea el cliente "Consumidor Final" compartido entre todos los tenants
+  /// Obtiene o crea el cliente "Consumidor Final" del tenant actual
   Future<Cliente> obtenerOCrearConsumidorFinal() async {
     try {
       final headers = await AuthService.getAuthHeaders();
       final response = await Apihandler.client.get(
         Uri.parse('$baseUrl/Clientes/consumidor-final'),
         headers: headers,
-      ).timeout(_timeoutDuration);
+      ).timeout(const Duration(seconds: 15));
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> clienteJson = jsonDecode(response.body);
         return Cliente.fromJson(clienteJson);
-      } else {
-        throw Exception(
-            'Error al obtener o crear Consumidor Final. Código de estado: ${response.statusCode}');
       }
+      String msg = 'Error al obtener o crear Consumidor Final (${response.statusCode})';
+      if (response.body.isNotEmpty) {
+        try {
+          final data = jsonDecode(response.body) as Map<String, dynamic>?;
+          if (data != null && data['message'] != null) {
+            msg = data['message'] as String;
+          }
+        } catch (_) {}
+      }
+      throw Exception(msg);
     } catch (e) {
       debugPrint('Error al obtener o crear Consumidor Final: $e');
       rethrow;

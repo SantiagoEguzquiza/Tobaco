@@ -93,7 +93,12 @@ class _DetalleProductoScreenState extends State<DetalleProductoScreen> {
           ),
         ),
         body: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
+          padding: EdgeInsets.fromLTRB(
+            20,
+            20,
+            20,
+            MediaQuery.of(context).padding.bottom + 24,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -294,8 +299,10 @@ class _DetalleProductoScreenState extends State<DetalleProductoScreen> {
                                 width: double.infinity,
                                 child: ElevatedButton.icon(
                                   onPressed: () async {
-                                    final result = await Navigator.push(
+                                    final result = await Navigator.of(
                                       context,
+                                      rootNavigator: true,
+                                    ).push(
                                       MaterialPageRoute(
                                         builder: (context) => EditarProductoScreen(
                                           producto: _producto,

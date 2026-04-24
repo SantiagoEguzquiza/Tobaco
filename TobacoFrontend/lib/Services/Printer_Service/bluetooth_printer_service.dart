@@ -1,8 +1,24 @@
 import 'dart:async';
-import 'dart:typed_data';
-import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+import 'package:blue_thermal_printer/blue_thermal_printer.dart';
+import 'package:flutter/foundation.dart';
 import 'package:tobaco/Utils/thermal/ticket_builder.dart';
 import 'package:tobaco/Models/Ventas.dart';
+
+export 'package:blue_thermal_printer/blue_thermal_printer.dart'
+    show BluetoothDevice;
+
+class _PrintJob {
+  final int jobId;
+  final Ventas venta;
+  final Completer<void> completer;
+  final DateTime createdAt;
+
+  _PrintJob({
+    required this.jobId,
+    required this.venta,
+    required this.completer,
+  }) : createdAt = DateTime.now();
+}
 
 class BluetoothPrinterService {
   static BluetoothPrinterService? _instance;
@@ -11,232 +27,236 @@ class BluetoothPrinterService {
 
   BluetoothPrinterService._();
 
+  final BlueThermalPrinter _bt = BlueThermalPrinter.instance;
   BluetoothDevice? _connectedDevice;
 
   BluetoothDevice? get connectedDevice => _connectedDevice;
 
-  Future<List<BluetoothDevice>> scanForPrinters(
-      {Duration timeout = const Duration(seconds: 2)}) async {
+  // --- Print queue state ---
+  final List<_PrintJob> _queue = [];
+  bool _isProcessing = false;
+  int _jobCounter = 0;
+
+  bool get isPrinting => _isProcessing;
+
+  Future<bool> get isBluetoothOn async => (await _bt.isOn) ?? false;
+
+  Future<bool> get isConnected async => (await _bt.isConnected) ?? false;
+
+  Future<List<BluetoothDevice>> getBondedDevices() async {
+    final on = await _bt.isOn;
+    if (on != true) {
+      throw Exception(
+        'Bluetooth está desactivado. Por favor, activalo desde Ajustes.',
+      );
+    }
+
     try {
-      // Verificar que Bluetooth esté habilitado
-      if (await FlutterBluePlus.isSupported == false) {
-        throw Exception('Bluetooth no está soportado en este dispositivo');
-      }
-
-      if (await FlutterBluePlus.isOn == false) {
-        throw Exception('Bluetooth está desactivado. Por favor, actívalo');
-      }
-
-      // Limpiar dispositivos escaneados anteriormente
-      await FlutterBluePlus.stopScan();
-      await Future.delayed(const Duration(milliseconds: 500));
-
-      // Iniciar escaneo con timeout
-      FlutterBluePlus.startScan(timeout: timeout);
-
-      // Recopilar todos los resultados
-      List<BluetoothDevice> printers = [];
-      Set<String> seenIds = {};
-      StreamSubscription? subscription;
-
-      // Suscribirse a los resultados del escaneo
-      subscription = FlutterBluePlus.scanResults.listen((scanResults) {
-        for (var result in scanResults) {
-          final device = result.device;
-          final deviceId = device.remoteId.toString();
-
-          // Evitar duplicados
-          if (seenIds.contains(deviceId)) {
-            continue;
-          }
-          seenIds.add(deviceId);
-
-          // Debug: mostrar nombres de dispositivos encontrados
-          print(
-              'Dispositivo Bluetooth encontrado: ${device.name}, ID: $deviceId');
-
-          if (_looksLikePrinter(result)) {
-            printers.add(device);
-          } else {
-            print('Descartado (no parece impresora): ${device.name}');
-          }
-        }
-      });
-
-      // Esperar hasta que el escaneo termine
-      await Future.delayed(timeout);
-
-      // Cancelar suscripción
-      await subscription.cancel();
-
-      // Detener el escaneo manualmente
-      await FlutterBluePlus.stopScan();
-
-      return printers;
+      return await _bt.getBondedDevices();
     } catch (e) {
-      throw Exception('Error al escanear impresoras: $e');
+      final msg = e.toString().toLowerCase();
+      if (msg.contains('permission') || msg.contains('security')) {
+        throw Exception(
+          'Permiso de Bluetooth denegado. '
+          'Andá a Ajustes > Apps > Tobaco > Permisos y habilitá Bluetooth.',
+        );
+      }
+      throw Exception('Error al obtener dispositivos emparejados: $e');
     }
-  }
-
-  bool _looksLikePrinter(ScanResult result) {
-    final name = result.device.platformName.toLowerCase();
-    const printerNameKeywords = [
-      'printer',
-      'print',
-      'pos',
-      'thermal',
-      'rpp',
-      'bt-sp',
-      'gprinter',
-      'gp',
-      'escpos',
-      'qs-58',
-    ];
-    if (printerNameKeywords.any((keyword) => name.contains(keyword))) {
-      return true;
-    }
-
-    const printerServiceIds = [
-      'FFE0',
-      'FFE1',
-      'FFE5',
-      '18F0',
-      '1812', // HID over GATT often used by printers
-    ];
-
-    final serviceUuids = result.advertisementData.serviceUuids
-        .map((uuid) => uuid.toString().toUpperCase())
-        .toList();
-    if (serviceUuids.any(
-        (uuid) => printerServiceIds.any((id) => uuid.contains(id)))) {
-      return true;
-    }
-
-    final serviceDataKeys = result.advertisementData.serviceData.keys
-        .map((uuid) => uuid.toString().toUpperCase())
-        .toList();
-    if (serviceDataKeys.any(
-        (uuid) => printerServiceIds.any((id) => uuid.contains(id)))) {
-      return true;
-    }
-
-    return false;
   }
 
   Future<void> connectToDevice(BluetoothDevice device) async {
+    if (_connectedDevice != null) {
+      await disconnect();
+    }
+
     try {
-      // Desconectar si hay una conexión previa
-      if (_connectedDevice != null && _connectedDevice != device) {
-        await disconnect();
-      }
-
+      await _bt.connect(device);
       _connectedDevice = device;
-
-      // Conectar al dispositivo (flutter_blue_plus v2 requiere 'license')
-      await device.connect(
-        license: License.free,
-        timeout: const Duration(seconds: 15),
+      debugPrint(
+        '[BT] Connected to ${device.name} (${device.address})',
       );
-
-      // Esperar a que la conexión se establezca completamente
-      await Future.delayed(const Duration(milliseconds: 500));
-
-      if (!device.isConnected) {
-        throw Exception('No se pudo establecer la conexión con la impresora');
-      }
     } catch (e) {
       _connectedDevice = null;
+      final msg = e.toString().toLowerCase();
+      if (msg.contains('permission') || msg.contains('security')) {
+        throw Exception(
+          'Permiso de Bluetooth denegado. '
+          'Andá a Ajustes > Apps > Tobaco > Permisos y habilitá Bluetooth.',
+        );
+      }
       throw Exception('Error al conectar con la impresora: $e');
     }
   }
 
   Future<void> disconnect() async {
-    if (_connectedDevice != null) {
-      try {
-        await _connectedDevice!.disconnect();
-      } catch (e) {
-        // Ignorar errores al desconectar
-      }
-      _connectedDevice = null;
-    }
+    try {
+      await _bt.disconnect();
+    } catch (_) {}
+    _connectedDevice = null;
+    _failPendingJobs('Impresora desconectada');
+    debugPrint('[BT] Disconnected. Pending jobs cleared.');
   }
 
-  Future<void> printTicket(Ventas venta) async {
-    if (_connectedDevice == null || !_connectedDevice!.isConnected) {
-      throw Exception('No hay una impresora conectada');
+  void _failPendingJobs(String reason) {
+    for (final job in _queue) {
+      if (!job.completer.isCompleted) {
+        job.completer.completeError(Exception(reason));
+      }
+    }
+    _queue.clear();
+  }
+
+  /// Enqueues a print job. The returned [Future] completes when the ticket
+  /// has been fully sent to the printer (or fails with an error).
+  /// Only ONE job is processed at a time; concurrent calls are queued.
+  Future<void> printTicket(Ventas venta) {
+    final jobId = ++_jobCounter;
+    final completer = Completer<void>();
+    final job = _PrintJob(jobId: jobId, venta: venta, completer: completer);
+
+    _queue.add(job);
+    debugPrint(
+      '[PrintQueue] Job #$jobId enqueued '
+      '(ventaId=${venta.id ?? "local"}, queue=${_queue.length})',
+    );
+
+    _processQueue();
+    return completer.future;
+  }
+
+  Future<void> _processQueue() async {
+    if (_isProcessing) return;
+    _isProcessing = true;
+
+    while (_queue.isNotEmpty) {
+      final job = _queue.removeAt(0);
+      final sw = Stopwatch()..start();
+      debugPrint(
+        '[PrintQueue] >>> Start job #${job.jobId} '
+        '(ventaId=${job.venta.id ?? "local"})',
+      );
+
+      try {
+        await _ensureConnection();
+        await _executePrint(job.venta);
+        sw.stop();
+        debugPrint(
+          '[PrintQueue] <<< Job #${job.jobId} OK '
+          '(${sw.elapsedMilliseconds} ms)',
+        );
+        job.completer.complete();
+      } catch (e) {
+        sw.stop();
+        debugPrint(
+          '[PrintQueue] <<< Job #${job.jobId} FAILED '
+          '(${sw.elapsedMilliseconds} ms): $e',
+        );
+        if (!job.completer.isCompleted) {
+          job.completer.completeError(e);
+        }
+      }
     }
 
+    _isProcessing = false;
+  }
+
+  /// Forces a fresh Bluetooth connection **and verifies it** before printing.
+  ///
+  /// Android's BT stack can cache a stale "connected" state and even let
+  /// [connect] succeed against a powered-off printer (RFCOMM socket opens from
+  /// cached bonding info). To detect this we send a probe byte after connecting
+  /// and wait for the radio to confirm or break the link.
+  Future<void> _ensureConnection() async {
+    if (_connectedDevice == null) {
+      throw Exception(
+        'No hay impresora configurada. Seleccioná una impresora.',
+      );
+    }
+
+    debugPrint(
+      '[BT] Verifying connection to '
+      '${_connectedDevice!.name} (${_connectedDevice!.address})...',
+    );
+
+    // 1. Tear down any stale socket
     try {
-      // Buscar el servicio y característica para imprimir
-      List<BluetoothService> services =
-          await _connectedDevice!.discoverServices();
+      await _bt.disconnect();
+    } catch (_) {}
 
-      BluetoothService? printService;
-      BluetoothCharacteristic? printCharacteristic;
+    // 2. Open a fresh RFCOMM link
+    try {
+      await _bt.connect(_connectedDevice!).timeout(
+            const Duration(seconds: 5),
+          );
+    } on TimeoutException {
+      debugPrint('[BT] connect() timeout');
+      try {
+        await _bt.disconnect();
+      } catch (_) {}
+      throw Exception(
+        'No se pudo conectar con la impresora. '
+        'Verificá que esté encendida y cerca del dispositivo.',
+      );
+    } catch (e) {
+      debugPrint('[BT] connect() failed: $e');
+      throw Exception(
+        'No se pudo conectar con la impresora. '
+        'Verificá que esté encendida y cerca del dispositivo.',
+      );
+    }
 
-      // Buscar el servicio de impresión (SPS)
-      for (var service in services) {
-        if (service.uuid.toString().toUpperCase().contains('0000FFE0') ||
-            service.uuid.toString().toUpperCase().contains('18F0')) {
-          printService = service;
-          break;
-        }
-      }
+    // 3. Probe: push a harmless ESC @ (printer init) through the radio.
+    //    If the physical device is off, the socket will break once Android
+    //    detects the dead link (~1-2 s).
+    try {
+      await _bt.writeBytes(Uint8List.fromList([0x1B, 0x40]));
+    } catch (e) {
+      debugPrint('[BT] Probe write failed immediately: $e');
+      try {
+        await _bt.disconnect();
+      } catch (_) {}
+      throw Exception(
+        'La impresora no responde. '
+        'Verificá que esté encendida y cerca del dispositivo.',
+      );
+    }
 
-      // Si no encontramos el servicio específico, usar el primer servicio
-      if (printService == null && services.isNotEmpty) {
-        printService = services.first;
-      }
+    // 4. Wait for Android to flush the write and detect a broken link
+    await Future.delayed(const Duration(seconds: 2));
 
-      if (printService == null) {
-        throw Exception('No se pudo encontrar el servicio de impresión');
-      }
+    final alive = await isConnected;
+    if (!alive) {
+      debugPrint('[BT] Connection dropped after probe — printer unreachable');
+      try {
+        await _bt.disconnect();
+      } catch (_) {}
+      throw Exception(
+        'La impresora no responde. '
+        'Verificá que esté encendida y cerca del dispositivo.',
+      );
+    }
 
-      // Buscar la característica de escritura (WRITE)
-      for (var char in printService.characteristics) {
-        if (char.properties.write || char.properties.writeWithoutResponse) {
-          printCharacteristic = char;
-          break;
-        }
-      }
+    debugPrint('[BT] Connection verified (probe OK)');
+  }
 
-      if (printCharacteristic == null) {
-        throw Exception('No se pudo encontrar la característica de impresión');
-      }
+  Future<void> _executePrint(Ventas venta) async {
+    try {
+      // ESC @ — initialize printer (resets any buffered state)
+      await _bt.writeBytes(Uint8List.fromList([0x1B, 0x40]));
 
-      // Generar el ticket
       final ticketData = TicketBuilder.buildTicket(venta);
+      await _bt.writeBytes(ticketData);
 
-      // Enviar el ticket en chunks si es muy grande
-      const chunkSize = 20;
-      for (int i = 0; i < ticketData.length; i += chunkSize) {
-        final end = (i + chunkSize < ticketData.length)
-            ? i + chunkSize
-            : ticketData.length;
-        final chunk = Uint8List.fromList(ticketData.sublist(i, end));
-
-        if (printCharacteristic.properties.writeWithoutResponse) {
-          await printCharacteristic.write(chunk, withoutResponse: true);
-        } else {
-          await printCharacteristic.write(chunk, withoutResponse: false);
-        }
-
-        // Pequeña pausa para evitar saturar el buffer
-        await Future.delayed(const Duration(milliseconds: 20));
-      }
-
-      // Agregar comandos finales de corte (opcional)
-      final finalCommands =
-          Uint8List.fromList([0x0A, 0x0A, 0x0A, 0x1D, 0x56, 0x41, 0x00]);
-      if (printCharacteristic.properties.writeWithoutResponse) {
-        await printCharacteristic.write(finalCommands, withoutResponse: true);
-      } else {
-        await printCharacteristic.write(finalCommands, withoutResponse: false);
-      }
+      // 5 line feeds + partial cut (GS V A 0x00)
+      await _bt.writeBytes(
+        Uint8List.fromList([
+          0x0A, 0x0A, 0x0A, 0x0A, 0x0A,
+          0x1D, 0x56, 0x41, 0x00,
+        ]),
+      );
     } catch (e) {
       throw Exception('Error al imprimir ticket: $e');
     }
   }
-
-  bool get isConnected => _connectedDevice?.isConnected ?? false;
 }

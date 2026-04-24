@@ -159,7 +159,7 @@ class _NuevoProductoScreenState extends State<NuevoProductoScreen> {
                   icon: Icons.category_outlined,
                   children: [
                     DropdownButtonFormField<Categoria>(
-                      value: categorias.isNotEmpty ? categorias.first : null,
+                      initialValue: categorias.isNotEmpty ? categorias.first : null,
                       decoration: InputDecoration(
                         hintText: 'Seleccione una categoría',
                         hintStyle: TextStyle(
@@ -208,10 +208,6 @@ class _NuevoProductoScreenState extends State<NuevoProductoScreen> {
                                 decoration: BoxDecoration(
                                   color: _parseColor(categoria.colorHex),
                                   shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
-                                    width: 1.5,
-                                  ),
                                 ),
                               ),
                               const SizedBox(width: 12),
@@ -252,9 +248,6 @@ class _NuevoProductoScreenState extends State<NuevoProductoScreen> {
                       decoration: BoxDecoration(
                         color: isDark ? const Color(0xFF2A2A2A) : Colors.white,
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: isDark ? const Color(0xFF404040) : Colors.grey.shade300,
-                        ),
                       ),
                       child: Row(
                         children: [
@@ -303,7 +296,7 @@ class _NuevoProductoScreenState extends State<NuevoProductoScreen> {
                                 }
                               });
                             },
-                            activeColor: AppTheme.primaryColor,
+                            activeThumbColor: AppTheme.primaryColor,
                           ),
                         ],
                       ),
@@ -317,9 +310,6 @@ class _NuevoProductoScreenState extends State<NuevoProductoScreen> {
                           decoration: BoxDecoration(
                             color: isDark ? const Color(0xFF2A2A2A) : Colors.white,
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: isDark ? const Color(0xFF404040) : Colors.grey.shade300,
-                            ),
                           ),
                           child: Row(
                             children: [
@@ -380,9 +370,6 @@ class _NuevoProductoScreenState extends State<NuevoProductoScreen> {
                       decoration: BoxDecoration(
                         color: isDark ? const Color(0xFF2A2A2A) : Colors.white,
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: isDark ? const Color(0xFF404040) : Colors.grey.shade300,
-                        ),
                       ),
                       child: Row(
                         children: [
@@ -428,7 +415,7 @@ class _NuevoProductoScreenState extends State<NuevoProductoScreen> {
                                 halfController.text = value ? 'true' : 'false';
                               });
                             },
-                            activeColor: AppTheme.primaryColor,
+                            activeThumbColor: AppTheme.primaryColor,
                           ),
                         ],
                       ),
@@ -462,11 +449,6 @@ class _NuevoProductoScreenState extends State<NuevoProductoScreen> {
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-                border: Border(
-                  top: BorderSide(
-                    color: isDark ? Colors.grey.shade800 : Colors.grey.shade300,
-                  ),
-                ),
               ),
               child: SafeArea(
                 child: SizedBox(
@@ -703,7 +685,7 @@ class _NuevoProductoScreenState extends State<NuevoProductoScreen> {
           Padding(
             padding: const EdgeInsets.only(bottom: 16),
             child: Text(
-              'No hay packs configurados. El producto se venderá solo por unidad.',
+              'Aún no hay packs configurados para este producto.',
               style: TextStyle(
                 fontSize: 13,
                 color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
@@ -734,9 +716,6 @@ class _NuevoProductoScreenState extends State<NuevoProductoScreen> {
                     decoration: BoxDecoration(
                       color: isDark ? const Color(0xFF2A2A2A) : Colors.grey.shade50,
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: isDark ? const Color(0xFF404040) : Colors.grey.shade300,
-                      ),
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -882,7 +861,7 @@ class _NuevoProductoScreenState extends State<NuevoProductoScreen> {
                           const SizedBox(width: 12),
                           const Expanded(
                             child: Text(
-                              'Precios por Cantidad (Packs)',
+                              'Precios por Packs',
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.w600,
@@ -903,6 +882,7 @@ class _NuevoProductoScreenState extends State<NuevoProductoScreen> {
                         padding: const EdgeInsets.all(20),
                         child: QuantityPriceWidget(
                           quantityPrices: tempPrices,
+                          basePrice: double.tryParse(precioController.text.trim()) ?? 0.0,
                           onChanged: (prices) {
                             setDialogState(() {
                               tempPrices.clear();
@@ -912,50 +892,49 @@ class _NuevoProductoScreenState extends State<NuevoProductoScreen> {
                         ),
                       ),
                     ),
-                    // Footer
-                    Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        border: Border(
-                          top: BorderSide(
-                            color: isDark ? const Color(0xFF404040) : Colors.grey.shade300,
-                          ),
+                    // Footer (mismo estilo que popup fecha de expiración)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      child: Center(
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            TextButton(
+                              onPressed: () => Navigator.of(dialogContext).pop(),
+                              style: TextButton.styleFrom(
+                                backgroundColor: isDark ? const Color(0xFF2A2A2A) : Colors.grey.shade200,
+                                foregroundColor: isDark ? Colors.white : Colors.black87,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                                minimumSize: const Size(120, 44),
+                                fixedSize: const Size(120, 44),
+                              ),
+                              child: const Text('Cancelar'),
+                            ),
+                            const SizedBox(width: 12),
+                            TextButton(
+                              onPressed: () {
+                                setState(() {
+                                  quantityPrices = List.from(tempPrices);
+                                });
+                                Navigator.of(dialogContext).pop();
+                              },
+                              style: TextButton.styleFrom(
+                                backgroundColor: AppTheme.primaryColor,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                                minimumSize: const Size(120, 44),
+                                fixedSize: const Size(120, 44),
+                              ),
+                              child: const Text('Guardar'),
+                            ),
+                          ],
                         ),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          TextButton(
-                            onPressed: () => Navigator.of(dialogContext).pop(),
-                            child: Text(
-                              'Cancelar',
-                              style: TextStyle(
-                                color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          ElevatedButton(
-                            onPressed: () {
-                              setState(() {
-                                quantityPrices = List.from(tempPrices);
-                              });
-                              Navigator.of(dialogContext).pop();
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppTheme.primaryColor,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 24,
-                                vertical: 12,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            child: const Text('Guardar'),
-                          ),
-                        ],
                       ),
                     ),
                   ],
@@ -982,14 +961,13 @@ class _NuevoProductoScreenState extends State<NuevoProductoScreen> {
                   onPrimary: Colors.white,
                   surface: const Color(0xFF1A1A1A),
                   onSurface: Colors.white,
-                  surfaceVariant: const Color(0xFF2A2A2A),
+                  surfaceContainerHighest: const Color(0xFF2A2A2A),
                 )
               : ColorScheme.light(
                   primary: AppTheme.primaryColor,
                   onPrimary: Colors.white,
                   onSurface: Colors.black87,
-                ),
-            dialogBackgroundColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+                ), dialogTheme: DialogThemeData(backgroundColor: isDark ? const Color(0xFF1A1A1A) : Colors.white),
           ),
           child: StatefulBuilder(
             builder: (context, setState) {

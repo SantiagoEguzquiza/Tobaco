@@ -1,20 +1,34 @@
 import 'dart:io';
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/io_client.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tobaco/Theme/dialogs.dart';
 
+/// URL del backend. Cambia solo aquí según dónde corras la app.
+class ApiConfig {
+  /// Backend en tu PC: celular y PC en la misma Wi‑Fi. Reemplaza por la IP de tu PC (ipconfig).
+  static const String localUrl = 'http://192.168.0.101:5006';
+  /// Backend en producción (Railway).
+  static const String productionUrl = 'https://tobacoapi-production.up.railway.app';
+}
+
 class Apihandler {
   static final HttpClient httpClient = HttpClient()
+    // Solo en debug: aceptar certificados self-signed del servidor local.
+    // En release (producción) se validan normalmente.
     ..badCertificateCallback =
-        (X509Certificate cert, String host, int port) => true;
+        (X509Certificate cert, String host, int port) => kDebugMode;
 
   static final IOClient client = IOClient(httpClient);
 
-  static final baseUrl = Uri.parse(
-      'https://10.0.2.2:7148'); // URL para emulador Android - 10.0.2.2 apunta a localhost de la máquina host //
-  // URL del servidor en Azure: 'https://tobaco-api-e4f7adesh0dfakcc.brazilsouth-01.azurewebsites.net'    
+  /// En debug (celular/emulador): usa backend local. En release: producción.
+  /// Para probar en celular: 1) Misma Wi‑Fi. 2) Backend con perfil "http". 3) ApiConfig.localUrl = IP de tu PC.
+  static Uri get baseUrl {
+    final url = kDebugMode ? ApiConfig.localUrl : ApiConfig.productionUrl;
+    return Uri.parse(url);
+  }
 
   static Future<bool> checkTokenAndFetchData(BuildContext context) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -44,12 +58,18 @@ class Apihandler {
     if (error is HandshakeException) {
       return true;
     }
-    if (error.toString().contains('Failed host lookup') ||
-        error.toString().contains('Connection refused') ||
-        error.toString().contains('Connection timed out') ||
-        error.toString().contains('Network is unreachable') ||
-        error.toString().contains('Software caused connection abort') ||
-        error.toString().contains('TimeoutException')) {
+    final msg = error.toString().toLowerCase();
+    if (msg.contains('clientexception') ||
+        msg.contains('failed host lookup') ||
+        msg.contains('connection refused') ||
+        msg.contains('connection timed out') ||
+        msg.contains('network is unreachable') ||
+        msg.contains('software caused connection abort') ||
+        msg.contains('timeoutexception') ||
+        msg.contains('no se pudo conectar') ||
+        msg.contains('conectar al servidor') ||
+        msg.contains('disponibles offline') ||
+        msg.contains('conecta para sincronizar')) {
       return true;
     }
     return false;

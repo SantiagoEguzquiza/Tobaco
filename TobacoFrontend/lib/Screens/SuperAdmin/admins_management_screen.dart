@@ -8,6 +8,8 @@ import 'package:tobaco/Services/Admin_Service/admin_service.dart';
 import 'package:tobaco/Theme/app_theme.dart';
 import 'package:tobaco/Theme/headers.dart';
 import 'package:tobaco/Theme/dialogs.dart';
+import 'package:tobaco/Screens/SuperAdmin/nuevo_admin_screen.dart';
+import 'package:tobaco/Screens/SuperAdmin/editar_admin_screen.dart';
 
 class AdminsManagementScreen extends StatefulWidget {
   const AdminsManagementScreen({super.key});
@@ -82,6 +84,7 @@ class _AdminsManagementScreenState extends State<AdminsManagementScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       appBar: AppBar(
         centerTitle: true,
         elevation: 0,
@@ -128,7 +131,10 @@ class _AdminsManagementScreenState extends State<AdminsManagementScreen> {
                         ],
                       ),
                       child: DropdownButtonFormField<Tenant>(
-                        value: _selectedTenant,
+                        initialValue: _selectedTenant != null &&
+                                tenantProvider.tenants.any((t) => t.id == _selectedTenant!.id)
+                            ? tenantProvider.tenants.firstWhere((t) => t.id == _selectedTenant!.id)
+                            : null,
                         decoration: InputDecoration(
                           labelText: 'Seleccionar Tenant',
                           labelStyle: TextStyle(
@@ -336,37 +342,53 @@ class _AdminsManagementScreenState extends State<AdminsManagementScreen> {
                                   ],
                                 ),
                               )
-                            : Column(
-                                children: [
-                                  if (_selectedTenant != null) ...[
-                                    Padding(
-                                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                                      child: SizedBox(
-                                        width: double.infinity,
-                                        child: ElevatedButton.icon(
-                                          onPressed: () => _mostrarDialogoCrearAdmin(context),
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: AppTheme.primaryColor,
-                                            foregroundColor: Colors.white,
-                                            padding: const EdgeInsets.symmetric(vertical: 16),
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
-                                            ),
-                                            elevation: 2,
-                                          ),
-                                          icon: const Icon(Icons.person_add, size: 20),
-                                          label: const Text(
-                                            'Nuevo Administrador',
-                                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                            : CustomScrollView(
+                                    slivers: [
+                                      SliverToBoxAdapter(
+                                        child: Padding(
+                                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                                          child: Column(
+                                            children: [
+                                              SizedBox(
+                                                width: double.infinity,
+                                                child: ElevatedButton.icon(
+                                                  onPressed: () async {
+                                                    FocusScope.of(context).unfocus();
+                                                    final result = await Navigator.push<bool>(
+                                                      context,
+                                                      MaterialPageRoute(
+                                                        builder: (context) => NuevoAdminScreen(tenant: _selectedTenant!),
+                                                      ),
+                                                    );
+                                                    if (result == true && mounted) {
+                                                      _cargarAdmins(_selectedTenant!.id);
+                                                    }
+                                                  },
+                                                  style: ElevatedButton.styleFrom(
+                                                    backgroundColor: AppTheme.primaryColor,
+                                                    foregroundColor: Colors.white,
+                                                    padding: const EdgeInsets.symmetric(vertical: 16),
+                                                    shape: RoundedRectangleBorder(
+                                                      borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
+                                                    ),
+                                                    elevation: 2,
+                                                  ),
+                                                  icon: const Icon(Icons.person_add, size: 20),
+                                                  label: const Text(
+                                                    'Nuevo Administrador',
+                                                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                                                  ),
+                                                ),
+                                              ),
+                                              const SizedBox(height: 8),
+                                            ],
                                           ),
                                         ),
                                       ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                  ],
-                                  Expanded(
-                                    child: admins.isEmpty
-                                        ? Center(
+                                      if (admins.isEmpty)
+                                        SliverFillRemaining(
+                                          hasScrollBody: false,
+                                          child: Center(
                                             child: Column(
                                               mainAxisAlignment: MainAxisAlignment.center,
                                               children: [
@@ -389,11 +411,14 @@ class _AdminsManagementScreenState extends State<AdminsManagementScreen> {
                                                 ),
                                               ],
                                             ),
-                                          )
-                                        : ListView.builder(
-                                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                                            itemCount: admins.length,
-                                            itemBuilder: (context, index) {
+                                          ),
+                                        )
+                                      else
+                                        SliverPadding(
+                                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                                          sliver: SliverList(
+                                            delegate: SliverChildBuilderDelegate(
+                                            (context, index) {
                                               final admin = admins[index];
                                               return Container(
                                                 margin: const EdgeInsets.only(bottom: 12),
@@ -416,14 +441,11 @@ class _AdminsManagementScreenState extends State<AdminsManagementScreen> {
                                                   color: Colors.transparent,
                                                   child: InkWell(
                                                     borderRadius: BorderRadius.circular(AppTheme.borderRadiusCards),
-                                                    onTap: () {
-                                                      // Opcional: navegar a detalle del admin
-                                                    },
+                                                    onTap: () {},
                                                     child: Padding(
                                                       padding: const EdgeInsets.all(16),
                                                       child: Row(
                                                         children: [
-                                                          // Indicador de estado del admin
                                                           Container(
                                                             width: 4,
                                                             height: 60,
@@ -433,8 +455,6 @@ class _AdminsManagementScreenState extends State<AdminsManagementScreen> {
                                                             ),
                                                           ),
                                                           const SizedBox(width: 16),
-                                                          
-                                                          // Información del admin
                                                           Expanded(
                                                             child: Column(
                                                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -483,8 +503,8 @@ class _AdminsManagementScreenState extends State<AdminsManagementScreen> {
                                                                 Container(
                                                                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                                                   decoration: BoxDecoration(
-                                                                    color: admin.isActive 
-                                                                        ? Colors.green.withOpacity(0.1) 
+                                                                    color: admin.isActive
+                                                                        ? Colors.green.withOpacity(0.1)
                                                                         : Colors.red.withOpacity(0.1),
                                                                     borderRadius: BorderRadius.circular(12),
                                                                   ),
@@ -500,8 +520,6 @@ class _AdminsManagementScreenState extends State<AdminsManagementScreen> {
                                                               ],
                                                             ),
                                                           ),
-                                                          
-                                                          // Botón de menú
                                                           PopupMenuButton(
                                                             icon: Icon(
                                                               Icons.more_vert,
@@ -520,7 +538,21 @@ class _AdminsManagementScreenState extends State<AdminsManagementScreen> {
                                                                 ),
                                                                 onTap: () => Future.delayed(
                                                                   Duration.zero,
-                                                                  () => _mostrarDialogoEditarAdmin(context, admin),
+                                                                  () async {
+                                                                    FocusScope.of(context).unfocus();
+                                                                    final result = await Navigator.push<bool>(
+                                                                      context,
+                                                                      MaterialPageRoute(
+                                                                        builder: (context) => EditarAdminScreen(
+                                                                          tenant: _selectedTenant!,
+                                                                          admin: admin,
+                                                                        ),
+                                                                      ),
+                                                                    );
+                                                                    if (result == true && mounted) {
+                                                                      _cargarAdmins(_selectedTenant!.id);
+                                                                    }
+                                                                  },
                                                                 ),
                                                               ),
                                                               PopupMenuItem(
@@ -561,1026 +593,17 @@ class _AdminsManagementScreenState extends State<AdminsManagementScreen> {
                                                 ),
                                               );
                                             },
+                                            childCount: admins.length,
                                           ),
-                                  ),
-                                ],
-                              ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
               ),
             ],
           );
         },
       ),
-    );
-  }
-
-  void _mostrarDialogoCrearAdmin(BuildContext context) {
-    final userNameController = TextEditingController();
-    final passwordController = TextEditingController();
-    final emailController = TextEditingController();
-    final _formKey = GlobalKey<FormState>();
-    bool _isLoading = false;
-    bool _hasPasswordError = false;
-
-    // Helper functions for password validation
-    bool _hasUpperCase(String password) {
-      return password.contains(RegExp(r'[A-Z]'));
-    }
-
-    bool _hasLowerCase(String password) {
-      return password.contains(RegExp(r'[a-z]'));
-    }
-
-    bool _hasNumber(String password) {
-      return password.contains(RegExp(r'[0-9]'));
-    }
-
-    bool _hasMinLength(String password) {
-      return password.length >= 8;
-    }
-
-    Widget _buildPasswordRule(BuildContext context, String text, bool isValid) {
-      final isDark = Theme.of(context).brightness == Brightness.dark;
-      return Row(
-        children: [
-          Icon(
-            isValid ? Icons.check_circle : Icons.circle_outlined,
-            size: 16,
-            color: isValid 
-                ? Colors.green[700] 
-                : (isDark ? Colors.grey.shade600 : Colors.grey.shade400),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              text,
-              style: TextStyle(
-                fontSize: 12,
-                color: isValid
-                    ? (isDark ? Colors.green[300] : Colors.green[700])
-                    : (isDark ? Colors.grey.shade400 : Colors.grey.shade600),
-                decoration: isValid ? null : TextDecoration.none,
-              ),
-            ),
-          ),
-        ],
-      );
-    }
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        final isDark = Theme.of(context).brightness == Brightness.dark;
-        return Dialog(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          child: Container(
-            decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-              borderRadius: BorderRadius.circular(24),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(isDark ? 0.5 : 0.15),
-                  blurRadius: 20,
-                  spreadRadius: 0,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Header con título
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
-                    decoration: BoxDecoration(
-                      color: isDark 
-                          ? const Color(0xFF2A2A2A).withOpacity(0.5) 
-                          : Colors.grey.shade50,
-                      border: Border(
-                        bottom: BorderSide(
-                          color: isDark 
-                              ? Colors.grey.shade800 
-                              : Colors.grey.shade200,
-                          width: 1,
-                        ),
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF4CAF50).withOpacity(0.15),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Icon(
-                            Icons.person_add,
-                            color: Color(0xFF4CAF50),
-                            size: 24,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            'Crear Nuevo Administrador',
-                            style: TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.w700,
-                              color: isDark ? Colors.white : Colors.black87,
-                              letterSpacing: -0.5,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  // Contenido
-                  Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: SingleChildScrollView(
-                      child: Form(
-                        key: _formKey,
-                        child: Column(
-                          children: [
-                            TextFormField(
-                              controller: userNameController,
-                              style: TextStyle(
-                                color: Theme.of(context).brightness == Brightness.dark
-                                    ? const Color(0xFFE0E0E0)
-                                    : Colors.black,
-                              ),
-                              inputFormatters: [
-                                FilteringTextInputFormatter.deny(RegExp(r'\s')),
-                              ],
-                              decoration: InputDecoration(
-                                labelText: 'Nombre de Usuario',
-                                labelStyle: TextStyle(
-                                  color: Theme.of(context).brightness == Brightness.dark
-                                      ? Colors.white
-                                      : const Color(0xFF4CAF50),
-                                ),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: const BorderSide(
-                                    color: Color(0xFF4CAF50),
-                                    width: 2,
-                                  ),
-                                ),
-                                prefixIcon: const Icon(
-                                  Icons.person,
-                                  color: Color(0xFF4CAF50),
-                                ),
-                                helperText: 'No se permiten espacios',
-                                helperStyle: TextStyle(
-                                  color: Theme.of(context).brightness == Brightness.dark
-                                      ? Colors.grey.shade400
-                                      : Colors.grey.shade600,
-                                  fontSize: 12,
-                                ),
-                              ),
-                              validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return 'El nombre de usuario es requerido';
-                                }
-                                if (value.contains(' ')) {
-                                  return 'El nombre de usuario no puede contener espacios';
-                                }
-                                return null;
-                              },
-                            ),
-                            const SizedBox(height: 16),
-                            TextFormField(
-                              controller: emailController,
-                              style: TextStyle(
-                                color: Theme.of(context).brightness == Brightness.dark
-                                    ? const Color(0xFFE0E0E0)
-                                    : Colors.black,
-                              ),
-                              decoration: InputDecoration(
-                                labelText: 'Email (Opcional)',
-                                labelStyle: TextStyle(
-                                  color: Theme.of(context).brightness == Brightness.dark
-                                      ? Colors.white
-                                      : const Color(0xFF4CAF50),
-                                ),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: const BorderSide(
-                                    color: Color(0xFF4CAF50),
-                                    width: 2,
-                                  ),
-                                ),
-                                prefixIcon: const Icon(
-                                  Icons.email,
-                                  color: Color(0xFF4CAF50),
-                                ),
-                              ),
-                              keyboardType: TextInputType.emailAddress,
-                              validator: (value) {
-                                if (value != null && value.isNotEmpty) {
-                                  final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
-                                  if (!emailRegex.hasMatch(value)) {
-                                    return 'Ingrese un email válido';
-                                  }
-                                }
-                                return null;
-                              },
-                            ),
-                            const SizedBox(height: 16),
-                            StatefulBuilder(
-                              builder: (context, setState) {
-                                return TextFormField(
-                                  controller: passwordController,
-                                  style: TextStyle(
-                                    color: Theme.of(context).brightness == Brightness.dark
-                                        ? const Color(0xFFE0E0E0)
-                                        : Colors.black,
-                                  ),
-                                  onChanged: (value) {
-                                    setState(() {
-                                      _hasPasswordError = !_hasMinLength(value) ||
-                                          !_hasUpperCase(value) ||
-                                          !_hasLowerCase(value) ||
-                                          !_hasNumber(value);
-                                    });
-                                  },
-                                  decoration: InputDecoration(
-                                    labelText: 'Contraseña',
-                                    labelStyle: TextStyle(
-                                      color: _hasPasswordError
-                                          ? Colors.red
-                                          : Theme.of(context).brightness == Brightness.dark
-                                              ? Colors.white
-                                              : const Color(0xFF4CAF50),
-                                    ),
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                      borderSide: BorderSide(
-                                        color: _hasPasswordError ? Colors.red : Colors.grey,
-                                      ),
-                                    ),
-                                    focusedBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                      borderSide: BorderSide(
-                                        color: _hasPasswordError
-                                            ? Colors.red
-                                            : const Color(0xFF4CAF50),
-                                        width: 2,
-                                      ),
-                                    ),
-                                    errorBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                      borderSide: const BorderSide(color: Colors.red, width: 2),
-                                    ),
-                                    focusedErrorBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                      borderSide: const BorderSide(color: Colors.red, width: 2),
-                                    ),
-                                    prefixIcon: Icon(
-                                      Icons.lock,
-                                      color: _hasPasswordError
-                                          ? Colors.red
-                                          : const Color(0xFF4CAF50),
-                                    ),
-                                    helperText: 'Requisitos: mayúscula, minúscula, número y 8+ caracteres',
-                                    helperStyle: TextStyle(
-                                      color: _hasPasswordError
-                                          ? Colors.red
-                                          : const Color(0xFF4CAF50),
-                                      fontSize: 12,
-                                    ),
-                                    helperMaxLines: 2,
-                                  ),
-                                  obscureText: true,
-                                  validator: (value) {
-                                    if (value == null || value.isEmpty) {
-                                      return 'La contraseña es requerida';
-                                    }
-                                    if (!_hasMinLength(value)) {
-                                      return 'La contraseña debe tener al menos 8 caracteres';
-                                    }
-                                    if (!_hasUpperCase(value)) {
-                                      return 'La contraseña debe contener al menos una letra mayúscula';
-                                    }
-                                    if (!_hasLowerCase(value)) {
-                                      return 'La contraseña debe contener al menos una letra minúscula';
-                                    }
-                                    if (!_hasNumber(value)) {
-                                      return 'La contraseña debe contener al menos un número';
-                                    }
-                                    return null;
-                                  },
-                                );
-                              },
-                            ),
-                            // Indicadores de reglas de contraseña (solo si hay texto)
-                            StatefulBuilder(
-                              builder: (context, setState) {
-                                if (passwordController.text.isEmpty) {
-                                  return const SizedBox.shrink();
-                                }
-                                return Column(
-                                  children: [
-                                    const SizedBox(height: 8),
-                                    Container(
-                                      padding: const EdgeInsets.all(12),
-                                      decoration: BoxDecoration(
-                                        color: Theme.of(context).brightness == Brightness.dark
-                                            ? Colors.grey.shade900
-                                            : Colors.grey.shade50,
-                                        borderRadius: BorderRadius.circular(8),
-                                        border: Border.all(
-                                          color: _hasPasswordError
-                                              ? Colors.red.withOpacity(0.3)
-                                              : Colors.grey.withOpacity(0.3),
-                                        ),
-                                      ),
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'Requisitos de contraseña:',
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              fontWeight: FontWeight.w600,
-                                              color: Theme.of(context).brightness == Brightness.dark
-                                                  ? Colors.grey.shade300
-                                                  : Colors.grey.shade700,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 8),
-                                          _buildPasswordRule(
-                                            context,
-                                            'Al menos 8 caracteres',
-                                            _hasMinLength(passwordController.text),
-                                          ),
-                                          const SizedBox(height: 4),
-                                          _buildPasswordRule(
-                                            context,
-                                            'Una letra mayúscula',
-                                            _hasUpperCase(passwordController.text),
-                                          ),
-                                          const SizedBox(height: 4),
-                                          _buildPasswordRule(
-                                            context,
-                                            'Una letra minúscula',
-                                            _hasLowerCase(passwordController.text),
-                                          ),
-                                          const SizedBox(height: 4),
-                                          _buildPasswordRule(
-                                            context,
-                                            'Un número',
-                                            _hasNumber(passwordController.text),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                );
-                              },
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  // Botones
-                  Container(
-                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-                    child: StatefulBuilder(
-                      builder: (context, setState) {
-                        return Row(
-                          children: [
-                            Expanded(
-                              child: OutlinedButton(
-                                onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
-                                style: OutlinedButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(vertical: 14),
-                                  backgroundColor: isDark 
-                                      ? const Color(0xFF2A2A2A) 
-                                      : Colors.transparent,
-                                  side: BorderSide(
-                                    color: isDark 
-                                        ? Colors.grey.shade700 
-                                        : Colors.grey.shade300,
-                                    width: 1.5,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  elevation: 0,
-                                ),
-                                child: Text(
-                                  'Cancelar',
-                                  style: TextStyle(
-                                    color: Theme.of(context).textTheme.bodyLarge?.color,
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 15,
-                                    letterSpacing: 0.2,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: ElevatedButton(
-                                onPressed: _isLoading
-                                    ? null
-                                    : () async {
-                                        if (_formKey.currentState!.validate()) {
-                                          setState(() {
-                                            _isLoading = true;
-                                          });
-
-                                          try {
-                                            await _adminService.crearAdmin(
-                                              _selectedTenant!.id,
-                                              userName: userNameController.text,
-                                              password: passwordController.text,
-                                              email: emailController.text.isEmpty
-                                                  ? null
-                                                  : emailController.text,
-                                            );
-                                            if (context.mounted) {
-                                              Navigator.pop(context);
-                                              _cargarAdmins(_selectedTenant!.id);
-                                              AppTheme.showSnackBar(
-                                                context,
-                                                AppTheme.successSnackBar('Administrador creado exitosamente'),
-                                              );
-                                            }
-                                          } catch (e) {
-                                            if (context.mounted) {
-                                              setState(() {
-                                                _isLoading = false;
-                                              });
-                                              AppTheme.showSnackBar(
-                                                context,
-                                                AppTheme.errorSnackBar('Error: ${e.toString().replaceFirst('Exception: ', '')}'),
-                                              );
-                                            }
-                                          }
-                                        }
-                                      },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppTheme.primaryColor,
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(vertical: 14),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  elevation: 0,
-                                  shadowColor: AppTheme.primaryColor.withOpacity(0.3),
-                                ),
-                                child: _isLoading
-                                    ? const SizedBox(
-                                        width: 20,
-                                        height: 20,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                        ),
-                                      )
-                                    : const Text(
-                                        'Crear',
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.w600,
-                                          fontSize: 15,
-                                          letterSpacing: 0.2,
-                                        ),
-                                      ),
-                              ),
-                            ),
-                          ],
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  void _mostrarDialogoEditarAdmin(BuildContext context, User admin) {
-    final userNameController = TextEditingController(text: admin.userName);
-    final passwordController = TextEditingController();
-    final emailController = TextEditingController(text: admin.email ?? '');
-    final _formKey = GlobalKey<FormState>();
-    bool _isLoading = false;
-    bool _hasPasswordError = false;
-
-    // Helper functions for password validation
-    bool _hasUpperCase(String password) {
-      return password.contains(RegExp(r'[A-Z]'));
-    }
-
-    bool _hasLowerCase(String password) {
-      return password.contains(RegExp(r'[a-z]'));
-    }
-
-    bool _hasNumber(String password) {
-      return password.contains(RegExp(r'[0-9]'));
-    }
-
-    bool _hasMinLength(String password) {
-      return password.length >= 8;
-    }
-
-    Widget _buildPasswordRule(BuildContext context, String text, bool isValid) {
-      final isDark = Theme.of(context).brightness == Brightness.dark;
-      return Row(
-        children: [
-          Icon(
-            isValid ? Icons.check_circle : Icons.circle_outlined,
-            size: 16,
-            color: isValid 
-                ? Colors.green[700] 
-                : (isDark ? Colors.grey.shade600 : Colors.grey.shade400),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              text,
-              style: TextStyle(
-                fontSize: 12,
-                color: isValid
-                    ? (isDark ? Colors.green[300] : Colors.green[700])
-                    : (isDark ? Colors.grey.shade400 : Colors.grey.shade600),
-                decoration: isValid ? null : TextDecoration.none,
-              ),
-            ),
-          ),
-        ],
-      );
-    }
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        final isDark = Theme.of(context).brightness == Brightness.dark;
-        return Dialog(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          child: Container(
-            decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-              borderRadius: BorderRadius.circular(24),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(isDark ? 0.5 : 0.15),
-                  blurRadius: 20,
-                  spreadRadius: 0,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Header con título
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
-                    decoration: BoxDecoration(
-                      color: isDark 
-                          ? const Color(0xFF2A2A2A).withOpacity(0.5) 
-                          : Colors.grey.shade50,
-                      border: Border(
-                        bottom: BorderSide(
-                          color: isDark 
-                              ? Colors.grey.shade800 
-                              : Colors.grey.shade200,
-                          width: 1,
-                        ),
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF4CAF50).withOpacity(0.15),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Icon(
-                            Icons.edit,
-                            color: Color(0xFF4CAF50),
-                            size: 24,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            'Editar Administrador',
-                            style: TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.w700,
-                              color: isDark ? Colors.white : Colors.black87,
-                              letterSpacing: -0.5,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  // Contenido
-                  Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: SingleChildScrollView(
-                      child: Form(
-                        key: _formKey,
-                        child: Column(
-                          children: [
-                            TextFormField(
-                              controller: userNameController,
-                              style: TextStyle(
-                                color: Theme.of(context).brightness == Brightness.dark
-                                    ? const Color(0xFFE0E0E0)
-                                    : Colors.black,
-                              ),
-                              inputFormatters: [
-                                FilteringTextInputFormatter.deny(RegExp(r'\s')),
-                              ],
-                              decoration: InputDecoration(
-                                labelText: 'Nombre de Usuario',
-                                labelStyle: TextStyle(
-                                  color: Theme.of(context).brightness == Brightness.dark
-                                      ? Colors.white
-                                      : const Color(0xFF4CAF50),
-                                ),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: const BorderSide(
-                                    color: Color(0xFF4CAF50),
-                                    width: 2,
-                                  ),
-                                ),
-                                prefixIcon: const Icon(
-                                  Icons.person,
-                                  color: Color(0xFF4CAF50),
-                                ),
-                                helperText: 'No se permiten espacios',
-                                helperStyle: TextStyle(
-                                  color: Theme.of(context).brightness == Brightness.dark
-                                      ? Colors.grey.shade400
-                                      : Colors.grey.shade600,
-                                  fontSize: 12,
-                                ),
-                              ),
-                              validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return 'El nombre de usuario es requerido';
-                                }
-                                if (value.contains(' ')) {
-                                  return 'El nombre de usuario no puede contener espacios';
-                                }
-                                return null;
-                              },
-                            ),
-                            const SizedBox(height: 16),
-                            TextFormField(
-                              controller: emailController,
-                              style: TextStyle(
-                                color: Theme.of(context).brightness == Brightness.dark
-                                    ? const Color(0xFFE0E0E0)
-                                    : Colors.black,
-                              ),
-                              decoration: InputDecoration(
-                                labelText: 'Email (Opcional)',
-                                labelStyle: TextStyle(
-                                  color: Theme.of(context).brightness == Brightness.dark
-                                      ? Colors.white
-                                      : const Color(0xFF4CAF50),
-                                ),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: const BorderSide(
-                                    color: Color(0xFF4CAF50),
-                                    width: 2,
-                                  ),
-                                ),
-                                prefixIcon: const Icon(
-                                  Icons.email,
-                                  color: Color(0xFF4CAF50),
-                                ),
-                              ),
-                              keyboardType: TextInputType.emailAddress,
-                              validator: (value) {
-                                if (value != null && value.isNotEmpty) {
-                                  final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
-                                  if (!emailRegex.hasMatch(value)) {
-                                    return 'Ingrese un email válido';
-                                  }
-                                }
-                                return null;
-                              },
-                            ),
-                            const SizedBox(height: 16),
-                            StatefulBuilder(
-                              builder: (context, setState) {
-                                return TextFormField(
-                                  controller: passwordController,
-                                  style: TextStyle(
-                                    color: Theme.of(context).brightness == Brightness.dark
-                                        ? const Color(0xFFE0E0E0)
-                                        : Colors.black,
-                                  ),
-                                  onChanged: (value) {
-                                    if (value.isNotEmpty) {
-                                      setState(() {
-                                        _hasPasswordError = !_hasMinLength(value) ||
-                                            !_hasUpperCase(value) ||
-                                            !_hasLowerCase(value) ||
-                                            !_hasNumber(value);
-                                      });
-                                    } else {
-                                      setState(() {
-                                        _hasPasswordError = false;
-                                      });
-                                    }
-                                  },
-                                  decoration: InputDecoration(
-                                    labelText: 'Nueva Contraseña (Opcional)',
-                                    helperText: 'Dejar vacío para no cambiar la contraseña',
-                                    labelStyle: TextStyle(
-                                      color: _hasPasswordError && passwordController.text.isNotEmpty
-                                          ? Colors.red
-                                          : Theme.of(context).brightness == Brightness.dark
-                                              ? Colors.white
-                                              : const Color(0xFF4CAF50),
-                                    ),
-                                    helperStyle: TextStyle(
-                                      color: Theme.of(context).brightness == Brightness.dark
-                                          ? Colors.grey.shade400
-                                          : Colors.grey.shade600,
-                                      fontSize: 12,
-                                    ),
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                      borderSide: BorderSide(
-                                        color: _hasPasswordError && passwordController.text.isNotEmpty
-                                            ? Colors.red
-                                            : Colors.grey,
-                                      ),
-                                    ),
-                                    focusedBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                      borderSide: BorderSide(
-                                        color: _hasPasswordError && passwordController.text.isNotEmpty
-                                            ? Colors.red
-                                            : const Color(0xFF4CAF50),
-                                        width: 2,
-                                      ),
-                                    ),
-                                    errorBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                      borderSide: const BorderSide(color: Colors.red, width: 2),
-                                    ),
-                                    focusedErrorBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                      borderSide: const BorderSide(color: Colors.red, width: 2),
-                                    ),
-                                    prefixIcon: Icon(
-                                      Icons.lock,
-                                      color: _hasPasswordError && passwordController.text.isNotEmpty
-                                          ? Colors.red
-                                          : const Color(0xFF4CAF50),
-                                    ),
-                                  ),
-                                  obscureText: true,
-                                  validator: (value) {
-                                    if (value != null && value.isNotEmpty) {
-                                      if (!_hasMinLength(value)) {
-                                        return 'La contraseña debe tener al menos 8 caracteres';
-                                      }
-                                      if (!_hasUpperCase(value)) {
-                                        return 'La contraseña debe contener al menos una letra mayúscula';
-                                      }
-                                      if (!_hasLowerCase(value)) {
-                                        return 'La contraseña debe contener al menos una letra minúscula';
-                                      }
-                                      if (!_hasNumber(value)) {
-                                        return 'La contraseña debe contener al menos un número';
-                                      }
-                                    }
-                                    return null;
-                                  },
-                                );
-                              },
-                            ),
-                            // Indicadores de reglas de contraseña (solo si hay texto)
-                            StatefulBuilder(
-                              builder: (context, setState) {
-                                if (passwordController.text.isEmpty) {
-                                  return const SizedBox.shrink();
-                                }
-                                return Column(
-                                  children: [
-                                    const SizedBox(height: 8),
-                                    Container(
-                                      padding: const EdgeInsets.all(12),
-                                      decoration: BoxDecoration(
-                                        color: Theme.of(context).brightness == Brightness.dark
-                                            ? Colors.grey.shade900
-                                            : Colors.grey.shade50,
-                                        borderRadius: BorderRadius.circular(8),
-                                        border: Border.all(
-                                          color: _hasPasswordError
-                                              ? Colors.red.withOpacity(0.3)
-                                              : Colors.grey.withOpacity(0.3),
-                                        ),
-                                      ),
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'Requisitos de contraseña:',
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              fontWeight: FontWeight.w600,
-                                              color: Theme.of(context).brightness == Brightness.dark
-                                                  ? Colors.grey.shade300
-                                                  : Colors.grey.shade700,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 8),
-                                          _buildPasswordRule(
-                                            context,
-                                            'Al menos 8 caracteres',
-                                            _hasMinLength(passwordController.text),
-                                          ),
-                                          const SizedBox(height: 4),
-                                          _buildPasswordRule(
-                                            context,
-                                            'Una letra mayúscula',
-                                            _hasUpperCase(passwordController.text),
-                                          ),
-                                          const SizedBox(height: 4),
-                                          _buildPasswordRule(
-                                            context,
-                                            'Una letra minúscula',
-                                            _hasLowerCase(passwordController.text),
-                                          ),
-                                          const SizedBox(height: 4),
-                                          _buildPasswordRule(
-                                            context,
-                                            'Un número',
-                                            _hasNumber(passwordController.text),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                );
-                              },
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  // Botones
-                  Container(
-                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-                    child: StatefulBuilder(
-                      builder: (context, setState) {
-                        return Row(
-                          children: [
-                            Expanded(
-                              child: OutlinedButton(
-                                onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
-                                style: OutlinedButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(vertical: 14),
-                                  backgroundColor: isDark 
-                                      ? const Color(0xFF2A2A2A) 
-                                      : Colors.transparent,
-                                  side: BorderSide(
-                                    color: isDark 
-                                        ? Colors.grey.shade700 
-                                        : Colors.grey.shade300,
-                                    width: 1.5,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  elevation: 0,
-                                ),
-                                child: Text(
-                                  'Cancelar',
-                                  style: TextStyle(
-                                    color: Theme.of(context).textTheme.bodyLarge?.color,
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 15,
-                                    letterSpacing: 0.2,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: ElevatedButton(
-                                onPressed: _isLoading
-                                    ? null
-                                    : () async {
-                                        if (_formKey.currentState!.validate()) {
-                                          setState(() {
-                                            _isLoading = true;
-                                          });
-
-                                          try {
-                                            await _adminService.actualizarAdmin(
-                                              _selectedTenant!.id,
-                                              admin.id,
-                                              userName: userNameController.text,
-                                              password: passwordController.text.isEmpty
-                                                  ? null
-                                                  : passwordController.text,
-                                              email: emailController.text.isEmpty
-                                                  ? null
-                                                  : emailController.text,
-                                            );
-                                            if (context.mounted) {
-                                              Navigator.pop(context);
-                                              _cargarAdmins(_selectedTenant!.id);
-                                              AppTheme.showSnackBar(
-                                                context,
-                                                AppTheme.successSnackBar('Administrador actualizado exitosamente'),
-                                              );
-                                            }
-                                          } catch (e) {
-                                            if (context.mounted) {
-                                              setState(() {
-                                                _isLoading = false;
-                                              });
-                                              AppTheme.showSnackBar(
-                                                context,
-                                                AppTheme.errorSnackBar('Error: ${e.toString().replaceFirst('Exception: ', '')}'),
-                                              );
-                                            }
-                                          }
-                                        }
-                                      },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppTheme.primaryColor,
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(vertical: 14),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  elevation: 0,
-                                  shadowColor: AppTheme.primaryColor.withOpacity(0.3),
-                                ),
-                                child: _isLoading
-                                    ? const SizedBox(
-                                        width: 20,
-                                        height: 20,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                        ),
-                                      )
-                                    : const Text(
-                                        'Guardar',
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.w600,
-                                          fontSize: 15,
-                                          letterSpacing: 0.2,
-                                        ),
-                                      ),
-                              ),
-                            ),
-                          ],
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
     );
   }
 

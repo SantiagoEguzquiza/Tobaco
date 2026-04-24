@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:tobaco/Helpers/api_handler.dart';
 import 'package:tobaco/Models/Producto.dart';
 import 'package:tobaco/Models/ProductQuantityPrice.dart';
 import 'package:tobaco/Services/Categoria_Service/categoria_provider.dart';
@@ -191,7 +192,7 @@ class EditarProductoScreenState extends State<EditarProductoScreen> {
                   icon: Icons.category_outlined,
                   children: [
                     DropdownButtonFormField<int>(
-                      value: categoriaSeleccionadaId,
+                      initialValue: categoriaSeleccionadaId,
                       decoration: InputDecoration(
                         hintText: 'Seleccione una categoría',
                         hintStyle: TextStyle(
@@ -240,10 +241,6 @@ class EditarProductoScreenState extends State<EditarProductoScreen> {
                                 decoration: BoxDecoration(
                                   color: _parseColor(categoria.colorHex),
                                   shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
-                                    width: 1.5,
-                                  ),
                                 ),
                               ),
                               const SizedBox(width: 12),
@@ -287,9 +284,6 @@ class EditarProductoScreenState extends State<EditarProductoScreen> {
                       decoration: BoxDecoration(
                         color: isDark ? const Color(0xFF2A2A2A) : Colors.white,
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: isDark ? const Color(0xFF404040) : Colors.grey.shade300,
-                        ),
                       ),
                       child: Row(
                         children: [
@@ -340,7 +334,7 @@ class EditarProductoScreenState extends State<EditarProductoScreen> {
                                 widget.producto.descuentoIndefinido = value;
                               });
                             },
-                            activeColor: AppTheme.primaryColor,
+                            activeThumbColor: AppTheme.primaryColor,
                           ),
                         ],
                       ),
@@ -354,9 +348,6 @@ class EditarProductoScreenState extends State<EditarProductoScreen> {
                           decoration: BoxDecoration(
                             color: isDark ? const Color(0xFF2A2A2A) : Colors.white,
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: isDark ? const Color(0xFF404040) : Colors.grey.shade300,
-                            ),
                           ),
                           child: Row(
                             children: [
@@ -417,9 +408,6 @@ class EditarProductoScreenState extends State<EditarProductoScreen> {
                       decoration: BoxDecoration(
                         color: isDark ? const Color(0xFF2A2A2A) : Colors.white,
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: isDark ? const Color(0xFF404040) : Colors.grey.shade300,
-                        ),
                       ),
                       child: Row(
                         children: [
@@ -466,7 +454,7 @@ class EditarProductoScreenState extends State<EditarProductoScreen> {
                                 widget.producto.half = value;
                               });
                             },
-                            activeColor: AppTheme.primaryColor,
+                            activeThumbColor: AppTheme.primaryColor,
                           ),
                         ],
                       ),
@@ -484,6 +472,7 @@ class EditarProductoScreenState extends State<EditarProductoScreen> {
                   children: [
                     QuantityPriceWidget(
                       quantityPrices: quantityPrices,
+                      basePrice: double.tryParse(precioController.text.trim()) ?? 0.0,
                       onChanged: (prices) {
                         setState(() {
                           quantityPrices = prices;
@@ -493,7 +482,7 @@ class EditarProductoScreenState extends State<EditarProductoScreen> {
                   ],
                 ),
                 
-                const SizedBox(height: 100), // Espacio para el botón flotante
+                SizedBox(height: MediaQuery.of(context).padding.bottom + 100), // Espacio para el botón flotante (evitar que se corte)
               ],
             ),
           ),
@@ -507,11 +496,6 @@ class EditarProductoScreenState extends State<EditarProductoScreen> {
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-                border: Border(
-                  top: BorderSide(
-                    color: isDark ? Colors.grey.shade800 : Colors.grey.shade300,
-                  ),
-                ),
               ),
               child: SafeArea(
                 child: SizedBox(
@@ -717,14 +701,13 @@ class EditarProductoScreenState extends State<EditarProductoScreen> {
                   onPrimary: Colors.white,
                   surface: const Color(0xFF1A1A1A),
                   onSurface: Colors.white,
-                  surfaceVariant: const Color(0xFF2A2A2A),
+                  surfaceContainerHighest: const Color(0xFF2A2A2A),
                 )
               : ColorScheme.light(
                   primary: AppTheme.primaryColor,
                   onPrimary: Colors.white,
                   onSurface: Colors.black87,
-                ),
-            dialogBackgroundColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+                ), dialogTheme: DialogThemeData(backgroundColor: isDark ? const Color(0xFF1A1A1A) : Colors.white),
           ),
           child: StatefulBuilder(
             builder: (context, setState) {
@@ -894,10 +877,14 @@ class EditarProductoScreenState extends State<EditarProductoScreen> {
       }
     } catch (e) {
       if (mounted) {
-        AppTheme.showSnackBar(
-          context,
-          AppTheme.errorSnackBar(e.toString()),
-        );
+        if (Apihandler.isConnectionError(e)) {
+          await Apihandler.handleConnectionError(context, e);
+        } else {
+          AppTheme.showSnackBar(
+            context,
+            AppTheme.errorSnackBar(e.toString().replaceFirst('Exception: ', '')),
+          );
+        }
       }
     } finally {
       if (mounted) {
@@ -929,10 +916,14 @@ class EditarProductoScreenState extends State<EditarProductoScreen> {
       }
     } catch (e) {
       if (mounted) {
-        AppTheme.showSnackBar(
-          context,
-          AppTheme.errorSnackBar(e.toString()),
-        );
+        if (Apihandler.isConnectionError(e)) {
+          await Apihandler.handleConnectionError(context, e);
+        } else {
+          AppTheme.showSnackBar(
+            context,
+            AppTheme.errorSnackBar(e.toString().replaceFirst('Exception: ', '')),
+          );
+        }
       }
       } finally {
         if (mounted) {

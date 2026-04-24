@@ -357,10 +357,12 @@ class DatabaseHelper {
         return [];
       }
       
+      // Incluir tanto ventas pendientes como fallidas, para que sigan
+      // apareciendo en el listado y puedan reintentarse en la sincronización.
       final ventas = await db.query(
         _ventasTable,
-        where: 'sync_status = ?',
-        whereArgs: ['pending'],
+        where: 'sync_status IN (?, ?)',
+        whereArgs: ['pending', 'failed'],
         orderBy: 'created_at ASC',
       );
 
@@ -503,7 +505,9 @@ class DatabaseHelper {
     );
   }
 
-  /// Marca una venta como sincronizada
+  /// Marca una venta como sincronizada.
+  /// No actualizamos la columna id (PRIMARY KEY) para evitar UNIQUE constraint:
+  /// id es AUTOINCREMENT de la fila, no el ventaId del servidor.
   Future<void> markVentaAsSynced(String localId, int? serverId) async {
     final db = await database;
     
@@ -511,14 +515,12 @@ class DatabaseHelper {
       _ventasTable,
       {
         'sync_status': 'synced',
-        'id': serverId,
+        'error_message': null,
         'updated_at': DateTime.now().toIso8601String(),
       },
       where: 'local_id = ?',
       whereArgs: [localId],
     );
-
-    
   }
 
   /// Marca una venta como fallida en la sincronización
@@ -584,16 +586,22 @@ class DatabaseHelper {
   }
 
   /// Limpia ventas sincronizadas antiguas (más de 30 días)
+  /// CRÍTICO: Solo borra ventas que fueron realmente sincronizadas (sync_status = 'synced')
+  /// y que tienen más de 30 días. NUNCA borra ventas pendientes o fallidas.
   Future<int> cleanOldSyncedVentas({int daysOld = 30}) async {
     final db = await database;
     final cutoffDate = DateTime.now().subtract(Duration(days: daysOld)).toIso8601String();
     
+    // CRÍTICO: Solo borrar ventas con sync_status = 'synced' y que tengan más de 30 días
+    // NUNCA borrar ventas con sync_status = 'pending' o 'failed'
     final deleted = await db.delete(
       _ventasTable,
       where: 'sync_status = ? AND updated_at < ?',
       whereArgs: ['synced', cutoffDate],
     );
 
+    debugPrint('🧹 DatabaseHelper: Limpiadas $deleted ventas sincronizadas antiguas (más de $daysOld días)');
+    debugPrint('✅ DatabaseHelper: Las ventas pendientes y fallidas NO fueron borradas');
     
     return deleted;
   }

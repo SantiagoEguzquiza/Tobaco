@@ -48,29 +48,29 @@ class VentasCacheService {
     
   }
 
-  /// Guarda las ventas del servidor en caché
-  Future<void> guardarVentasEnCache(List<Ventas> ventas) async {
+  /// Guarda las ventas del servidor en caché.
+  /// [limpiarAnterior] borra todo el caché antes de insertar (usar al cargar página 1).
+  /// Si es false, hace append/upsert (usar al cargar páginas siguientes).
+  Future<void> guardarVentasEnCache(List<Ventas> ventas, {bool limpiarAnterior = false}) async {
     try {
       final db = await database;
-      
-      // SIEMPRE limpiar el caché anterior, incluso si la lista está vacía
-      await db.delete('ventas_cache');
-      
-      // Si hay ventas, guardarlas
+
+      if (limpiarAnterior) {
+        await db.delete('ventas_cache');
+      }
+
       if (ventas.isNotEmpty) {
         final now = DateTime.now().toIso8601String();
-        
         for (var venta in ventas) {
           await db.insert('ventas_cache', {
             'id': venta.id,
             'venta_json': jsonEncode(venta.toJson()),
             'cached_at': now,
-          });
+          }, conflictAlgorithm: ConflictAlgorithm.replace);
         }
       }
-      
     } catch (e) {
-      
+      // Error silencioso - el caché es best-effort
     }
   }
 
@@ -118,6 +118,16 @@ class VentasCacheService {
     } catch (e) {
       
       return 0;
+    }
+  }
+
+  /// Elimina una venta del caché por id (para que no vuelva a aparecer al cargar offline).
+  Future<void> eliminarVentaDelCache(int id) async {
+    try {
+      final db = await database;
+      await db.delete('ventas_cache', where: 'id = ?', whereArgs: [id]);
+    } catch (e) {
+      // Error silencioso
     }
   }
 

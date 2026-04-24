@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(xargs grep *)",
+      "PowerShell(start ms-settings:developers)",
+      "Bash(grep -E \"\\\\.\\(cs\\)$\")"
+    ]
+  }
+}

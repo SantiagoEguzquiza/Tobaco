@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:tobaco/Models/Cliente.dart';
 import 'package:tobaco/Services/Clientes_Service/clientes_provider.dart';
@@ -5,8 +7,8 @@ import 'package:tobaco/Theme/app_theme.dart';
 import 'package:tobaco/Theme/dialogs.dart';
 import 'package:tobaco/Theme/headers.dart';
 import 'package:tobaco/Helpers/api_handler.dart';
+import 'package:tobaco/Services/Auth_Service/auth_service.dart';
 import 'package:tobaco/Screens/CuentaCorriente/cuenta_corriente_detalle_screen.dart';
-import 'dart:developer';
 
 class CuentaCorrienteScreen extends StatefulWidget {
   const CuentaCorrienteScreen({super.key});
@@ -17,29 +19,53 @@ class CuentaCorrienteScreen extends StatefulWidget {
 
 class _CuentaCorrienteScreenState extends State<CuentaCorrienteScreen> {
   bool isLoading = true;
-  String searchQuery = '';
   String? errorMessage;
   List<Cliente> clientes = [];
   final TextEditingController _searchController = TextEditingController();
 
-  // Variables para infinite scroll
+  // Paginación / infinite scroll (modo normal)
   bool _isLoadingMore = false;
   bool _hasMoreData = true;
   int _currentPage = 1;
   final int _pageSize = 20;
-  
-  // ScrollController para detectar cuando llegar al final
-  final ScrollController _scrollController = ScrollController();
 
-   @override
+  // Modo búsqueda API
+  String _searchText = '';
+  bool _isSearchMode = false;
+  bool _isSearchLoading = false;
+  List<Cliente> _searchResults = [];
+  Timer? _debounceTimer;
+
+  final ScrollController _scrollController = ScrollController();
+  final GlobalKey _headerKey = GlobalKey();
+
+  double _headerVisibility = 1.0;
+  double _lastScrollOffset = 0.0;
+  double _maxHeaderHeight = 0.0;
+
+  @override
   void initState() {
     super.initState();
-    _loadClientes();
     _scrollController.addListener(_onScroll);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _measureHeader();
+    });
+    _loadClientes();
+  }
+
+  void _measureHeader() {
+    final ctx = _headerKey.currentContext;
+    if (ctx != null) {
+      final box = ctx.findRenderObject() as RenderBox?;
+      if (box != null && box.hasSize) {
+        _maxHeaderHeight = box.size.height;
+      }
+    }
   }
 
   @override
   void dispose() {
+    _debounceTimer?.cancel();
     _searchController.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -83,10 +109,69 @@ class _CuentaCorrienteScreenState extends State<CuentaCorrienteScreen> {
     return double.tryParse(deudaLimpia) ?? 0.0;
   }
 
+  void _onSearchChanged(String value) {
+    _debounceTimer?.cancel();
+    if (value.trim().isEmpty) {
+      setState(() {
+        _searchText = '';
+        _isSearchMode = false;
+        _searchResults = [];
+        _isSearchLoading = false;
+      });
+      return;
+    }
+    setState(() {
+      _searchText = value;
+      _isSearchLoading = true;
+      _isSearchMode = true;
+    });
+    _debounceTimer = Timer(const Duration(milliseconds: 400), () {
+      _buscarEnBackend(value.trim());
+    });
+  }
+
+  Future<void> _buscarEnBackend(String query) async {
+    if (!mounted) return;
+    try {
+      final results = await ClienteProvider().buscarClientesConDeuda(query);
+      if (!mounted) return;
+      setState(() {
+        _searchResults = results;
+        _isSearchLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isSearchLoading = false);
+      if (AuthService.isSessionExpiredException(e)) {
+        await AuthService.logout();
+      } else if (!Apihandler.isConnectionError(e)) {
+        log('Error al buscar clientes: $e', level: 1000);
+      }
+    }
+  }
+
   void _onScroll() {
-    if (_scrollController.position.pixels >= 
-        _scrollController.position.maxScrollExtent - 200) {
+    if (!_scrollController.hasClients) return;
+    final currentOffset = _scrollController.offset;
+    final delta = currentOffset - _lastScrollOffset;
+    _lastScrollOffset = currentOffset;
+
+    if (!_isSearchMode && currentOffset >= _scrollController.position.maxScrollExtent - 200) {
       _cargarMasClientes();
+    }
+
+    if (_maxHeaderHeight <= 0 || delta.abs() > 200) return;
+    double newVisibility;
+    if (currentOffset <= 0) {
+      newVisibility = 1.0;
+    } else {
+      newVisibility =
+          (_headerVisibility - delta * 0.5 / _maxHeaderHeight).clamp(0.0, 1.0);
+    }
+    if ((newVisibility - _headerVisibility).abs() > 0.001) {
+      setState(() {
+        _headerVisibility = newVisibility;
+      });
     }
   }
 
@@ -119,6 +204,11 @@ class _CuentaCorrienteScreenState extends State<CuentaCorrienteScreen> {
       
       log('Error al cargar los clientes: $e', level: 1000);
       
+      if (AuthService.isSessionExpiredException(e)) {
+        await AuthService.logout();
+        setState(() => isLoading = false);
+        return;
+      }
       if (Apihandler.isConnectionError(e)) {
         setState(() {
           isLoading = false;
@@ -165,6 +255,10 @@ class _CuentaCorrienteScreenState extends State<CuentaCorrienteScreen> {
       });
       log('Error al cargar más clientes: $e', level: 1000);
       
+      if (AuthService.isSessionExpiredException(e)) {
+        await AuthService.logout();
+        return;
+      }
       if (Apihandler.isConnectionError(e)) {
         await Apihandler.handleConnectionError(context, e);
       } else {
@@ -176,157 +270,115 @@ class _CuentaCorrienteScreenState extends State<CuentaCorrienteScreen> {
     }
   }
 
-  String _searchText = '';
-
   @override
   Widget build(BuildContext context) {
-    final filteredClientes = clientes.where((cliente) {
-      final matchesSearchQuery = cliente.nombre
-          .toLowerCase()
-          .contains(_searchText.toLowerCase());
-      return matchesSearchQuery;
-    }).toList()
-      ..sort((a, b) => a.nombre.toLowerCase().compareTo(b.nombre.toLowerCase()));
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _measureHeader();
+    });
+
+    final displayedClientes = _isSearchMode ? _searchResults : clientes;
+    final subtitle = _isSearchMode
+        ? '${_searchResults.length} resultado${_searchResults.length != 1 ? 's' : ''}'
+        : '${clientes.length} cliente${clientes.length != 1 ? 's' : ''} con cuenta corriente';
 
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         centerTitle: true,
         elevation: 0,
-        backgroundColor: null, // Usar el tema
+        backgroundColor: null,
+        scrolledUnderElevation: 0,
         title: const Text(
           'Cuenta Corriente',
           style: AppTheme.appBarTitleStyle,
         ),
       ),
-      body: isLoading
-          ? const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CircularProgressIndicator(
-                    valueColor:
-                        AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
-                  ),
-                  SizedBox(height: 16),
-                  Text(
-                    'Cargando cuenta corriente...',
-                    style: TextStyle(
-                      color: Colors.grey,
-                      fontSize: 16,
+      body: Container(
+        color: Theme.of(context).scaffoldBackgroundColor,
+        child: isLoading
+            ? const Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    CircularProgressIndicator(
+                      valueColor:
+                          AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
                     ),
+                    SizedBox(height: 16),
+                    Text(
+                      'Cargando cuenta corriente...',
+                      style: TextStyle(color: Colors.grey, fontSize: 16),
+                    ),
+                  ],
+                ),
+              )
+            : SafeArea(
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    16,
+                    MediaQuery.of(context).size.height < 680 ? 12 : 16,
+                    16,
+                    0,
                   ),
-                ],
-              ),
-            )
-          : SingleChildScrollView(
-              controller: _scrollController,
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Header con buscador
-                  HeaderConBuscador(
-                    leadingIcon: Icons.account_balance_wallet,
-                    title: 'Cuenta Corriente',
-                    subtitle: '${clientes.length} cliente${clientes.length != 1 ? 's' : ''} con saldo pendiente',
-                    controller: _searchController,
-                    hintText: 'Buscar clientes con saldo...',
-                    onChanged: (value) {
-                      setState(() {
-                        _searchText = value;
-                      });
-                    },
-                    onClear: () {
-                      _searchController.clear();
-                      setState(() {
-                        _searchText = '';
-                      });
-                    },
+                  child: Column(
+                    children: [
+                      ClipRect(
+                        child: Align(
+                          alignment: Alignment.topCenter,
+                          heightFactor: _headerVisibility,
+                          child: Opacity(
+                            opacity: _headerVisibility,
+                            child: Column(
+                              key: _headerKey,
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                HeaderConBuscador(
+                                  leadingIcon: Icons.account_balance_wallet,
+                                  title: 'Cuenta Corriente',
+                                  subtitle: subtitle,
+                                  controller: _searchController,
+                                  hintText: 'Buscar clientes...',
+                                  onChanged: _onSearchChanged,
+                                  onClear: () {
+                                    _searchController.clear();
+                                    _onSearchChanged('');
+                                  },
+                                ),
+                                SizedBox(height: MediaQuery.of(context).size.height < 680 ? 10 : 20),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: _isSearchLoading
+                            ? const Center(
+                                child: CircularProgressIndicator(
+                                  valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
+                                ),
+                              )
+                            : displayedClientes.isEmpty
+                                ? SizedBox.expand(child: _buildEmptyState())
+                                : _buildClientesList(displayedClientes),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 20),
-
-                  // Lista de clientes con cuenta corriente
-                  if (filteredClientes.isEmpty && !isLoading)
-                    _buildEmptyState()
-                  else
-                    _buildClientesList(filteredClientes),
-                ],
+                ),
               ),
-            ),
-    );
-  }
-
-
-
-  // Estado vacío
-  Widget _buildEmptyState() {
-    return Container(
-      padding: const EdgeInsets.all(40),
-      child: Column(
-        children: [
-          Icon(
-            Icons.search_off,
-            size: 80,
-            color: Colors.grey.shade300,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            _searchText.isEmpty
-                ? 'No hay clientes con cuenta corriente'
-                : 'No se encontraron clientes',
-            style: TextStyle(
-              fontSize: 18,
-              color: Colors.grey.shade600,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            _searchText.isEmpty
-                ? 'Todos los clientes están al día con sus pagos'
-                : 'Intenta con otro término de búsqueda',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey.shade400,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
       ),
     );
   }
 
-  // Lista de clientes
-  Widget _buildClientesList(List<Cliente> filteredClientes) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        ListView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: filteredClientes.length + (_isLoadingMore ? 1 : 0),
-          itemBuilder: (context, index) {
-            if (index == filteredClientes.length) {
-              return _buildLoadingIndicator();
-            }
-            final cliente = filteredClientes[index];
-            return _buildClienteCard(cliente, index);
-          },
-        ),
-      ],
-    );
-  }
 
-  // Tarjeta de cliente
-  Widget _buildClienteCard(Cliente cliente, int index) {
+
+  // Estado vacío: igual que pantalla Clientes (fondo gris oscuro + icono + dos líneas cortas)
+  Widget _buildEmptyState() {
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: Theme.of(context).brightness == Brightness.dark
             ? const Color(0xFF1A1A1A)
             : Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(15),
         boxShadow: [
           BoxShadow(
             color: Theme.of(context).brightness == Brightness.dark
@@ -337,133 +389,197 @@ class _CuentaCorrienteScreenState extends State<CuentaCorrienteScreen> {
           ),
         ],
       ),
+      child: Center(
+        child: SingleChildScrollView(
+          padding: EdgeInsets.fromLTRB(
+            24,
+            24,
+            24,
+            24 + MediaQuery.of(context).padding.bottom + 24,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.people_outline,
+                size: 80,
+                color: Colors.grey.shade400,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                _searchText.isEmpty
+                    ? 'No hay clientes con cuenta corriente'
+                    : 'No se encontraron clientes',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.grey.shade300
+                      : Colors.grey.shade700,
+                  fontWeight: FontWeight.w500,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                _searchText.isEmpty
+                    ? 'Habilita la cuenta corriente en un cliente para que aparezca aquí'
+                    : 'Intenta con otro término de búsqueda',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.grey.shade400
+                      : Colors.grey.shade600,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Lista de clientes
+  Widget _buildClientesList(List<Cliente> filteredClientes) {
+    return RefreshIndicator(
+      color: AppTheme.primaryColor,
+      onRefresh: _loadClientes,
+      child: ListView.builder(
+        controller: _scrollController,
+        physics: const AlwaysScrollableScrollPhysics(),
+        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+        padding: const EdgeInsets.only(bottom: 8),
+        itemCount: filteredClientes.length + (_isLoadingMore ? 1 : 0),
+        itemBuilder: (context, index) {
+          if (index == filteredClientes.length) {
+            return _buildLoadingIndicator();
+          }
+          final cliente = filteredClientes[index];
+          return _buildClienteCard(cliente, index);
+        },
+      ),
+    );
+  }
+
+  // Tarjeta de cliente (mismo estilo que compras, ventas, productos y clientes)
+  Widget _buildClienteCard(Cliente cliente, int index) {
+    final deuda = _parsearDeuda(cliente.deuda);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isCompact = AppTheme.isCompactVentasButton(context);
+
+    final Color estadoColor = deuda > 0
+        ? Colors.red.shade600
+        : deuda < 0
+            ? Colors.green.shade600
+            : (isDark ? Colors.grey.shade500 : Colors.grey.shade500);
+    final IconData estadoIcon = deuda > 0
+        ? Icons.trending_down
+        : deuda < 0
+            ? Icons.trending_up
+            : Icons.account_balance_wallet_outlined;
+    final String estadoLabel = deuda > 0
+        ? 'Deuda pendiente'
+        : deuda < 0
+            ? 'Saldo a favor'
+            : 'Sin deuda';
+    final double montoAbsoluto = deuda.abs();
+    final bool mostrarMonto = deuda != 0;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
       child: Material(
-        color: Colors.transparent,
+        color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+        borderRadius: BorderRadius.circular(AppTheme.borderRadiusCards),
         child: InkWell(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(AppTheme.borderRadiusCards),
           onTap: () async {
             final result = await Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => CuentaCorrienteDetalleScreen(cliente: cliente),
+                builder: (context) =>
+                    CuentaCorrienteDetalleScreen(cliente: cliente),
               ),
             );
-            
-            // Si regresamos con true, significa que se actualizó el saldo y debemos refrescar
             if (result == true) {
               _loadClientes();
             }
           },
-          child: Padding(
-            padding: const EdgeInsets.all(16),
+          child: Container(
+            padding: EdgeInsets.all(isCompact ? 14 : 16),
+            decoration: BoxDecoration(
+              borderRadius:
+                  BorderRadius.circular(AppTheme.borderRadiusCards),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
             child: Row(
               children: [
-                // Indicador lateral
                 Container(
-                  width: 4,
-                  height: 60,
+                  padding: EdgeInsets.all(isCompact ? 8 : 10),
                   decoration: BoxDecoration(
-                    color: Colors.red,
-                    borderRadius: BorderRadius.circular(2),
+                    color: estadoColor.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    estadoIcon,
+                    color: estadoColor,
+                    size: isCompact ? 24 : 28,
                   ),
                 ),
-                const SizedBox(width: 16),
-
-                // Información del cliente
+                SizedBox(width: isCompact ? 12 : 16),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
                         cliente.nombre,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).brightness == Brightness.dark
-                              ? Colors.white
-                              : AppTheme.textColor,
+                          fontWeight: FontWeight.w600,
+                          fontSize: isCompact ? 15 : 16,
+                          color: isDark ? Colors.white : Colors.black87,
                         ),
                       ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.attach_money,
-                            size: 16,
-                            color: Theme.of(context).brightness == Brightness.dark
-                                ? Colors.grey.shade400
-                                : Colors.grey.shade600,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            'Saldo CC: \$${_formatearPrecio(_parsearDeuda(cliente.deuda))}',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Theme.of(context).brightness == Brightness.dark
-                                  ? Colors.grey.shade400
-                                  : Colors.grey.shade600,
-                            ),
-                          ),
-                        ],
-                      ),
-                      if (cliente.telefono != null) ...[
-                        const SizedBox(height: 2),
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.phone_outlined,
-                              size: 16,
-                              color: Theme.of(context).brightness == Brightness.dark
-                                  ? Colors.grey.shade400
-                                  : Colors.grey.shade600,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              cliente.telefono!.toString(),
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Theme.of(context).brightness == Brightness.dark
-                                    ? Colors.grey.shade400
-                                    : Colors.grey.shade600,
-                              ),
-                            ),
-                          ],
+                      SizedBox(height: isCompact ? 2 : 4),
+                      Text(
+                        estadoLabel,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: isCompact ? 13 : 14,
+                          color: estadoColor,
+                          fontWeight: FontWeight.w500,
                         ),
-                      ],
-                      const SizedBox(height: 2),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.people_outline,
-                            size: 16,
-                            color: Theme.of(context).brightness == Brightness.dark
-                                ? Colors.grey.shade400
-                                : Colors.grey.shade600,
-                          ),
-                          const SizedBox(width: 4),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.red.shade50,
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: Colors.red.shade200),
-                            ),
-                            child: Text(
-                              'Cuenta Corriente',
-                              style: TextStyle(
-                                fontSize: 10,
-                                color: Colors.red.shade600,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                        ],
                       ),
                     ],
                   ),
+                ),
+                SizedBox(width: isCompact ? 8 : 10),
+                Text(
+                  mostrarMonto
+                      ? '\$${_formatearPrecio(montoAbsoluto)}'
+                      : '\$0,00',
+                  style: TextStyle(
+                    fontSize: isCompact ? 14 : 16,
+                    fontWeight: FontWeight.bold,
+                    color: mostrarMonto
+                        ? estadoColor
+                        : (isDark ? Colors.grey.shade400 : Colors.grey.shade600),
+                  ),
+                ),
+                SizedBox(width: isCompact ? 2 : 4),
+                Icon(
+                  Icons.chevron_right,
+                  color: Colors.grey,
+                  size: isCompact ? 20 : 24,
                 ),
               ],
             ),

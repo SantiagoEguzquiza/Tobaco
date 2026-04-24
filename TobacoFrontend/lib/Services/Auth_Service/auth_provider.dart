@@ -7,17 +7,21 @@ import 'auth_service.dart';
 class AuthProvider extends ChangeNotifier {
   User? _currentUser;
   bool _isLoading = false;
+  bool _isInitializing = false;
   String? _errorMessage;
   bool _isAuthenticated = false;
 
   User? get currentUser => _currentUser;
   bool get isLoading => _isLoading;
+  bool get isInitializing => _isInitializing;
   String? get errorMessage => _errorMessage;
   bool get isAuthenticated => _isAuthenticated;
 
-  // Initialize authentication state
+  // Initialize authentication state (app startup only)
   Future<void> initializeAuth() async {
-    _isLoading = true;
+    if (_isInitializing) return;
+
+    _isInitializing = true;
     notifyListeners();
 
     try {
@@ -38,12 +42,14 @@ class AuthProvider extends ChangeNotifier {
         _errorMessage = 'Error initializing authentication: $e';
       }
       
-      // Relanzar la excepción para que la UI la maneje
-      rethrow;
+      // No relanzar la excepción para evitar bucles - solo loguear
+      debugPrint('AuthProvider.initializeAuth: Error: $e');
+    } finally {
+      _isInitializing = false;
+      Future.microtask(() {
+        notifyListeners();
+      });
     }
-
-    _isLoading = false;
-    notifyListeners();
   }
 
   // Login user
@@ -117,10 +123,28 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Clears in-memory auth state only (no storage). Used when the session
+  /// is invalidated elsewhere (e.g. refresh failed on app resume or 401).
+  /// [sessionExpiredMessage] se muestra en la pantalla de login para explicar por qué volvió.
+  void clearSession({String? sessionExpiredMessage}) {
+    _currentUser = null;
+    _isAuthenticated = false;
+    _errorMessage = sessionExpiredMessage;
+    notifyListeners();
+  }
+
   // Clear error message
   void clearError() {
     _errorMessage = null;
     notifyListeners();
+  }
+
+  /// Detiene el estado de carga (útil cuando hay timeout para no quedar colgado).
+  void stopLoading() {
+    if (_isLoading) {
+      _isLoading = false;
+      notifyListeners();
+    }
   }
 
   // Update current user data

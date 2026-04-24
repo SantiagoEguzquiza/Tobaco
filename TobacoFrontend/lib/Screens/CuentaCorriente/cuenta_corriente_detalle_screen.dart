@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 import 'package:tobaco/Models/Cliente.dart';
 import 'package:tobaco/Models/Ventas.dart';
 import 'package:tobaco/Models/Abono.dart';
@@ -16,6 +17,7 @@ import 'package:tobaco/Theme/app_theme.dart';
 import 'package:tobaco/Screens/Ventas/detalleVentas_screen.dart';
 import 'package:tobaco/Theme/dialogs.dart';
 import 'package:tobaco/Helpers/api_handler.dart';
+import 'package:tobaco/Services/Auth_Service/auth_service.dart';
 import 'dart:developer';
 
 class CuentaCorrienteDetalleScreen extends StatefulWidget {
@@ -27,10 +29,9 @@ class CuentaCorrienteDetalleScreen extends StatefulWidget {
   State<CuentaCorrienteDetalleScreen> createState() => _CuentaCorrienteDetalleScreenState();
 }
 
-class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScreen> 
-    with SingleTickerProviderStateMixin {
+class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScreen> {
   
-  late TabController _tabController;
+  int _selectedTabIndex = 0;
   bool isLoadingVentas = true;
   bool isLoadingAbonos = true;
   bool isLoadingDetalle = true;
@@ -50,23 +51,11 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
   // Variable para rastrear si hubo cambios (abonos creados/eliminados)
   bool _huboCambios = false;
   
-  // Variables para paginación de ventas
-  bool _isLoadingMoreVentas = false;
-  bool _hasMoreVentas = true;
-  int _currentPageVentas = 1;
-  final int _pageSizeVentas = 20;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
     _loadData();
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
   }
 
   Future<void> _loadData() async {
@@ -86,18 +75,28 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
 
   Future<void> _loadDetalleDeuda() async {
     try {
-      final clienteProvider = ClienteProvider();
+      final clienteProvider =
+          Provider.of<ClienteProvider>(context, listen: false);
       final detalle = await clienteProvider.obtenerDetalleDeuda(widget.cliente.id!);
       _safeSetState(() {
         detalleDeuda = detalle;
         _saldoDetalle = _obtenerSaldoDesdeDetalle(detalle);
         if (_saldoDetalle != null) {
           widget.cliente.deuda = _saldoDetalle!.toStringAsFixed(2);
+          // Sincroniza la deuda recién traída del server con la lista global
+          // y el caché, para que otras pantallas (ej. NuevaVenta) la vean.
+          clienteProvider.actualizarDeudaCliente(
+              widget.cliente.id!, _saldoDetalle!);
         }
         isLoadingDetalle = false;
       });
     } catch (e) {
       log('Error al cargar cuenta corriente: $e', level: 1000);
+      if (AuthService.isSessionExpiredException(e)) {
+        await AuthService.logout();
+        _safeSetState(() => isLoadingDetalle = false);
+        return;
+      }
       if (Apihandler.isConnectionError(e)) {
         try {
           final offlineDetalle =
@@ -126,6 +125,12 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
 
   double? _obtenerSaldoDesdeDetalle(Map<String, dynamic>? detalle) {
     if (detalle == null) return null;
+    // saldoAFavor > 0 significa crédito -> saldo negativo
+    final saldoAFavor = detalle['saldoAFavor'];
+    if (saldoAFavor != null) {
+      final v = saldoAFavor is num ? saldoAFavor.toDouble() : (double.tryParse(saldoAFavor.toString()) ?? 0.0);
+      if (v > 0) return -v;
+    }
     final raw = detalle['deudaActual'] ?? detalle['saldoActual'];
     if (raw is num) return raw.toDouble();
     if (raw is String) {
@@ -142,24 +147,25 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
   Future<void> _loadVentasCC() async {
     try {
       final ventasProvider = VentasProvider();
-      final data = await ventasProvider.obtenerVentasCuentaCorrientePorClienteId(
-        widget.cliente.id!, 
-        _currentPageVentas, 
-        _pageSizeVentas
+      final todas = await ventasProvider.obtenerTodasLasVentasCCPorClienteId(
+        widget.cliente.id!,
       );
-      
       _safeSetState(() {
-        ventasCC = List<Ventas>.from(data['ventas']);
-        _hasMoreVentas = data['hasNextPage'];
+        ventasCC = todas;
         isLoadingVentas = false;
       });
     } catch (e) {
       log('Error al cargar ventas: $e', level: 1000);
+      if (AuthService.isSessionExpiredException(e)) {
+        await AuthService.logout();
+        _safeSetState(() => isLoadingVentas = false);
+        return;
+      }
       if (Apihandler.isConnectionError(e)) {
-        final offlineVentas = await _ccCacheService.obtenerVentasOffline(widget.cliente.id!);
+        final offlineVentas =
+            await _ccCacheService.obtenerVentasOffline(widget.cliente.id!);
         _safeSetState(() {
           ventasCC = offlineVentas;
-          _hasMoreVentas = false;
           isLoadingVentas = false;
         });
         return;
@@ -180,6 +186,11 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
       });
     } catch (e) {
       log('Error al cargar abonos: $e', level: 1000);
+      if (AuthService.isSessionExpiredException(e)) {
+        await AuthService.logout();
+        _safeSetState(() => isLoadingAbonos = false);
+        return;
+      }
       if (Apihandler.isConnectionError(e)) {
         final offlineAbonos =
             await _ccCacheService.obtenerAbonosOffline(widget.cliente.id!);
@@ -211,6 +222,11 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
       });
     } catch (e) {
       if (!mounted) return;
+      if (AuthService.isSessionExpiredException(e)) {
+        await AuthService.logout();
+        _safeSetState(() => isLoadingProductos = false);
+        return;
+      }
       final esTimeout = e is TimeoutException;
       if (Apihandler.isConnectionError(e) || esTimeout) {
         final productos = await _ccCacheService.obtenerProductosAFavorOffline(widget.cliente.id!);
@@ -241,6 +257,11 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
       });
     } catch (e) {
       if (!mounted) return;
+      if (AuthService.isSessionExpiredException(e)) {
+        await AuthService.logout();
+        _safeSetState(() => isLoadingNotasCredito = false);
+        return;
+      }
       _safeSetState(() {
         isLoadingNotasCredito = false;
       });
@@ -248,34 +269,6 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
     }
   }
 
-  Future<void> _cargarMasVentas() async {
-    if (_isLoadingMoreVentas || !_hasMoreVentas) return;
-    
-    _safeSetState(() {
-      _isLoadingMoreVentas = true;
-    });
-
-    try {
-      final ventasProvider = VentasProvider();
-      final data = await ventasProvider.obtenerVentasCuentaCorrientePorClienteId(
-        widget.cliente.id!, 
-        _currentPageVentas + 1, 
-        _pageSizeVentas
-      );
-      
-      _safeSetState(() {
-        ventasCC.addAll(List<Ventas>.from(data['ventas']));
-        _currentPageVentas++;
-        _hasMoreVentas = data['hasNextPage'];
-        _isLoadingMoreVentas = false;
-      });
-    } catch (e) {
-      _safeSetState(() {
-        _isLoadingMoreVentas = false;
-      });
-      log('Error al cargar más ventas: $e', level: 1000);
-    }
-  }
 
   String _formatearPrecio(double precio) {
     return precio.toStringAsFixed(2);
@@ -323,252 +316,329 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
     final TextEditingController montoController = TextEditingController();
     final TextEditingController notaController = TextEditingController();
     String? errorMessage;
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    
+
     showDialog(
       context: context,
       builder: (BuildContext dialogContext) {
         return StatefulBuilder(
           builder: (context, setState) {
-            return AppTheme.minimalAlertDialog(
-              title: 'Registrar abono',
-              content: TextSelectionTheme(
-                data: TextSelectionThemeData(
-                  cursorColor: AppTheme.primaryColor,
-                  selectionColor: AppTheme.primaryColor.withOpacity(0.3),
-                  selectionHandleColor: AppTheme.primaryColor,
-                ),
-                child: Container(
-                  padding: const EdgeInsets.only(bottom: 16),
+            final isDark = Theme.of(context).brightness == Brightness.dark;
+            final bgDialog = isDark ? const Color(0xFF1E1E1E) : Colors.white;
+            final cardBg = isDark ? const Color(0xFF2A2A2A) : Colors.grey.shade50;
+            final textColor = isDark ? Colors.white : Colors.black87;
+            final subColor = isDark ? Colors.grey.shade400 : Colors.grey.shade600;
+            final fillField = isDark ? const Color(0xFF2A2A2A) : Colors.grey.shade100;
+            final borderColor = isDark ? Colors.grey.shade600 : Colors.grey.shade400;
+
+            final viewInsets = MediaQuery.viewInsetsOf(context);
+            final maxContentHeight = MediaQuery.sizeOf(context).height - viewInsets.bottom - 160;
+
+            return AlertDialog(
+              backgroundColor: bgDialog,
+              insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              titlePadding: const EdgeInsets.fromLTRB(24, 18, 24, 10),
+              contentPadding: const EdgeInsets.fromLTRB(24, 0, 24, 14),
+              title: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryColor.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.payment_rounded,
+                      color: AppTheme.primaryColor,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Text(
+                    'Registrar abono',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: textColor,
+                    ),
+                  ),
+                ],
+              ),
+              content: ConstrainedBox(
+                constraints: BoxConstraints(maxHeight: maxContentHeight.clamp(200.0, double.infinity)),
+                child: SingleChildScrollView(
+                  child: TextSelectionTheme(
+                  data: TextSelectionThemeData(
+                    cursorColor: AppTheme.primaryColor,
+                    selectionColor: AppTheme.primaryColor.withOpacity(0.3),
+                    selectionHandleColor: AppTheme.primaryColor,
+                  ),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                // Información del cliente y saldo actual
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: AppTheme.primaryColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.person,
-                        color: AppTheme.primaryColor,
-                        size: 24,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              widget.cliente.nombre,
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: AppTheme.primaryColor,
+                      // Cliente y saldo (tappable para autocompletar monto)
+                      Builder(
+                        builder: (context) {
+                          final deudaActual =
+                              _parsearDeuda(widget.cliente.deuda);
+                          return Material(
+                            color: cardBg,
+                            borderRadius: BorderRadius.circular(14),
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(14),
+                              onTap: deudaActual > 0
+                                  ? () {
+                                      final valor =
+                                          deudaActual.toStringAsFixed(2);
+                                      montoController.value =
+                                          TextEditingValue(
+                                        text: valor,
+                                        selection: TextSelection.collapsed(
+                                            offset: valor.length),
+                                      );
+                                      setState(() => errorMessage = null);
+                                    }
+                                  : null,
+                              child: Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(
+                                    color: AppTheme.primaryColor
+                                        .withOpacity(0.2),
+                                    width: 1,
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color: AppTheme.primaryColor
+                                            .withOpacity(0.15),
+                                        borderRadius:
+                                            BorderRadius.circular(10),
+                                      ),
+                                      child: const Icon(
+                                        Icons.person_rounded,
+                                        color: AppTheme.primaryColor,
+                                        size: 22,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 14),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            widget.cliente.nombre,
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w600,
+                                              color: textColor,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            deudaActual > 0
+                                                ? 'Saldo: \$${_formatearPrecio(deudaActual)}'
+                                                : deudaActual < 0
+                                                    ? 'Saldo a favor: \$${_formatearPrecio(-deudaActual)}'
+                                                    : 'Sin deuda actualmente',
+                                            style: TextStyle(
+                                              fontSize: 14,
+                                              color: deudaActual > 0
+                                                  ? Colors.red.shade600
+                                                  : Colors.green.shade600,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    if (deudaActual > 0) ...[
+                                      const SizedBox(width: 8),
+                                      Icon(
+                                        Icons.touch_app_rounded,
+                                        size: 20,
+                                        color: Colors.red.shade600
+                                            .withOpacity(0.7),
+                                      ),
+                                    ],
+                                  ],
+                                ),
                               ),
                             ),
-                            Text(
-                              'Saldo actual: \$${_formatearPrecio(_parsearDeuda(widget.cliente.deuda))}',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.red.shade600,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 20),
-                
-                // Mensaje de error
-                if (errorMessage != null) ...[
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.red.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.red.withOpacity(0.3)),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.error_outline,
-                          color: Colors.red.shade600,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            errorMessage!,
-                            style: TextStyle(
-                              color: Colors.red.shade600,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                ],
-                
-                // Campo monto
-                TextField(
-                  controller: montoController,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  inputFormatters: [
-                    FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
-                  ],
-                  style: TextStyle(
-                    color: isDarkMode ? Colors.white : Colors.black,
-                  ),
-                  decoration: InputDecoration(
-                    labelText: 'Monto a abonar',
-                    hintText: 'Ingrese el monto',
-                    prefixText: '\$ ',
-                    labelStyle: TextStyle(
-                      color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade700,
-                    ),
-                    hintStyle: TextStyle(
-                      color: isDarkMode ? Colors.grey.shade600 : Colors.grey.shade400,
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: const BorderSide(color: AppTheme.primaryColor),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(
-                        color: isDarkMode ? Colors.grey.shade700 : Colors.grey.shade400,
-                      ),
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                
-                // Campo nota
-                TextField(
-                  controller: notaController,
-                  maxLines: 2,
-                  style: TextStyle(
-                    color: isDarkMode ? Colors.white : Colors.black,
-                  ),
-                  decoration: InputDecoration(
-                    labelText: 'Nota (opcional)',
-                    hintText: 'Ingrese una nota...',
-                    labelStyle: TextStyle(
-                      color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade700,
-                    ),
-                    hintStyle: TextStyle(
-                      color: isDarkMode ? Colors.grey.shade600 : Colors.grey.shade400,
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: const BorderSide(color: AppTheme.primaryColor),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(
-                        color: isDarkMode ? Colors.grey.shade700 : Colors.grey.shade400,
-                      ),
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                
-                // Botones
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        style: OutlinedButton.styleFrom(
-                          backgroundColor: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
-                          side: BorderSide(
-                            color: isDarkMode ? Colors.grey.shade700 : Colors.grey.shade400, 
-                            width: 1.5
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                        ),
-                        child: Text(
-                          'Cancelar',
-                          style: TextStyle(
-                            color: isDarkMode ? Colors.white : Colors.black,
-                            fontWeight: FontWeight.w400,
-                            fontSize: 16,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () async {
-                          final monto = double.tryParse(montoController.text);
-                          final deudaActual = _parsearDeuda(widget.cliente.deuda);
-                          
-                          // Limpiar error previo
-                          setState(() {
-                            errorMessage = null;
-                          });
-                          
-                          if (monto == null || monto <= 0) {
-                            setState(() {
-                              errorMessage = 'Ingrese un monto válido';
-                            });
-                            return;
-                          }
-                          
-                          if (monto > deudaActual) {
-                            setState(() {
-                              errorMessage = 'El monto no puede ser mayor al saldo actual';
-                            });
-                            return;
-                          }
-                          
-                          Navigator.of(context).pop();
-                          await _procesarAbono(monto, notaController.text);
+                          );
                         },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.primaryColor,
-                          shape: RoundedRectangleBorder(
+                      ),
+                      const SizedBox(height: 16),
+
+                      if (errorMessage != null) ...[
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.red.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.red.withOpacity(0.3)),
                           ),
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          elevation: 2,
+                          child: Row(
+                            children: [
+                              Icon(Icons.error_outline_rounded, color: Colors.red.shade600, size: 22),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  errorMessage!,
+                                  style: TextStyle(
+                                    color: Colors.red.shade600,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                        child: const Text(
-                          'Guardar',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 16,
+                        const SizedBox(height: 16),
+                      ],
+
+                      Text(
+                        'Monto a abonar',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: subColor,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: montoController,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        inputFormatters: [
+                          FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                        ],
+                        style: TextStyle(color: textColor, fontSize: 16),
+                        decoration: InputDecoration(
+                          hintText: '0.00',
+                          prefixText: '\$ ',
+                          prefixStyle: TextStyle(color: subColor, fontSize: 16),
+                          filled: true,
+                          fillColor: fillField,
+                          hintStyle: TextStyle(color: subColor),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: borderColor),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: borderColor),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: AppTheme.primaryColor, width: 2),
                           ),
                         ),
                       ),
-                    ),
-                  ],
-                ),
+                      const SizedBox(height: 14),
+
+                      Text(
+                        'Nota (opcional)',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: subColor,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: notaController,
+                        maxLines: 2,
+                        style: TextStyle(color: textColor, fontSize: 16),
+                        decoration: InputDecoration(
+                          hintText: 'Ej: Pago en efectivo',
+                          filled: true,
+                          fillColor: fillField,
+                          hintStyle: TextStyle(color: subColor),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: borderColor),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: borderColor),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: AppTheme.primaryColor, width: 2),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextButton(
+                              onPressed: () => Navigator.of(context).pop(),
+                              style: TextButton.styleFrom(
+                                backgroundColor: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
+                                foregroundColor: isDark ? Colors.grey.shade200 : Colors.grey.shade800,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
+                                ),
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                              ),
+                              child: const Text(
+                                'Cancelar',
+                                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: () async {
+                                final monto = double.tryParse(montoController.text);
+                                setState(() => errorMessage = null);
+
+                                if (monto == null || monto <= 0) {
+                                  setState(() => errorMessage = 'Ingrese un monto válido');
+                                  return;
+                                }
+                                // Permitir abonos mayores a la deuda (genera saldo a favor)
+
+                                Navigator.of(context).pop();
+                                await _procesarAbono(monto, notaController.text);
+                              },
+                              icon: const Icon(Icons.check_rounded, size: 20),
+                              label: const Text(
+                                'Guardar',
+                                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppTheme.primaryColor,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
+                                ),
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                elevation: 2,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ],
                   ),
                 ),
               ),
+            ),
             );
           },
         );
@@ -594,32 +664,32 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
         final deudaActual = _parsearDeuda(widget.cliente.deuda);
         final nuevaDeuda = deudaActual - monto;
         widget.cliente.deuda = nuevaDeuda.toStringAsFixed(2);
-        
-        // Recargar los datos
+
+        // Propagar al ClienteProvider global para que otras pantallas
+        // (ej. NuevaVenta) y el caché SQLite queden sincronizados.
+        if (mounted) {
+          final clienteProvider =
+              Provider.of<ClienteProvider>(context, listen: false);
+          clienteProvider.actualizarDeudaCliente(
+              widget.cliente.id!, nuevaDeuda);
+        }
+
+        // Recargar los datos para que ventas y abonos queden como historial (no se borran)
         await _loadData();
         
-        // Mostrar mensaje de éxito
+        if (!mounted) return;
         AppTheme.showSnackBar(
           context,
-          AppTheme.successSnackBar('Abono registrado exitosamente'),
+          AppTheme.successSnackBar(
+            nuevaDeuda < 0
+                ? 'Abono registrado. Saldo a favor: \$${_formatearPrecio(-nuevaDeuda)}'
+                : nuevaDeuda == 0
+                    ? 'Abono registrado. Cuenta corriente al día.'
+                    : 'Abono registrado exitosamente',
+          ),
         );
-        
-        // Si el saldo quedó en 0 o menos, navegar de vuelta a la pantalla principal
-        if (nuevaDeuda <= 0) {
-          // Esperar un poco para que el usuario vea el mensaje de éxito
-          await Future.delayed(const Duration(milliseconds: 1500));
-          
-          // Navegar de vuelta a la pantalla de cuenta corriente con indicación de refrescar
-          if (mounted) {
-            Navigator.of(context).pop(true); // true indica que debe refrescar
-            
-            // Mostrar mensaje de saldo saldado
-        AppTheme.showSnackBar(
-          context,
-          AppTheme.successSnackBar('¡Cuenta corriente al día!'),
-        );
-          }
-        }
+        // No hacer pop al saldar: el usuario se queda en el detalle y ve el historial
+        // (ventas y abonos saldados siguen visibles como registro).
       }
     } catch (e) {
       AppTheme.showSnackBar(
@@ -649,138 +719,56 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
             style: AppTheme.appBarTitleStyle,
           ),
         ),
-      body: isLoadingDetalle
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+      body: Container(
+        color: Theme.of(context).scaffoldBackgroundColor,
+        child: isLoadingDetalle
+            ? Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Cargando detalles...',
+                      style: TextStyle(
+                        color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            : Column(
                 children: [
-                  const CircularProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Cargando detalles...',
-                    style: TextStyle(
-                      color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
-                      fontSize: 16,
+                  // Header con información del cliente
+                  _buildHeaderSection(isDarkMode),
+                  // Tabs custom (chips + animación)
+                  _buildCustomTabRow(isDarkMode),
+                  // Contenido con animación fade/slide
+                  Expanded(
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 220),
+                      switchInCurve: Curves.easeOutCubic,
+                      switchOutCurve: Curves.easeInCubic,
+                      transitionBuilder: (Widget child, Animation<double> animation) {
+                        return FadeTransition(
+                          opacity: animation,
+                          child: SlideTransition(
+                            position: Tween<Offset>(
+                              begin: const Offset(0.04, 0),
+                              end: Offset.zero,
+                            ).animate(animation),
+                            child: child,
+                          ),
+                        );
+                      },
+                      child: _buildTabContent(isDarkMode),
                     ),
                   ),
                 ],
               ),
-            )
-          : Column(
-              children: [
-                // Header con información del cliente
-                _buildHeaderSection(isDarkMode),
-                
-                // Tabs
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
-                      borderRadius: BorderRadius.circular(15),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(isDarkMode ? 0.3 : 0.05),
-                          blurRadius: 10,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                      child: TabBar(
-                        controller: _tabController,
-                        isScrollable: true,
-                        indicator: BoxDecoration(
-                          color: AppTheme.primaryColor,
-                          borderRadius: BorderRadius.circular(15),
-                        ),
-                        labelColor: Colors.white,
-                        unselectedLabelColor: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
-                        tabs: [
-                          Tab(
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 6),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  const Icon(Icons.receipt_long, size: 18),
-                                  const SizedBox(width: 10),
-                                  Text('Ventas CC (${ventasCC.length})'),
-                                ],
-                              ),
-                            ),
-                          ),
-                          Tab(
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 6),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  const Icon(Icons.payment, size: 18),
-                                  const SizedBox(width: 10),
-                                  Text('Abonos (${abonos.length})'),
-                                ],
-                              ),
-                            ),
-                          ),
-                          Tab(
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 6),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  const Icon(Icons.receipt, size: 18),
-                                  const SizedBox(width: 10),
-                                  Text('Notas (${notasCredito.length})'),
-                                ],
-                              ),
-                            ),
-                          ),
-                          Tab(
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 6),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  const Icon(Icons.inventory_2, size: 18),
-                                  const SizedBox(width: 10),
-                                  Text('Prod. a favor (${productosAFavor.length})'),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                
-                // Contenido de los tabs
-                Expanded(
-                  child: TabBarView(
-                    controller: _tabController,
-                    children: [
-                      _buildVentasTab(isDarkMode),
-                      _buildAbonosTab(isDarkMode),
-                      _buildNotasCreditoTab(isDarkMode),
-                      _buildProductosAFavorTab(isDarkMode),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _mostrarModalSaldarDeuda,
-        backgroundColor: AppTheme.primaryColor,
-        icon: const Icon(Icons.payment, color: Colors.white),
-        label: const Text(
-          'Registrar abono',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
       ),
       ),
     );
@@ -789,7 +777,7 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
   Widget _buildHeaderSection(bool isDarkMode) {
     final saldoActual = _saldoDetalle ?? _parsearDeuda(widget.cliente.deuda);
     return Container(
-      margin: const EdgeInsets.all(16),
+      margin: const EdgeInsets.fromLTRB(16, 16, 16, 12),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -848,10 +836,14 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
                       ),
                     ),
                     Text(
-                      'Saldo actual: \$${_formatearPrecio(saldoActual)}',
+                      saldoActual > 0
+                          ? 'Saldo actual: \$${_formatearPrecio(saldoActual)}'
+                          : saldoActual < 0
+                              ? 'Saldo a favor: \$${_formatearPrecio(-saldoActual)}'
+                              : 'Sin deuda actualmente',
                       style: TextStyle(
                         fontSize: 16,
-                        color: Colors.red.shade600,
+                        color: saldoActual > 0 ? Colors.red.shade600 : Colors.green.shade600,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -890,6 +882,107 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
     );
   }
 
+  static const List<({String label, IconData icon})> _tabItems = [
+    (label: 'Ventas CC', icon: Icons.receipt_long),
+    (label: 'Abonos', icon: Icons.payment),
+    (label: 'Notas', icon: Icons.receipt),
+    (label: 'Prod. a favor', icon: Icons.inventory_2),
+  ];
+
+  Widget _buildCustomTabRow(bool isDarkMode) {
+    final counts = [ventasCC.length, abonos.length, notasCredito.length, productosAFavor.length];
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: List.generate(4, (i) {
+            final selected = _selectedTabIndex == i;
+            final item = _tabItems[i];
+            return Padding(
+              padding: EdgeInsets.only(right: i < 3 ? 10 : 0),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () => setState(() => _selectedTabIndex = i),
+                  borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    curve: Curves.easeOutCubic,
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: selected
+                          ? AppTheme.primaryColor
+                          : (isDarkMode ? const Color(0xFF2A2A2A) : Colors.grey.shade100),
+                      borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
+                      boxShadow: selected
+                          ? [
+                              BoxShadow(
+                                color: AppTheme.primaryColor.withOpacity(0.35),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ]
+                          : null,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          item.icon,
+                          size: 18,
+                          color: selected
+                              ? Colors.white
+                              : (isDarkMode ? Colors.grey.shade400 : Colors.grey.shade700),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          '${item.label} (${counts[i]})',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                            color: selected
+                                ? Colors.white
+                                : (isDarkMode ? Colors.grey.shade400 : Colors.grey.shade700),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            );
+          }),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTabContent(bool isDarkMode) {
+    final Widget body;
+    switch (_selectedTabIndex) {
+      case 0:
+        body = _buildVentasTab(isDarkMode);
+        break;
+      case 1:
+        body = _buildAbonosTab(isDarkMode);
+        break;
+      case 2:
+        body = _buildNotasCreditoTab(isDarkMode);
+        break;
+      case 3:
+        body = _buildProductosAFavorTab(isDarkMode);
+        break;
+      default:
+        body = _buildVentasTab(isDarkMode);
+    }
+    return KeyedSubtree(
+      key: ValueKey<int>(_selectedTabIndex),
+      child: body,
+    );
+  }
+
   Widget _buildVentasTab(bool isDarkMode) {
     if (isLoadingVentas) {
       return const Center(
@@ -900,22 +993,23 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
     }
 
     if (ventasCC.isEmpty) {
-      return _buildEmptyState(
-        isDarkMode: isDarkMode,
-        icon: Icons.receipt_long,
-        title: 'No hay ventas con cuenta corriente',
-        subtitle: 'Este cliente no tiene ventas pendientes de pago',
+      final bottomPad = MediaQuery.of(context).padding.bottom + 88;
+      return SingleChildScrollView(
+        padding: EdgeInsets.fromLTRB(16, 8, 16, bottomPad),
+        child: _buildEmptyState(
+          context: context,
+          isDarkMode: isDarkMode,
+          icon: Icons.receipt_long,
+          title: 'No hay ventas a cuenta corriente',
+          subtitle: 'El historial de ventas a CC aparecerá aquí',
+        ),
       );
     }
 
     return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: ventasCC.length + (_isLoadingMoreVentas ? 1 : 0),
+      padding: const EdgeInsets.only(left: 16, right: 16, top: 0, bottom: 72),
+      itemCount: ventasCC.length,
       itemBuilder: (context, index) {
-        if (index == ventasCC.length) {
-          return _buildLoadingIndicator();
-        }
-        
         final venta = ventasCC[index];
         return _buildVentaCard(venta, isDarkMode);
       },
@@ -931,22 +1025,68 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
       );
     }
 
-    if (abonos.isEmpty) {
-      return _buildEmptyState(
-        isDarkMode: isDarkMode,
-        icon: Icons.payment,
-        title: 'No hay abonos registrados',
-        subtitle: 'Este cliente aún no ha realizado ningún abono',
-      );
-    }
-
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: abonos.length,
-      itemBuilder: (context, index) {
-        final abono = abonos[index];
-        return _buildAbonoCard(abono, isDarkMode);
-      },
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: abonos.isEmpty
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                    child: _buildEmptyState(
+                      context: context,
+                      isDarkMode: isDarkMode,
+                      icon: Icons.payment,
+                      title: 'No hay abonos registrados',
+                      subtitle: 'Este cliente aún no ha realizado ningún abono',
+                    ),
+                  ),
+                )
+              : ListView.builder(
+                  padding:
+                      const EdgeInsets.only(left: 16, right: 16, top: 0, bottom: 16),
+                  itemCount: abonos.length,
+                  itemBuilder: (context, index) {
+                    final abono = abonos[index];
+                    return _buildAbonoCard(abono, isDarkMode);
+                  },
+                ),
+        ),
+        Container(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+          decoration: BoxDecoration(
+            color: isDarkMode ? const Color(0xFF121212) : Colors.white,
+            border: Border(
+              top: BorderSide(
+                color: isDarkMode ? Colors.grey.shade800 : Colors.grey.shade200,
+              ),
+            ),
+          ),
+          child: SafeArea(
+            top: false,
+            child: SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: _mostrarModalSaldarDeuda,
+                icon: const Icon(Icons.payment_rounded, size: 20),
+                label: const Text(
+                  'Registrar abono',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryColor,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius:
+                        BorderRadius.circular(AppTheme.borderRadiusMainButtons),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -960,16 +1100,21 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
     }
 
     if (notasCredito.isEmpty) {
-      return _buildEmptyState(
-        isDarkMode: isDarkMode,
-        icon: Icons.receipt,
-        title: 'No hay notas de crédito',
-        subtitle: 'Aún no se registraron notas de crédito para este cliente',
+      final bottomPad = MediaQuery.of(context).padding.bottom + 88;
+      return SingleChildScrollView(
+        padding: EdgeInsets.fromLTRB(16, 8, 16, bottomPad),
+        child: _buildEmptyState(
+          context: context,
+          isDarkMode: isDarkMode,
+          icon: Icons.receipt,
+          title: 'No hay notas de crédito',
+          subtitle: 'Aún no se registraron notas de crédito para este cliente',
+        ),
       );
     }
 
     return ListView.builder(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.only(left: 16, right: 16, top: 0, bottom: 72),
       itemCount: notasCredito.length,
       itemBuilder: (context, index) {
         final movimiento = notasCredito[index];
@@ -988,16 +1133,21 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
     }
 
     if (productosAFavor.isEmpty) {
-      return _buildEmptyState(
-        isDarkMode: isDarkMode,
-        icon: Icons.inventory_2_outlined,
-        title: 'Sin productos a favor',
-        subtitle: 'No hay entregas pendientes para este cliente',
+      final bottomPad = MediaQuery.of(context).padding.bottom + 88;
+      return SingleChildScrollView(
+        padding: EdgeInsets.fromLTRB(16, 8, 16, bottomPad),
+        child: _buildEmptyState(
+          context: context,
+          isDarkMode: isDarkMode,
+          icon: Icons.inventory_2_outlined,
+          title: 'Sin productos a favor',
+          subtitle: 'No hay entregas pendientes para este cliente',
+        ),
       );
     }
 
     return ListView.builder(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.only(left: 16, right: 16, top: 0, bottom: 72),
       itemCount: productosAFavor.length,
       itemBuilder: (context, index) {
         final producto = productosAFavor[index];
@@ -1006,115 +1156,156 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
     );
   }
 
+  /// Total de la venta con precio especial incluido (suma de precioFinalCalculado por producto).
+  double _totalVentaConPrecioEspecial(Ventas venta) {
+    if (venta.ventasProductos.isEmpty) return venta.total;
+    return venta.ventasProductos.fold(
+      0.0,
+      (s, p) => s + p.precioFinalCalculado,
+    );
+  }
+
   Widget _buildVentaCard(Ventas venta, bool isDarkMode) {
-    // Calcular el monto específico pagado con cuenta corriente
+    final isCompact = AppTheme.isCompactVentasButton(context);
+    final totalVenta = _totalVentaConPrecioEspecial(venta);
     double montoCuentaCorriente = 0.0;
     if (venta.pagos != null && venta.pagos!.isNotEmpty) {
-      // Si tenemos pagos cargados, calcular el monto de cuenta corriente
       montoCuentaCorriente = venta.pagos!
           .where((pago) => pago.metodo.index == MetodoPago.cuentaCorriente.index)
           .fold(0.0, (sum, pago) => sum + pago.monto);
+      if (venta.metodoPago == MetodoPago.cuentaCorriente &&
+          montoCuentaCorriente < totalVenta - 0.01) {
+        montoCuentaCorriente = totalVenta;
+      }
     } else if (venta.metodoPago == MetodoPago.cuentaCorriente) {
-      // Si no tenemos pagos cargados pero el método de pago es cuenta corriente,
-      // usar el total de la venta como monto de cuenta corriente
-      montoCuentaCorriente = venta.total;
+      montoCuentaCorriente = totalVenta;
     }
 
-    return GestureDetector(
-      onTap: () {
-        // Navegar a la pantalla de detalle de venta
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => DetalleVentaScreen(venta: venta),
-          ),
-        );
-      },
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
+    final bool hasMixedPayments =
+        venta.pagos != null && venta.pagos!.length > 1;
+    final Color accentColor = Colors.orange.shade700;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Material(
         color: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
-        borderRadius: BorderRadius.circular(15),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(isDarkMode ? 0.3 : 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.orange.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(
-                    Icons.receipt_long,
-                    color: Colors.orange.shade600,
-                    size: 20,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        venta.id != null ? 'Venta #${venta.id}' : 'Venta Pendiente',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.primaryColor,
-                        ),
-                      ),
-                      Text(
-                        _formatearFecha(venta.fecha),
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: isDarkMode ? Colors.grey.shade300 : Colors.grey.shade600,
-                        ),
-                      ),
-                      if (venta.pagos != null && venta.pagos!.length > 1) ...[
-                        const SizedBox(height: 2),
-                        Text(
-                          'Total: \$${_formatearPrecio(venta.total)}',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade500,
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.orange.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    '\$${_formatearPrecio(montoCuentaCorriente)}',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.orange.shade700,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
+        borderRadius: BorderRadius.circular(AppTheme.borderRadiusCards),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(AppTheme.borderRadiusCards),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => DetalleVentaScreen(venta: venta),
+              ),
+            );
+          },
+          child: Container(
+            padding: EdgeInsets.all(isCompact ? 14 : 16),
+            decoration: BoxDecoration(
+              borderRadius:
+                  BorderRadius.circular(AppTheme.borderRadiusCards),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(isDarkMode ? 0.3 : 0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 2),
                 ),
               ],
             ),
-          ],
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Container(
+                  padding: EdgeInsets.all(isCompact ? 8 : 10),
+                  decoration: BoxDecoration(
+                    color: accentColor.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    Icons.receipt_long,
+                    color: accentColor,
+                    size: isCompact ? 24 : 28,
+                  ),
+                ),
+                SizedBox(width: isCompact ? 12 : 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        venta.id != null
+                            ? 'Venta #${venta.numeroVisible}'
+                            : 'Venta Pendiente',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: isCompact ? 15 : 16,
+                          color: isDarkMode
+                              ? Colors.white
+                              : Colors.black87,
+                        ),
+                      ),
+                      SizedBox(height: isCompact ? 2 : 4),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.calendar_today_outlined,
+                            size: isCompact ? 13 : 14,
+                            color: isDarkMode
+                                ? Colors.grey.shade400
+                                : Colors.grey.shade600,
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              hasMixedPayments
+                                  ? '${_formatearFecha(venta.fecha)} · Total \$${_formatearPrecio(totalVenta)}'
+                                  : _formatearFecha(venta.fecha),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: isCompact ? 13 : 14,
+                                color: isDarkMode
+                                    ? Colors.grey.shade400
+                                    : Colors.grey.shade600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(width: isCompact ? 8 : 12),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      '\$${_formatearPrecio(montoCuentaCorriente)}',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: isCompact ? 14 : 16,
+                        color: accentColor,
+                      ),
+                    ),
+                    SizedBox(height: isCompact ? 2 : 4),
+                    Icon(
+                      Icons.chevron_right,
+                      color: isDarkMode
+                          ? Colors.grey.shade500
+                          : Colors.grey.shade400,
+                      size: isCompact ? 18 : 20,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
         ),
-      ),
       ),
     );
   }
@@ -1440,367 +1631,455 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
   }
 
   Widget _buildAbonoCard(Abono abono, bool isDarkMode) {
-    return GestureDetector(
-      onTap: () => _mostrarDetalleAbono(abono),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
+    final isCompact = AppTheme.isCompactVentasButton(context);
+    final Color accentColor = Colors.green.shade700;
+    final String subtitleText = abono.nota.isNotEmpty
+        ? '${_formatearFecha(abono.fecha)} · ${abono.nota}'
+        : _formatearFecha(abono.fecha);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Material(
         color: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
-        borderRadius: BorderRadius.circular(15),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(isDarkMode ? 0.3 : 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.green.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(
-                    Icons.payment,
-                    color: Colors.green.shade600,
-                    size: 20,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Abono #${abono.id}',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.primaryColor,
-                        ),
-                      ),
-                      Text(
-                        _formatearFecha(abono.fecha),
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: isDarkMode ? Colors.grey.shade300 : Colors.grey.shade600,
-                        ),
-                      ),
-                      if (abono.nota.isNotEmpty) ...[
-                        const SizedBox(height: 4),
-                        Text(
-                          abono.nota,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade500,
-                            fontStyle: FontStyle.italic,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.green.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        '\$${_formatearPrecio(_parsearDeuda(abono.monto))}',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.green.shade700,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    GestureDetector(
-                      onTap: () => _mostrarConfirmacionEliminarAbono(abono),
-                      child: Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: Colors.red.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Icon(
-                          Icons.delete_outline,
-                          color: Colors.red.shade600,
-                          size: 18,
-                        ),
-                      ),
-                    ),
-                  ],
+        borderRadius: BorderRadius.circular(AppTheme.borderRadiusCards),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(AppTheme.borderRadiusCards),
+          onTap: () => _mostrarDetalleAbono(abono),
+          child: Container(
+            padding: EdgeInsets.all(isCompact ? 14 : 16),
+            decoration: BoxDecoration(
+              borderRadius:
+                  BorderRadius.circular(AppTheme.borderRadiusCards),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(isDarkMode ? 0.3 : 0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 2),
                 ),
               ],
             ),
-          ],
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Container(
+                  padding: EdgeInsets.all(isCompact ? 8 : 10),
+                  decoration: BoxDecoration(
+                    color: accentColor.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    Icons.payment,
+                    color: accentColor,
+                    size: isCompact ? 24 : 28,
+                  ),
+                ),
+                SizedBox(width: isCompact ? 12 : 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Abono #${abono.id ?? "-"}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: isCompact ? 15 : 16,
+                          color: isDarkMode
+                              ? Colors.white
+                              : Colors.black87,
+                        ),
+                      ),
+                      SizedBox(height: isCompact ? 2 : 4),
+                      Row(
+                        children: [
+                          Icon(
+                            abono.nota.isNotEmpty
+                                ? Icons.sticky_note_2_outlined
+                                : Icons.calendar_today_outlined,
+                            size: isCompact ? 13 : 14,
+                            color: isDarkMode
+                                ? Colors.grey.shade400
+                                : Colors.grey.shade600,
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              subtitleText,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: isCompact ? 13 : 14,
+                                color: isDarkMode
+                                    ? Colors.grey.shade400
+                                    : Colors.grey.shade600,
+                                fontStyle: abono.nota.isNotEmpty
+                                    ? FontStyle.italic
+                                    : FontStyle.normal,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(width: isCompact ? 8 : 12),
+                Text(
+                  '\$${_formatearPrecio(_parsearDeuda(abono.monto))}',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: isCompact ? 14 : 16,
+                    color: accentColor,
+                  ),
+                ),
+                SizedBox(width: isCompact ? 6 : 8),
+                Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(10),
+                    onTap: () => _mostrarConfirmacionEliminarAbono(abono),
+                    child: Container(
+                      width: isCompact ? 36 : 40,
+                      height: isCompact ? 36 : 40,
+                      decoration: BoxDecoration(
+                        color: Colors.red.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(
+                        Icons.delete_outline,
+                        color: Colors.red.shade600,
+                        size: isCompact ? 18 : 20,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
-      ),
       ),
     );
   }
 
-  Widget _buildNotaCreditoCard(CuentaCorrienteMovimiento movimiento, bool isDarkMode) {
+  Widget _buildNotaCreditoCard(
+      CuentaCorrienteMovimiento movimiento, bool isDarkMode) {
+    final isCompact = AppTheme.isCompactVentasButton(context);
     final monto = movimiento.montoTotal != 0
         ? movimiento.montoTotal
         : movimiento.saldoDelta.abs();
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
+    final Color accentColor = Colors.orange.shade700;
+    final bool hasObs = movimiento.observacion?.isNotEmpty == true;
+    final String subtitleText = hasObs
+        ? '${_formatearFecha(movimiento.fecha)} · ${movimiento.observacion}'
+        : _formatearFecha(movimiento.fecha);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Material(
         color: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
-        borderRadius: BorderRadius.circular(15),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(isDarkMode ? 0.3 : 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
+        borderRadius: BorderRadius.circular(AppTheme.borderRadiusCards),
+        child: Container(
+          padding: EdgeInsets.all(isCompact ? 14 : 16),
+          decoration: BoxDecoration(
+            borderRadius:
+                BorderRadius.circular(AppTheme.borderRadiusCards),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(isDarkMode ? 0.3 : 0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: Colors.orange.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(
-                Icons.receipt_long,
-                color: Colors.orange.shade700,
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    movimiento.detalle ?? 'Nota de crédito',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: isDarkMode ? Colors.white : AppTheme.textColor,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    _formatearFecha(movimiento.fecha),
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
-                    ),
-                  ),
-                  if (movimiento.observacion?.isNotEmpty == true) ...[
-                    const SizedBox(height: 6),
-                    Text(
-                      movimiento.observacion ?? '',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade500,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: Colors.orange.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                '\$${_formatearPrecio(monto)}',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.orange.shade800,
-                  fontWeight: FontWeight.w600,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                padding: EdgeInsets.all(isCompact ? 8 : 10),
+                decoration: BoxDecoration(
+                  color: accentColor.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  Icons.receipt_long,
+                  color: accentColor,
+                  size: isCompact ? 24 : 28,
                 ),
               ),
-            ),
-          ],
+              SizedBox(width: isCompact ? 12 : 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      movimiento.detalle ?? 'Nota de crédito',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: isCompact ? 15 : 16,
+                        color: isDarkMode ? Colors.white : Colors.black87,
+                      ),
+                    ),
+                    SizedBox(height: isCompact ? 2 : 4),
+                    Row(
+                      children: [
+                        Icon(
+                          hasObs
+                              ? Icons.sticky_note_2_outlined
+                              : Icons.calendar_today_outlined,
+                          size: isCompact ? 13 : 14,
+                          color: isDarkMode
+                              ? Colors.grey.shade400
+                              : Colors.grey.shade600,
+                        ),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            subtitleText,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: isCompact ? 13 : 14,
+                              color: isDarkMode
+                                  ? Colors.grey.shade400
+                                  : Colors.grey.shade600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(width: isCompact ? 8 : 12),
+              Text(
+                '\$${_formatearPrecio(monto)}',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: isCompact ? 14 : 16,
+                  color: accentColor,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
   Widget _buildProductoAFavorCard(ProductoAFavor producto, bool isDarkMode) {
-    final entregado = producto.entregado;
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
+    final isCompact = AppTheme.isCompactVentasButton(context);
+    final bool entregado = producto.entregado;
+    final Color accentColor =
+        entregado ? Colors.green.shade700 : Colors.blue.shade700;
+    final Color statusColor =
+        entregado ? Colors.green.shade700 : Colors.amber.shade800;
+    final bool hasNota = producto.nota != null && producto.nota!.isNotEmpty;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Material(
         color: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
-        borderRadius: BorderRadius.circular(15),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(isDarkMode ? 0.3 : 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
+        borderRadius: BorderRadius.circular(AppTheme.borderRadiusCards),
+        child: Container(
+          padding: EdgeInsets.all(isCompact ? 14 : 16),
+          decoration: BoxDecoration(
+            borderRadius:
+                BorderRadius.circular(AppTheme.borderRadiusCards),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(isDarkMode ? 0.3 : 0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: Colors.blue.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(
-                    Icons.inventory_2,
-                    color: Colors.blue.shade700,
-                  ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                padding: EdgeInsets.all(isCompact ? 8 : 10),
+                decoration: BoxDecoration(
+                  color: accentColor.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        producto.producto?.nombre ?? 'Producto a favor',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: isDarkMode ? Colors.white : AppTheme.textColor,
-                        ),
+                child: Icon(
+                  Icons.inventory_2_outlined,
+                  color: accentColor,
+                  size: isCompact ? 24 : 28,
+                ),
+              ),
+              SizedBox(width: isCompact ? 12 : 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      producto.producto?.nombre ?? 'Producto a favor',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: isCompact ? 15 : 16,
+                        color: isDarkMode ? Colors.white : Colors.black87,
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Cantidad: ${producto.cantidad}',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
+                    ),
+                    SizedBox(height: isCompact ? 2 : 4),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.shopping_bag_outlined,
+                          size: isCompact ? 13 : 14,
+                          color: isDarkMode
+                              ? Colors.grey.shade400
+                              : Colors.grey.shade600,
                         ),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            'Cant: ${producto.cantidad} · ${_formatearFecha(producto.fechaRegistro)}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: isCompact ? 13 : 14,
+                              color: isDarkMode
+                                  ? Colors.grey.shade400
+                                  : Colors.grey.shade600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (hasNota) ...[
+                      SizedBox(height: isCompact ? 2 : 4),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.sticky_note_2_outlined,
+                            size: isCompact ? 13 : 14,
+                            color: isDarkMode
+                                ? Colors.grey.shade500
+                                : Colors.grey.shade500,
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              producto.nota!,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: isCompact ? 12 : 13,
+                                fontStyle: FontStyle.italic,
+                                color: isDarkMode
+                                    ? Colors.grey.shade500
+                                    : Colors.grey.shade500,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
-                  ),
+                  ],
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: (entregado ? Colors.green : Colors.amber).withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    entregado ? 'Entregado' : 'Pendiente',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: entregado ? Colors.green.shade700 : Colors.amber.shade800,
-                      fontWeight: FontWeight.w600,
+              ),
+              SizedBox(width: isCompact ? 8 : 12),
+              Container(
+                padding: EdgeInsets.symmetric(
+                  horizontal: isCompact ? 8 : 10,
+                  vertical: isCompact ? 4 : 6,
+                ),
+                decoration: BoxDecoration(
+                  color: statusColor.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: statusColor.withOpacity(0.3)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      entregado
+                          ? Icons.check_circle_outline
+                          : Icons.schedule,
+                      size: isCompact ? 12 : 14,
+                      color: statusColor,
                     ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Icon(
-                  Icons.calendar_today,
-                  size: 16,
-                  color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  _formatearFecha(producto.fechaRegistro),
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
-                  ),
-                ),
-              ],
-            ),
-            if (producto.nota != null && producto.nota!.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Text(
-                producto.nota!,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: isDarkMode ? Colors.grey.shade300 : Colors.grey.shade700,
+                    const SizedBox(width: 4),
+                    Text(
+                      entregado ? 'Entregado' : 'Pendiente',
+                      style: TextStyle(
+                        fontSize: isCompact ? 11 : 12,
+                        color: statusColor,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
-          ],
+          ),
         ),
       ),
     );
   }
 
   Widget _buildEmptyState({
-    required bool isDarkMode, 
-    required IconData icon, 
-    required String title, 
-    required String subtitle
+    required BuildContext context,
+    required bool isDarkMode,
+    required IconData icon,
+    required String title,
+    required String subtitle,
   }) {
-    return Center(
+    final screenHeight = MediaQuery.of(context).size.height;
+    final isCompact = screenHeight < 600;
+    final iconSize = isCompact ? 40.0 : 52.0;
+    final iconPadding = isCompact ? 10.0 : 14.0;
+    const titleSize = 16.0;
+    const subtitleSize = 14.0;
+    final spacing = isCompact ? 8.0 : 12.0;
+    final subSpacing = isCompact ? 4.0 : 6.0;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            padding: const EdgeInsets.all(20),
+            padding: EdgeInsets.all(iconPadding),
             decoration: BoxDecoration(
               color: isDarkMode ? Colors.grey.shade800 : Colors.grey.shade100,
               shape: BoxShape.circle,
             ),
             child: Icon(
               icon,
-              size: 60,
+              size: iconSize,
               color: isDarkMode ? Colors.grey.shade600 : Colors.grey.shade400,
             ),
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: spacing),
           Text(
             title,
             style: TextStyle(
-              fontSize: 18,
+              fontSize: titleSize,
               color: isDarkMode ? Colors.grey.shade300 : Colors.grey.shade600,
               fontWeight: FontWeight.w500,
             ),
+            textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: subSpacing),
           Text(
             subtitle,
             style: TextStyle(
-              fontSize: 14,
+              fontSize: subtitleSize,
               color: isDarkMode ? Colors.grey.shade500 : Colors.grey.shade400,
             ),
             textAlign: TextAlign.center,
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildLoadingIndicator() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      child: const Center(
-        child: CircularProgressIndicator(
-          valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
-        ),
       ),
     );
   }
@@ -1839,8 +2118,17 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
         // Actualizar la deuda local del cliente
         final montoAbono = _parsearDeuda(abono.monto);
         final deudaActual = _parsearDeuda(widget.cliente.deuda);
-        widget.cliente.deuda = (deudaActual + montoAbono).toStringAsFixed(2);
-        
+        final nuevaDeuda = deudaActual + montoAbono;
+        widget.cliente.deuda = nuevaDeuda.toStringAsFixed(2);
+
+        // Propagar el cambio al ClienteProvider global (y al caché)
+        if (mounted) {
+          final clienteProvider =
+              Provider.of<ClienteProvider>(context, listen: false);
+          clienteProvider.actualizarDeudaCliente(
+              widget.cliente.id!, nuevaDeuda);
+        }
+
         // Recargar todos los datos
         await _loadData();
         

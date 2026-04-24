@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../Models/PermisosEmpleado.dart';
 import 'permisos_service.dart';
@@ -17,6 +18,9 @@ class PermisosProvider with ChangeNotifier {
   bool get isAdmin => _isAdmin;
   bool get hasAttemptedLoad => _hasAttemptedLoad;
   int? get currentUserId => _currentUserId;
+
+  // Logs detallados de flujo de permisos (solo útiles al depurar ese módulo)
+  static const bool _logVerbosePermisos = false;
 
   // Getters para verificar permisos específicos
   bool get canViewProductos => _isAdmin || (_permisos?.productosVisualizar ?? false);
@@ -40,11 +44,20 @@ class PermisosProvider with ChangeNotifier {
   bool get canViewEntregas => _isAdmin || (_permisos?.entregasVisualizar ?? false);
   bool get canUpdateEstadoEntregas => _isAdmin || (_permisos?.entregasActualizarEstado ?? false);
 
+  bool get canViewCompras => _isAdmin || (_permisos?.comprasVisualizar ?? false);
+  bool get canCreateCompras => _isAdmin || (_permisos?.comprasCrear ?? false);
+  bool get canEditCompras => _isAdmin || (_permisos?.comprasEditar ?? false);
+  bool get canDeleteCompras => _isAdmin || (_permisos?.comprasEliminar ?? false);
+
   Future<void> loadPermisos(AuthProvider authProvider, {bool forceReload = false}) async {
-    debugPrint('PermisosProvider.loadPermisos: Iniciando carga. forceReload: $forceReload');
+    if (_logVerbosePermisos) {
+      debugPrint('PermisosProvider.loadPermisos: Iniciando carga. forceReload: $forceReload');
+    }
     
     if (authProvider.currentUser == null) {
-      debugPrint('PermisosProvider.loadPermisos: Usuario es null, retornando');
+      if (_logVerbosePermisos) {
+        debugPrint('PermisosProvider.loadPermisos: Usuario es null, retornando');
+      }
       _permisos = null;
       _isAdmin = false;
       _currentUserId = null;
@@ -54,15 +67,21 @@ class PermisosProvider with ChangeNotifier {
     }
 
     final newUserId = authProvider.currentUser!.id;
-    debugPrint('PermisosProvider.loadPermisos: UserId actual: $_currentUserId, nuevo: $newUserId');
+    if (_logVerbosePermisos) {
+      debugPrint('PermisosProvider.loadPermisos: UserId actual: $_currentUserId, nuevo: $newUserId');
+    }
     
     // Detectar si el usuario cambió
     final userChanged = _currentUserId != null && _currentUserId != newUserId;
-    debugPrint('PermisosProvider.loadPermisos: Usuario cambió: $userChanged');
+    if (_logVerbosePermisos) {
+      debugPrint('PermisosProvider.loadPermisos: Usuario cambió: $userChanged');
+    }
     
     // Si el usuario cambió o se fuerza recarga, resetear el estado primero
     if (forceReload || userChanged) {
-      debugPrint('PermisosProvider.loadPermisos: Reseteando estado (forceReload: $forceReload, userChanged: $userChanged)');
+      if (_logVerbosePermisos) {
+        debugPrint('PermisosProvider.loadPermisos: Reseteando estado (forceReload: $forceReload, userChanged: $userChanged)');
+      }
       _permisos = null;
       _isAdmin = false;
       _hasAttemptedLoad = false;
@@ -71,23 +90,31 @@ class PermisosProvider with ChangeNotifier {
 
     // Verificar si ya está cargando (evitar cargas múltiples simultáneas)
     if (_isLoading) {
-      debugPrint('PermisosProvider.loadPermisos: Ya está cargando, retornando');
+      if (_logVerbosePermisos) {
+        debugPrint('PermisosProvider.loadPermisos: Ya está cargando, retornando');
+      }
       return;
     }
 
     // Si ya se intentó cargar y no se fuerza recarga ni cambió el usuario, no cargar de nuevo
     if (_hasAttemptedLoad && !forceReload && !userChanged) {
-      debugPrint('PermisosProvider.loadPermisos: Ya se intentó cargar y no hay cambios, retornando');
+      if (_logVerbosePermisos) {
+        debugPrint('PermisosProvider.loadPermisos: Ya se intentó cargar y no hay cambios, retornando');
+      }
       return;
     }
 
     _isAdmin = authProvider.currentUser!.role == 'Admin';
     _currentUserId = newUserId;
-    debugPrint('PermisosProvider.loadPermisos: Es admin: $_isAdmin');
+    if (_logVerbosePermisos) {
+      debugPrint('PermisosProvider.loadPermisos: Es admin: $_isAdmin');
+    }
 
     // Si es admin, no necesita cargar permisos (tiene todos)
     if (_isAdmin) {
-      debugPrint('PermisosProvider.loadPermisos: Usuario es admin, no carga permisos');
+      if (_logVerbosePermisos) {
+        debugPrint('PermisosProvider.loadPermisos: Usuario es admin, no carga permisos');
+      }
       _permisos = null; // Admins no tienen restricciones
       _isLoading = false;
       _hasAttemptedLoad = true;
@@ -95,55 +122,105 @@ class PermisosProvider with ChangeNotifier {
       return;
     }
 
-    debugPrint('PermisosProvider.loadPermisos: Llamando al endpoint mis-permisos');
+    if (_logVerbosePermisos) {
+      debugPrint('PermisosProvider.loadPermisos: Llamando al endpoint mis-permisos');
+    }
     _isLoading = true;
     _errorMessage = null;
-    _hasAttemptedLoad = true; // Marcar como intentado antes de la llamada
+    _hasAttemptedLoad = true;
     notifyListeners();
 
     try {
-      final permisos = await PermisosService.getMisPermisos();
-      debugPrint('PermisosProvider.loadPermisos: Permisos recibidos correctamente');
-      debugPrint('PermisosProvider.loadPermisos: productosVisualizar = ${permisos.productosVisualizar}');
-      debugPrint('PermisosProvider.loadPermisos: canViewProductos = ${permisos.productosVisualizar || _isAdmin}');
-      _permisos = permisos;
+      // Timeout 10s (incluye getToken + request) para no quedar colgado
+      final permisosResult = await PermisosService.getMisPermisos()
+          .timeout(const Duration(seconds: 10));
+      _permisos = permisosResult;
+      _errorMessage = null;
       _isLoading = false;
       notifyListeners();
-      debugPrint('PermisosProvider.loadPermisos: Permisos cargados y notificados. canViewProductos getter = $canViewProductos');
+      if (_logVerbosePermisos) {
+        debugPrint('PermisosProvider.loadPermisos: Permisos cargados correctamente');
+      }
     } catch (e) {
-      debugPrint('PermisosProvider.loadPermisos: Error al cargar permisos: $e');
-      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      if (_logVerbosePermisos) {
+        debugPrint('PermisosProvider.loadPermisos: Error al cargar permisos: $e');
+      }
+      _permisos = null;
       _isLoading = false;
-      // No resetear _hasAttemptedLoad en caso de error para evitar bucles
-      // Si es un error de rate limiting, crear permisos por defecto (todos false)
-      if (_errorMessage != null && 
-          (_errorMessage!.contains('quota exceeded') || _errorMessage!.contains('Demasiadas solicitudes'))) {
-        debugPrint('PermisosService: Rate limit alcanzado, usando permisos por defecto');
-        // Crear permisos por defecto (todos desactivados) para evitar que la app se rompa
-        _permisos = PermisosEmpleado(
-          id: 0,
-          userId: authProvider.currentUser?.id ?? 0,
-          productosVisualizar: false,
-          productosCrear: false,
-          productosEditar: false,
-          productosEliminar: false,
-          clientesVisualizar: false,
-          clientesCrear: false,
-          clientesEditar: false,
-          clientesEliminar: false,
-          ventasVisualizar: false,
-          ventasCrear: false,
-          ventasEditarBorrador: false,
-          ventasEliminar: false,
-          cuentaCorrienteVisualizar: false,
-          cuentaCorrienteRegistrarAbonos: false,
-          entregasVisualizar: false,
-          entregasActualizarEstado: false,
-        );
-        _errorMessage = null; // Limpiar el error ya que tenemos permisos por defecto
+      if (e is TimeoutException) {
+        _errorMessage = 'La carga tardó demasiado. Comprueba la conexión y toca Reintentar.';
+        _hasAttemptedLoad = true;
+      } else {
+        final msg = e.toString().replaceAll('Exception: ', '');
+        if (msg.contains('quota exceeded') || msg.contains('Demasiadas solicitudes')) {
+          _permisos = _permisosPorDefecto(authProvider);
+          _errorMessage = null;
+        } else {
+          _errorMessage = msg.isEmpty ? 'Error al cargar permisos.' : msg;
+        }
       }
       notifyListeners();
     }
+  }
+
+  /// Para mostrar pantalla de error con Reintentar: permite volver a intentar la carga.
+  Future<void> reintentarPermisos(AuthProvider authProvider) async {
+    _errorMessage = null;
+    _hasAttemptedLoad = false;
+    _isLoading = false;
+    notifyListeners();
+    await loadPermisos(authProvider, forceReload: true);
+  }
+
+  /// Si la carga se quedó colgada (ej. 12s), marcar como error para mostrar Reintentar.
+  void marcarTimeoutPermisos() {
+    if (_isLoading) {
+      if (_logVerbosePermisos) {
+        debugPrint('PermisosProvider.marcarTimeoutPermisos: Carga colgada, mostrando Reintentar');
+      }
+      _isLoading = false;
+      _errorMessage = 'La carga tardó demasiado. Toca Reintentar.';
+      notifyListeners();
+    }
+  }
+
+  /// Tras timeout, permitir entrar al menú con permisos por defecto (sin bloquear la app).
+  void marcarTimeoutYPermitirEntrada(AuthProvider authProvider) {
+    if (_logVerbosePermisos) {
+      debugPrint('PermisosProvider.marcarTimeoutYPermitirEntrada: Timeout, entrando con permisos por defecto');
+    }
+    _isLoading = false;
+    _hasAttemptedLoad = true;
+    _errorMessage = null;
+    _permisos ??= _permisosPorDefecto(authProvider);
+    notifyListeners();
+  }
+
+  static PermisosEmpleado _permisosPorDefecto(AuthProvider authProvider) {
+    return PermisosEmpleado(
+      id: 0,
+      userId: authProvider.currentUser?.id ?? 0,
+      productosVisualizar: false,
+      productosCrear: false,
+      productosEditar: false,
+      productosEliminar: false,
+      clientesVisualizar: false,
+      clientesCrear: false,
+      clientesEditar: false,
+      clientesEliminar: false,
+      ventasVisualizar: false,
+      ventasCrear: false,
+      ventasEditarBorrador: false,
+      ventasEliminar: false,
+      cuentaCorrienteVisualizar: false,
+      cuentaCorrienteRegistrarAbonos: false,
+      entregasVisualizar: false,
+      entregasActualizarEstado: false,
+      comprasVisualizar: false,
+      comprasCrear: false,
+      comprasEditar: false,
+      comprasEliminar: false,
+    );
   }
 
   void clearPermisos() {

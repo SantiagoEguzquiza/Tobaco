@@ -21,6 +21,7 @@ import 'package:tobaco/Models/Ventas.dart';
 import 'package:tobaco/Theme/confirmAnimation.dart';
 import 'package:tobaco/Screens/Ventas/resumenVenta_screen.dart';
 import 'package:tobaco/Services/Auth_Service/auth_service.dart';
+import 'package:tobaco/Helpers/api_handler.dart';
 
 // Nuevos widgets modulares
 import 'NuevaVenta/widgets/widgets.dart';
@@ -50,6 +51,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
   Timer? _debounceTimer;
   String? errorMessage;
   VentaBorradorProvider? _borradorProvider; // Referencia al provider
+  ClienteProvider? _clienteProvider; // Referencia al provider global de clientes
   bool _ventaCompletada = false; // Flag para saber si la venta se completó
 
   @override
@@ -74,6 +76,13 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
     // Guardar referencia al provider de manera segura
     _borradorProvider ??=
         Provider.of<VentaBorradorProvider>(context, listen: false);
+
+    // Suscribirse (una sola vez) al ClienteProvider global para reaccionar a
+    // cambios de deuda (ej. tras un abono en cuenta corriente).
+    if (_clienteProvider == null) {
+      _clienteProvider = Provider.of<ClienteProvider>(context, listen: false);
+      _clienteProvider!.addListener(_onClientesActualizados);
+    }
   }
 
   @override
@@ -83,11 +92,50 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
     for (final controller in _cantidadControllers.values) {
       controller.dispose();
     }
+    _clienteProvider?.removeListener(_onClientesActualizados);
     // Solo guardar borrador si la venta NO se completó
     if (!_ventaCompletada) {
       _guardarBorradorAlSalir();
     }
     super.dispose();
+  }
+
+  /// Handler que se dispara cuando el ClienteProvider global cambia
+  /// (ej. se registró un abono o se actualizó la deuda de un cliente).
+  /// Actualiza `clientesIniciales` y re-filtra si hay búsqueda activa.
+  void _onClientesActualizados() {
+    if (!mounted) return;
+    final provider = _clienteProvider;
+    if (provider == null) return;
+
+    final clientesProvider = provider.clientes;
+    if (clientesProvider.isEmpty) return;
+
+    final nuevosClientes = clientesProvider
+        .where((c) => !_esConsumidorFinal(c))
+        .toList()
+      ..sort((a, b) =>
+          a.nombre.toLowerCase().compareTo(b.nombre.toLowerCase()));
+
+    // Sincroniza también el cliente seleccionado (si corresponde) para que la
+    // deuda mostrada en el resumen quede actualizada.
+    Cliente? clienteSeleccionadoActualizado;
+    if (clienteSeleccionado?.id != null) {
+      final match = clientesProvider
+          .where((c) => c.id == clienteSeleccionado!.id)
+          .toList();
+      if (match.isNotEmpty) clienteSeleccionadoActualizado = match.first;
+    }
+
+    setState(() {
+      clientesIniciales = nuevosClientes;
+      if (clienteSeleccionadoActualizado != null) {
+        clienteSeleccionado = clienteSeleccionadoActualizado;
+      }
+      if (_searchController.text.trim().isNotEmpty) {
+        _filtrarClientesIniciales(_searchController.text);
+      }
+    });
   }
 
   /// Verifica si existe un borrador y muestra diálogo para recuperarlo
@@ -115,15 +163,28 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
       context: context,
       barrierDismissible: false,
       builder: (BuildContext context) {
+        final screenHeight = MediaQuery.of(context).size.height;
+        final maxHeight = (screenHeight * 0.85).clamp(280.0, 500.0);
         return Dialog(
+          backgroundColor: Theme.of(context).brightness == Brightness.dark
+              ? const Color(0xFF1E1E1E)
+              : Colors.white,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(12),
           ),
           elevation: 8,
           child: Container(
-            constraints: const BoxConstraints(maxWidth: 380),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
+            constraints: BoxConstraints(maxWidth: 380, maxHeight: maxHeight),
+            decoration: BoxDecoration(
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? const Color(0xFF1E1E1E)
+                  : Colors.white,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Column(
+              mainAxisSize: MainAxisSize.max,
               children: [
                 // Header con gradiente
                 Container(
@@ -137,10 +198,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(12),
-                      topRight: Radius.circular(12),
-                    ),
+                    borderRadius: BorderRadius.zero,
                   ),
                   child: Row(
                     children: [
@@ -172,7 +230,17 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                   ),
                 ),
 
-                // Contenido
+                // Contenido scrollable para evitar overflow en pantallas pequeñas
+                Flexible(
+                  child: Container(
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? const Color(0xFF1E1E1E)
+                        : Colors.white,
+                    child: SingleChildScrollView(
+                      child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
                 Padding(
                   padding: const EdgeInsets.all(20),
                   child: Column(
@@ -253,80 +321,134 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                   ),
                 ),
 
-                // Botones
+                // Botones: en ancho chico se apilan para evitar texto truncado
                 Padding(
                   padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: () => Navigator.of(context).pop('nueva'),
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            side: BorderSide(
-                              color: Theme.of(context).brightness ==
-                                      Brightness.dark
-                                  ? Colors.grey.shade600
-                                  : Colors.grey.shade400,
-                              width: 1.5,
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final stackButtons = constraints.maxWidth < 280;
+
+                      Widget nuevaVentaButton() {
+                        return SizedBox(
+                          height: 52,
+                          child: OutlinedButton(
+                            onPressed: () => Navigator.of(context).pop('nueva'),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 16,
+                                horizontal: 12,
+                              ),
+                              side: BorderSide(
+                                color: Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.grey.shade600
+                                    : Colors.grey.shade400,
+                                width: 1.5,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
                             ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.add_circle_outline,
+                                  size: 18,
+                                  color: Theme.of(context).brightness == Brightness.dark
+                                      ? Colors.grey.shade400
+                                      : Colors.grey.shade700,
+                                ),
+                                const SizedBox(width: 6),
+                                Flexible(
+                                  child: Text(
+                                    'Nueva Venta',
+                                    maxLines: 1,
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                      color: Theme.of(context).brightness == Brightness.dark
+                                          ? Colors.grey.shade300
+                                          : Colors.grey.shade700,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          icon: Icon(
-                            Icons.add_circle_outline,
-                            size: 20,
-                            color:
-                                Theme.of(context).brightness == Brightness.dark
-                                    ? Colors.grey.shade400
-                                    : Colors.grey.shade700,
-                          ),
-                          label: Text(
-                            'Nueva Venta',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: Theme.of(context).brightness ==
-                                      Brightness.dark
-                                  ? Colors.grey.shade300
-                                  : Colors.grey.shade700,
+                        );
+                      }
+
+                      Widget continuarButton() {
+                        return SizedBox(
+                          height: 52,
+                          child: ElevatedButton(
+                            onPressed: () => Navigator.of(context).pop('continuar'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.primaryColor,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 16,
+                                horizontal: 12,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              elevation: 2,
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(Icons.play_arrow, color: Colors.white, size: 18),
+                                const SizedBox(width: 6),
+                                const Flexible(
+                                  child: Text(
+                                    'Continuar',
+                                    maxLines: 1,
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
+                        );
+                      }
+
+                      if (stackButtons) {
+                        return Column(
+                          children: [
+                            SizedBox(width: double.infinity, child: nuevaVentaButton()),
+                            const SizedBox(height: 12),
+                            SizedBox(width: double.infinity, child: continuarButton()),
+                          ],
+                        );
+                      }
+
+                      return SizedBox(
+                        height: 52,
+                        child: Row(
+                          children: [
+                            Expanded(child: nuevaVentaButton()),
+                            const SizedBox(width: 12),
+                            Expanded(child: continuarButton()),
+                          ],
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: () =>
-                              Navigator.of(context).pop('continuar'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.primaryColor,
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            elevation: 2,
-                          ),
-                          icon: const Icon(
-                            Icons.play_arrow,
-                            color: Colors.white,
-                            size: 20,
-                          ),
-                          label: const Text(
-                            'Continuar',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
+                      );
+                    },
+                  ),
+                ),
+                      ],
+                    ),
+                    ),
                   ),
                 ),
               ],
+            ),
             ),
           ),
         );
@@ -504,111 +626,11 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
     }
   }
 
-  /// Muestra diálogo preguntando cómo quiere asignar la venta
-  /// Retorna: 'a_mi', 'automatico', o null (cancelar)
-  Future<String?> _mostrarDialogoAsignacionVenta(BuildContext context) async {
-    return await showDialog<String>(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
-          title: Row(
-            children: [
-              Icon(Icons.assignment, color: AppTheme.primaryColor),
-              const SizedBox(width: 12),
-              const Text('Asignar Venta'),
-            ],
-          ),
-          content: const Text(
-            '¿Cómo deseas asignar esta venta?\n\n'
-            '• Asignarme a mí: La venta aparecerá en "Mis Entregas"\n'
-            '• Asignar automáticamente: Se asignará a otro repartidor disponible\n'
-            '• Cancelar: Dejar sin asignar',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(null),
-              style: TextButton.styleFrom(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              child: const Text('Cancelar'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop('automatico'),
-              style: TextButton.styleFrom(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              child: Text(
-                'Automático',
-                style: TextStyle(color: AppTheme.primaryColor),
-              ),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.of(context).pop('a_mi'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primaryColor,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              child: const Text('Asignarme a mí'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  /// Asigna la venta automáticamente a otro repartidor
-  Future<void> _asignarVentaAutomaticamente(
-    VentasProvider ventasProvider,
-    int ventaId,
-    int usuarioIdExcluir,
-  ) async {
-    try {
-      final resultado = await ventasProvider.asignarVentaAutomaticamente(
-          ventaId, usuarioIdExcluir);
-
-      if (mounted) {
-        if (resultado['asignada'] == true) {
-          final nombreAsignado = resultado['usuarioAsignadoNombre'];
-          await AppDialogs.showSuccessDialog(
-            context: context,
-            title: 'Venta Asignada',
-            message: nombreAsignado != null
-                ? 'La venta se asignó automáticamente a: $nombreAsignado'
-                : 'Venta asignada exitosamente',
-            buttonText: 'Entendido',
-          );
-        } else {
-          AppTheme.showSnackBar(
-            context,
-            AppTheme.errorSnackBar(
-                resultado['message'] ?? 'No se pudo asignar la venta'),
-          );
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        AppTheme.showSnackBar(
-          context,
-          AppTheme.errorSnackBar('Error al asignar la venta: $e'),
-        );
-      }
-    }
-  }
-
   void _onSearchChanged() {
     _debounceTimer?.cancel();
-    _debounceTimer = Timer(const Duration(milliseconds: 500), () {
-      buscarClientes(_searchController.text);
+    _debounceTimer = Timer(const Duration(milliseconds: 300), () {
+      // Solo filtrar localmente, sin consultar API
+      buscarClientesLocal(_searchController.text);
     });
   }
 
@@ -622,23 +644,63 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
       isLoadingClientesIniciales = true;
     });
 
+    final provider = Provider.of<ClienteProvider>(context, listen: false);
+
+    // 1) Mostrar de inmediato lo que haya en caché (rápido, sin red).
     try {
-      final provider = Provider.of<ClienteProvider>(context, listen: false);
-      final clientes = await provider.obtenerClientes();
-      if (mounted) {
+      final clientesCache = await provider.obtenerClientesDelCache();
+      if (mounted && clientesCache.isNotEmpty) {
         setState(() {
-          // Filtrar "Consumidor Final" de la lista inicial
-          clientesIniciales = clientes.where((c) => !_esConsumidorFinal(c)).toList();
+          clientesIniciales = clientesCache
+              .where((c) => !_esConsumidorFinal(c))
+              .toList()
+            ..sort((a, b) =>
+                a.nombre.toLowerCase().compareTo(b.nombre.toLowerCase()));
           isLoadingClientesIniciales = false;
         });
+        debugPrint(
+            '✅ Clientes iniciales cargados desde caché: ${clientesIniciales.length}');
       }
     } catch (e) {
-      if (mounted) {
+      debugPrint('⚠️ Error leyendo caché de clientes: $e');
+    }
+
+    // 2) Revalidar SIEMPRE contra el servidor en background para captar
+    // cambios hechos por otros usuarios (o desde otras pantallas). El
+    // provider global grabará caché y notificará: el listener actualiza la
+    // UI automáticamente.
+    unawaited(_refrescarClientesEnBackground(provider));
+  }
+
+  /// Trae la lista de clientes desde el servidor sin bloquear la UI.
+  /// El provider global grabará caché y notificará: el listener
+  /// `_onClientesActualizados` se encarga de refrescar la UI.
+  /// Solo maneja aquí el fallback de apagar el spinner si todavía no había
+  /// datos al momento del error.
+  Future<void> _refrescarClientesEnBackground(
+      ClienteProvider provider) async {
+    try {
+      final clientes = await provider.obtenerClientes();
+      if (!mounted) return;
+
+      // Apagar spinner si no estaba apagado (caché estaba vacío y recién
+      // llega el servidor). El listener ya habrá puesto la lista.
+      if (isLoadingClientesIniciales) {
         setState(() {
           isLoadingClientesIniciales = false;
         });
       }
-      debugPrint('Error al cargar clientes iniciales: $e');
+
+      debugPrint(
+          '✅ Clientes revalidados desde servidor: ${clientes.length}');
+    } catch (e) {
+      debugPrint('⚠️ Error revalidando clientes en background: $e');
+      if (!mounted) return;
+      if (clientesIniciales.isEmpty) {
+        setState(() {
+          isLoadingClientesIniciales = false;
+        });
+      }
     }
   }
 
@@ -670,155 +732,155 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
   }
 
   Widget _buildClientesList(List<Cliente> clientes, String title) {
-    bool tieneDeuda(String? deuda) {
-      if (deuda == null) return false;
-      return double.tryParse(deuda.toString()) != null &&
-          double.parse(deuda.toString()) > 0;
+    double parsearDeuda(String? deuda) {
+      if (deuda == null || deuda.isEmpty) return 0.0;
+      if (deuda.contains(',')) {
+        final partes = deuda.split(',');
+        if (partes.length == 2) {
+          final parteEntera = partes[0];
+          final parteDecimal = partes[1].length >= 2
+              ? partes[1].substring(0, 2)
+              : partes[1].padRight(2, '0');
+          return double.tryParse('$parteEntera.$parteDecimal') ?? 0.0;
+        }
+      }
+      return double.tryParse(deuda.replaceAll(',', '')) ?? 0.0;
     }
 
-    // Filtrar "Consumidor Final" de la lista antes de mostrar
-    final clientesFiltrados = clientes.where((c) => !_esConsumidorFinal(c)).toList();
+    final clientesFiltrados =
+        clientes.where((c) => !_esConsumidorFinal(c)).toList();
+    final isCompact = AppTheme.isCompactVentasButton(context);
 
     return ListView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      padding: const EdgeInsets.all(16),
-      itemCount: clientesFiltrados.length.clamp(0, 4),
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      itemCount: clientesFiltrados.length,
       itemBuilder: (context, index) {
         final cliente = clientesFiltrados[index];
-        final tieneDeudaCliente = tieneDeuda(cliente.deuda);
+        return _buildClienteSeleccionCard(cliente, parsearDeuda, isCompact);
+      },
+    );
+  }
 
-        return Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          decoration: BoxDecoration(
-            color: Theme.of(context).brightness == Brightness.dark
-                ? const Color(0xFF1A1A1A)
-                : Colors.white,
-            borderRadius: BorderRadius.circular(8),
-            boxShadow: [
-              BoxShadow(
-                color: Theme.of(context).brightness == Brightness.dark
-                    ? Colors.black.withOpacity(0.3)
-                    : Colors.black.withOpacity(0.05),
-                blurRadius: 10,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              borderRadius: BorderRadius.circular(8),
-              onTap: () => _seleccionarCliente(cliente),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  children: [
-                    // Indicador lateral
-                    Container(
-                      width: 4,
-                      height: 60,
-                      decoration: BoxDecoration(
-                        color: tieneDeudaCliente
-                            ? Colors.red
-                            : AppTheme.primaryColor,
-                        borderRadius: BorderRadius.circular(8),
+  Widget _buildClienteSeleccionCard(
+      Cliente cliente, double Function(String?) parsearDeuda, bool isCompact) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final deuda = parsearDeuda(cliente.deuda);
+    final tieneDeuda = deuda > 0;
+    final direccion = cliente.direccion?.trim() ?? '';
+    final tieneDireccion = direccion.isNotEmpty;
+
+    final Color estadoColor =
+        tieneDeuda ? Colors.red.shade600 : AppTheme.primaryColor;
+    final IconData estadoIcon =
+        tieneDeuda ? Icons.person_off_outlined : Icons.person_outline;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Material(
+        color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+        borderRadius: BorderRadius.circular(AppTheme.borderRadiusCards),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(AppTheme.borderRadiusCards),
+          onTap: () => _seleccionarCliente(cliente),
+          child: Container(
+            padding: EdgeInsets.all(isCompact ? 14 : 16),
+            decoration: BoxDecoration(
+              borderRadius:
+                  BorderRadius.circular(AppTheme.borderRadiusCards),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: EdgeInsets.all(isCompact ? 8 : 10),
+                  decoration: BoxDecoration(
+                    color: estadoColor.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    estadoIcon,
+                    color: estadoColor,
+                    size: isCompact ? 24 : 28,
+                  ),
+                ),
+                SizedBox(width: isCompact ? 12 : 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        cliente.nombre,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: isCompact ? 15 : 16,
+                          color: isDark ? Colors.white : Colors.black87,
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 16),
-
-                    // Información del cliente
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      SizedBox(height: isCompact ? 2 : 4),
+                      Row(
                         children: [
-                          Text(
-                            cliente.nombre,
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Theme.of(context).brightness ==
-                                      Brightness.dark
-                                  ? Colors.white
-                                  : AppTheme.textColor,
+                          Icon(
+                            Icons.location_on_outlined,
+                            size: isCompact ? 13 : 14,
+                            color: isDark
+                                ? Colors.grey.shade400
+                                : Colors.grey.shade600,
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              tieneDireccion ? direccion : 'Sin dirección',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: isCompact ? 13 : 14,
+                                fontStyle: tieneDireccion
+                                    ? FontStyle.normal
+                                    : FontStyle.italic,
+                                color: isDark
+                                    ? Colors.grey.shade400
+                                    : Colors.grey.shade600,
+                              ),
                             ),
                           ),
-                          if (cliente.direccion != null &&
-                              cliente.direccion!.isNotEmpty) ...[
-                            const SizedBox(height: 4),
-                            Row(
-                              children: [
-                                Icon(
-                                  Icons.location_on_outlined,
-                                  size: 16,
-                                  color: Theme.of(context).brightness ==
-                                          Brightness.dark
-                                      ? Colors.grey.shade400
-                                      : Colors.grey.shade600,
-                                ),
-                                const SizedBox(width: 4),
-                                Expanded(
-                                  child: Text(
-                                    cliente.direccion!,
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      color: Theme.of(context).brightness ==
-                                              Brightness.dark
-                                          ? Colors.grey.shade400
-                                          : Colors.grey.shade600,
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                          if (tieneDeudaCliente) ...[
-                            const SizedBox(height: 2),
-                            Row(
-                              children: [
-                                Icon(
-                                  Icons.attach_money,
-                                  size: 16,
-                                  color: Theme.of(context).brightness ==
-                                          Brightness.dark
-                                      ? Colors.grey.shade400
-                                      : Colors.grey.shade600,
-                                ),
-                                const SizedBox(width: 4),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 6,
-                                    vertical: 2,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: Colors.red.shade50,
-                                    borderRadius: BorderRadius.circular(8),
-                                    border:
-                                        Border.all(color: Colors.red.shade200),
-                                  ),
-                                  child: Text(
-                                    'Deuda: \$${cliente.deuda}',
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      color: Colors.red.shade600,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
                         ],
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
+                if (tieneDeuda) ...[
+                  SizedBox(width: isCompact ? 8 : 10),
+                  Text(
+                    '\$${deuda.toStringAsFixed(2)}',
+                    style: TextStyle(
+                      fontSize: isCompact ? 14 : 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.red.shade600,
+                    ),
+                  ),
+                ],
+                SizedBox(width: isCompact ? 2 : 4),
+                Icon(
+                  Icons.chevron_right,
+                  color: Colors.grey,
+                  size: isCompact ? 20 : 24,
+                ),
+              ],
             ),
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 
@@ -874,6 +936,73 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  /// Estado vacío cuando no hay clientes (igual que listado de clientes).
+  /// El usuario puede deslizar hacia abajo para refrescar.
+  Widget _buildEmptyStateConRefresh() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).brightness == Brightness.dark
+            ? const Color(0xFF1A1A1A)
+            : Colors.white,
+        borderRadius: BorderRadius.circular(15),
+        boxShadow: [
+          BoxShadow(
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.black.withOpacity(0.3)
+                : Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Center(
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: EdgeInsets.fromLTRB(
+            24,
+            24,
+            24,
+            24 + MediaQuery.of(context).padding.bottom + 24,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.people_outline,
+                size: 80,
+                color: Colors.grey.shade400,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'No hay clientes registrados',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.grey.shade300
+                      : Colors.grey.shade700,
+                  fontWeight: FontWeight.w500,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Crea tu primer cliente para comenzar',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.grey.shade400
+                      : Colors.grey.shade600,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -1008,7 +1137,9 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                           left: 16,
                           right: _productosSeleccionadosExpandidos
                                   .contains(producto.id)
-                              ? 150
+                              ? (AppTheme.isCompactVentasButton(context)
+                                  ? 128
+                                  : 150)
                               : 16,
                           top: 10,
                           bottom: 10,
@@ -1051,6 +1182,41 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                                               : Colors.grey.shade600,
                                         ),
                                       ),
+                                      if (producto.stock != null) ...[
+                                        const SizedBox(width: 8),
+                                        Flexible(
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Expanded(
+                                                child: _maxCantidadDisponible(producto) == 0
+                                                    ? Text(
+                                                        'Sin stock',
+                                                        style: TextStyle(
+                                                          fontSize: 12,
+                                                          fontWeight: FontWeight.w600,
+                                                          color: Colors.orange.shade700,
+                                                        ),
+                                                        overflow: TextOverflow.ellipsis,
+                                                      )
+                                                    : Text(
+                                                        'Disponible: ${_maxCantidadDisponible(producto).toStringAsFixed(0)}',
+                                                        style: TextStyle(
+                                                          fontSize: 12,
+                                                          color: isDark
+                                                              ? Colors.grey.shade500
+                                                              : Colors.grey.shade600,
+                                                        ),
+                                                        overflow: TextOverflow.ellipsis,
+                                                      ),
+                                              ),
+                                              if (producto.stock != null && producto.cantidad > _maxCantidadDisponible(producto))
+                                                Icon(Icons.warning_amber_rounded,
+                                                    size: 14, color: Colors.orange.shade700),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
                                     ],
                                   ),
                                 ],
@@ -1117,25 +1283,46 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                                 .contains(producto.id)
                             ? Container(
                                 color: backgroundColor,
-                                padding: const EdgeInsets.only(
-                                  right: 8,
-                                  left: 8,
+                                padding: EdgeInsets.only(
+                                  right: AppTheme.isCompactVentasButton(context)
+                                      ? 4
+                                      : 8,
+                                  left: AppTheme.isCompactVentasButton(context)
+                                      ? 4
+                                      : 8,
                                 ),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     IconButton(
-                                      icon: const Icon(
+                                      icon: Icon(
                                         Icons.remove_circle_outline,
                                         color: Colors.red,
-                                        size: 24,
+                                        size: AppTheme.isCompactVentasButton(context)
+                                            ? 22
+                                            : 24,
+                                      ),
+                                      padding: EdgeInsets.zero,
+                                      constraints: BoxConstraints(
+                                        minWidth:
+                                            AppTheme.isCompactVentasButton(context)
+                                                ? 32
+                                                : 40,
+                                        minHeight:
+                                            AppTheme.isCompactVentasButton(context)
+                                                ? 32
+                                                : 40,
                                       ),
                                       onPressed: () => _ajustarCantidadProducto(
                                           producto, -1),
                                     ),
                                     Container(
-                                      width: 55,
-                                      height: 36,
+                                      width: AppTheme.isCompactVentasButton(context)
+                                          ? 46
+                                          : 55,
+                                      height: AppTheme.isCompactVentasButton(context)
+                                          ? 34
+                                          : 36,
                                       decoration: BoxDecoration(
                                         border: Border.all(
                                           color: isDark
@@ -1147,46 +1334,72 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                                             ? const Color(0xFF1F1F1F)
                                             : Colors.white,
                                       ),
-                                      child: TextField(
-                                        controller:
-                                            _getCantidadController(producto),
-                                        textAlign: TextAlign.center,
-                                        keyboardType:
-                                            const TextInputType.numberWithOptions(
-                                                decimal: true),
-                                        inputFormatters: [
-                                          FilteringTextInputFormatter.allow(
-                                            RegExp(r'^\d{0,3}(\.\d{0,1})?$'),
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.circular(8),
+                                        child: TextField(
+                                          controller:
+                                              _getCantidadController(producto),
+                                          textAlign: TextAlign.center,
+                                          keyboardType:
+                                              const TextInputType.numberWithOptions(
+                                                  decimal: true),
+                                          inputFormatters: [
+                                            FilteringTextInputFormatter.allow(
+                                              RegExp(r'^\d{0,3}(\.\d{0,1})?$'),
+                                            ),
+                                          ],
+                                          decoration: const InputDecoration(
+                                            border: InputBorder.none,
+                                            enabledBorder: InputBorder.none,
+                                            focusedBorder: InputBorder.none,
+                                            disabledBorder: InputBorder.none,
+                                            errorBorder: InputBorder.none,
+                                            focusedErrorBorder: InputBorder.none,
+                                            isCollapsed: true,
+                                            contentPadding: EdgeInsets.symmetric(
+                                                vertical: 6),
                                           ),
-                                        ],
-                                        decoration: const InputDecoration(
-                                          border: InputBorder.none,
-                                          contentPadding:
-                                              EdgeInsets.symmetric(vertical: 6),
+                                          style: TextStyle(
+                                            fontSize:
+                                                AppTheme.isCompactVentasButton(
+                                                        context)
+                                                    ? 14
+                                                    : 15,
+                                            fontWeight: FontWeight.bold,
+                                            color: isDark
+                                                ? Colors.white
+                                                : Colors.black,
+                                          ),
+                                          onChanged: (value) {
+                                            final nuevaCantidad =
+                                                double.tryParse(value) ?? 0;
+                                            _actualizarCantidadProductoSeleccionado(
+                                              producto,
+                                              nuevaCantidad,
+                                              actualizarController: false,
+                                            );
+                                          },
                                         ),
-                                        style: TextStyle(
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.bold,
-                                          color: isDark
-                                              ? Colors.white
-                                              : Colors.black,
-                                        ),
-                                        onChanged: (value) {
-                                          final nuevaCantidad =
-                                              double.tryParse(value) ?? 0;
-                                          _actualizarCantidadProductoSeleccionado(
-                                            producto,
-                                            nuevaCantidad,
-                                            actualizarController: false,
-                                          );
-                                        },
                                       ),
                                     ),
                                     IconButton(
-                                      icon: const Icon(
+                                      icon: Icon(
                                         Icons.add_circle_outline,
                                         color: Colors.green,
-                                        size: 24,
+                                        size: AppTheme.isCompactVentasButton(context)
+                                            ? 22
+                                            : 24,
+                                      ),
+                                      padding: EdgeInsets.zero,
+                                      constraints: BoxConstraints(
+                                        minWidth:
+                                            AppTheme.isCompactVentasButton(context)
+                                                ? 32
+                                                : 40,
+                                        minHeight:
+                                            AppTheme.isCompactVentasButton(context)
+                                                ? 32
+                                                : 40,
                                       ),
                                       onPressed: () => _ajustarCantidadProducto(
                                           producto, 1),
@@ -1287,10 +1500,19 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
         : cantidad.toStringAsFixed(1);
   }
 
+  /// Stock efectivo: stock del producto menos lo ya reservado en ventas offline pendientes de sync.
+  double _maxCantidadDisponible(ProductoSeleccionado producto) {
+    final reservada = context.read<VentasProvider>().cantidadReservadaOfflinePorProducto;
+    final base = producto.stock ?? 999.0;
+    final reservado = reservada[producto.id] ?? 0.0;
+    return (base - reservado).clamp(0.0, double.infinity);
+  }
+
   void _ajustarCantidadProducto(
       ProductoSeleccionado producto, double delta) {
+    final maxDisp = _maxCantidadDisponible(producto);
     final nuevaCantidad =
-        (producto.cantidad + delta).clamp(0, 999).toDouble();
+        (producto.cantidad + delta).clamp(0.0, maxDisp).toDouble();
     _actualizarCantidadProductoSeleccionado(producto, nuevaCantidad);
   }
 
@@ -1299,7 +1521,8 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
     double nuevaCantidad, {
     bool actualizarController = true,
   }) {
-    final cantidadNormalizada = nuevaCantidad.clamp(0, 999).toDouble();
+    final maxCantidad = _maxCantidadDisponible(producto);
+    final cantidadNormalizada = nuevaCantidad.clamp(0.0, maxCantidad).toDouble();
     setState(() {
       producto.cantidad = cantidadNormalizada;
     });
@@ -1353,6 +1576,101 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
     }
   }
 
+  /// Busca clientes solo en la lista local (caché), sin consultar API
+  void buscarClientesLocal(String query) {
+    final trimmedQuery = query.trim();
+
+    if (trimmedQuery.isEmpty) {
+      setState(() {
+        clientesFiltrados = [];
+        errorMessage = null;
+        isLoadingClientes = false;
+      });
+      return;
+    }
+
+    // Filtrar desde clientesIniciales (que ya están cargados del caché)
+    final queryLower = trimmedQuery.toLowerCase();
+    final filtrados = clientesIniciales.where((cliente) {
+      // Excluir "Consumidor Final" de los resultados de búsqueda
+      if (_esConsumidorFinal(cliente)) return false;
+      return cliente.nombre.toLowerCase().contains(queryLower);
+    }).toList();
+
+    // Ordenar: primero los que empiezan con el query, luego los que lo contienen
+    // Cada grupo ordenado alfabéticamente
+    final empiezaCon = filtrados
+        .where((c) => c.nombre.toLowerCase().startsWith(queryLower))
+        .toList();
+    empiezaCon.sort((a, b) => a.nombre.toLowerCase().compareTo(b.nombre.toLowerCase()));
+    
+    final contiene = filtrados
+        .where((c) => !c.nombre.toLowerCase().startsWith(queryLower))
+        .toList();
+    contiene.sort((a, b) => a.nombre.toLowerCase().compareTo(b.nombre.toLowerCase()));
+
+    setState(() {
+      clientesFiltrados = [...empiezaCon, ...contiene];
+      isLoadingClientes = false;
+      
+      if (clientesFiltrados.isEmpty) {
+        errorMessage = 'No se encontraron clientes con ese nombre';
+      } else {
+        errorMessage = null;
+      }
+    });
+  }
+
+  /// Actualiza la lista de clientes desde el servidor (para pull-to-refresh)
+  Future<void> actualizarClientesDesdeServidor() async {
+    setState(() {
+      isLoadingClientesIniciales = true;
+    });
+
+    try {
+      final provider = Provider.of<ClienteProvider>(context, listen: false);
+      
+      // Obtener clientes del servidor y actualizar caché
+      final clientes = await provider.obtenerClientes();
+      
+      if (mounted) {
+        setState(() {
+          // Filtrar "Consumidor Final" de la lista inicial
+          clientesIniciales = clientes.where((c) => !_esConsumidorFinal(c)).toList();
+          
+          // Ordenar alfabéticamente por nombre
+          clientesIniciales.sort((a, b) => a.nombre.toLowerCase().compareTo(b.nombre.toLowerCase()));
+          
+          isLoadingClientesIniciales = false;
+          
+          // Si hay una búsqueda activa, re-filtrar con los nuevos datos
+          if (_searchController.text.trim().isNotEmpty) {
+            buscarClientesLocal(_searchController.text);
+          }
+        });
+        
+        debugPrint('✅ Clientes actualizados desde servidor: ${clientesIniciales.length}');
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          isLoadingClientesIniciales = false;
+        });
+      }
+      debugPrint('Error al actualizar clientes desde servidor: $e');
+
+      if (!mounted) return;
+      if (Apihandler.isConnectionError(e)) {
+        await Apihandler.handleConnectionError(context, e);
+      } else {
+        AppTheme.showSnackBar(
+          context,
+          AppTheme.errorSnackBar('Error al actualizar clientes'),
+        );
+      }
+    }
+  }
+
   void buscarClientes(String query) async {
     final trimmedQuery = query.trim();
     final provider = Provider.of<ClienteProvider>(context, listen: false);
@@ -1369,6 +1687,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
     setState(() {
       isLoadingClientes = true;
       errorMessage = null;
+      // Mantener los resultados locales mientras se carga del servidor
     });
 
     try {
@@ -1381,21 +1700,35 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
 
       setState(() {
         // Filtrar "Consumidor Final" de los resultados de búsqueda
-        clientesFiltrados = clientes.where((c) => !_esConsumidorFinal(c)).toList();
-        isLoadingClientes = false;
-        if (clientesFiltrados.isEmpty) {
+        final resultadosServidor = clientes.where((c) => !_esConsumidorFinal(c)).toList();
+        
+        // Solo actualizar si hay resultados o si el filtro local también está vacío
+        if (resultadosServidor.isNotEmpty) {
+          clientesFiltrados = resultadosServidor;
+          errorMessage = null;
+        } else if (clientesFiltrados.isEmpty) {
+          // Solo mostrar error si tampoco hay resultados locales
           errorMessage = 'No se encontraron clientes con ese nombre';
         }
+        // Si hay resultados locales y el servidor devuelve vacío, mantener los locales
+        
+        isLoadingClientes = false;
       });
     } catch (e) {
       debugPrint('Error al buscar clientes: $e');
       if (!mounted) return;
 
-      setState(() {
-        clientesFiltrados = [];
-        isLoadingClientes = false;
-        errorMessage = 'Error al buscar clientes. Intente nuevamente.';
-      });
+      setState(() => isLoadingClientes = false);
+
+      if (Apihandler.isConnectionError(e)) {
+        await Apihandler.handleConnectionError(context, e);
+      } else {
+        setState(() {
+          if (clientesFiltrados.isEmpty) {
+            errorMessage = 'Error al buscar clientes. Mostrando resultados locales.';
+          }
+        });
+      }
     }
   }
 
@@ -1500,6 +1833,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
       isProcessingVenta = true;
     });
 
+    bool procesandoOverlayCerrado = false;
     try {
       final productos = productosSeleccionados
           .map((ps) {
@@ -1544,7 +1878,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
       if (totalCalculado <= 0) {
         debugPrint('⚠️ ERROR CRÍTICO: El total de la venta es 0 o negativo. Recalculando...');
         // Recalcular sumando los precios finales calculados de cada producto
-        final totalRecalculado = productos.fold(0.0, (sum, p) => sum + (p.precioFinalCalculado ?? 0.0));
+        final totalRecalculado = productos.fold(0.0, (sum, p) => sum + p.precioFinalCalculado);
         debugPrint('💰 Total recalculado: $totalRecalculado');
         totalFinal = totalRecalculado > 0 ? totalRecalculado : totalCalculado;
       }
@@ -1554,7 +1888,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
         cliente: clienteSeleccionado!,
         ventasProductos: productos,
         total: totalFinal,
-        fecha: DateTime.now().toLocal(), // Asegurar que sea hora local
+        fecha: DateTime.now().toUtc(), // Enviar siempre en UTC al backend
       );
 
       final Ventas? ventaConPagos = await Navigator.push(
@@ -1580,98 +1914,91 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
         ventaConPagos.usuarioCreador = usuario;
       }
 
-      // Crear la venta
+      // Crear la venta - el provider se encarga de intentar servidor primero y fallback a local
       final ventasProvider =
           Provider.of<VentasProvider>(context, listen: false);
+
+      // Mostrar overlay de "Procesando..." de inmediato para que el usuario vea feedback
+      if (mounted) {
+        showDialog<void>(
+          context: context,
+          barrierDismissible: false,
+          barrierColor: Colors.black54,
+          builder: (ctx) => PopScope(
+            canPop: false,
+            child: Center(
+              child: Material(
+                color: Colors.transparent,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
+                  decoration: BoxDecoration(
+                    color: Theme.of(ctx).dialogBackgroundColor,
+                    borderRadius: BorderRadius.circular(AppTheme.borderRadiusMainButtons),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.2),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SizedBox(
+                        width: 36,
+                        height: 36,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: AppTheme.primaryColor,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Procesando venta...',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                          color: Theme.of(ctx).brightness == Brightness.dark
+                              ? Colors.white
+                              : Colors.black87,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      }
+
       final result = await ventasProvider.crearVenta(ventaConPagos);
+
+      // Cerrar overlay de "Procesando..." antes de mostrar la animación verde
+      if (mounted) {
+        Navigator.of(context).pop();
+        procesandoOverlayCerrado = true;
+      }
 
       if (mounted) {
         if (!result['success']) {
           throw Exception(result['message']);
         }
 
-        // Mostrar mensaje offline INMEDIATAMENTE (sin Future.microtask que añade delay)
-        if (result['isOffline']) {
-          if (mounted) {
-            await AppDialogs.showWarningDialog(
-              context: context,
-              title: 'Venta guardada offline',
-              message:
-                  'Venta guardada localmente. Se sincronizará cuando haya conexión.',
-              buttonText: 'Entendido',
-              icon: Icons.cloud_off,
-            );
-          }
+        // Propagar el aumento de deuda al ClienteProvider global si la venta
+        // incluyó pagos con cuenta corriente. Esto mantiene la lista de
+        // clientes y el caché al día sin esperar al refresh periódico.
+        final montoCC =
+            VentasProvider.calcularMontoCuentaCorriente(ventaConPagos);
+        if (montoCC > 0 && ventaConPagos.clienteId > 0) {
+          final clienteProviderGlobal =
+              Provider.of<ClienteProvider>(context, listen: false);
+          clienteProviderGlobal.ajustarDeudaCliente(
+              ventaConPagos.clienteId, montoCC);
         }
 
-        // Manejar asignación según el tipo de empleado (en background si es offline)
-        if (!result['isOffline'] && result['ventaId'] != null) {
-          final usuario = await AuthService.getCurrentUser();
-          if (usuario != null && (usuario.isEmployee || usuario.isAdmin)) {
-            // Verificar si la venta ya fue asignada automáticamente por el backend
-            if (result['asignada'] == true && result['usuarioAsignadoId'] != null) {
-              // La venta fue asignada automáticamente (solo para RepartidorVendedor)
-              final nombreAsignado = result['usuarioAsignadoNombre'];
-              if (mounted) {
-                AppTheme.showSnackBar(
-                  context,
-                  AppTheme.successSnackBar(
-                    nombreAsignado != null
-                        ? 'Venta asignada a $nombreAsignado exitosamente'
-                        : 'Venta asignada exitosamente'),
-                );
-              }
-            } else if (usuario.isAdmin) {
-              // Admin: la venta se crea y queda pendiente de asignación
-              // No mostrar ningún diálogo, el admin puede asignarla después desde la pantalla de asignar ventas
-            } else if (usuario.esVendedor) {
-              // Vendedor: mostrar diálogo informativo de que la venta queda pendiente de asignación
-              if (mounted) {
-                await AppDialogs.showWarningDialog(
-                  context: context,
-                  title: 'Venta Creada',
-                  message:
-                      'Queda la venta pendiente de asignación para repartir o entregar',
-                  buttonText: 'Entendido',
-                  icon: Icons.info_outline,
-                );
-              }
-            } else {
-              // Para Repartidor, mostrar el diálogo de asignación
-              final opcionAsignacion =
-                  await _mostrarDialogoAsignacionVenta(context);
-
-              if (mounted) {
-                try {
-                  if (opcionAsignacion == 'a_mi') {
-                    // Asignarse a sí mismo
-                    await ventasProvider.asignarVenta(
-                        result['ventaId'], usuario.id);
-                    if (mounted) {
-                      AppTheme.showSnackBar(
-                        context,
-                        AppTheme.successSnackBar(
-                            'Venta asignada a ti exitosamente'),
-                      );
-                    }
-                  } else if (opcionAsignacion == 'automatico') {
-                    // Asignar automáticamente a otro repartidor
-                    await _asignarVentaAutomaticamente(
-                        ventasProvider, result['ventaId'], usuario.id);
-                  }
-                  // Si es 'cancelar' o null, no hacer nada
-                } catch (e) {
-                  if (mounted) {
-                    AppTheme.showSnackBar(
-                      context,
-                      AppTheme.errorSnackBar('Error al asignar la venta: $e'),
-                    );
-                  }
-                }
-              }
-            }
-          }
-        }
+        // Mensaje offline: se muestra en ResumenVentaScreen como "Guardada localmente"
 
         // Marcar que la venta se completó exitosamente
         _ventaCompletada = true;
@@ -1679,7 +2006,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
         // Eliminar borrador después de confirmar la venta (de forma segura) en background
         _eliminarBorradorDeFormaSegura();
 
-        // Mostrar animación de confirmación después del diálogo
+        // Mostrar animación de confirmación
         showGeneralDialog(
           context: context,
           barrierDismissible: false,
@@ -1711,6 +2038,12 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
         );
       }
     } catch (e) {
+      // Cerrar overlay "Procesando..." solo si aún está abierto (excepción durante la API)
+      if (mounted && !procesandoOverlayCerrado) {
+        try {
+          Navigator.of(context).pop();
+        } catch (_) {}
+      }
       setState(() {
         isProcessingVenta = false;
       });
@@ -1754,7 +2087,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
             // Header fijo cuando se está buscando
             if (isSearching)
               Padding(
-                padding: const EdgeInsets.all(16.0),
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
                 child: HeaderConBuscador(
                   leadingIcon: Icons.people,
                   title: 'Buscar Cliente',
@@ -1762,13 +2095,14 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                   controller: _searchController,
                   hintText: 'Buscar por nombre...',
                   onChanged: (value) {
+                    // Solo actualizar estado local, el debounce se maneja en _onSearchChanged
                     setState(() {
                       if (value.trim().isEmpty) {
                         clientesFiltrados = [];
                         errorMessage = null;
                       } else {
                         _filtrarClientesIniciales(value);
-                        buscarClientes(value);
+                        // NO llamar buscarClientes aquí, se hace en _onSearchChanged con debounce
                       }
                     });
                   },
@@ -1788,75 +2122,70 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                   return isSearching && isLoadingClientesIniciales
                       ? Column(
                           children: [
+                            SizedBox(
+                              height:
+                                  AppTheme.isCompactVentasButton(context) ? 8 : 16,
+                            ),
                             Padding(
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 16),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  ElevatedButton.icon(
-                                    onPressed: () async {
-                                      final cliente = await VentasProvider
-                                          .obtenerOCrearConsumidorFinal(
-                                        context: context,
-                                        clientesIniciales: clientesIniciales,
-                                        clientesFiltrados: clientesFiltrados,
-                                        clienteSeleccionado:
-                                            clienteSeleccionado,
-                                      );
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                              ),
+                              child: SizedBox(
+                                width: double.infinity,
+                                child: ElevatedButton.icon(
+                                  onPressed: () async {
+                                    final cliente = await VentasProvider
+                                        .obtenerOCrearConsumidorFinal(
+                                      context: context,
+                                      clientesIniciales: clientesIniciales,
+                                      clientesFiltrados: clientesFiltrados,
+                                      clienteSeleccionado:
+                                          clienteSeleccionado,
+                                    );
 
-                                      if (cliente != null) {
-                                        final clienteProvider =
-                                            Provider.of<ClienteProvider>(
-                                                context,
-                                                listen: false);
-                                        final clientesActualizados =
-                                            clienteProvider.clientes;
+                                    if (cliente != null) {
+                                      _seleccionarCliente(cliente);
 
-                                        _seleccionarCliente(cliente);
-
-                                        if (!mounted) return;
-                                        setState(() {
-                                          clientesFiltrados = [];
-                                          errorMessage = null;
-
-                                          if (clientesActualizados.isNotEmpty) {
-                                            // Filtrar "Consumidor Final" de la lista
-                                            clientesIniciales = List.from(
-                                              clientesActualizados.where((c) => !_esConsumidorFinal(c))
-                                            );
-                                          } else if (!clientesIniciales
-                                              .any((c) => c.id == cliente.id)) {
-                                            clientesIniciales = [
-                                              cliente,
-                                              ...clientesIniciales
-                                            ];
-                                          }
-                                        });
-                                      }
-                                    },
-                                    style: AppTheme.elevatedButtonStyle(
-                                        AppTheme.primaryColor),
-                                    icon: const Icon(
-                                      Icons.person_outline,
-                                      color: Colors.white,
+                                      if (!mounted) return;
+                                      setState(() {
+                                        clientesFiltrados = [];
+                                        errorMessage = null;
+                                      });
+                                    }
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppTheme.primaryColor,
+                                    foregroundColor: Colors.white,
+                                    padding: AppTheme.ventasButtonPadding(context),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
                                     ),
-                                    label: const Text(
-                                      'Consumidor Final',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w600,
-                                      ),
+                                    elevation: 2,
+                                  ),
+                                  icon: Icon(
+                                    Icons.person_outline,
+                                    color: Colors.white,
+                                    size: AppTheme.ventasButtonIconSize(context),
+                                  ),
+                                  label: Text(
+                                    'Consumidor Final',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: AppTheme.ventasButtonFontSize(context),
+                                      fontWeight: FontWeight.w600,
                                     ),
                                   ),
-                                ],
+                                ),
                               ),
+                            ),
+                            SizedBox(
+                              height:
+                                  AppTheme.isCompactVentasButton(context) ? 8 : 16,
                             ),
                             // Estado de carga que ocupa el espacio restante
                             Expanded(
                               child: Padding(
-                                padding: const EdgeInsets.all(16.0),
+                                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                                 child: Container(
                                   decoration: BoxDecoration(
                                     color: Theme.of(context).brightness ==
@@ -1901,91 +2230,90 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                             ),
                           ],
                         )
-                      : SingleChildScrollView(
-                          child: Column(
-                            children: [
-                              if (isSearching) ...[
+                      : RefreshIndicator(
+                          color: AppTheme.primaryColor,
+                          onRefresh: actualizarClientesDesdeServidor,
+                          child: SingleChildScrollView(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            keyboardDismissBehavior:
+                                ScrollViewKeyboardDismissBehavior.onDrag,
+                            child: Column(
+                              children: [
+                                if (isSearching) ...[
+                                SizedBox(
+                                  height:
+                                      AppTheme.isCompactVentasButton(context) ? 8 : 16,
+                                ),
                                 Padding(
                                   padding: const EdgeInsets.symmetric(
-                                      horizontal: 16.0, vertical: 8.0),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.stretch,
-                                    children: [
-                                      ElevatedButton.icon(
-                                        onPressed: () async {
-                                          final cliente = await VentasProvider
-                                              .obtenerOCrearConsumidorFinal(
-                                            context: context,
-                                            clientesIniciales:
-                                                clientesIniciales,
-                                            clientesFiltrados:
-                                                clientesFiltrados,
-                                            clienteSeleccionado:
-                                                clienteSeleccionado,
-                                          );
+                                    horizontal: 16.0,
+                                  ),
+                                  child: SizedBox(
+                                    width: double.infinity,
+                                    child: ElevatedButton.icon(
+                                      onPressed: () async {
+                                        final cliente = await VentasProvider
+                                            .obtenerOCrearConsumidorFinal(
+                                          context: context,
+                                          clientesIniciales:
+                                              clientesIniciales,
+                                          clientesFiltrados:
+                                              clientesFiltrados,
+                                          clienteSeleccionado:
+                                              clienteSeleccionado,
+                                        );
 
-                                          if (cliente != null) {
-                                            final clienteProvider =
-                                                Provider.of<ClienteProvider>(
-                                                    context,
-                                                    listen: false);
-                                            final clientesActualizados =
-                                                clienteProvider.clientes;
+                                        if (cliente != null) {
+                                          _seleccionarCliente(cliente);
 
-                                            _seleccionarCliente(cliente);
-
-                                            if (!mounted) return;
-                                            setState(() {
-                                              clientesFiltrados = [];
-                                              errorMessage = null;
-
-                                              if (clientesActualizados
-                                                  .isNotEmpty) {
-                                                // Filtrar "Consumidor Final" de la lista
-                                                clientesIniciales = List.from(
-                                                  clientesActualizados.where((c) => !_esConsumidorFinal(c))
-                                                );
-                                              } else if (!clientesIniciales.any(
-                                                  (c) => c.id == cliente.id)) {
-                                                clientesIniciales = [
-                                                  cliente,
-                                                  ...clientesIniciales
-                                                ];
-                                              }
-                                            });
-                                          }
-                                        },
-                                        style: AppTheme.elevatedButtonStyle(
-                                            AppTheme.primaryColor),
-                                        icon: const Icon(
-                                          Icons.person_outline,
-                                          color: Colors.white,
+                                          if (!mounted) return;
+                                          setState(() {
+                                            clientesFiltrados = [];
+                                            errorMessage = null;
+                                          });
+                                        }
+                                      },
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: AppTheme.primaryColor,
+                                        foregroundColor: Colors.white,
+                                        padding: AppTheme.ventasButtonPadding(context),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(8),
                                         ),
-                                        label: const Text(
-                                          'Consumidor Final',
-                                          style: TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w600,
-                                          ),
+                                        elevation: 2,
+                                      ),
+                                      icon: Icon(
+                                        Icons.person_outline,
+                                        color: Colors.white,
+                                        size: AppTheme.ventasButtonIconSize(context),
+                                      ),
+                                      label: Text(
+                                        'Consumidor Final',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: AppTheme.ventasButtonFontSize(context),
+                                          fontWeight: FontWeight.w600,
                                         ),
                                       ),
-                                    ],
+                                    ),
                                   ),
+                                ),
+                                SizedBox(
+                                  height:
+                                      AppTheme.isCompactVentasButton(context) ? 8 : 16,
                                 ),
 
                                 // Lista de clientes
                                 if (clientesFiltrados.isNotEmpty)
                                   Padding(
-                                    padding: const EdgeInsets.only(top: 8.0),
+                                    padding: EdgeInsets.zero,
                                     child: _buildClientesList(
                                         clientesFiltrados, 'Clientes encontrados'),
                                   )
                                 else if (clientesIniciales.isNotEmpty &&
                                     _searchController.text.trim().isEmpty)
                                   Padding(
-                                    padding: const EdgeInsets.only(top: 8.0),
+                                    padding: EdgeInsets.zero,
                                     child: _buildClientesList(
                                         clientesIniciales, 'Clientes disponibles'),
                                   )
@@ -1999,25 +2327,32 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                                         'No se encontraron clientes con ese nombre'),
                                   )
                                 else
+                                  // Estado vacío con altura mínima para centrar verticalmente
                                   Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 16.0, vertical: 16.0),
-                                    child: _buildEmptyState(
-                                        'No hay clientes disponibles'),
+                                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                                    child: SizedBox(
+                                      height: (MediaQuery.of(context).size.height - 320).clamp(200.0, 400.0),
+                                      child: _buildEmptyStateConRefresh(),
+                                    ),
                                   ),
                               ] else ...[
                                 // Cliente seleccionado
                                 ClienteSection(
                                   cliente: clienteSeleccionado!,
                                   onCambiarCliente: cambiarCliente,
+                                  onAbonoRegistrado: () {
+                                    if (mounted) setState(() {});
+                                  },
                                 ),
 
                                 // Botón agregar productos
                                 AgregarProductoButton(
                                   onPressed: () async {
                                     try {
-                                      final resultado = await Navigator.push(
-                                        context,
+                                      final resultado = await Navigator.of(
+                                              context,
+                                              rootNavigator: true)
+                                          .push(
                                         MaterialPageRoute(
                                           builder: (context) =>
                                               SeleccionarProductosScreen(
@@ -2052,12 +2387,18 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
                                 if (productosSeleccionados.isNotEmpty) ...[
                                   _buildProductsSection(),
                                 ] else ...[
-                                  const EmptyStateVenta(),
+                                  SizedBox(
+                                    height: (constraints.maxHeight - 220).clamp(200.0, 900.0),
+                                    child: Center(
+                                      child: const EmptyStateVenta(),
+                                    ),
+                                  ),
                                 ],
                               ],
                             ],
                           ),
-                        );
+                        ),
+                      );
                 },
               ),
             ),

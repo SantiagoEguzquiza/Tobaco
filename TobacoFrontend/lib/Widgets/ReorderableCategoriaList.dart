@@ -7,10 +7,12 @@ import 'package:tobaco/Theme/app_theme.dart';
 
 class ReorderableCategoriaList extends StatefulWidget {
   final Function(Categoria)? onDelete;
-  
+  final Function(Categoria)? onEdit;
+
   const ReorderableCategoriaList({
     super.key,
     this.onDelete,
+    this.onEdit,
   });
 
   @override
@@ -106,19 +108,32 @@ class _ReorderableCategoriaListState extends State<ReorderableCategoriaList> {
         }
 
         if (_categorias.isEmpty) {
-          return const Center(
-            child: Text(
-              'No hay categorías disponibles',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey,
+          final isSmallPhone = MediaQuery.of(context).size.height < 600 ||
+              MediaQuery.of(context).size.width < 360;
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Text(
+                'No hay categorías disponibles',
+                style: TextStyle(
+                  fontSize: isSmallPhone ? 15 : 16,
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.grey.shade400
+                      : Colors.grey.shade600,
+                  fontWeight: FontWeight.w500,
+                ),
+                textAlign: TextAlign.center,
               ),
             ),
           );
         }
 
         return ReorderableListView.builder(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: EdgeInsets.only(
+            top: 8,
+            bottom: MediaQuery.of(context).padding.bottom + 24,
+          ),
           itemCount: _categorias.length,
           onReorder: _onReorder, 
           proxyDecorator: (child, index, animation) {
@@ -236,7 +251,32 @@ class _ReorderableCategoriaListState extends State<ReorderableCategoriaList> {
                   return Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      if (widget.onDelete != null && permisosProvider.canDeleteProductos)
+                      if (widget.onEdit != null &&
+                          permisosProvider.canEditProductos &&
+                          categoria.id != null)
+                        Container(
+                          decoration: BoxDecoration(
+                            color: AppTheme.primaryColor.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: IconButton(
+                            icon: Icon(
+                              Icons.edit_outlined,
+                              color: AppTheme.primaryColor,
+                              size: 20,
+                            ),
+                            onPressed: () {
+                              widget.onEdit!(categoria);
+                            },
+                            tooltip: 'Editar',
+                          ),
+                        ),
+                      if (widget.onEdit != null &&
+                          permisosProvider.canEditProductos &&
+                          categoria.id != null)
+                        const SizedBox(width: 8),
+                      if (widget.onDelete != null &&
+                          permisosProvider.canDeleteProductos)
                         Container(
                           decoration: BoxDecoration(
                             color: Colors.red.withOpacity(0.1),
@@ -254,7 +294,9 @@ class _ReorderableCategoriaListState extends State<ReorderableCategoriaList> {
                             tooltip: 'Eliminar',
                           ),
                         ),
-                      const SizedBox(width: 8),
+                      if (widget.onDelete != null &&
+                          permisosProvider.canDeleteProductos)
+                        const SizedBox(width: 8),
                       Icon(
                         Icons.drag_handle,
                         color: Theme.of(context).brightness == Brightness.dark

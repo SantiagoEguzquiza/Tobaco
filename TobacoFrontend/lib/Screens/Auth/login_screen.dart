@@ -1,9 +1,14 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../Services/Auth_Service/auth_provider.dart';
 import '../../Services/Permisos_Service/permisos_provider.dart';
+import '../../Services/Productos_Service/productos_provider.dart';
+import '../../Services/Clientes_Service/clientes_provider.dart';
+import '../../Services/Categoria_Service/categoria_provider.dart';
+import '../../Services/Ventas_Service/ventas_provider.dart';
 import '../../Helpers/api_handler.dart';
-import '../menu_screen.dart';
+import 'recuperar_contrasena_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -12,26 +17,27 @@ class LoginScreen extends StatefulWidget {
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
+enum _LoginLayoutSize { compact, medium, regular }
+
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _userNameController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _passwordFocusNode = FocusNode();
   bool _obscurePassword = true;
 
   @override
   void initState() {
     super.initState();
-    
-    // Check if user is already authenticated
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _checkExistingAuth();
-    });
+    // No necesitamos verificar autenticación aquí porque AuthWrapper ya lo hace
+    // Esto evita doble inicialización y bucles
   }
 
   @override
   void dispose() {
     _userNameController.dispose();
     _passwordController.dispose();
+    _passwordFocusNode.dispose();
     super.dispose();
   }
 
@@ -77,30 +83,59 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         ),
           child: SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(20.0),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  minHeight: MediaQuery.of(context).size.height - 
-                            MediaQuery.of(context).padding.top - 
-                            MediaQuery.of(context).padding.bottom - 40,
-                ),
-                child: IntrinsicHeight(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      // Header Section
-                      _buildHeader(),
-                      
-                      // Login Form
-                      _buildLoginForm(),
-                      
-                      // Footer
-                      _buildFooter(),
-                    ],
-                  ),
-                ),
-              ),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final height = MediaQuery.sizeOf(context).height;
+                final width = MediaQuery.sizeOf(context).width;
+                final layoutSize = height < 700 || width < 360
+                    ? _LoginLayoutSize.compact
+                    : (height < 840 || width < 430)
+                        ? _LoginLayoutSize.medium
+                        : _LoginLayoutSize.regular;
+                final isCompactLayout = layoutSize == _LoginLayoutSize.compact;
+                final padding = switch (layoutSize) {
+                  _LoginLayoutSize.compact => 20.0,
+                  _LoginLayoutSize.medium => 22.0,
+                  _LoginLayoutSize.regular => 24.0,
+                };
+                final sectionSpacing = switch (layoutSize) {
+                  _LoginLayoutSize.compact => 24.0,
+                  _LoginLayoutSize.medium => 18.0,
+                  _LoginLayoutSize.regular => 32.0,
+                };
+                final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
+                final bottomPadding = padding + MediaQuery.paddingOf(context).bottom + 24;
+                final content = Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _buildHeader(layoutSize),
+                    SizedBox(height: sectionSpacing),
+                    _buildLoginForm(layoutSize),
+                    SizedBox(height: sectionSpacing),
+                    _buildFooter(layoutSize),
+                  ],
+                );
+                return Column(
+                  children: [
+                    Expanded(
+                      child: Center(
+                        child: SingleChildScrollView(
+                          physics: isCompactLayout || keyboardHeight > 0
+                              ? const AlwaysScrollableScrollPhysics()
+                              : const NeverScrollableScrollPhysics(),
+                          padding: EdgeInsets.fromLTRB(
+                            padding,
+                            padding,
+                            padding,
+                            bottomPadding + keyboardHeight,
+                          ),
+                          child: content,
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
           ),
         ),
@@ -108,13 +143,34 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(_LoginLayoutSize layoutSize) {
+    final isCompactLayout = layoutSize == _LoginLayoutSize.compact;
+    final logoSize = switch (layoutSize) {
+      _LoginLayoutSize.compact => 64.0,
+      _LoginLayoutSize.medium => 78.0,
+      _LoginLayoutSize.regular => 100.0,
+    };
+    final iconSize = switch (layoutSize) {
+      _LoginLayoutSize.compact => 32.0,
+      _LoginLayoutSize.medium => 38.0,
+      _LoginLayoutSize.regular => 50.0,
+    };
+    final titleSize = switch (layoutSize) {
+      _LoginLayoutSize.compact => 24.0,
+      _LoginLayoutSize.medium => 27.0,
+      _LoginLayoutSize.regular => 32.0,
+    };
+    final subtitleSize = switch (layoutSize) {
+      _LoginLayoutSize.compact => 13.0,
+      _LoginLayoutSize.medium => 14.5,
+      _LoginLayoutSize.regular => 16.0,
+    };
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        // Logo Container with gradient
         Container(
-          width: 100,
-          height: 100,
+          width: logoSize,
+          height: logoSize,
           decoration: BoxDecoration(
             gradient: const LinearGradient(
               begin: Alignment.topLeft,
@@ -124,56 +180,79 @@ class _LoginScreenState extends State<LoginScreen> {
                 Color(0xFF2E7D32),
               ],
             ),
-            borderRadius: BorderRadius.circular(50),
+            borderRadius: BorderRadius.circular(logoSize / 2),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(0.4),
-                blurRadius: 20,
-                offset: const Offset(0, 10),
+                blurRadius: isCompactLayout ? 12 : (layoutSize == _LoginLayoutSize.medium ? 16 : 20),
+                offset: Offset(0, isCompactLayout ? 6 : (layoutSize == _LoginLayoutSize.medium ? 8 : 10)),
               ),
               BoxShadow(
                 color: const Color(0xFF4CAF50).withOpacity(0.3),
-                blurRadius: 15,
-                offset: const Offset(0, 5),
+                blurRadius: isCompactLayout ? 8 : (layoutSize == _LoginLayoutSize.medium ? 11 : 15),
+                offset: Offset(0, isCompactLayout ? 3 : (layoutSize == _LoginLayoutSize.medium ? 4 : 5)),
               ),
             ],
           ),
-          child: const Icon(
+          child: Icon(
             Icons.business_center,
-            size: 50,
+            size: iconSize,
             color: Colors.white,
           ),
         ),
-        const SizedBox(height: 20),
-        
-        // App Title
+        SizedBox(
+          height: switch (layoutSize) {
+            _LoginLayoutSize.compact => 20.0,
+            _LoginLayoutSize.medium => 18.0,
+            _LoginLayoutSize.regular => 24.0,
+          },
+        ),
         Text(
           'PROVIDER',
           style: TextStyle(
-            fontSize: 32,
+            fontSize: titleSize,
             fontWeight: FontWeight.bold,
             color: Theme.of(context).brightness == Brightness.dark
                 ? Colors.white
                 : const Color.fromARGB(255, 48, 48, 48),
             fontFamily: 'Raleway',
-            letterSpacing: 2.0,
+            letterSpacing: switch (layoutSize) {
+              _LoginLayoutSize.compact => 1.2,
+              _LoginLayoutSize.medium => 1.5,
+              _LoginLayoutSize.regular => 2.0,
+            },
           ),
         ),
-        const SizedBox(height: 8),
+        SizedBox(
+          height: switch (layoutSize) {
+            _LoginLayoutSize.compact => 10.0,
+            _LoginLayoutSize.medium => 9.0,
+            _LoginLayoutSize.regular => 12.0,
+          },
+        ),
         Text(
           'Sistema de Gestión Comercial',
           style: TextStyle(
-            fontSize: 16,
+            fontSize: subtitleSize,
             color: Theme.of(context).brightness == Brightness.dark
                 ? Colors.grey.shade300
                 : const Color.fromARGB(255, 49, 49, 49),
             fontFamily: 'Raleway',
-            letterSpacing: 1.0,
+            letterSpacing: switch (layoutSize) {
+              _LoginLayoutSize.compact => 0.5,
+              _LoginLayoutSize.medium => 0.7,
+              _LoginLayoutSize.regular => 1.0,
+            },
           ),
+          textAlign: TextAlign.center,
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 8),
         Container(
-          width: 80,
+          width: switch (layoutSize) {
+            _LoginLayoutSize.compact => 56.0,
+            _LoginLayoutSize.medium => 66.0,
+            _LoginLayoutSize.regular => 80.0,
+          },
           height: 3,
           decoration: BoxDecoration(
             gradient: const LinearGradient(
@@ -186,14 +265,61 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Widget _buildLoginForm() {
+  Widget _buildLoginForm(_LoginLayoutSize layoutSize) {
+    final isCompactLayout = layoutSize == _LoginLayoutSize.compact;
+    final formPadding = switch (layoutSize) {
+      _LoginLayoutSize.compact => 18.0,
+      _LoginLayoutSize.medium => 20.0,
+      _LoginLayoutSize.regular => 22.0,
+    };
+    final titleSize = switch (layoutSize) {
+      _LoginLayoutSize.compact => 20.0,
+      _LoginLayoutSize.medium => 22.0,
+      _LoginLayoutSize.regular => 24.0,
+    };
+    final subtitleSize = switch (layoutSize) {
+      _LoginLayoutSize.compact => 13.0,
+      _LoginLayoutSize.medium => 13.5,
+      _LoginLayoutSize.regular => 14.0,
+    };
+    final afterSubtitle = switch (layoutSize) {
+      _LoginLayoutSize.compact => 14.0,
+      _LoginLayoutSize.medium => 14.0,
+      _LoginLayoutSize.regular => 16.0,
+    };
+    final fieldSpacing = switch (layoutSize) {
+      _LoginLayoutSize.compact => 14.0,
+      _LoginLayoutSize.medium => 12.0,
+      _LoginLayoutSize.regular => 16.0,
+    };
+    final afterPassword = switch (layoutSize) {
+      _LoginLayoutSize.compact => 6.0,
+      _LoginLayoutSize.medium => 6.0,
+      _LoginLayoutSize.regular => 8.0,
+    };
+    final beforeButton = switch (layoutSize) {
+      _LoginLayoutSize.compact => 10.0,
+      _LoginLayoutSize.medium => 10.0,
+      _LoginLayoutSize.regular => 12.0,
+    };
+    final buttonHeight = switch (layoutSize) {
+      _LoginLayoutSize.compact => 48.0,
+      _LoginLayoutSize.medium => 50.0,
+      _LoginLayoutSize.regular => 52.0,
+    };
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.all(formPadding),
       decoration: BoxDecoration(
         color: Theme.of(context).brightness == Brightness.dark
             ? const Color(0xFF1A1A1A)
             : Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(
+          switch (layoutSize) {
+            _LoginLayoutSize.compact => 18.0,
+            _LoginLayoutSize.medium => 19.0,
+            _LoginLayoutSize.regular => 20.0,
+          },
+        ),
         boxShadow: [
           BoxShadow(
             color: Theme.of(context).brightness == Brightness.dark
@@ -207,11 +333,12 @@ class _LoginScreenState extends State<LoginScreen> {
       child: Form(
         key: _formKey,
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
             Text(
               'Bienvenido',
               style: TextStyle(
-                fontSize: 24,
+                fontSize: titleSize,
                 fontWeight: FontWeight.bold,
                 color: Theme.of(context).brightness == Brightness.dark
                     ? Colors.white
@@ -219,24 +346,34 @@ class _LoginScreenState extends State<LoginScreen> {
                 fontFamily: 'Raleway',
               ),
             ),
-            const SizedBox(height: 6),
+            SizedBox(
+              height: switch (layoutSize) {
+                _LoginLayoutSize.compact => 6.0,
+                _LoginLayoutSize.medium => 6.0,
+                _LoginLayoutSize.regular => 8.0,
+              },
+            ),
             Text(
               'Inicia sesión para acceder al sistema',
               style: TextStyle(
-                fontSize: 14,
+                fontSize: subtitleSize,
                 color: Theme.of(context).brightness == Brightness.dark
                     ? Colors.grey.shade400
                     : const Color(0xFF666666),
                 fontFamily: 'Raleway',
               ),
+              softWrap: true,
+              overflow: TextOverflow.visible,
             ),
-            const SizedBox(height: 24),
+            SizedBox(height: afterSubtitle),
 
-            // Username Field
             _buildTextField(
               controller: _userNameController,
               label: 'Usuario',
               icon: Icons.person_outline,
+              layoutSize: layoutSize,
+              textInputAction: TextInputAction.next,
+              onFieldSubmitted: () => FocusScope.of(context).requestFocus(_passwordFocusNode),
               validator: (value) {
                 if (value == null || value.isEmpty) {
                   return 'Por favor ingrese su usuario';
@@ -244,14 +381,20 @@ class _LoginScreenState extends State<LoginScreen> {
                 return null;
               },
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: fieldSpacing),
 
-            // Password Field
             _buildTextField(
               controller: _passwordController,
               label: 'Contraseña',
               icon: Icons.lock_outline,
               isPassword: true,
+              layoutSize: layoutSize,
+              focusNode: _passwordFocusNode,
+              textInputAction: TextInputAction.done,
+              onFieldSubmitted: () {
+                final authProvider = context.read<AuthProvider>();
+                if (!authProvider.isLoading) _handleLogin(context, authProvider);
+              },
               validator: (value) {
                 if (value == null || value.isEmpty) {
                   return 'Por favor ingrese su contraseña';
@@ -259,15 +402,50 @@ class _LoginScreenState extends State<LoginScreen> {
                 return null;
               },
             ),
-            const SizedBox(height: 24),
+            SizedBox(height: afterPassword),
+            Center(
+              child: TextButton(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => const RecuperarContrasenaScreen(),
+                    ),
+                  );
+                },
+                style: TextButton.styleFrom(
+                  foregroundColor: const Color(0xFF2E7D32),
+                  padding: EdgeInsets.symmetric(
+                    vertical: isCompactLayout ? 4 : 2,
+                    horizontal: 16,
+                  ),
+                ),
+                child: Text(
+                  '¿Olvidaste tu contraseña?',
+                  style: TextStyle(
+                    fontSize: switch (layoutSize) {
+                      _LoginLayoutSize.compact => 13.0,
+                      _LoginLayoutSize.medium => 13.5,
+                      _LoginLayoutSize.regular => 14.0,
+                    },
+                    fontFamily: 'Raleway',
+                  ),
+                ),
+              ),
+            ),
+            SizedBox(height: beforeButton),
 
             // Error Message
             Consumer<AuthProvider>(
               builder: (context, authProvider, child) {
                 if (authProvider.errorMessage != null) {
                   return Container(
-                    padding: const EdgeInsets.all(16),
-                    margin: const EdgeInsets.only(bottom: 20),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: isCompactLayout ? 8 : 10,
+                    ),
+                    margin: EdgeInsets.only(
+                      bottom: layoutSize == _LoginLayoutSize.medium ? 10 : 12,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.red.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(12),
@@ -307,7 +485,7 @@ class _LoginScreenState extends State<LoginScreen> {
               builder: (context, authProvider, child) {
                 return Container(
                   width: double.infinity,
-                  height: 48,
+                  height: buttonHeight,
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
                       colors: [Color(0xFF2E7D32), Color(0xFF1B5E20)],
@@ -335,31 +513,37 @@ class _LoginScreenState extends State<LoginScreen> {
                       elevation: 0,
                     ),
                     child: authProvider.isLoading
-                        ? const SizedBox(
-                            height: 24,
-                            width: 24,
-                            child: CircularProgressIndicator(
+                        ? SizedBox(
+                          height: isCompactLayout ? 22 : 24,
+                          width: isCompactLayout ? 22 : 24,
+                            child: const CircularProgressIndicator(
                               strokeWidth: 3.0,
                               valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                             ),
                           )
-                        : const Row(
+                        : Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Icon(
                                 Icons.login,
                                 color: Colors.white,
-                                size: 24,
+                                size: isCompactLayout ? 22 : 24,
                               ),
-                              SizedBox(width: 12),
+                              SizedBox(
+                                width: layoutSize == _LoginLayoutSize.medium ? 10 : 12,
+                              ),
                               Text(
                                 'INICIAR SESIÓN',
                                 style: TextStyle(
-                                  fontSize: 18,
+                                  fontSize: switch (layoutSize) {
+                                    _LoginLayoutSize.compact => 16.0,
+                                    _LoginLayoutSize.medium => 17.0,
+                                    _LoginLayoutSize.regular => 18.0,
+                                  },
                                   fontWeight: FontWeight.bold,
                                   color: Colors.white,
                                   fontFamily: 'Raleway',
-                                  letterSpacing: 1.0,
+                                  letterSpacing: isCompactLayout ? 0.8 : 1.0,
                                 ),
                               ),
                             ],
@@ -379,15 +563,43 @@ class _LoginScreenState extends State<LoginScreen> {
     required String label,
     required IconData icon,
     bool isPassword = false,
+    required _LoginLayoutSize layoutSize,
     String? Function(String?)? validator,
+    TextInputAction? textInputAction,
+    FocusNode? focusNode,
+    VoidCallback? onFieldSubmitted,
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+    final fontSize = switch (layoutSize) {
+      _LoginLayoutSize.compact => 15.0,
+      _LoginLayoutSize.medium => 16.0,
+      _LoginLayoutSize.regular => 16.0,
+    };
+    final iconSize = switch (layoutSize) {
+      _LoginLayoutSize.compact => 20.0,
+      _LoginLayoutSize.medium => 22.0,
+      _LoginLayoutSize.regular => 24.0,
+    };
+    final verticalPadding = switch (layoutSize) {
+      _LoginLayoutSize.compact => 12.0,
+      _LoginLayoutSize.medium => 14.0,
+      _LoginLayoutSize.regular => 16.0,
+    };
+    final borderRadius = switch (layoutSize) {
+      _LoginLayoutSize.compact => 12.0,
+      _LoginLayoutSize.medium => 14.0,
+      _LoginLayoutSize.regular => 16.0,
+    };
+
     return TextFormField(
       controller: controller,
+      focusNode: focusNode,
       obscureText: isPassword ? _obscurePassword : false,
+      scrollPadding: const EdgeInsets.only(bottom: 200),
+      textInputAction: textInputAction,
+      onFieldSubmitted: onFieldSubmitted != null ? (_) => onFieldSubmitted() : null,
       style: TextStyle(
-        fontSize: 16,
+        fontSize: fontSize,
         color: isDark ? Colors.white : const Color.fromARGB(255, 0, 0, 0),
         fontFamily: 'Raleway',
       ),
@@ -397,11 +609,16 @@ class _LoginScreenState extends State<LoginScreen> {
           color: isDark ? Colors.grey.shade400 : const Color(0xFF333333),
           fontFamily: 'Raleway',
           fontWeight: FontWeight.w500,
+          fontSize: switch (layoutSize) {
+            _LoginLayoutSize.compact => 14.0,
+            _LoginLayoutSize.medium => 15.0,
+            _LoginLayoutSize.regular => 15.0,
+          },
         ),
         prefixIcon: Icon(
           icon,
           color: isDark ? Colors.grey.shade400 : const Color(0xFF333333),
-          size: 24,
+          size: iconSize,
         ),
         suffixIcon: isPassword
             ? IconButton(
@@ -419,43 +636,48 @@ class _LoginScreenState extends State<LoginScreen> {
         filled: true,
         fillColor: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFF8F9FA),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(borderRadius),
           borderSide: BorderSide(
             color: isDark ? Colors.grey.shade600 : const Color(0xFFE0E0E0),
           ),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(borderRadius),
           borderSide: BorderSide(
             color: isDark ? Colors.grey.shade600 : const Color(0xFFE0E0E0),
           ),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(borderRadius),
           borderSide: BorderSide(
             color: isDark ? Colors.grey.shade400 : const Color(0xFF333333),
             width: 2,
           ),
         ),
         errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(borderRadius),
           borderSide: const BorderSide(color: Colors.red),
         ),
         focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(borderRadius),
           borderSide: const BorderSide(color: Colors.red, width: 2),
         ),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 16,
+        contentPadding: EdgeInsets.symmetric(
+          horizontal: switch (layoutSize) {
+            _LoginLayoutSize.compact => 12.0,
+            _LoginLayoutSize.medium => 14.0,
+            _LoginLayoutSize.regular => 16.0,
+          },
+          vertical: verticalPadding,
         ),
       ),
       validator: validator,
     );
   }
 
-  Widget _buildFooter() {
+  Widget _buildFooter(_LoginLayoutSize layoutSize) {
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
         Text(
           '© 2025 Provider',
@@ -463,18 +685,32 @@ class _LoginScreenState extends State<LoginScreen> {
             color: Theme.of(context).brightness == Brightness.dark
                 ? Colors.grey.shade400
                 : const Color.fromARGB(255, 223, 223, 223),
-            fontSize: 14,
+            fontSize: switch (layoutSize) {
+              _LoginLayoutSize.compact => 12.0,
+              _LoginLayoutSize.medium => 13.0,
+              _LoginLayoutSize.regular => 14.0,
+            },
             fontFamily: 'Raleway',
           ),
         ),
-        const SizedBox(height: 4),
+        SizedBox(
+          height: switch (layoutSize) {
+            _LoginLayoutSize.compact => 6.0,
+            _LoginLayoutSize.medium => 5.0,
+            _LoginLayoutSize.regular => 4.0,
+          },
+        ),
         Text(
           'Sistema de Gestión Comercial',
           style: TextStyle(
             color: Theme.of(context).brightness == Brightness.dark
                 ? Colors.grey.shade500
                 : const Color.fromARGB(255, 255, 255, 255),
-            fontSize: 12,
+            fontSize: switch (layoutSize) {
+              _LoginLayoutSize.compact => 11.0,
+              _LoginLayoutSize.medium => 11.5,
+              _LoginLayoutSize.regular => 12.0,
+            },
             fontFamily: 'Raleway',
           ),
         ),
@@ -482,56 +718,76 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
+  Future<void> _runLoginWithTimeout({
+    required AuthProvider authProvider,
+    required ClienteProvider clientesProvider,
+    required CategoriasProvider categoriasProvider,
+    required ProductoProvider productosProvider,
+    required VentasProvider ventasProvider,
+    required String userName,
+    required String password,
+  }) async {
+    Future<void> doLogin() async {
+      final success = await authProvider.login(userName, password);
+      if (!success) return;
+
+      // Limpiar caché con timeout para no bloquear
+      await Future.any([
+        Future.wait([
+          clientesProvider.clearForNewUser(),
+          categoriasProvider.clearForNewUser(),
+          productosProvider.clearForNewUser(),
+          ventasProvider.clearForNewUser(),
+        ]),
+        Future.delayed(const Duration(seconds: 8), () {}),
+      ]);
+      // Los permisos los carga AuthWrapper exclusivamente para evitar
+      // dos llamadas concurrentes con forceReload que generan race condition.
+    }
+
+    await doLogin().timeout(
+      const Duration(seconds: 30),
+      onTimeout: () {
+        throw TimeoutException(
+          'El inicio de sesión tardó demasiado. Verifica tu conexión e intenta de nuevo.',
+        );
+      },
+    );
+  }
+
   Future<void> _handleLogin(BuildContext context, AuthProvider authProvider) async {
     if (_formKey.currentState!.validate()) {
       authProvider.clearError();
-      
-      // Limpiar permisos antes de iniciar login para asegurar estado limpio
+
+      // Capturar providers antes de cualquier await (el context puede invalidarse tras login)
       final permisosProvider = context.read<PermisosProvider>();
+      final clientesProvider = context.read<ClienteProvider>();
+      final categoriasProvider = context.read<CategoriasProvider>();
+      final productosProvider = context.read<ProductoProvider>();
+      final ventasProvider = context.read<VentasProvider>();
+
       permisosProvider.clearPermisos();
-      
+
       try {
-        final success = await authProvider.login(
-          _userNameController.text.trim(),
-          _passwordController.text,
+        await _runLoginWithTimeout(
+          authProvider: authProvider,
+          clientesProvider: clientesProvider,
+          categoriasProvider: categoriasProvider,
+          productosProvider: productosProvider,
+          ventasProvider: ventasProvider,
+          userName: _userNameController.text.trim(),
+          password: _passwordController.text,
         );
-
-        if (success && mounted) {
-          // Cargar permisos después del login exitoso, forzando recarga
-          await permisosProvider.loadPermisos(authProvider, forceReload: true);
-          
-          // Navigate to main menu using direct navigation instead of named routes
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (context) => const MenuScreen()),
-          );
-        }
       } catch (e) {
-        // Mostrar diálogo de error de servidor si corresponde
-        if (mounted && Apihandler.isConnectionError(e)) {
-          await Apihandler.handleConnectionError(context, e);
+        if (mounted) {
+          authProvider.stopLoading();
+          if (Apihandler.isConnectionError(e) || e is TimeoutException) {
+            await Apihandler.handleConnectionError(context, e);
+          }
+          // authProvider._errorMessage ya fue seteado por AuthProvider.login() antes del rethrow
         }
-        // Los demás errores ya se muestran en la UI del AuthProvider
       }
     }
   }
 
-  Future<void> _checkExistingAuth() async {
-    try {
-      final authProvider = context.read<AuthProvider>();
-      await authProvider.initializeAuth();
-      
-      if (authProvider.isAuthenticated && mounted) {
-        // User is already authenticated, navigate to menu
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const MenuScreen()),
-        );
-      }
-    } catch (e) {
-      // If there's an error checking auth, just stay on login screen
-      // Show server error if needed
-      if (mounted && Apihandler.isConnectionError(e)) {
-        await Apihandler.handleConnectionError(context, e);
-      }
-    }
-  }
 }

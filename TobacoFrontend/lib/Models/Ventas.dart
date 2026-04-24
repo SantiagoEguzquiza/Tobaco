@@ -7,6 +7,8 @@ import 'package:tobaco/Models/EstadoEntrega.dart';
 
 class Ventas {
   int? id;
+  /// Número visible de venta (correlativo por tenant). Usar para tickets, PDFs, listados.
+  int? numeroVenta;
   int clienteId;
   Cliente cliente;
   List<VentasProductos> ventasProductos;
@@ -22,6 +24,7 @@ class Ventas {
 
   Ventas({
     this.id,
+    this.numeroVenta,
     required this.clienteId,
     required this.cliente,
     required this.ventasProductos,
@@ -36,15 +39,23 @@ class Ventas {
     this.estadoEntrega = EstadoEntrega.noEntregada,
   });
 
-  factory Ventas.fromJson(Map<String, dynamic> json) => Ventas(
+  factory Ventas.fromJson(Map<String, dynamic> json) {
+    // El backend ya está guardando la fecha correctamente.
+    // Regla:
+    // - Si la cadena trae zona horaria (UTC, "Z", offset), convertir a local.
+    // - Si NO trae zona (ej: "2026-02-07T15:00:00"), tomarla tal cual como hora local.
+    final fechaParsed = DateTime.parse(json['fecha'] as String);
+    final fechaLocal = fechaParsed.isUtc ? fechaParsed.toLocal() : fechaParsed;
+    return Ventas(
         id: json['id'],
+        numeroVenta: json['numeroVenta'],
         clienteId: json['clienteId'] ?? 0,
         cliente: Cliente.fromJson(json['cliente']),
         ventasProductos: (json['ventaProductos'] as List?)
             ?.map((e) => VentasProductos.fromJson(e))
             .toList() ?? [],
         total: (json['total'] as num?)?.toDouble() ?? 0.0,
-        fecha: DateTime.parse(json['fecha']),
+        fecha: fechaLocal,
         metodoPago: json['metodoPago'] != null
             ? MetodoPago.values[json['metodoPago'] as int]
             : null,
@@ -61,14 +72,19 @@ class Ventas {
             ? EstadoEntregaExtension.fromJson(json['estadoEntrega'])
             : EstadoEntrega.noEntregada,
       );
+  }
+
+  /// Número visible para mostrar al usuario (NumeroVenta si existe, sino Id).
+  int get numeroVisible => numeroVenta ?? id ?? 0;
 
   Map<String, dynamic> toJson() => {
         if (id != null) 'id': id,
+        if (numeroVenta != null) 'numeroVenta': numeroVenta,
         'clienteId': clienteId,
         'cliente': cliente.toJson(),
         'ventaProductos': ventasProductos.map((e) => e.toJson()).toList(),
         'total': total,
-        'fecha': fecha.toIso8601String(),
+        'fecha': fecha.toUtc().toIso8601String(), // Siempre enviar en UTC
         'metodoPago': metodoPago?.index,
         'ventaPagos': pagos?.map((e) => e.toJson()).toList() ?? [],
         'usuarioIdCreador': usuarioIdCreador,
@@ -76,5 +92,26 @@ class Ventas {
         'usuarioIdAsignado': usuarioIdAsignado,
         'usuarioAsignado': usuarioAsignado?.toJson(),
         'estadoEntrega': estadoEntrega.toJson(),
-      };    
+      };
+
+  /// Payload solo con IDs para crear venta; evita enviar entidades anidadas
+  /// que pueden provocar "An error occurred while saving the entity changes" en el backend.
+  Map<String, dynamic> toJsonForCreate() => {
+        'clienteId': clienteId,
+        'ventaProductos': ventasProductos.map((e) => e.toJson()).toList(),
+        'total': total,
+        'fecha': fecha.toUtc().toIso8601String(), // Siempre enviar en UTC
+        if (metodoPago != null) 'metodoPago': metodoPago!.index,
+        'ventaPagos': pagos
+            ?.map((e) => {
+                  'id': 0,
+                  'ventaId': 0,
+                  'metodo': e.metodo.index,
+                  'monto': e.monto,
+                })
+            .toList() ?? [],
+        if (usuarioIdCreador != null) 'usuarioIdCreador': usuarioIdCreador,
+        if (usuarioIdAsignado != null) 'usuarioIdAsignado': usuarioIdAsignado,
+        'estadoEntrega': estadoEntrega.toJson(),
+      };
 }

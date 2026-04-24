@@ -407,8 +407,8 @@ class _TenantsManagementScreenState extends State<TenantsManagementScreen> {
     final descripcionController = TextEditingController();
     final emailController = TextEditingController();
     final telefonoController = TextEditingController();
-    final _formKey = GlobalKey<FormState>();
-    bool _isLoading = false;
+    final formKey = GlobalKey<FormState>();
+    bool isLoading = false;
 
     showDialog(
       context: context,
@@ -486,7 +486,7 @@ class _TenantsManagementScreenState extends State<TenantsManagementScreen> {
                     padding: const EdgeInsets.all(24),
                     child: SingleChildScrollView(
                       child: Form(
-                        key: _formKey,
+                        key: formKey,
                         child: Column(
                           children: [
                             TextFormField(
@@ -648,7 +648,7 @@ class _TenantsManagementScreenState extends State<TenantsManagementScreen> {
                           children: [
                             Expanded(
                               child: OutlinedButton(
-                                onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
+                                onPressed: isLoading ? null : () => Navigator.of(context).pop(),
                                 style: OutlinedButton.styleFrom(
                                   padding: const EdgeInsets.symmetric(vertical: 14),
                                   backgroundColor: isDark 
@@ -679,12 +679,12 @@ class _TenantsManagementScreenState extends State<TenantsManagementScreen> {
                             const SizedBox(width: 12),
                             Expanded(
                               child: ElevatedButton(
-                                onPressed: _isLoading
+                                onPressed: isLoading
                                     ? null
                                     : () async {
-                                        if (_formKey.currentState!.validate()) {
+                                        if (formKey.currentState!.validate()) {
                                           setState(() {
-                                            _isLoading = true;
+                                            isLoading = true;
                                           });
 
                                           final tenant = Tenant(
@@ -715,7 +715,7 @@ class _TenantsManagementScreenState extends State<TenantsManagementScreen> {
                                           } catch (e) {
                                             if (context.mounted) {
                                               setState(() {
-                                                _isLoading = false;
+                                                isLoading = false;
                                               });
                                               AppTheme.showSnackBar(
                                                 context,
@@ -735,7 +735,7 @@ class _TenantsManagementScreenState extends State<TenantsManagementScreen> {
                                   elevation: 0,
                                   shadowColor: AppTheme.primaryColor.withOpacity(0.3),
                                 ),
-                                child: _isLoading
+                                child: isLoading
                                     ? const SizedBox(
                                         width: 20,
                                         height: 20,
@@ -773,8 +773,8 @@ class _TenantsManagementScreenState extends State<TenantsManagementScreen> {
     final descripcionController = TextEditingController(text: tenant.descripcion ?? '');
     final emailController = TextEditingController(text: tenant.email ?? '');
     final telefonoController = TextEditingController(text: tenant.telefono ?? '');
-    final _formKey = GlobalKey<FormState>();
-    bool _isLoading = false;
+    final formKey = GlobalKey<FormState>();
+    bool isLoading = false;
 
     showDialog(
       context: context,
@@ -852,7 +852,7 @@ class _TenantsManagementScreenState extends State<TenantsManagementScreen> {
                     padding: const EdgeInsets.all(24),
                     child: SingleChildScrollView(
                       child: Form(
-                        key: _formKey,
+                        key: formKey,
                         child: Column(
                           children: [
                             TextFormField(
@@ -1013,7 +1013,7 @@ class _TenantsManagementScreenState extends State<TenantsManagementScreen> {
                           children: [
                             Expanded(
                               child: OutlinedButton(
-                                onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
+                                onPressed: isLoading ? null : () => Navigator.of(context).pop(),
                                 style: OutlinedButton.styleFrom(
                                   padding: const EdgeInsets.symmetric(vertical: 14),
                                   backgroundColor: isDark 
@@ -1044,12 +1044,12 @@ class _TenantsManagementScreenState extends State<TenantsManagementScreen> {
                             const SizedBox(width: 12),
                             Expanded(
                               child: ElevatedButton(
-                                onPressed: _isLoading
+                                onPressed: isLoading
                                     ? null
                                     : () async {
-                                        if (_formKey.currentState!.validate()) {
+                                        if (formKey.currentState!.validate()) {
                                           setState(() {
-                                            _isLoading = true;
+                                            isLoading = true;
                                           });
 
                                           final tenantActualizado = Tenant(
@@ -1084,7 +1084,7 @@ class _TenantsManagementScreenState extends State<TenantsManagementScreen> {
                                           } catch (e) {
                                             if (context.mounted) {
                                               setState(() {
-                                                _isLoading = false;
+                                                isLoading = false;
                                               });
                                               AppTheme.showSnackBar(
                                                 context,
@@ -1104,7 +1104,7 @@ class _TenantsManagementScreenState extends State<TenantsManagementScreen> {
                                   elevation: 0,
                                   shadowColor: AppTheme.primaryColor.withOpacity(0.3),
                                 ),
-                                child: _isLoading
+                                child: isLoading
                                     ? const SizedBox(
                                         width: 20,
                                         height: 20,

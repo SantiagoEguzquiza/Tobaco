@@ -22,6 +22,7 @@ import 'package:tobaco/Services/Sync/simple_sync_service.dart';
 import 'package:tobaco/Services/Ventas_Service/ventas_service.dart';
 import 'package:tobaco/Theme/app_theme.dart';
 import 'package:tobaco/Services/Connectivity/connectivity_service.dart';
+import 'package:tobaco/Services/Auth_Service/auth_service.dart';
 
 class VentasProvider with ChangeNotifier {
   final VentasService _ventasService = VentasService();
@@ -44,6 +45,8 @@ class VentasProvider with ChangeNotifier {
   final int _pageSize = 20;
   String _searchQuery = '';
   bool _offlineMessageShown = false;
+  /// Tras clearForNewUser, no mostrar caché en la próxima carga (evita datos de otro usuario).
+  bool _skipCacheOnNextLoad = false;
 
   List<Ventas> get ventas => List.unmodifiable(_ventas);
   bool get isLoading => _isLoading;
@@ -70,97 +73,164 @@ class VentasProvider with ChangeNotifier {
     }).toList(growable: false);
   }
 
+  /// Ordena _ventas: primero las pendientes offline (local_*), luego por fecha más reciente.
+  /// Dentro de las ventas del servidor, se ordena por ID de base de datos (más nuevo primero),
+  /// para que el orden coincida exactamente con el backend.
+  void _ordenarVentasRecientesPrimero() {
+    if (_ventas.isEmpty) return;
+    _ventas.sort((a, b) {
+      final idA = _ventaLocalIds[a] ?? '';
+      final idB = _ventaLocalIds[b] ?? '';
+      final aEsOffline = idA.startsWith('local_');
+      final bEsOffline = idB.startsWith('local_');
+      if (aEsOffline && !bEsOffline) return -1; // offline primero
+      if (!aEsOffline && bEsOffline) return 1;
+      // Ambos mismo tipo:
+      // - Si ambos tienen ID de servidor, ordenar por ID desc (más nuevo primero).
+      // - Si no, usar fecha como fallback.
+      if (a.id != null && b.id != null) {
+        return b.id!.compareTo(a.id!);
+      }
+      return b.fecha.compareTo(a.fecha);
+    });
+  }
+
   Future<void> cargarVentas({bool usarTimeoutNormal = false}) async {
-    _isLoading = true;
     _errorMessage = null;
     _isOffline = false;
     _currentPage = 1;
     _hasMoreData = true;
-    notifyListeners();
+    final skipCache = _skipCacheOnNextLoad;
+    if (skipCache) _skipCacheOnNextLoad = false;
 
-    try {
-      // Primero verificamos conectividad completa (internet + backend).
-      // Si no hay, evitamos hacer la llamada HTTP (que demoraría por timeout)
-      // y vamos directo al modo offline usando SQLite/caché.
-      final tieneConexion = await _connectivityService.checkFullConnectivity();
-      if (!tieneConexion) {
-        await _cargarVentasOffline();
-        _isOffline = true;
-        _isLoading = false;
-        _errorMessage = null;
-        notifyListeners();
-        return;
-      }
+    // PASO 1: Mostrar datos cacheados inmediatamente solo si no acabamos de cambiar de usuario
+    if (!skipCache && _ventas.isEmpty) {
+      _isLoading = true;
+      notifyListeners();
 
-      final ventasDelServidor = await _ventasService.obtenerVentas(
-        // Usamos siempre el timeout "normal" para evitar falsos positivos de modo offline
-        // cuando el backend tarda un poco más en responder.
-        timeoutRapido: false,
-        timeoutNormal: true,
-      );
-
-      // En modo online: borrar solo las ventas SINCRONIZADAS de SQLite (preservar las pendientes)
-      // y reemplazarlas con las del servidor
-      await _db.borrarVentasSincronizadas();
-      
-      // Guardar las ventas del servidor en SQLite
-      for (final venta in ventasDelServidor) {
-        if (venta.id != null) {
-          await _guardarVentaDelServidor(venta);
-          _ventaLocalIds[venta] = 'servidor_${venta.id}';
+      try {
+        final cacheadas = await _cacheService.obtenerVentasDelCache();
+        final soloDelUsuario = await _filtrarVentasPorUsuarioActual(cacheadas);
+        if (soloDelUsuario.isNotEmpty) {
+          final combinadas = await _combinarConVentasOfflinePendientes(
+            soloDelUsuario,
+            incluirPendientesOffline: true,
+          );
+          _ventas = combinadas;
+          _ordenarVentasRecientesPrimero();
+          _isLoading = false;
+          notifyListeners();
         }
+      } catch (e) {
+        debugPrint('⚠️ VentasProvider: Error cargando caché inicial: $e');
       }
+    }
 
-      // Guardar ventas del servidor en caché (incluso si está vacío, para marcar que no hay datos)
-      await _cacheService.guardarVentasEnCache(
-        ventasDelServidor.where((venta) => venta.id != null).toList(),
-      );
-      
-      // Si no hay ventas del servidor, limpiar el caché para indicar que no hay datos
-      if (ventasDelServidor.isEmpty) {
-        await _cacheService.limpiarCache();
-        debugPrint('📝 VentasProvider: Sin datos del servidor, caché limpiado');
+    // Si saltamos caché, asegurar loading visible hasta que responda la API
+    if (skipCache && _ventas.isEmpty) {
+      _isLoading = true;
+      notifyListeners();
+    }
+
+    // PASO 2: Verificar si el backend está prendido con GET /health (2s). Sin backend → modo offline al instante.
+    final backendOk = await _ventasService.backendDisponible;
+    if (!backendOk) {
+      _isOffline = true;
+      _hasMoreData = false;
+      if (_ventas.isEmpty) {
+        _errorMessage = 'Sin conexión con el servidor.';
+        await _cargarVentasOffline();
       }
+      _isLoading = false;
+      notifyListeners();
+      return;
+    }
+
+    // PASO 3: Backend disponible → traer página 1 (timeout normal por si responde lento).
+    try {
+      final resultado = await _ventasService.obtenerVentasPaginadas(1, _pageSize);
+      final ventasDelServidor = resultado['ventas'] as List<Ventas>;
+      _hasMoreData = resultado['hasNextPage'] as bool? ?? false;
+      _currentPage = 1;
+
+      // Reemplazar caché con la página 1 fresca
+      await _cacheService.guardarVentasEnCache(
+        ventasDelServidor.where((v) => v.id != null).toList(),
+        limpiarAnterior: true,
+      );
 
       // Combinar ventas del servidor con las pendientes de sincronizar
       final combinadas = await _combinarConVentasOfflinePendientes(
         ventasDelServidor,
-        incluirPendientesOffline: true, // Incluir pendientes para que aparezcan
+        incluirPendientesOffline: true,
       );
 
-      _ventas = combinadas..sort((a, b) => b.fecha.compareTo(a.fecha));
+      _ventas = combinadas;
+      _ordenarVentasRecientesPrimero();
       _isOffline = false;
-      _hasMoreData = false;
       _offlineMessageShown = false;
     } catch (e) {
-      if (Apihandler.isConnectionError(e) ||
-          e is TimeoutException ||
-          _esErrorServidor(e)) {
-        await _cargarVentasOffline();
-        // Siempre indicamos modo offline si hubo problema de conexión o servidor,
-        // aunque tengamos datos en caché/SQLite.
+      if (AuthService.isSessionExpiredException(e)) {
+        await AuthService.logout();
+        _isLoading = false;
+        notifyListeners();
+        return;
+      }
+      // Solo marcar offline cuando es error de conexión o timeout (no por 400, 500, etc.)
+      final esErrorConexion = Apihandler.isConnectionError(e) || e is TimeoutException;
+      if (esErrorConexion) {
         _isOffline = true;
-        if (_ventas.isEmpty) {
-          _errorMessage = _limpiarMensajeError(e.toString());
-        }
-      } else {
-        _ventas = [];
+        _hasMoreData = false;
+      }
+      if (_ventas.isEmpty) {
         _errorMessage = _limpiarMensajeError(e.toString());
+      }
+      notifyListeners();
+      if (_ventas.isEmpty && esErrorConexion) {
+        await _cargarVentasOffline();
       }
     } finally {
       _isLoading = false;
+      _ordenarVentasRecientesPrimero();
       notifyListeners();
     }
   }
 
   Future<void> cargarMasVentas() async {
-    if (_isLoadingMore || !_hasMoreData) return;
+    if (_isLoadingMore || !_hasMoreData || _isOffline) return;
 
     _isLoadingMore = true;
     notifyListeners();
 
     try {
-      _currentPage += 1;
+      final nextPage = _currentPage + 1;
+      final resultado = await _ventasService.obtenerVentasPaginadas(nextPage, _pageSize);
+      final nuevasVentas = resultado['ventas'] as List<Ventas>;
+      _hasMoreData = resultado['hasNextPage'] as bool? ?? false;
+      _currentPage = nextPage;
+
+      final idsExistentes = _ventas
+          .where((v) => v.id != null)
+          .map((v) => v.id!)
+          .toSet();
+
+      for (final venta in nuevasVentas) {
+        if (venta.id != null && !idsExistentes.contains(venta.id!)) {
+          _ventas.add(venta);
+          _ventaLocalIds[venta] = 'servidor_${venta.id}';
+          idsExistentes.add(venta.id!);
+        }
+      }
+
+      // Append al caché (no limpiar, solo agregar la nueva página)
+      await _cacheService.guardarVentasEnCache(
+        nuevasVentas.where((v) => v.id != null).toList(),
+        limpiarAnterior: false,
+      );
+    } catch (e) {
+      debugPrint('⚠️ VentasProvider: Error al cargar más ventas: $e');
+      // No marcar _isOffline: el fallo al cargar página N+1 no implica estar offline
+      // (ya tenemos página 1). Solo dejar de intentar cargar más.
       _hasMoreData = false;
     } finally {
       _isLoadingMore = false;
@@ -178,20 +248,49 @@ class VentasProvider with ChangeNotifier {
       };
     }
 
+    // CRÍTICO: Validar conexión ANTES de iniciar sincronización
+    // Si no hay conexión, NO intentar sincronizar y NO modificar las ventas
+    final tieneConexion = await _connectivityService.checkFullConnectivity();
+    if (!tieneConexion) {
+      debugPrint('⚠️ VentasProvider: Sin conexión - ABORTANDO sincronización');
+      final stats = await _db.getStats();
+      final cantidadPendientes = stats['pending'] ?? 0;
+      
+      return {
+        'success': false,
+        'sincronizadas': 0,
+        'fallidas': 0,
+        'message': 'Sin conexión. No se puede sincronizar en este momento. Los datos siguen guardados localmente.',
+        'noConnection': true, // Flag para identificar que fue por falta de conexión
+        'ventasPendientes': cantidadPendientes,
+      };
+    }
+
     _isSincronizando = true;
     notifyListeners();
 
     Map<String, dynamic> resultado;
     try {
+      // El servicio SimpleSyncService también valida conexión, pero hacerlo aquí
+      // evita cualquier intento de sincronización si no hay conexión
       resultado = await _syncService.sincronizarAhora();
-      await cargarVentas(usarTimeoutNormal: true);
+      
+      // CRÍTICO: Solo recargar ventas si la sincronización fue exitosa
+      // Si falló, NO recargar para no perder las ventas pendientes de la vista
+      if (resultado['success'] == true || (resultado['sincronizadas'] as int? ?? 0) > 0) {
+        await cargarVentas(usarTimeoutNormal: true);
+      }
     } catch (e) {
+      debugPrint('❌ VentasProvider: Error en sincronización: $e');
+      debugPrint('⚠️ VentasProvider: NINGUNA venta fue borrada - todas permanecen en la BD local');
+      
       _errorMessage = _limpiarMensajeError(e.toString());
       resultado = {
         'success': false,
-        'message': _errorMessage,
+        'message': 'Error al sincronizar. Los datos siguen guardados localmente.',
         'sincronizadas': 0,
         'fallidas': 0,
+        'error': _errorMessage,
       };
     } finally {
       _isSincronizando = false;
@@ -223,27 +322,27 @@ class VentasProvider with ChangeNotifier {
 
     try {
       await _ventasService.eliminarVenta(id);
-      _ventas.remove(venta);
-      _ventaLocalIds.remove(venta);
+      _ventas.removeWhere((v) => v.id == id);
+      _ventaLocalIds.removeWhere((v, _) => v.id == id);
       await _db.deleteVentaOffline(localId);
-      // Eliminar también de la caché de cuenta corriente
       await _ccCacheService.eliminarMovimientosPorVenta(
         ventaId: id,
         ventaLocalId: localId.startsWith('local_') ? localId : null,
       );
+      await _cacheService.eliminarVentaDelCache(id);
       await _actualizarCacheDesdeVentasActuales();
       notifyListeners();
     } catch (e) {
       if (Apihandler.isConnectionError(e)) {
-        _ventas.remove(venta);
-        _ventaLocalIds.remove(venta);
+        _ventas.removeWhere((v) => v.id == id);
+        _ventaLocalIds.removeWhere((v, _) => v.id == id);
         _isOffline = true;
         await _db.deleteVentaOffline(localId);
-        // Eliminar también de la caché de cuenta corriente
         await _ccCacheService.eliminarMovimientosPorVenta(
           ventaId: id,
           ventaLocalId: localId.startsWith('local_') ? localId : null,
         );
+        await _cacheService.eliminarVentaDelCache(id);
         await _actualizarCacheDesdeVentasActuales();
         notifyListeners();
       } else {
@@ -254,31 +353,55 @@ class VentasProvider with ChangeNotifier {
   }
 
   Future<void> eliminarVentaLocal(Ventas venta) async {
-    final localId = _ventaLocalIds[venta];
-    _ventas.remove(venta);
-    _ventaLocalIds.remove(venta);
-    if (localId != null) {
+    // Obtener localId de la venta que está en _ventas (por referencia o por id) para borrarla de la BD
+    Ventas? ventaEnLista = _ventas.where((v) => v == venta).firstOrNull;
+    if (ventaEnLista == null && venta.id != null) {
+      ventaEnLista = _ventas.where((v) => v.id == venta.id).firstOrNull;
+    }
+    final localId = ventaEnLista != null ? _ventaLocalIds[ventaEnLista] : null;
+
+    // Quitar por id o por referencia para que el listado se actualice siempre
+    if (venta.id != null) {
+      _ventas.removeWhere((v) => v.id == venta.id);
+      _ventaLocalIds.removeWhere((v, _) => v.id == venta.id);
+    } else {
+      _ventas.remove(venta);
+      _ventaLocalIds.remove(venta);
+    }
+
+    // Borrar siempre de la BD offline para que no vuelva a aparecer al reabrir
+    if (localId != null && localId.startsWith('local_')) {
       await _db.deleteVentaOffline(localId);
-      // Eliminar también de la caché de cuenta corriente
       await _ccCacheService.eliminarMovimientosPorVenta(
         ventaId: venta.id,
-        ventaLocalId: localId.startsWith('local_') ? localId : null,
+        ventaLocalId: localId,
       );
+    }
+    // Quitar también del caché de ventas (por si estaba guardada ahí) para que no reaparezca en modo offline
+    if (venta.id != null) {
+      await _cacheService.eliminarVentaDelCache(venta.id!);
     }
     await _actualizarCacheDesdeVentasActuales();
     notifyListeners();
   }
 
   Future<void> eliminarVentaDeLista(Ventas venta) async {
-    final localId = _ventaLocalIds[venta];
+    // Resolver la venta que está en _ventas (misma referencia o mismo id) para que remove/notifyListeners actualice la UI
+    Ventas? enLista = _ventas.where((v) => v == venta).firstOrNull;
+    if (enLista == null && venta.id != null) {
+      enLista = _ventas.where((v) => v.id == venta.id).firstOrNull;
+    }
+    final ventaAUsar = enLista ?? venta;
+
+    final localId = _ventaLocalIds[ventaAUsar];
     final esVentaLocal = localId != null && localId.startsWith('local_');
 
-    if (venta.id != null && !esVentaLocal) {
-      await eliminarVenta(venta.id!);
+    if (ventaAUsar.id != null && !esVentaLocal) {
+      await eliminarVenta(ventaAUsar.id!);
       return;
     }
 
-    await eliminarVentaLocal(venta);
+    await eliminarVentaLocal(ventaAUsar);
   }
 
   Future<List<Ventas>> obtenerVentas({bool usarTimeoutNormal = false}) async {
@@ -287,54 +410,23 @@ class VentasProvider with ChangeNotifier {
   }
 
   Future<Map<String, dynamic>> crearVenta(Ventas venta) async {
+    // PRIORIDAD: Intentar guardar en el servidor primero
     try {
-      // Verificación rápida de conectividad (timeout corto para respuesta instantánea)
-      final tieneConexion = await _connectivityService.checkFullConnectivity()
-          .timeout(const Duration(milliseconds: 300), onTimeout: () => false);
+      debugPrint('📤 VentasProvider: Intentando guardar venta en el servidor...');
       
-      if (!tieneConexion) {
-        // Retornar INMEDIATAMENTE y guardar en background para que el popup aparezca al instante
-        _ventas.insert(0, venta);
-        _isOffline = true;
-        notifyListeners();
-
-        // Guardar en SQLite en background sin bloquear
-        Future.microtask(() async {
-          try {
-            final localId = await _db.saveVentaOffline(venta);
-            _ventaLocalIds[venta] = localId;
-            final deudaGenerada = _calcularMontoCuentaCorriente(venta);
-            if (deudaGenerada > 0) {
-              await _ccCacheService.registrarVentaOffline(
-                clienteId: venta.clienteId,
-                clienteNombre: venta.cliente.nombre,
-                ventaLocalId: localId,
-                deudaGenerada: deudaGenerada,
-                venta: venta,
-              );
-            }
-            await _actualizarCacheDesdeVentasActuales();
-            notifyListeners();
-          } catch (e) {
-            debugPrint('Error guardando venta offline en background: $e');
-          }
-        });
-
-        return {
-          'success': true,
-          'isOffline': true,
-          'message':
-              'Venta guardada localmente. Se sincronizará cuando haya conexión.',
-        };
-      }
-
       final response = await _ventasService.crearVenta(
         venta,
         customTimeout: const Duration(seconds: 10),
       );
 
+      // Éxito: la venta se guardó en el servidor
+      debugPrint('✅ VentasProvider: Venta guardada exitosamente en el servidor');
+      
       if (response['ventaId'] != null) {
         venta.id = response['ventaId'];
+      }
+      if (response['numeroVenta'] != null) {
+        venta.numeroVenta = response['numeroVenta'];
       }
 
       _ventas.insert(0, venta);
@@ -347,6 +439,8 @@ class VentasProvider with ChangeNotifier {
             'servidor_temp_${DateTime.now().millisecondsSinceEpoch}_${Random().nextInt(1000)}';
       }
 
+      // IMPORTANTE: Actualizar estado a online cuando la venta se crea exitosamente
+      _isOffline = false;
       await _actualizarCacheDesdeVentasActuales();
       notifyListeners();
 
@@ -355,41 +449,85 @@ class VentasProvider with ChangeNotifier {
         'isOffline': false,
         'message': response['message'] ?? 'Venta creada exitosamente',
         'ventaId': response['ventaId'],
+        'numeroVenta': response['numeroVenta'],
         'asignada': response['asignada'] ?? false,
         'usuarioAsignadoId': response['usuarioAsignadoId'],
         'usuarioAsignadoNombre': response['usuarioAsignadoNombre'],
       };
     } catch (e) {
-      if (!_esErrorDeConexion(e)) {
-        rethrow;
-      }
-      final localId = await _db.saveVentaOffline(venta);
-      _ventas.insert(0, venta);
-      _ventaLocalIds[venta] = localId;
-      _isOffline = true;
-      final deudaGenerada = _calcularMontoCuentaCorriente(venta);
-      if (deudaGenerada > 0) {
-        await _ccCacheService.registrarVentaOffline(
-          clienteId: venta.clienteId,
-          clienteNombre: venta.cliente.nombre,
-          ventaLocalId: localId,
-          deudaGenerada: deudaGenerada,
-          venta: venta,
-        );
-      }
-      await _actualizarCacheDesdeVentasActuales();
-      notifyListeners();
+      final errorStr = e.toString().toLowerCase();
+      final esErrorStock = errorStr.contains('stock insuficiente') ||
+          (errorStr.contains('insuficiente') && errorStr.contains('disponible'));
 
-      return {
-        'success': true,
-        'isOffline': true,
-        'message':
-            'Venta guardada localmente. Se sincronizará cuando haya conexión.',
-      };
+      if (esErrorStock) {
+        final message = e is Exception ? e.toString().replaceFirst('Exception: ', '') : e.toString();
+        debugPrint('⚠️ VentasProvider: Error de stock, no se guarda offline: $message');
+        return {
+          'success': false,
+          'isOffline': false,
+          'message': message,
+        };
+      }
+
+      // FALLBACK: Solo si falla el servidor (conexión, etc.), guardar localmente como excepción
+      debugPrint('⚠️ VentasProvider: Error al guardar en servidor, guardando localmente como fallback...');
+      debugPrint('   Error: $e');
+      
+      try {
+        final localId = await _db.saveVentaOffline(venta);
+        _ventas.insert(0, venta);
+        _ventaLocalIds[venta] = localId;
+        _isOffline = true;
+        
+        final deudaGenerada = _calcularMontoCuentaCorriente(venta);
+        if (deudaGenerada > 0) {
+          await _ccCacheService.registrarVentaOffline(
+            clienteId: venta.clienteId,
+            clienteNombre: venta.cliente.nombre,
+            ventaLocalId: localId,
+            deudaGenerada: deudaGenerada,
+            venta: venta,
+          );
+        }
+        
+        await _actualizarCacheDesdeVentasActuales();
+        notifyListeners();
+
+        final bool esErrorConexion = _esErrorDeConexion(e);
+        final String message = esErrorConexion
+            ? 'Sin conexión. Venta guardada localmente. Se sincronizará cuando haya conexión.'
+            : 'Error del servidor. Venta guardada localmente. Puedes sincronizar después.';
+
+        debugPrint('✅ VentasProvider: Venta guardada localmente como fallback');
+
+        return {
+          'success': true,
+          'isOffline': true,
+          'message': message,
+          'serverError': !esErrorConexion,
+        };
+      } catch (localError) {
+        // Si incluso el guardado local falla, retornar error crítico
+        debugPrint('❌ VentasProvider: Error crítico - no se pudo guardar ni en servidor ni localmente');
+        debugPrint('   Error local: $localError');
+        
+        return {
+          'success': false,
+          'isOffline': false,
+          'message': 'Error crítico: No se pudo guardar la venta. Por favor, intenta nuevamente.',
+          'error': localError.toString(),
+        };
+      }
     }
   }
 
-  double _calcularMontoCuentaCorriente(Ventas venta) {
+  double _calcularMontoCuentaCorriente(Ventas venta) =>
+      calcularMontoCuentaCorriente(venta);
+
+  /// Calcula cuánto de la venta se financia con cuenta corriente.
+  /// Público para que las pantallas puedan propagar el incremento de deuda
+  /// al `ClienteProvider` inmediatamente tras crear la venta.
+  static double calcularMontoCuentaCorriente(Ventas venta) {
     if (venta.pagos != null && venta.pagos!.isNotEmpty) {
       return venta.pagos!
           .where((pago) => pago.metodo == MetodoPago.cuentaCorriente)
@@ -453,9 +591,61 @@ class VentasProvider with ChangeNotifier {
     return false;
   }
 
+  /// Cantidad por producto ya "reservada" en ventas pendientes de sincronizar (offline).
+  /// Al hacer otra venta offline, el máximo disponible debe ser stock - esta cantidad.
+  Map<int, double> get cantidadReservadaOfflinePorProducto {
+    final Map<int, double> reservada = {};
+    for (final venta in _ventas) {
+      if (!esVentaPendiente(venta)) continue;
+      for (final vp in venta.ventasProductos) {
+        reservada[vp.productoId] = (reservada[vp.productoId] ?? 0) + vp.cantidad;
+      }
+    }
+    return reservada;
+  }
+
+  /// Cuenta ventas pendientes de sincronizar (pending + failed).
+  /// Las ventas con status 'failed' también se pueden reintentar.
   Future<int> contarVentasPendientes() async {
     final stats = await _db.getStats();
-    return stats['pending'] ?? 0;
+    final pending = stats['pending'] ?? 0;
+    final failed = stats['failed'] ?? 0;
+    return pending + failed;
+  }
+
+  /// Limpia listas y caché al cambiar de usuario. Evita mostrar ventas de otro usuario.
+  Future<void> clearForNewUser() async {
+    _ventas = [];
+    _ventaLocalIds.clear();
+    _currentPage = 1;
+    _hasMoreData = true;
+    _searchQuery = '';
+    _errorMessage = null;
+    _isOffline = false;
+    _isLoading = false;
+    _isLoadingMore = false;
+    _offlineMessageShown = false;
+    _skipCacheOnNextLoad = true;
+    notifyListeners();
+    try {
+      await _cacheService.limpiarCache();
+    } catch (e) {
+      debugPrint('⚠️ VentasProvider: error limpiando caché para nuevo usuario: $e');
+    }
+  }
+
+  /// Deja la lista vacía y activa loading para que al abrir Ventas se muestre carga y no la lista anterior.
+  void prepararParaCargaInicial() {
+    _currentPage = 1;
+    _hasMoreData = true;
+    _errorMessage = null;
+    _isLoadingMore = false;
+    // Solo mostrar loading si no hay datos previos/cacheados (evita parpadeo)
+    if (_ventas.isEmpty) {
+      _isLoading = true;
+    }
+    // Defer to avoid setState/markNeedsBuild during build
+    Future.microtask(() => notifyListeners());
   }
 
   /// Borra todas las ventas pendientes de sincronizar (útil para limpiar ventas bugeadas)
@@ -634,6 +824,54 @@ class VentasProvider with ChangeNotifier {
     }
   }
 
+  /// Obtiene TODAS las ventas CC de un cliente sin importar cuántas páginas haya.
+  /// Usa un page size de 100 para minimizar roundtrips. Fusiona ventas offline
+  /// pendientes una sola vez al final, evitando duplicados.
+  Future<List<Ventas>> obtenerTodasLasVentasCCPorClienteId(int clienteId) async {
+    final tieneConexion = await _connectivityService.checkFullConnectivity();
+    if (!tieneConexion) {
+      return _ccCacheService.obtenerVentasOffline(clienteId);
+    }
+
+    try {
+      const pageSize = 100;
+      int page = 1;
+      bool hasMore = true;
+      final allServerVentas = <Ventas>[];
+
+      while (hasMore) {
+        final data = await _ventasService.obtenerVentasCuentaCorrientePorClienteId(
+          clienteId, page, pageSize,
+        );
+        allServerVentas.addAll(List<Ventas>.from(data['ventas'] ?? []));
+        hasMore = (data['hasNextPage'] as bool?) ?? false;
+        page++;
+      }
+
+      await _ccCacheService.eliminarVentasSincronizadasDelCliente(clienteId);
+      await _ccCacheService.cacheVentasCuentaCorriente(clienteId, allServerVentas);
+
+      final ventasPendientes =
+          await _ccCacheService.obtenerVentasPendientesOffline(clienteId);
+      final idsServidor =
+          allServerVentas.where((v) => v.id != null).map((v) => v.id!).toSet();
+      final ventasCombinadas = <Ventas>[
+        ...allServerVentas,
+        ...ventasPendientes
+            .where((v) => v.id == null || !idsServidor.contains(v.id)),
+      ];
+      ventasCombinadas.sort((a, b) => b.fecha.compareTo(a.fecha));
+      return ventasCombinadas;
+    } catch (e) {
+      debugPrint('Error al obtener todas las ventas CC: $e');
+      final esTimeout = e is TimeoutException;
+      if (Apihandler.isConnectionError(e) || esTimeout) {
+        return _ccCacheService.obtenerVentasOffline(clienteId);
+      }
+      rethrow;
+    }
+  }
+
   Future<void> actualizarEstadoEntrega(
       int ventaId, List<VentasProductos> items) async {
     try {
@@ -649,49 +887,6 @@ class VentasProvider with ChangeNotifier {
     if (!_offlineMessageShown) {
       _offlineMessageShown = true;
       notifyListeners();
-    }
-  }
-
-  Future<void> _sincronizarSQLiteConServidor(
-      List<Ventas> ventasDelServidor) async {
-    try {
-      final idsDelServidor = <int>{};
-      for (final venta in ventasDelServidor) {
-        if (venta.id != null) {
-          idsDelServidor.add(venta.id!);
-          await _guardarVentaDelServidor(venta);
-        }
-      }
-
-      final db = await _db.database;
-      
-      // Verificar que la base de datos esté abierta
-      if (!db.isOpen) {
-        debugPrint('⚠️ VentasProvider: Base de datos cerrada al sincronizar SQLite con servidor');
-        return;
-      }
-      
-      final ventasSincronizadasSQLite = await db.query(
-        'ventas_offline',
-        where: 'sync_status = ? AND id IS NOT NULL',
-        whereArgs: ['synced'],
-      );
-
-      for (var ventaRow in ventasSincronizadasSQLite) {
-        try {
-          final ventaId = ventaRow['id'] as int?;
-          if (ventaId != null && !idsDelServidor.contains(ventaId)) {
-            final localId = ventaRow['local_id'] as String;
-            await _db.deleteVentaOffline(localId);
-          }
-        } catch (e) {
-          debugPrint('⚠️ VentasProvider: Error eliminando venta sincronizada: $e');
-          // Continuar con la siguiente venta
-        }
-      }
-    } catch (e) {
-      debugPrint('⚠️ VentasProvider: Error sincronizando SQLite con servidor: $e');
-      // No rethrow, solo loguear el error
     }
   }
 
@@ -724,9 +919,18 @@ class VentasProvider with ChangeNotifier {
       // Si hay error, retornar solo las ventas del servidor
       return resultado;
     }
-    
+
+    final currentUser = await AuthService.getCurrentUser();
+    final currentUserId = currentUser?.id;
+
     for (var ventaData in ventasOffline) {
       final ventaRow = ventaData['venta'] as Map<String, dynamic>;
+      // Solo incluir ventas del usuario actual (evitar mostrar ventas de otros en modo offline)
+      final creadorId = ventaRow['usuario_id_creador'] as int?;
+      if (currentUserId == null || creadorId != currentUserId) {
+        continue;
+      }
+
       final localId = ventaRow['local_id'] as String;
       final ventaId = ventaRow['id'] as int?;
 
@@ -814,7 +1018,28 @@ class VentasProvider with ChangeNotifier {
       }
     }
 
+    // Ordenar: pendientes offline primero, luego por ID de base de datos (más nuevo primero)
+    resultado.sort((a, b) {
+      final idA = _ventaLocalIds[a] ?? '';
+      final idB = _ventaLocalIds[b] ?? '';
+      final aEsOffline = idA.startsWith('local_');
+      final bEsOffline = idB.startsWith('local_');
+      if (aEsOffline && !bEsOffline) return -1;
+      if (!aEsOffline && bEsOffline) return 1;
+      if (a.id != null && b.id != null) {
+        return b.id!.compareTo(a.id!);
+      }
+      return b.fecha.compareTo(a.fecha);
+    });
     return resultado;
+  }
+
+  /// Solo ventas del usuario actual (evita mostrar datos de otro usuario en offline/caché).
+  Future<List<Ventas>> _filtrarVentasPorUsuarioActual(List<Ventas> ventas) async {
+    final user = await AuthService.getCurrentUser();
+    if (user == null) return [];
+    final userId = user.id;
+    return ventas.where((v) => v.usuarioIdCreador == userId).toList();
   }
 
   Future<void> _cargarVentasOffline() async {
@@ -823,54 +1048,70 @@ class VentasProvider with ChangeNotifier {
 
     _ventaLocalIds.clear();
 
-    // En modo offline, SOLO cargar ventas offline pendientes de sincronizar
-    // NO cargar ventas del servidor cacheadas
-    debugPrint('📦 VentasProvider: Cargando solo ventas offline pendientes...');
+    final user = await AuthService.getCurrentUser();
+    final currentUserId = user?.id;
 
+    debugPrint('📦 VentasProvider: Cargando ventas en modo offline (solo usuario actual)...');
+
+    // 1) Cargar ventas del servidor desde caché (solo del usuario actual)
     try {
-      final db = await _db.database;
-      
-      // Verificar que la base de datos esté abierta
-      if (!db.isOpen) {
-        debugPrint('⚠️ VentasProvider: Base de datos cerrada al cargar ventas offline');
-        _ventas = resultado..sort((a, b) => b.fecha.compareTo(a.fecha));
-        _isOffline = true;
-        _hasMoreData = false;
-        _errorMessage = null;
-        return;
-      }
-      
-      final ventasRows = await db.query(
-        'ventas_offline',
-        orderBy: 'created_at DESC',
-      );
-
-      for (final ventaRow in ventasRows) {
-        try {
-          final localId = ventaRow['local_id'] as String;
-          final ventaId = ventaRow['id'] as int?;
-
-          if (ventaId != null && idsAgregados.contains(ventaId)) {
-            continue;
-          }
-
-          final venta = await _buildVentaFromRow(ventaRow);
+      final cacheadas = await _cacheService.obtenerVentasDelCache();
+      final soloDelUsuario = await _filtrarVentasPorUsuarioActual(cacheadas);
+      for (final venta in soloDelUsuario) {
+        if (venta.id != null && !idsAgregados.contains(venta.id!)) {
           resultado.add(venta);
-          _ventaLocalIds[venta] = localId;
-          if (ventaId != null) {
-            idsAgregados.add(ventaId);
-          }
-        } catch (e) {
-          debugPrint('⚠️ VentasProvider: Error procesando venta offline: $e');
-          // Continuar con la siguiente venta
+          idsAgregados.add(venta.id!);
+          _ventaLocalIds[venta] = 'servidor_${venta.id}';
         }
       }
     } catch (e) {
-      debugPrint('⚠️ VentasProvider: Error obteniendo ventas offline: $e');
-      // Si hay error, usar solo las ventas del caché
+      debugPrint('⚠️ VentasProvider: Error leyendo caché de ventas: $e');
     }
 
-    _ventas = resultado..sort((a, b) => b.fecha.compareTo(a.fecha));
+    // 2) Cargar solo ventas PENDIENTES o FALLIDAS de sincronizar (ventas_offline).
+    // Las marcadas como 'synced' no se incluyen: si están realmente en el servidor,
+    // ya estarían en el caché. Incluirlas causaba "ventas fantasma" cuando la
+    // sincronización falló pero se marcó como exitosa, o cuando se eliminaron en el servidor.
+    try {
+      final db = await _db.database;
+      if (db.isOpen) {
+        final ventasRows = currentUserId != null
+            ? await db.query(
+                'ventas_offline',
+                where: 'usuario_id_creador = ? AND sync_status IN (?, ?)',
+                whereArgs: [currentUserId, 'pending', 'failed'],
+                orderBy: 'created_at DESC',
+              )
+            : <Map<String, dynamic>>[]; // Sin usuario no mostrar ventas offline de nadie
+
+        for (final ventaRow in ventasRows) {
+          try {
+            final localId = ventaRow['local_id'] as String;
+            final ventaId = ventaRow['id'] as int?;
+
+            if (ventaId != null && idsAgregados.contains(ventaId)) {
+              continue;
+            }
+
+            final venta = await _buildVentaFromRow(ventaRow);
+            resultado.add(venta);
+            _ventaLocalIds[venta] = localId;
+            if (ventaId != null) {
+              idsAgregados.add(ventaId);
+            }
+          } catch (e) {
+            debugPrint('⚠️ VentasProvider: Error procesando venta offline: $e');
+          }
+        }
+      } else {
+        debugPrint('⚠️ VentasProvider: Base de datos cerrada al cargar ventas offline');
+      }
+    } catch (e) {
+      debugPrint('⚠️ VentasProvider: Error obteniendo ventas offline: $e');
+    }
+
+    _ventas = resultado;
+    _ordenarVentasRecientesPrimero();
     _isOffline = true;
     _hasMoreData = false;
     _errorMessage = null;
@@ -879,6 +1120,7 @@ class VentasProvider with ChangeNotifier {
   Future<void> _actualizarCacheDesdeVentasActuales() async {
     await _cacheService.guardarVentasEnCache(
       _ventas.where((venta) => venta.id != null).toList(),
+      limpiarAnterior: true,
     );
   }
 
@@ -1125,33 +1367,52 @@ class VentasProvider with ChangeNotifier {
       return clienteConsumidor;
     }
 
+    // Buscar en caché de clientes (por si estamos offline o antes de llamar al servidor)
+    try {
+      final clientesCache = await clienteProvider.obtenerClientesDelCache();
+      clienteConsumidor = _buscarConsumidorFinalEnColecciones([clientesCache]);
+      if (clienteConsumidor != null) return clienteConsumidor;
+    } catch (_) {}
+
     // Si no se encuentra localmente, usar el endpoint del backend que garantiza un único Consumidor Final compartido
     try {
       final clienteService = ClienteService();
       clienteConsumidor = await clienteService.obtenerOCrearConsumidorFinal();
       
-      if (clienteConsumidor != null) {
-        // Actualizar la lista de clientes para incluir el Consumidor Final
-        await clienteProvider.obtenerClientes();
-        return clienteConsumidor;
-      }
+      // Actualizar la lista de clientes para incluir el Consumidor Final
+      await clienteProvider.obtenerClientes();
+      return clienteConsumidor;
     } catch (e) {
       debugPrint('Error al obtener o crear Consumidor Final desde el servidor: $e');
-      AppTheme.showSnackBar(
-        context,
-        AppTheme.errorSnackBar('Error al obtener Consumidor Final: $e'),
-      );
+      // Sin conexión (Failed host lookup, SocketException, etc.): usar Consumidor Final local para venta offline
+      if (Apihandler.isConnectionError(e)) {
+        try {
+          final clientesCache = await clienteProvider.obtenerClientesDelCache();
+          clienteConsumidor = _buscarConsumidorFinalEnColecciones([clientesCache]);
+        } catch (_) {}
+        if (clienteConsumidor != null) {
+          return clienteConsumidor;
+        }
+        // Placeholder local para poder continuar la venta sin conexión
+        clienteConsumidor = Cliente(
+          id: 0,
+          nombre: 'Consumidor Final',
+          direccion: null,
+          descuentoGlobal: 0.0,
+          preciosEspeciales: const [],
+          visible: true,
+        );
+        return clienteConsumidor;
+      }
+      // Para otros errores (no de conexión), mostrar el error y retornar null
+      if (context.mounted) {
+        AppTheme.showSnackBar(
+          context,
+          AppTheme.errorSnackBar('Error al obtener Consumidor Final: $e'),
+        );
+      }
       return null;
     }
-
-    AppTheme.showSnackBar(
-      context,
-      AppTheme.errorSnackBar(
-        'No se pudo asegurar el cliente "Consumidor Final". Intenta nuevamente.',
-      ),
-    );
-
-    return null;
   }
 
   static Cliente? _buscarConsumidorFinalEnColecciones(List<Iterable<Cliente>> colecciones) {

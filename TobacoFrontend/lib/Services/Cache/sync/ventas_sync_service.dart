@@ -42,17 +42,19 @@ class VentasSyncService {
       };
     }
 
-    // Verificar conectividad antes de sincronizar
+    // CRÍTICO: Verificar conectividad ANTES de sincronizar
+    // Si no hay conexión, NO intentar sincronizar y NO modificar las ventas
     final isConnected = await _connectivityService.checkFullConnectivity();
     if (!isConnected) {
-      debugPrint('⚠️ VentasSyncService: Sin conexión o backend no disponible');
+      debugPrint('⚠️ VentasSyncService: Sin conexión o backend no disponible - ABORTANDO sincronización');
       final stats = await _offlineService.getStats();
       return {
         'success': false,
         'sincronizadas': 0,
-        'fallidas': stats['pending'] ?? 0,
-        'message': 'No hay conexión al backend. Verifica que el servidor esté encendido y que tengas conexión a internet.',
+        'fallidas': 0, // No son fallidas, solo no se pueden sincronizar
+        'message': 'Sin conexión. No se puede sincronizar en este momento. Los datos siguen guardados localmente.',
         'ventasSincronizadas': [],
+        'noConnection': true, // Flag para identificar que fue por falta de conexión
       };
     }
 
@@ -86,14 +88,25 @@ class VentasSyncService {
           // Construir objeto Ventas desde los datos
           final venta = await _buildVentaFromPendingData(ventaData);
 
+          // CRÍTICO: Verificar conexión antes de cada intento de sincronización
+          // Si se perdió la conexión durante el proceso, abortar
+          final stillConnected = await _connectivityService.checkFullConnectivity();
+          if (!stillConnected) {
+            debugPrint('⚠️ VentasSyncService: Se perdió la conexión durante la sincronización');
+            debugPrint('⚠️ VentasSyncService: NO se modifica el estado de la venta - permanece como pendiente');
+            fallidas++;
+            continue; // Continuar con la siguiente venta sin modificar esta
+          }
+
           // Intentar sincronizar con el servidor
           final resultado = await _ventasService.crearVenta(venta);
 
+          // CRÍTICO: Solo marcar como sincronizada si recibimos confirmación exitosa del servidor
           if (resultado['success'] == true) {
             final ventaSincronizada = resultado['venta'] as Ventas;
             final serverId = ventaSincronizada.id;
 
-            // Marcar como sincronizada en el caché
+            // SOLO después de confirmación exitosa del servidor, marcar como sincronizada
             await _offlineService.markAsSynced(localId, serverId);
 
             // Actualizar cuenta corriente si corresponde
@@ -116,16 +129,28 @@ class VentasSyncService {
         } catch (e) {
           final ventaRow = ventaData['venta'] as Map<String, dynamic>;
           final localId = ventaRow['local_id'] as String;
+          
+          // Verificar si perdió conexión durante la sincronización
+          final stillConnected = await _connectivityService.checkFullConnectivity();
+          if (!stillConnected) {
+            debugPrint('⚠️ VentasSyncService: Se perdió la conexión durante la sincronización');
+            debugPrint('⚠️ VentasSyncService: NO se modifica el estado de la venta - permanece como pendiente');
+            fallidas++;
+            continue; // Continuar con la siguiente venta sin modificar esta
+          }
+          
+          // Marcar como fallida PERO NO BORRAR - la venta permanece en la BD para reintentar
           await _offlineService.markAsSyncFailed(localId, e.toString());
           fallidas++;
           debugPrint('❌ VentasSyncService: Excepción sincronizando venta (localId: $localId): $e');
+          debugPrint('✅ VentasSyncService: La venta permanece en la BD local para reintentar más tarde');
         }
       }
 
       final mensaje = sincronizadas > 0
           ? '$sincronizadas venta(s) sincronizada(s) correctamente'
           : fallidas > 0
-              ? 'Error al sincronizar ventas. Verifica la conexión y los datos.'
+              ? 'Error al sincronizar. Los datos siguen guardados localmente. Puedes reintentar más tarde.'
               : 'No hay ventas pendientes';
 
       return {
@@ -137,15 +162,17 @@ class VentasSyncService {
       };
     } catch (e) {
       debugPrint('❌ VentasSyncService: Error general en sincronización: $e');
+      debugPrint('⚠️ VentasSyncService: NINGUNA venta fue borrada - todas permanecen en la BD local');
       return {
         'success': false,
         'sincronizadas': sincronizadas,
         'fallidas': fallidas,
-        'message': 'Error al sincronizar: ${e.toString()}',
+        'message': 'Error al sincronizar: ${e.toString()}. Los datos siguen guardados localmente.',
         'ventasSincronizadas': ventasSincronizadas,
       };
     } finally {
       _isSyncing = false;
+      debugPrint('✅ VentasSyncService: Sincronización finalizada. Estado de ventas preservado.');
     }
   }
 

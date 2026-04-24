@@ -7,7 +7,7 @@ import 'package:tobaco/Services/Auth_Service/auth_service.dart';
 
 class CategoriaService {
   final Uri baseUrl = Apihandler.baseUrl;
-  static const Duration _timeoutDuration = Duration(milliseconds: 500); // Ultra rápido para modo offline
+  static const Duration _timeoutDuration = Duration(seconds: 5);
 
   Future<List<Categoria>> obtenerCategorias() async {
     try {
@@ -65,23 +65,22 @@ class CategoriaService {
       ).timeout(_timeoutDuration);
 
       if (response.statusCode != 200) {
-        // Intentar extraer el mensaje del backend
-        String errorMessage = 'Error al eliminar la categoria. Código de estado: ${response.statusCode}';
-        
+        String errorMessage = 'Error al eliminar la categoría. Código: ${response.statusCode}';
+        if (response.statusCode == 403) {
+          errorMessage = 'No tienes permisos para eliminar categorías. Se requiere permiso de eliminar productos.';
+        }
         try {
           if (response.body.isNotEmpty) {
             final Map<String, dynamic> errorData = jsonDecode(response.body);
             if (errorData.containsKey('message')) {
-              errorMessage = errorData['message'];
+              errorMessage = errorData['message'] as String;
             } else if (errorData.containsKey('error')) {
-              errorMessage = errorData['error'];
+              errorMessage = errorData['error'] as String;
             }
           }
         } catch (e) {
-          // Si no se puede parsear el JSON, usar el mensaje por defecto
           debugPrint('No se pudo parsear el error del backend: $e');
         }
-        
         throw Exception(errorMessage);
       } else {
         debugPrint('Categoria eliminado exitosamente');

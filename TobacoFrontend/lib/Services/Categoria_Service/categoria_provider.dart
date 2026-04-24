@@ -202,6 +202,8 @@ class CategoriasProvider with ChangeNotifier {
       await _categoriaService.eliminarCategoria(id);
       _categorias.removeWhere((cat) => cat.id == id);
       await _guardarCategoriasLocales();
+      // Recargar desde servidor para asegurar sincronización
+      await cargarCategorias(silent: true);
     } catch (e) {
       if (Apihandler.isConnectionError(e)) {
         // Verificar productos vinculados también en modo offline
@@ -344,6 +346,27 @@ class CategoriasProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  /// Obtiene categorías del caché inmediatamente (sin llamar al servidor).
+  /// Si la caché está vacía, intenta CatalogoLocal para modo offline.
+  /// Siempre devuelve la lista ordenada de primera a última (por sortOrder).
+  Future<List<Categoria>> obtenerCategoriasDelCache() async {
+    try {
+      final list = await _datosCacheService.obtenerCategoriasDelCache();
+      if (list.isNotEmpty) return _sortCategoriasFirstToLast(list);
+      final locales = await _catalogoLocal.obtenerCategorias();
+      return _sortCategoriasFirstToLast(locales);
+    } catch (e) {
+      final locales = await _catalogoLocal.obtenerCategorias();
+      return _sortCategoriasFirstToLast(locales);
+    }
+  }
+
+  /// Ordena categorías de primera a última por sortOrder (ascendente).
+  List<Categoria> _sortCategoriasFirstToLast(List<Categoria> list) {
+    if (list.isEmpty) return list;
+    return List<Categoria>.from(list)..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+  }
+
   Future<List<Categoria>> obtenerCategorias({bool silent = false}) async {
     await cargarCategorias(silent: silent);
     return _categorias;
@@ -386,6 +409,23 @@ class CategoriasProvider with ChangeNotifier {
       if (!Apihandler.isConnectionError(e)) {
         _errorMessage = _limpiarMensajeError(e.toString());
       }
+    }
+  }
+
+  /// Limpia listas y caché al cambiar de usuario. Evita mostrar categorías de otro usuario.
+  Future<void> clearForNewUser() async {
+    _categorias = [];
+    _isLoading = false;
+    _isOffline = false;
+    _errorMessage = null;
+    _loadedFromCache = false;
+    _pendingReorderDtos = null;
+    notifyListeners();
+    try {
+      final categoriasCache = CategoriasCacheService();
+      await categoriasCache.clear();
+    } catch (e) {
+      debugPrint('⚠️ CategoriasProvider: error limpiando caché para nuevo usuario: $e');
     }
   }
 }

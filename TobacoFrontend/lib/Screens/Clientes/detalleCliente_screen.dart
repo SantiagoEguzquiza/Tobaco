@@ -64,7 +64,12 @@ class DetalleClienteScreen extends StatelessWidget {
         ),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
+        padding: EdgeInsets.fromLTRB(
+          16,
+          16,
+          16,
+          16 + MediaQuery.of(context).padding.bottom + 24,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -138,85 +143,96 @@ class DetalleClienteScreen extends StatelessWidget {
 
             // Botón volver
             _buildBackButton(context),
+            const SizedBox(height: 36),
           ],
         ),
       ),
     );
   }
 
-  // Header del cliente
+  // Header del cliente (bloque centrado en pantalla)
   Widget _buildClienteHeader(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: Theme.of(context).brightness == Brightness.dark
-              ? [
-                  const Color(0xFF1A1A1A),
-                  const Color(0xFF2A2A2A),
-                ]
-              : [
-                  AppTheme.primaryColor.withOpacity(0.1),
-                  AppTheme.secondaryColor.withOpacity(0.3),
-                ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: Theme.of(context).brightness == Brightness.dark
-              ? Colors.grey.shade700
-              : AppTheme.primaryColor.withOpacity(0.2),
-          width: 1,
-        ),
-      ),
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: AppTheme.primaryColor,
-              borderRadius: BorderRadius.circular(50),
-            ),
-            child: const Icon(
-              Icons.person,
-              color: Colors.white,
-              size: 40,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            cliente.nombre,
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).brightness == Brightness.dark
-                  ? Colors.white
-                  : AppTheme.primaryColor,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 8),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+    final tieneDeuda = _parsearDeuda(cliente.deuda) > 0;
+
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 380),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
           decoration: BoxDecoration(
-            color: _parsearDeuda(cliente.deuda) > 0
-                ? Colors.orange.withOpacity(0.1)
-                : Colors.green.withOpacity(0.1),
+            gradient: LinearGradient(
+              colors: Theme.of(context).brightness == Brightness.dark
+                  ? [
+                      const Color(0xFF1A1A1A),
+                      const Color(0xFF2A2A2A),
+                    ]
+                  : [
+                      AppTheme.primaryColor.withOpacity(0.12),
+                      AppTheme.secondaryColor.withOpacity(0.32),
+                    ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
             borderRadius: BorderRadius.circular(20),
-          ),
-          child: Text(
-            _parsearDeuda(cliente.deuda) > 0 ? 'Saldo pendiente' : 'Sin saldo pendiente',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: _parsearDeuda(cliente.deuda) > 0
-                  ? Colors.orange.shade700
-                  : Colors.green.shade700,
+            border: Border.all(
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? Colors.grey.shade700
+                  : AppTheme.primaryColor.withOpacity(0.2),
+              width: 1,
             ),
           ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryColor,
+                  borderRadius: BorderRadius.circular(50),
+                ),
+                child: const Icon(
+                  Icons.person,
+                  color: Colors.white,
+                  size: 40,
+                ),
+              ),
+              const SizedBox(height: 14),
+              Text(
+                cliente.nombre,
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.white
+                      : AppTheme.primaryColor,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                decoration: BoxDecoration(
+                  color: tieneDeuda
+                      ? Colors.orange.withOpacity(0.12)
+                      : Colors.green.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  tieneDeuda ? 'Saldo pendiente' : 'Sin saldo pendiente',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: tieneDeuda
+                        ? Colors.orange.shade700
+                        : Colors.green.shade700,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
-        ],
       ),
     );
   }

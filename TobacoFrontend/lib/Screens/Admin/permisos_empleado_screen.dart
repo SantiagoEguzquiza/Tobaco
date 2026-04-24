@@ -200,7 +200,7 @@ class _PermisosEmpleadoScreenState extends State<PermisosEmpleadoScreen> {
           color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
         ),
       ),
-      activeColor: AppTheme.primaryColor,
+      activeThumbColor: AppTheme.primaryColor,
       contentPadding: const EdgeInsets.symmetric(horizontal: 0, vertical: 8),
     );
   }
@@ -409,6 +409,33 @@ class _PermisosEmpleadoScreenState extends State<PermisosEmpleadoScreen> {
       ),
     ];
 
+    final comprasPermissions = [
+      PermissionItem(
+        label: 'Visualizar',
+        description: 'Puede ver el módulo de compras',
+        value: _permisos!.comprasVisualizar,
+        onChanged: (value) => setState(() => _permisos = _permisos!.copyWith(comprasVisualizar: value)),
+      ),
+      PermissionItem(
+        label: 'Crear',
+        description: 'Puede registrar nuevas compras',
+        value: _permisos!.comprasCrear,
+        onChanged: (value) => setState(() => _permisos = _permisos!.copyWith(comprasCrear: value)),
+      ),
+      PermissionItem(
+        label: 'Editar',
+        description: 'Puede modificar compras existentes',
+        value: _permisos!.comprasEditar,
+        onChanged: (value) => setState(() => _permisos = _permisos!.copyWith(comprasEditar: value)),
+      ),
+      PermissionItem(
+        label: 'Eliminar',
+        description: 'Puede eliminar compras',
+        value: _permisos!.comprasEliminar,
+        onChanged: (value) => setState(() => _permisos = _permisos!.copyWith(comprasEliminar: value)),
+      ),
+    ];
+
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF121212) : Colors.grey.shade50,
       appBar: AppBar(
@@ -503,6 +530,11 @@ class _PermisosEmpleadoScreenState extends State<PermisosEmpleadoScreen> {
                     title: 'ENTREGAS',
                     icon: Icons.local_shipping,
                     permissions: entregasPermissions,
+                  ),
+                  _buildPermissionSection(
+                    title: 'COMPRAS',
+                    icon: Icons.shopping_basket,
+                    permissions: comprasPermissions,
                   ),
 
                   const SizedBox(height: 16),
