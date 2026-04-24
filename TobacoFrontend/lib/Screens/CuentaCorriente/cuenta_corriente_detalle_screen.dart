@@ -51,11 +51,6 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
   // Variable para rastrear si hubo cambios (abonos creados/eliminados)
   bool _huboCambios = false;
   
-  // Variables para paginación de ventas
-  bool _isLoadingMoreVentas = false;
-  bool _hasMoreVentas = true;
-  int _currentPageVentas = 1;
-  final int _pageSizeVentas = 20;
 
   @override
   void initState() {
@@ -152,15 +147,11 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
   Future<void> _loadVentasCC() async {
     try {
       final ventasProvider = VentasProvider();
-      final data = await ventasProvider.obtenerVentasCuentaCorrientePorClienteId(
-        widget.cliente.id!, 
-        _currentPageVentas, 
-        _pageSizeVentas
+      final todas = await ventasProvider.obtenerTodasLasVentasCCPorClienteId(
+        widget.cliente.id!,
       );
-      
       _safeSetState(() {
-        ventasCC = List<Ventas>.from(data['ventas']);
-        _hasMoreVentas = data['hasNextPage'];
+        ventasCC = todas;
         isLoadingVentas = false;
       });
     } catch (e) {
@@ -171,10 +162,10 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
         return;
       }
       if (Apihandler.isConnectionError(e)) {
-        final offlineVentas = await _ccCacheService.obtenerVentasOffline(widget.cliente.id!);
+        final offlineVentas =
+            await _ccCacheService.obtenerVentasOffline(widget.cliente.id!);
         _safeSetState(() {
           ventasCC = offlineVentas;
-          _hasMoreVentas = false;
           isLoadingVentas = false;
         });
         return;
@@ -278,37 +269,6 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
     }
   }
 
-  Future<void> _cargarMasVentas() async {
-    if (_isLoadingMoreVentas || !_hasMoreVentas) return;
-    
-    _safeSetState(() {
-      _isLoadingMoreVentas = true;
-    });
-
-    try {
-      final ventasProvider = VentasProvider();
-      final data = await ventasProvider.obtenerVentasCuentaCorrientePorClienteId(
-        widget.cliente.id!, 
-        _currentPageVentas + 1, 
-        _pageSizeVentas
-      );
-      
-      _safeSetState(() {
-        ventasCC.addAll(List<Ventas>.from(data['ventas']));
-        _currentPageVentas++;
-        _hasMoreVentas = data['hasNextPage'];
-        _isLoadingMoreVentas = false;
-      });
-    } catch (e) {
-      if (AuthService.isSessionExpiredException(e)) {
-        await AuthService.logout();
-      }
-      _safeSetState(() {
-        _isLoadingMoreVentas = false;
-      });
-      log('Error al cargar más ventas: $e', level: 1000);
-    }
-  }
 
   String _formatearPrecio(double precio) {
     return precio.toStringAsFixed(2);
@@ -1048,12 +1008,8 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
 
     return ListView.builder(
       padding: const EdgeInsets.only(left: 16, right: 16, top: 0, bottom: 72),
-      itemCount: ventasCC.length + (_isLoadingMoreVentas ? 1 : 0),
+      itemCount: ventasCC.length,
       itemBuilder: (context, index) {
-        if (index == ventasCC.length) {
-          return _buildLoadingIndicator();
-        }
-        
         final venta = ventasCC[index];
         return _buildVentaCard(venta, isDarkMode);
       },
@@ -2124,17 +2080,6 @@ class _CuentaCorrienteDetalleScreenState extends State<CuentaCorrienteDetalleScr
             textAlign: TextAlign.center,
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildLoadingIndicator() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      child: const Center(
-        child: CircularProgressIndicator(
-          valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
-        ),
       ),
     );
   }

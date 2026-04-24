@@ -23,6 +23,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _userNameController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _passwordFocusNode = FocusNode();
   bool _obscurePassword = true;
 
   @override
@@ -36,6 +37,7 @@ class _LoginScreenState extends State<LoginScreen> {
   void dispose() {
     _userNameController.dispose();
     _passwordController.dispose();
+    _passwordFocusNode.dispose();
     super.dispose();
   }
 
@@ -370,6 +372,8 @@ class _LoginScreenState extends State<LoginScreen> {
               label: 'Usuario',
               icon: Icons.person_outline,
               layoutSize: layoutSize,
+              textInputAction: TextInputAction.next,
+              onFieldSubmitted: () => FocusScope.of(context).requestFocus(_passwordFocusNode),
               validator: (value) {
                 if (value == null || value.isEmpty) {
                   return 'Por favor ingrese su usuario';
@@ -385,6 +389,12 @@ class _LoginScreenState extends State<LoginScreen> {
               icon: Icons.lock_outline,
               isPassword: true,
               layoutSize: layoutSize,
+              focusNode: _passwordFocusNode,
+              textInputAction: TextInputAction.done,
+              onFieldSubmitted: () {
+                final authProvider = context.read<AuthProvider>();
+                if (!authProvider.isLoading) _handleLogin(context, authProvider);
+              },
               validator: (value) {
                 if (value == null || value.isEmpty) {
                   return 'Por favor ingrese su contraseña';
@@ -555,6 +565,9 @@ class _LoginScreenState extends State<LoginScreen> {
     bool isPassword = false,
     required _LoginLayoutSize layoutSize,
     String? Function(String?)? validator,
+    TextInputAction? textInputAction,
+    FocusNode? focusNode,
+    VoidCallback? onFieldSubmitted,
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final fontSize = switch (layoutSize) {
@@ -580,8 +593,11 @@ class _LoginScreenState extends State<LoginScreen> {
 
     return TextFormField(
       controller: controller,
+      focusNode: focusNode,
       obscureText: isPassword ? _obscurePassword : false,
       scrollPadding: const EdgeInsets.only(bottom: 200),
+      textInputAction: textInputAction,
+      onFieldSubmitted: onFieldSubmitted != null ? (_) => onFieldSubmitted() : null,
       style: TextStyle(
         fontSize: fontSize,
         color: isDark ? Colors.white : const Color.fromARGB(255, 0, 0, 0),
@@ -704,7 +720,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _runLoginWithTimeout({
     required AuthProvider authProvider,
-    required PermisosProvider permisosProvider,
     required ClienteProvider clientesProvider,
     required CategoriasProvider categoriasProvider,
     required ProductoProvider productosProvider,
@@ -716,7 +731,7 @@ class _LoginScreenState extends State<LoginScreen> {
       final success = await authProvider.login(userName, password);
       if (!success) return;
 
-      // Limpiar caché con timeout para no bloquear (p. ej. BD lenta)
+      // Limpiar caché con timeout para no bloquear
       await Future.any([
         Future.wait([
           clientesProvider.clearForNewUser(),
@@ -726,37 +741,12 @@ class _LoginScreenState extends State<LoginScreen> {
         ]),
         Future.delayed(const Duration(seconds: 8), () {}),
       ]);
-
-      await Future.delayed(const Duration(milliseconds: 300));
-
-      bool permisosLoaded = false;
-      for (int attempt = 0; attempt < 2 && !permisosLoaded; attempt++) {
-        try {
-          await permisosProvider
-              .loadPermisos(authProvider, forceReload: true)
-              .timeout(const Duration(seconds: 12));
-          permisosLoaded = true;
-        } on TimeoutException {
-          permisosProvider.marcarTimeoutPermisos();
-          break;
-        } catch (e) {
-          if (Apihandler.isConnectionError(e) && attempt == 0) {
-            await Future.delayed(const Duration(milliseconds: 1500));
-          } else {
-            break;
-          }
-        }
-      }
-      if (!permisosLoaded && permisosProvider.isLoading) {
-        permisosProvider.marcarTimeoutPermisos();
-      }
-
-      authProvider.notifyListeners();
-      permisosProvider.notifyListeners();
+      // Los permisos los carga AuthWrapper exclusivamente para evitar
+      // dos llamadas concurrentes con forceReload que generan race condition.
     }
 
     await doLogin().timeout(
-      const Duration(seconds: 55),
+      const Duration(seconds: 30),
       onTimeout: () {
         throw TimeoutException(
           'El inicio de sesión tardó demasiado. Verifica tu conexión e intenta de nuevo.',
@@ -781,7 +771,6 @@ class _LoginScreenState extends State<LoginScreen> {
       try {
         await _runLoginWithTimeout(
           authProvider: authProvider,
-          permisosProvider: permisosProvider,
           clientesProvider: clientesProvider,
           categoriasProvider: categoriasProvider,
           productosProvider: productosProvider,
@@ -794,10 +783,8 @@ class _LoginScreenState extends State<LoginScreen> {
           authProvider.stopLoading();
           if (Apihandler.isConnectionError(e) || e is TimeoutException) {
             await Apihandler.handleConnectionError(context, e);
-          } else {
-            authProvider.clearError();
-            authProvider.notifyListeners();
           }
+          // authProvider._errorMessage ya fue seteado por AuthProvider.login() antes del rethrow
         }
       }
     }

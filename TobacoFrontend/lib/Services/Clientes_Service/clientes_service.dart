@@ -187,7 +187,7 @@ class ClienteService {
     try {
       final headers = await AuthService.getAuthHeaders();
       final response = await Apihandler.client.get(
-        Uri.parse('$baseUrl/Clientes/buscar?query=$nombre'),
+        Uri.parse('$baseUrl/Clientes/buscar?query=${Uri.encodeComponent(nombre)}'),
         headers: headers,
       ).timeout(_timeoutDuration);
 
@@ -199,6 +199,26 @@ class ClienteService {
       }
     } catch (e) {
       debugPrint('Error al buscar clientes: $e');
+      rethrow;
+    }
+  }
+
+  Future<List<Cliente>> buscarClientesConDeuda(String query) async {
+    try {
+      final headers = await AuthService.getAuthHeaders();
+      final response = await Apihandler.client.get(
+        Uri.parse('$baseUrl/Clientes/con-deuda/buscar?query=${Uri.encodeComponent(query)}'),
+        headers: headers,
+      ).timeout(_timeoutDuration);
+
+      if (response.statusCode == 200) {
+        final List<dynamic> jsonList = jsonDecode(response.body);
+        return jsonList.map((json) => Cliente.fromJson(json)).toList();
+      } else {
+        throw Exception('Error al buscar clientes con cuenta corriente');
+      }
+    } catch (e) {
+      debugPrint('Error al buscar clientes con deuda: $e');
       rethrow;
     }
   }

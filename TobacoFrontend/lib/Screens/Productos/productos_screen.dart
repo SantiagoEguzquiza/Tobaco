@@ -6,7 +6,6 @@ import 'package:tobaco/Models/Categoria.dart';
 import 'package:tobaco/Models/Producto.dart';
 import 'package:tobaco/Screens/Productos/categorias_screen.dart';
 import 'package:tobaco/Screens/Productos/detalleProducto_screen.dart';
-import 'package:tobaco/Screens/Productos/editarProducto_screen.dart';
 import 'package:tobaco/Screens/Productos/nuevoProducto_screen.dart';
 import 'package:tobaco/Services/Categoria_Service/categoria_provider.dart';
 import 'package:tobaco/Services/Productos_Service/productos_provider.dart';
@@ -97,7 +96,9 @@ class _ProductosScreenState extends State<ProductosScreen> {
       await context.read<CategoriasProvider>().cargarCategorias(silent: true);
       if (!mounted) return;
       context.read<ProductoProvider>().sincronizarCategoriasDesde(context.read<CategoriasProvider>());
-    } catch (_) {}
+    } catch (_) {
+      _categoriesLoadTriggered = false;
+    }
   }
 
   @override

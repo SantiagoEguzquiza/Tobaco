@@ -824,6 +824,54 @@ class VentasProvider with ChangeNotifier {
     }
   }
 
+  /// Obtiene TODAS las ventas CC de un cliente sin importar cuántas páginas haya.
+  /// Usa un page size de 100 para minimizar roundtrips. Fusiona ventas offline
+  /// pendientes una sola vez al final, evitando duplicados.
+  Future<List<Ventas>> obtenerTodasLasVentasCCPorClienteId(int clienteId) async {
+    final tieneConexion = await _connectivityService.checkFullConnectivity();
+    if (!tieneConexion) {
+      return _ccCacheService.obtenerVentasOffline(clienteId);
+    }
+
+    try {
+      const pageSize = 100;
+      int page = 1;
+      bool hasMore = true;
+      final allServerVentas = <Ventas>[];
+
+      while (hasMore) {
+        final data = await _ventasService.obtenerVentasCuentaCorrientePorClienteId(
+          clienteId, page, pageSize,
+        );
+        allServerVentas.addAll(List<Ventas>.from(data['ventas'] ?? []));
+        hasMore = (data['hasNextPage'] as bool?) ?? false;
+        page++;
+      }
+
+      await _ccCacheService.eliminarVentasSincronizadasDelCliente(clienteId);
+      await _ccCacheService.cacheVentasCuentaCorriente(clienteId, allServerVentas);
+
+      final ventasPendientes =
+          await _ccCacheService.obtenerVentasPendientesOffline(clienteId);
+      final idsServidor =
+          allServerVentas.where((v) => v.id != null).map((v) => v.id!).toSet();
+      final ventasCombinadas = <Ventas>[
+        ...allServerVentas,
+        ...ventasPendientes
+            .where((v) => v.id == null || !idsServidor.contains(v.id)),
+      ];
+      ventasCombinadas.sort((a, b) => b.fecha.compareTo(a.fecha));
+      return ventasCombinadas;
+    } catch (e) {
+      debugPrint('Error al obtener todas las ventas CC: $e');
+      final esTimeout = e is TimeoutException;
+      if (Apihandler.isConnectionError(e) || esTimeout) {
+        return _ccCacheService.obtenerVentasOffline(clienteId);
+      }
+      rethrow;
+    }
+  }
+
   Future<void> actualizarEstadoEntrega(
       int ventaId, List<VentasProductos> items) async {
     try {

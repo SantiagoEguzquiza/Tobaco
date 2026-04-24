@@ -192,9 +192,7 @@ class PermisosProvider with ChangeNotifier {
     _isLoading = false;
     _hasAttemptedLoad = true;
     _errorMessage = null;
-    if (_permisos == null) {
-      _permisos = _permisosPorDefecto(authProvider);
-    }
+    _permisos ??= _permisosPorDefecto(authProvider);
     notifyListeners();
   }
 

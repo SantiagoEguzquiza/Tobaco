@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -94,15 +93,21 @@ class AuthService {
 
         if (response.statusCode == 200) {
           final loginResponse = LoginResponse.fromJson(jsonDecode(response.body));
-
-          // Save token and user data to secure storage
           await _saveAuthData(loginResponse);
-
           return loginResponse;
-        } else if (response.statusCode == 401) {
-          // Unauthorized - invalid credentials (no reintentar)
+        } else if (response.statusCode == 429) {
+          // Cuenta bloqueada por demasiados intentos (no reintentar)
           final errorData = jsonDecode(response.body);
-          throw Exception(errorData['message'] ?? 'Usuario o contraseña incorrectos');
+          throw Exception(errorData['message'] ?? 'Cuenta bloqueada. Intentá de nuevo en unos minutos.');
+        } else if (response.statusCode == 401) {
+          // Credenciales incorrectas (no reintentar)
+          final errorData = jsonDecode(response.body);
+          final base = errorData['message'] ?? 'Usuario o contraseña incorrectos.';
+          final remaining = errorData['remainingAttempts'] as int?;
+          final suffix = (remaining != null && remaining > 0)
+              ? ' Te queda${remaining == 1 ? '' : 'n'} $remaining intento${remaining == 1 ? '' : 's'}.'
+              : '';
+          throw Exception('$base$suffix');
         } else if (response.statusCode == 400) {
           // Bad request - validation errors (no reintentar)
           final errorData = jsonDecode(response.body);
@@ -478,23 +483,40 @@ class AuthService {
 
   // Logout user
   static Future<void> logout() async {
+    // Revocar el refresh token en el servidor (falla silenciosamente si no hay red)
     try {
-      // Eliminar tokens de secure storage
+      await _revokeRefreshTokenOnServer();
+    } catch (_) {}
+
+    try {
       await _secureStorage.delete(key: _tokenKey);
       await _secureStorage.delete(key: _refreshTokenKey);
-      
-      // Eliminar datos de SharedPreferences
+
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(_tokenExpiryKey);
       await prefs.remove(_userKey);
-      
+
       debugPrint('AuthService.logout: Logout completado');
-      // Notificar a la UI para que actualice (ej. volver a pantalla de login)
       onSessionInvalidated?.call();
     } catch (e) {
       debugPrint('AuthService.logout: Error al hacer logout: $e');
       onSessionInvalidated?.call();
     }
+  }
+
+  static Future<void> _revokeRefreshTokenOnServer() async {
+    final token = await getToken();
+    final refreshToken = await getRefreshToken();
+    if (token == null || refreshToken == null) return;
+
+    await Apihandler.client.post(
+      Apihandler.baseUrl.resolve('/api/User/logout'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({'refreshToken': refreshToken}),
+    ).timeout(const Duration(seconds: 5));
   }
 
   // Validate token with backend

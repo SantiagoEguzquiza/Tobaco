@@ -246,6 +246,10 @@ class ClienteProvider with ChangeNotifier {
     return _clientesConDeuda;
   }
 
+  Future<List<Cliente>> buscarClientesConDeuda(String query) async {
+    return await _clienteService.buscarClientesConDeuda(query);
+  }
+
   Future<Map<String, dynamic>> obtenerClientesConDeudaPaginados(
       int page, int pageSize) async {
     try {

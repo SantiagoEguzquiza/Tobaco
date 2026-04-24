@@ -47,7 +47,7 @@ class TicketBuilder {
       // Si no cabe, truncar el texto de la derecha
       final availableSpace = width - left.length - 3; // -3 para "..."
       if (availableSpace <= 0) return left.substring(0, width);
-      return left + right.substring(0, availableSpace) + '...';
+      return '$left${right.substring(0, availableSpace)}...';
     }
     final padding = width - totalLength;
     return left + (' ' * padding) + right;

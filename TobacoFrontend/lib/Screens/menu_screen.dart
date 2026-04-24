@@ -7,17 +7,10 @@ import 'package:tobaco/Screens/Ventas/nuevaVenta_screen.dart';
 import 'package:tobaco/Screens/Ventas/ventas_screen.dart';
 import 'package:tobaco/Screens/Productos/productos_screen.dart';
 import 'package:tobaco/Screens/Compras/compras_screen.dart';
-import 'package:tobaco/Screens/Auth/login_screen.dart';
-import 'package:tobaco/Screens/Entregas/mapa_entregas_screen.dart';
-import 'package:tobaco/Screens/Entregas/entregas_screen.dart';
 import 'package:tobaco/Services/Auth_Service/auth_provider.dart';
-import 'package:tobaco/Services/Categoria_Service/categoria_provider.dart';
-import 'package:tobaco/Services/Clientes_Service/clientes_provider.dart';
 import 'package:tobaco/Services/Permisos_Service/permisos_provider.dart';
-import 'package:tobaco/Services/Productos_Service/productos_provider.dart';
 import 'package:tobaco/Services/Ventas_Service/ventas_provider.dart';
 import 'package:tobaco/Theme/app_theme.dart';
-import 'package:tobaco/Theme/dialogs.dart';
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});

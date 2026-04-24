@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:tobaco/Screens/menu_screen.dart';
 import 'package:tobaco/Screens/main_shell_screen.dart';
 import 'package:tobaco/Screens/Auth/login_screen.dart';
 import 'package:tobaco/Screens/SuperAdmin/super_admin_menu_screen.dart';
@@ -119,6 +118,8 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
   bool _isInitializing = false;
   bool _permisosLoadTriggered = false;
   bool _permisosTimeoutFired = false;
+  int _retryCount = 0;
+  static const int _maxRetries = 3;
 
   @override
   void initState() {
@@ -129,6 +130,12 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
     // AuthService limpia tokens y llama este callback para que la UI vuelva al login.
     AuthService.onSessionInvalidated = () {
       if (mounted) {
+        setState(() {
+          _permisosLoadTriggered = false;
+          _permisosTimeoutFired = false;
+          _retryCount = 0;
+        });
+        context.read<PermisosProvider>().clearPermisos();
         unawaited(context.read<ClienteProvider>().clearForNewUser());
         unawaited(context.read<VentasProvider>().clearForNewUser());
         unawaited(context.read<ProductoProvider>().clearForNewUser());
@@ -192,6 +199,21 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
     WidgetsBinding.instance.removeObserver(_lifecycleObserver);
     AuthService.onSessionInvalidated = null;
     super.dispose();
+  }
+
+  Future<void> _cerrarSesion(AuthProvider authProvider) async {
+    if (!mounted) return;
+    setState(() {
+      _permisosLoadTriggered = false;
+      _permisosTimeoutFired = false;
+      _retryCount = 0;
+    });
+    context.read<PermisosProvider>().clearPermisos();
+    unawaited(context.read<ClienteProvider>().clearForNewUser());
+    unawaited(context.read<VentasProvider>().clearForNewUser());
+    unawaited(context.read<ProductoProvider>().clearForNewUser());
+    unawaited(context.read<CategoriasProvider>().clearForNewUser());
+    await authProvider.logout();
   }
 
   @override
@@ -261,10 +283,6 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
                 perm.marcarTimeoutYPermitirEntrada(auth);
               });
             }
-            final theme = Theme.of(context);
-            final loadingColor = theme.brightness == Brightness.light
-                ? Colors.green
-                : theme.colorScheme.primary;
             return Scaffold(
               resizeToAvoidBottomInset: false,
               body: Center(
@@ -285,6 +303,7 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
 
           if (errorPermisos) {
             final mensaje = permisosProvider.errorMessage ?? 'No se pudieron cargar los permisos.';
+            final agotados = _retryCount >= _maxRetries;
             return Scaffold(
               body: SafeArea(
                 child: Center(
@@ -306,14 +325,35 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
                           style: Theme.of(context).textTheme.bodyMedium,
                           textAlign: TextAlign.center,
                         ),
+                        if (agotados) ...[
+                          const SizedBox(height: 8),
+                          Text(
+                            'Varios intentos fallidos. Cerrá sesión y volvé a ingresar.',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Colors.orange.shade700,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
                         const SizedBox(height: 24),
-                        ElevatedButton.icon(
-                          onPressed: () async {
-                            await context.read<PermisosProvider>().reintentarPermisos(authProvider);
-                          },
-                          icon: const Icon(Icons.refresh),
-                          label: const Text('Reintentar'),
-                          style: ElevatedButton.styleFrom(
+                        if (!agotados)
+                          ElevatedButton.icon(
+                            onPressed: () {
+                              setState(() => _retryCount++);
+                              context.read<PermisosProvider>().reintentarPermisos(authProvider);
+                            },
+                            icon: const Icon(Icons.refresh),
+                            label: Text('Reintentar (${_maxRetries - _retryCount} restantes)'),
+                            style: ElevatedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                            ),
+                          ),
+                        const SizedBox(height: 12),
+                        OutlinedButton.icon(
+                          onPressed: () => _cerrarSesion(authProvider),
+                          icon: const Icon(Icons.logout),
+                          label: const Text('Cerrar sesión'),
+                          style: OutlinedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                           ),
                         ),
@@ -327,6 +367,7 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
 
           _permisosLoadTriggered = false;
           _permisosTimeoutFired = false;
+          _retryCount = 0;
           return const MainShellScreen();
         }
 

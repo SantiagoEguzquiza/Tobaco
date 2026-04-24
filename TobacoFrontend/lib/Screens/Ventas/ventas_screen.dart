@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:provider/provider.dart';
 import 'package:tobaco/Models/Ventas.dart';
@@ -73,8 +72,10 @@ class _VentasScreenState extends State<VentasScreen> {
     final delta = currentOffset - _lastScrollOffset;
     _lastScrollOffset = currentOffset;
 
-    if (currentOffset >= _scrollController.position.maxScrollExtent - 200) {
-      context.read<VentasProvider>().cargarMasVentas();
+    final provider = context.read<VentasProvider>();
+    if (currentOffset >= _scrollController.position.maxScrollExtent - 200 &&
+        !provider.isLoadingMore) {
+      provider.cargarMasVentas();
     }
 
     if (_maxHeaderHeight <= 0 || delta.abs() > 200) return;

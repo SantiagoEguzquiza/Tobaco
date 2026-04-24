@@ -289,7 +289,6 @@ class AppTheme {
   static ThemeData get theme {
     return ThemeData(
       scaffoldBackgroundColor: Colors.white,
-      primarySwatch: Colors.green,
       primaryColor: primaryColor,
       colorScheme: ColorScheme.light(
         primary: primaryColor,
@@ -328,7 +327,7 @@ class AppTheme {
       ),
       textSelectionTheme: TextSelectionThemeData(
         cursorColor: primaryColor,
-        selectionColor: primaryColor.withOpacity(0.25),
+        selectionColor: primaryColor.withValues(alpha: 0.25),
         selectionHandleColor: primaryColor,
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
@@ -427,7 +426,7 @@ class AppTheme {
         style: ElevatedButton.styleFrom(
           backgroundColor: const Color(0xFF4CAF50),
           foregroundColor: Colors.white,
-          shadowColor: const Color(0xFF4CAF50).withOpacity(0.3),
+          shadowColor: const Color(0xFF4CAF50).withValues(alpha: 0.3),
           elevation: 4,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(10),
@@ -519,7 +518,7 @@ class AppTheme {
           horizontal: 15,
         ),
       ),
-      cardTheme: const CardTheme(
+      cardTheme: const CardThemeData(
         color: Color(0xFF1A1A1A),
         elevation: 2,
         shadowColor: Colors.black26,
@@ -527,7 +526,7 @@ class AppTheme {
           borderRadius: BorderRadius.all(Radius.circular(12)),
         ),
       ),
-      dialogTheme: const DialogTheme(
+      dialogTheme: const DialogThemeData(
         backgroundColor: Color(0xFF1A1A1A),
         titleTextStyle: TextStyle(
           color: Color(0xFFE0E0E0),
@@ -555,7 +554,7 @@ class AppTheme {
         }),
         trackColor: WidgetStateProperty.resolveWith<Color>((states) {
           if (states.contains(WidgetState.selected)) {
-            return const Color(0xFF4CAF50).withOpacity(0.3);
+            return const Color(0xFF4CAF50).withValues(alpha: 0.3);
           }
           return const Color(0xFF404040);
         }),
@@ -643,7 +642,7 @@ class AppTheme {
               borderRadius: BorderRadius.circular(24),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(isDark ? 0.5 : 0.15),
+                  color: Colors.black.withValues(alpha: isDark ? 0.5 : 0.15),
                   blurRadius: 20,
                   spreadRadius: 0,
                   offset: const Offset(0, 8),
@@ -662,7 +661,7 @@ class AppTheme {
                     padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
                     decoration: BoxDecoration(
                       color: isDark 
-                          ? const Color(0xFF2A2A2A).withOpacity(0.5) 
+                          ? const Color(0xFF2A2A2A).withValues(alpha: 0.5)
                           : Colors.grey.shade50,
                       border: Border(
                         bottom: BorderSide(

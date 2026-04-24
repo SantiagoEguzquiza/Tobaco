@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../Services/User_Service/user_provider.dart';
 import '../../Services/Auth_Service/auth_provider.dart';
 import '../../Services/Auth_Service/auth_service.dart';
 import '../../Models/User.dart';
-import '../../Models/TipoVendedor.dart';
 import '../../Theme/app_theme.dart';
 import '../../Theme/dialogs.dart';
 import '../../Theme/headers.dart';

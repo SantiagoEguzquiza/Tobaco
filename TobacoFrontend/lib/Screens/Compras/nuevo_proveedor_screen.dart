@@ -1,7 +1,6 @@
 // ignore_for_file: library_private_types_in_public_api
 
 import 'package:flutter/material.dart';
-import 'package:tobaco/Models/Proveedor.dart';
 import 'package:tobaco/Services/Compras_Service/compras_service.dart';
 import 'package:tobaco/Theme/app_theme.dart';
 import 'package:tobaco/Helpers/api_handler.dart';

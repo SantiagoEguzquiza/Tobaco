@@ -410,8 +410,9 @@ class _SeleccionarProductosScreenState
               } catch (_) {}
             }
             isLoading = false;
-            if (productos.isEmpty)
+            if (productos.isEmpty) {
               errorMessage = 'No hay productos. Conecta para sincronizar.';
+            }
           });
         }
       }
@@ -927,8 +928,8 @@ class _SeleccionarProductosScreenState
                           border: Border(
                             bottom: BorderSide(
                               color: isDark
-                                  ? Colors.grey.shade800!
-                                  : Colors.grey.shade200!,
+                                  ? Colors.grey.shade800
+                                  : Colors.grey.shade200,
                               width: 1,
                             ),
                           ),
@@ -2739,7 +2740,7 @@ class _SeleccionarProductosScreenState
                                               : cantidad.toStringAsFixed(1);
                                     }
 
-                                    return Container(
+                                    return SizedBox(
                                       
                                       key: _productKeys[producto.id],
                                       height:

@@ -192,7 +192,7 @@ class EditarProductoScreenState extends State<EditarProductoScreen> {
                   icon: Icons.category_outlined,
                   children: [
                     DropdownButtonFormField<int>(
-                      value: categoriaSeleccionadaId,
+                      initialValue: categoriaSeleccionadaId,
                       decoration: InputDecoration(
                         hintText: 'Seleccione una categoría',
                         hintStyle: TextStyle(
@@ -334,7 +334,7 @@ class EditarProductoScreenState extends State<EditarProductoScreen> {
                                 widget.producto.descuentoIndefinido = value;
                               });
                             },
-                            activeColor: AppTheme.primaryColor,
+                            activeThumbColor: AppTheme.primaryColor,
                           ),
                         ],
                       ),
@@ -454,7 +454,7 @@ class EditarProductoScreenState extends State<EditarProductoScreen> {
                                 widget.producto.half = value;
                               });
                             },
-                            activeColor: AppTheme.primaryColor,
+                            activeThumbColor: AppTheme.primaryColor,
                           ),
                         ],
                       ),
@@ -701,14 +701,13 @@ class EditarProductoScreenState extends State<EditarProductoScreen> {
                   onPrimary: Colors.white,
                   surface: const Color(0xFF1A1A1A),
                   onSurface: Colors.white,
-                  surfaceVariant: const Color(0xFF2A2A2A),
+                  surfaceContainerHighest: const Color(0xFF2A2A2A),
                 )
               : ColorScheme.light(
                   primary: AppTheme.primaryColor,
                   onPrimary: Colors.white,
                   onSurface: Colors.black87,
-                ),
-            dialogBackgroundColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+                ), dialogTheme: DialogThemeData(backgroundColor: isDark ? const Color(0xFF1A1A1A) : Colors.white),
           ),
           child: StatefulBuilder(
             builder: (context, setState) {

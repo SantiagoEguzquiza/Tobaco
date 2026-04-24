@@ -201,7 +201,7 @@ class _NuevoUsuarioScreenState extends State<NuevoUsuarioScreen> {
                       icon: Icons.badge_outlined,
                       children: [
                         DropdownButtonFormField<String>(
-                          value: _selectedRole,
+                          initialValue: _selectedRole,
                           decoration: _dropdownDecoration(isDark),
                           dropdownColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,
                           style: TextStyle(color: textColor, fontSize: 16),
@@ -214,7 +214,7 @@ class _NuevoUsuarioScreenState extends State<NuevoUsuarioScreen> {
                         if (_selectedRole == 'Employee') ...[
                           const SizedBox(height: 16),
                           DropdownButtonFormField<TipoVendedor>(
-                            value: _selectedTipoVendedor,
+                            initialValue: _selectedTipoVendedor,
                             decoration: _dropdownDecoration(isDark),
                             dropdownColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,
                             style: TextStyle(color: textColor, fontSize: 16),

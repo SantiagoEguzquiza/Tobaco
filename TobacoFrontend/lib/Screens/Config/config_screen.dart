@@ -239,7 +239,7 @@ class _ConfigScreenState extends State<ConfigScreen> {
               ),
               trailing: Switch(
                 value: isDark,
-                activeColor: AppTheme.primaryColor,
+                activeThumbColor: AppTheme.primaryColor,
                 onChanged: (value) {
                   themeProvider.setThemeMode(
                     value ? ThemeMode.dark : ThemeMode.light,

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show SystemNavigator;
 import 'package:tobaco/Screens/menu_screen.dart';
 import 'package:tobaco/Screens/Config/config_screen.dart';
-import 'package:tobaco/Theme/app_theme.dart';
 
 /// Shell que muestra el navbar en todas las pantallas.
 /// Tab 0 = Inicio (Navigator con MenuScreen y las pantallas que se abren desde él).
@@ -20,6 +20,7 @@ class _MainShellScreenState extends State<MainShellScreen> {
   int? _selectedNavIndex = 0;
   final GlobalKey<NavigatorState> _inicioNavigatorKey = GlobalKey<NavigatorState>();
   final RouteObserver<ModalRoute<void>> _routeObserver = RouteObserver<ModalRoute<void>>();
+  DateTime? _lastBackPress;
 
   void _onInicioRouteSelectionChanged(bool isMenuVisible) {
     if (!mounted) return;
@@ -28,48 +29,80 @@ class _MainShellScreenState extends State<MainShellScreen> {
     });
   }
 
+  Future<bool> _onBackPressed() async {
+    // Si el navigator interno tiene rutas, popearlas primero
+    if (_inicioNavigatorKey.currentState?.canPop() == true) {
+      _inicioNavigatorKey.currentState!.pop();
+      return false;
+    }
+    // Doble back para salir
+    final now = DateTime.now();
+    if (_lastBackPress == null ||
+        now.difference(_lastBackPress!) > const Duration(seconds: 2)) {
+      _lastBackPress = now;
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Presioná atrás de nuevo para salir'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+      return false;
+    }
+    return true;
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      extendBody: true,
-      body: IndexedStack(
-        index: _currentTabIndex,
-        children: [
-          Navigator(
-            key: _inicioNavigatorKey,
-            initialRoute: '/',
-            onGenerateRoute: (RouteSettings settings) {
-              if (settings.name == '/' || settings.name == null) {
-                return MaterialPageRoute<void>(
-                  builder: (context) => _NavSelectionNotifier(
-                    routeObserver: _routeObserver,
-                    onMenuVisible: () => _onInicioRouteSelectionChanged(true),
-                    onMenuNotVisible: () => _onInicioRouteSelectionChanged(false),
-                    child: const MenuScreen(),
-                  ),
-                  settings: settings,
-                );
-              }
-              return null;
-            },
-            observers: [_routeObserver],
-          ),
-          const Center(
-            child: Text(
-              'Reportes — Próximamente',
-              style: TextStyle(color: Colors.white70, fontSize: 18),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) async {
+        if (didPop) return;
+        final shouldExit = await _onBackPressed();
+        if (shouldExit) SystemNavigator.pop();
+      },
+      child: Scaffold(
+        extendBody: true,
+        body: IndexedStack(
+          index: _currentTabIndex,
+          children: [
+            Navigator(
+              key: _inicioNavigatorKey,
+              initialRoute: '/',
+              onGenerateRoute: (RouteSettings settings) {
+                if (settings.name == '/' || settings.name == null) {
+                  return MaterialPageRoute<void>(
+                    builder: (context) => _NavSelectionNotifier(
+                      routeObserver: _routeObserver,
+                      onMenuVisible: () => _onInicioRouteSelectionChanged(true),
+                      onMenuNotVisible: () => _onInicioRouteSelectionChanged(false),
+                      child: const MenuScreen(),
+                    ),
+                    settings: settings,
+                  );
+                }
+                return null;
+              },
+              observers: [_routeObserver],
             ),
-          ),
-          const Center(
-            child: Text(
-              'Avisos — Próximamente',
-              style: TextStyle(color: Colors.white70, fontSize: 18),
+            const Center(
+              child: Text(
+                'Reportes — Próximamente',
+                style: TextStyle(color: Colors.white70, fontSize: 18),
+              ),
             ),
-          ),
-          const ConfigScreen(),
-        ],
+            const Center(
+              child: Text(
+                'Avisos — Próximamente',
+                style: TextStyle(color: Colors.white70, fontSize: 18),
+              ),
+            ),
+            const ConfigScreen(),
+          ],
+        ),
+        bottomNavigationBar: _buildNavBar(),
       ),
-      bottomNavigationBar: _buildNavBar(),
     );
   }
 

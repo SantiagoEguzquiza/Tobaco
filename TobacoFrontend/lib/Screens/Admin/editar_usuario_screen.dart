@@ -351,7 +351,7 @@ class _EditarUsuarioScreenState extends State<EditarUsuarioScreen> {
                       icon: Icons.badge_outlined,
                       children: [
                         DropdownButtonFormField<String>(
-                          value: _selectedRole,
+                          initialValue: _selectedRole,
                           decoration: _dropdownDecoration(isDark),
                           dropdownColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,
                           style: TextStyle(color: textColor, fontSize: 16),
@@ -382,7 +382,7 @@ class _EditarUsuarioScreenState extends State<EditarUsuarioScreen> {
                         if (_selectedRole == 'Employee') ...[
                           const SizedBox(height: 16),
                           DropdownButtonFormField<TipoVendedor>(
-                            value: _selectedTipoVendedor,
+                            initialValue: _selectedTipoVendedor,
                             decoration: _dropdownDecoration(isDark),
                             dropdownColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,
                             style: TextStyle(color: textColor, fontSize: 16),

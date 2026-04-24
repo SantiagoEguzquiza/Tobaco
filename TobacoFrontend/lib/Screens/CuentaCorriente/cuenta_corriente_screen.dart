@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:tobaco/Models/Cliente.dart';
 import 'package:tobaco/Services/Clientes_Service/clientes_provider.dart';
@@ -7,7 +9,6 @@ import 'package:tobaco/Theme/headers.dart';
 import 'package:tobaco/Helpers/api_handler.dart';
 import 'package:tobaco/Services/Auth_Service/auth_service.dart';
 import 'package:tobaco/Screens/CuentaCorriente/cuenta_corriente_detalle_screen.dart';
-import 'dart:developer';
 
 class CuentaCorrienteScreen extends StatefulWidget {
   const CuentaCorrienteScreen({super.key});
@@ -18,16 +19,22 @@ class CuentaCorrienteScreen extends StatefulWidget {
 
 class _CuentaCorrienteScreenState extends State<CuentaCorrienteScreen> {
   bool isLoading = true;
-  String searchQuery = '';
   String? errorMessage;
   List<Cliente> clientes = [];
   final TextEditingController _searchController = TextEditingController();
 
-  // Variables para infinite scroll
+  // Paginación / infinite scroll (modo normal)
   bool _isLoadingMore = false;
   bool _hasMoreData = true;
   int _currentPage = 1;
   final int _pageSize = 20;
+
+  // Modo búsqueda API
+  String _searchText = '';
+  bool _isSearchMode = false;
+  bool _isSearchLoading = false;
+  List<Cliente> _searchResults = [];
+  Timer? _debounceTimer;
 
   final ScrollController _scrollController = ScrollController();
   final GlobalKey _headerKey = GlobalKey();
@@ -58,6 +65,7 @@ class _CuentaCorrienteScreenState extends State<CuentaCorrienteScreen> {
 
   @override
   void dispose() {
+    _debounceTimer?.cancel();
     _searchController.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -101,13 +109,54 @@ class _CuentaCorrienteScreenState extends State<CuentaCorrienteScreen> {
     return double.tryParse(deudaLimpia) ?? 0.0;
   }
 
+  void _onSearchChanged(String value) {
+    _debounceTimer?.cancel();
+    if (value.trim().isEmpty) {
+      setState(() {
+        _searchText = '';
+        _isSearchMode = false;
+        _searchResults = [];
+        _isSearchLoading = false;
+      });
+      return;
+    }
+    setState(() {
+      _searchText = value;
+      _isSearchLoading = true;
+      _isSearchMode = true;
+    });
+    _debounceTimer = Timer(const Duration(milliseconds: 400), () {
+      _buscarEnBackend(value.trim());
+    });
+  }
+
+  Future<void> _buscarEnBackend(String query) async {
+    if (!mounted) return;
+    try {
+      final results = await ClienteProvider().buscarClientesConDeuda(query);
+      if (!mounted) return;
+      setState(() {
+        _searchResults = results;
+        _isSearchLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isSearchLoading = false);
+      if (AuthService.isSessionExpiredException(e)) {
+        await AuthService.logout();
+      } else if (!Apihandler.isConnectionError(e)) {
+        log('Error al buscar clientes: $e', level: 1000);
+      }
+    }
+  }
+
   void _onScroll() {
     if (!_scrollController.hasClients) return;
     final currentOffset = _scrollController.offset;
     final delta = currentOffset - _lastScrollOffset;
     _lastScrollOffset = currentOffset;
 
-    if (currentOffset >= _scrollController.position.maxScrollExtent - 200) {
+    if (!_isSearchMode && currentOffset >= _scrollController.position.maxScrollExtent - 200) {
       _cargarMasClientes();
     }
 
@@ -221,21 +270,16 @@ class _CuentaCorrienteScreenState extends State<CuentaCorrienteScreen> {
     }
   }
 
-  String _searchText = '';
-
   @override
   Widget build(BuildContext context) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _measureHeader();
     });
 
-    final filteredClientes = clientes.where((cliente) {
-      final matchesSearchQuery = cliente.nombre
-          .toLowerCase()
-          .contains(_searchText.toLowerCase());
-      return matchesSearchQuery;
-    }).toList()
-      ..sort((a, b) => a.nombre.toLowerCase().compareTo(b.nombre.toLowerCase()));
+    final displayedClientes = _isSearchMode ? _searchResults : clientes;
+    final subtitle = _isSearchMode
+        ? '${_searchResults.length} resultado${_searchResults.length != 1 ? 's' : ''}'
+        : '${clientes.length} cliente${clientes.length != 1 ? 's' : ''} con cuenta corriente';
 
     return Scaffold(
       appBar: AppBar(
@@ -262,69 +306,66 @@ class _CuentaCorrienteScreenState extends State<CuentaCorrienteScreen> {
                     SizedBox(height: 16),
                     Text(
                       'Cargando cuenta corriente...',
-                      style: TextStyle(
-                        color: Colors.grey,
-                        fontSize: 16,
-                      ),
+                      style: TextStyle(color: Colors.grey, fontSize: 16),
                     ),
                   ],
                 ),
               )
             : SafeArea(
-              child: Padding(
-                padding: EdgeInsets.fromLTRB(
-                  16,
-                  MediaQuery.of(context).size.height < 680 ? 12 : 16,
-                  16,
-                  0,
-                ),
-                child: Column(
-                  children: [
-                    ClipRect(
-                      child: Align(
-                        alignment: Alignment.topCenter,
-                        heightFactor: _headerVisibility,
-                        child: Opacity(
-                          opacity: _headerVisibility,
-                          child: Column(
-                            key: _headerKey,
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              HeaderConBuscador(
-                                leadingIcon: Icons.account_balance_wallet,
-                                title: 'Cuenta Corriente',
-                                subtitle: '${clientes.length} cliente${clientes.length != 1 ? 's' : ''} con cuenta corriente',
-                                controller: _searchController,
-                                hintText: 'Buscar clientes...',
-                                onChanged: (value) {
-                                  setState(() {
-                                    _searchText = value;
-                                  });
-                                },
-                                onClear: () {
-                                  _searchController.clear();
-                                  setState(() {
-                                    _searchText = '';
-                                  });
-                                },
-                              ),
-                              SizedBox(height: MediaQuery.of(context).size.height < 680 ? 10 : 20),
-                            ],
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    16,
+                    MediaQuery.of(context).size.height < 680 ? 12 : 16,
+                    16,
+                    0,
+                  ),
+                  child: Column(
+                    children: [
+                      ClipRect(
+                        child: Align(
+                          alignment: Alignment.topCenter,
+                          heightFactor: _headerVisibility,
+                          child: Opacity(
+                            opacity: _headerVisibility,
+                            child: Column(
+                              key: _headerKey,
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                HeaderConBuscador(
+                                  leadingIcon: Icons.account_balance_wallet,
+                                  title: 'Cuenta Corriente',
+                                  subtitle: subtitle,
+                                  controller: _searchController,
+                                  hintText: 'Buscar clientes...',
+                                  onChanged: _onSearchChanged,
+                                  onClear: () {
+                                    _searchController.clear();
+                                    _onSearchChanged('');
+                                  },
+                                ),
+                                SizedBox(height: MediaQuery.of(context).size.height < 680 ? 10 : 20),
+                              ],
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                    Expanded(
-                      child: filteredClientes.isEmpty && !isLoading
-                          ? SizedBox.expand(child: _buildEmptyState())
-                          : _buildClientesList(filteredClientes),
-                    ),
-                  ],
+                      Expanded(
+                        child: _isSearchLoading
+                            ? const Center(
+                                child: CircularProgressIndicator(
+                                  valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
+                                ),
+                              )
+                            : displayedClientes.isEmpty
+                                ? SizedBox.expand(child: _buildEmptyState())
+                                : _buildClientesList(displayedClientes),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-        ),
+      ),
     );
   }
 

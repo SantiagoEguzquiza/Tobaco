@@ -9,15 +9,17 @@ import 'package:tobaco/Theme/dialogs.dart';
 /// URL del backend. Cambia solo aquí según dónde corras la app.
 class ApiConfig {
   /// Backend en tu PC: celular y PC en la misma Wi‑Fi. Reemplaza por la IP de tu PC (ipconfig).
-  static const String localUrl = 'http://192.168.0.103:5006';
+  static const String localUrl = 'http://192.168.0.101:5006';
   /// Backend en producción (Railway).
   static const String productionUrl = 'https://tobacoapi-production.up.railway.app';
 }
 
 class Apihandler {
   static final HttpClient httpClient = HttpClient()
+    // Solo en debug: aceptar certificados self-signed del servidor local.
+    // En release (producción) se validan normalmente.
     ..badCertificateCallback =
-        (X509Certificate cert, String host, int port) => true;
+        (X509Certificate cert, String host, int port) => kDebugMode;
 
   static final IOClient client = IOClient(httpClient);
 

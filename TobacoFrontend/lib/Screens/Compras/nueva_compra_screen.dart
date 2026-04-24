@@ -398,14 +398,13 @@ class _NuevaCompraScreenState extends State<NuevaCompraScreen> {
                     onPrimary: Colors.white,
                     surface: const Color(0xFF1A1A1A),
                     onSurface: Colors.white,
-                    surfaceVariant: const Color(0xFF2A2A2A),
+                    surfaceContainerHighest: const Color(0xFF2A2A2A),
                   )
                 : ColorScheme.light(
                     primary: AppTheme.primaryColor,
                     onPrimary: Colors.white,
                     onSurface: Colors.black87,
-                  ),
-            dialogBackgroundColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+                  ), dialogTheme: DialogThemeData(backgroundColor: isDark ? const Color(0xFF1A1A1A) : Colors.white),
           ),
           child: StatefulBuilder(
             builder: (context, setState) {
@@ -1045,7 +1044,7 @@ class _NuevaCompraScreenState extends State<NuevaCompraScreen> {
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             ProveedorSection(
-                              proveedor: proveedor!,
+                              proveedor: proveedor,
                               onCambiarProveedor: _cambiarProveedor,
                             ),
                             Padding(
@@ -1072,7 +1071,7 @@ class _NuevaCompraScreenState extends State<NuevaCompraScreen> {
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
                               ProveedorSection(
-                                proveedor: proveedor!,
+                                proveedor: proveedor,
                                 onCambiarProveedor: _cambiarProveedor,
                               ),
                               Padding(
