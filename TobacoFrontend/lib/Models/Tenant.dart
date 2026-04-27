@@ -7,6 +7,7 @@ class Tenant {
   final bool isActive;
   final DateTime createdAt;
   final DateTime? updatedAt;
+  final bool stockControlEnabledByDefault;
 
   Tenant({
     required this.id,
@@ -17,6 +18,7 @@ class Tenant {
     required this.isActive,
     required this.createdAt,
     this.updatedAt,
+    this.stockControlEnabledByDefault = true,
   });
 
   @override
@@ -37,6 +39,8 @@ class Tenant {
       isActive: json['isActive'] ?? true,
       createdAt: DateTime.parse(json['createdAt']),
       updatedAt: json['updatedAt'] != null ? DateTime.parse(json['updatedAt']) : null,
+      stockControlEnabledByDefault:
+          json['stockControlEnabledByDefault'] as bool? ?? true,
     );
   }
 
@@ -50,6 +54,7 @@ class Tenant {
       'isActive': isActive,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt?.toIso8601String(),
+      'stockControlEnabledByDefault': stockControlEnabledByDefault,
     };
   }
 
@@ -69,7 +74,32 @@ class Tenant {
       'email': email,
       'telefono': telefono,
       'isActive': isActive,
+      'stockControlEnabledByDefault': stockControlEnabledByDefault,
     };
   }
-}
 
+  Tenant copyWith({
+    int? id,
+    String? nombre,
+    String? descripcion,
+    String? email,
+    String? telefono,
+    bool? isActive,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    bool? stockControlEnabledByDefault,
+  }) {
+    return Tenant(
+      id: id ?? this.id,
+      nombre: nombre ?? this.nombre,
+      descripcion: descripcion ?? this.descripcion,
+      email: email ?? this.email,
+      telefono: telefono ?? this.telefono,
+      isActive: isActive ?? this.isActive,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      stockControlEnabledByDefault:
+          stockControlEnabledByDefault ?? this.stockControlEnabledByDefault,
+    );
+  }
+}

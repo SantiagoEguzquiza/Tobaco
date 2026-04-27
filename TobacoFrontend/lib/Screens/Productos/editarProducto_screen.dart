@@ -4,8 +4,10 @@ import 'package:provider/provider.dart';
 import 'package:tobaco/Helpers/api_handler.dart';
 import 'package:tobaco/Models/Producto.dart';
 import 'package:tobaco/Models/ProductQuantityPrice.dart';
+import 'package:tobaco/Models/StockControlMode.dart';
 import 'package:tobaco/Services/Categoria_Service/categoria_provider.dart';
 import 'package:tobaco/Services/Productos_Service/productos_provider.dart';
+import 'package:tobaco/Services/Tenant_Service/tenant_provider.dart';
 import 'package:tobaco/Theme/app_theme.dart';
 import 'package:tobaco/Theme/dialogs.dart';
 import 'package:tobaco/Models/Categoria.dart';
@@ -33,6 +35,7 @@ class EditarProductoScreenState extends State<EditarProductoScreen> {
   bool _isLoading = false;
   bool _descuentoIndefinido = false;
   DateTime? _fechaExpiracionDescuento;
+  late StockControlMode _stockControlMode;
 
   // Helper method to safely parse color hex
   Color _parseColor(String colorHex) {
@@ -70,10 +73,22 @@ class EditarProductoScreenState extends State<EditarProductoScreen> {
     // Inicializar campos de descuento
     _descuentoIndefinido = widget.producto.descuentoIndefinido;
     _fechaExpiracionDescuento = widget.producto.fechaExpiracionDescuento;
-    
-    Future.microtask(() {
+
+    _stockControlMode = widget.producto.stockControlMode;
+
+    Future.microtask(() async {
       if (!mounted) return;
-      Provider.of<CategoriasProvider>(context, listen: false).obtenerCategorias();
+      await Provider.of<CategoriasProvider>(context, listen: false)
+          .obtenerCategorias();
+
+      // Cargar el tenant para mostrar la configuración heredada en el switch.
+      if (mounted) {
+        final tenantProvider =
+            Provider.of<TenantProvider>(context, listen: false);
+        if (tenantProvider.miTenant == null) {
+          await tenantProvider.cargarMiTenant();
+        }
+      }
     });
   }
 
@@ -463,6 +478,18 @@ class EditarProductoScreenState extends State<EditarProductoScreen> {
                 ),
                 
                 const SizedBox(height: 16),
+
+                // Control de stock
+                _buildSectionCard(
+                  isDark: isDark,
+                  title: 'Control de stock',
+                  icon: Icons.inventory_2_outlined,
+                  children: [
+                    _buildStockControlSwitch(isDark),
+                  ],
+                ),
+
+                const SizedBox(height: 16),
                 
                 // Precios por cantidad (packs)
                 _buildSectionCard(
@@ -687,6 +714,158 @@ class EditarProductoScreenState extends State<EditarProductoScreen> {
     );
   }
 
+  /// Switch de control de stock para el producto.
+  ///
+  /// El switch refleja el estado efectivo (combinando tenant + producto).
+  /// Si el usuario lo cambia, se overridea el modo del producto a
+  /// `forceEnabled`/`forceDisabled`. Si vuelve a coincidir con el tenant,
+  /// se restablece a `inheritTenant` automáticamente. También hay un botón
+  /// para volver explícitamente a "heredar".
+  Widget _buildStockControlSwitch(bool isDark) {
+    return Consumer<TenantProvider>(
+      builder: (context, tenantProvider, _) {
+        final tenant = tenantProvider.miTenant;
+        final tenantDefault = tenant?.stockControlEnabledByDefault ?? true;
+
+        final bool effective;
+        switch (_stockControlMode) {
+          case StockControlMode.forceEnabled:
+            effective = true;
+            break;
+          case StockControlMode.forceDisabled:
+            effective = false;
+            break;
+          case StockControlMode.inheritTenant:
+            effective = tenantDefault;
+            break;
+        }
+
+        final isInherit = _stockControlMode == StockControlMode.inheritTenant;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF2A2A2A) : Colors.white,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(
+                      Icons.warehouse_outlined,
+                      color: AppTheme.primaryColor,
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Controlar stock',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w500,
+                            color: isDark ? Colors.white : Colors.black87,
+                          ),
+                        ),
+                        Text(
+                          effective
+                              ? 'Las ventas y compras descontarán/sumarán stock.'
+                              : 'Este producto no afecta el stock.',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: isDark
+                                ? Colors.grey.shade400
+                                : Colors.grey.shade600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Switch(
+                    value: effective,
+                    activeColor: AppTheme.primaryColor,
+                    onChanged: (bool value) {
+                      setState(() {
+                        if (value == tenantDefault) {
+                          _stockControlMode = StockControlMode.inheritTenant;
+                        } else {
+                          _stockControlMode = value
+                              ? StockControlMode.forceEnabled
+                              : StockControlMode.forceDisabled;
+                        }
+                        widget.producto.stockControlMode = _stockControlMode;
+                      });
+                    },
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Icon(
+                  isInherit ? Icons.link : Icons.lock_outline,
+                  size: 16,
+                  color: isInherit
+                      ? (isDark ? Colors.grey.shade400 : Colors.grey.shade600)
+                      : AppTheme.primaryColor,
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    isInherit
+                        ? 'Hereda la configuración general del tenant '
+                            '(${tenantDefault ? "controla stock" : "no controla stock"}).'
+                        : 'Excepción: el producto fuerza '
+                            '${effective ? "controlar" : "no controlar"} stock.',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isInherit
+                          ? (isDark
+                              ? Colors.grey.shade400
+                              : Colors.grey.shade600)
+                          : AppTheme.primaryColor,
+                    ),
+                  ),
+                ),
+                if (!isInherit)
+                  TextButton(
+                    onPressed: () {
+                      setState(() {
+                        _stockControlMode = StockControlMode.inheritTenant;
+                        widget.producto.stockControlMode = _stockControlMode;
+                      });
+                    },
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppTheme.primaryColor,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 0,
+                      ),
+                      minimumSize: const Size(0, 32),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    child: const Text('Heredar'),
+                  ),
+              ],
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Future<void> _selectFechaExpiracion(BuildContext context, bool isDark) async {
     final DateTime? picked = await showDialog<DateTime>(
       context: context,
@@ -864,6 +1043,7 @@ class EditarProductoScreenState extends State<EditarProductoScreen> {
       widget.producto.descuento = descuentoValue;
       widget.producto.fechaExpiracionDescuento = _descuentoIndefinido ? null : _fechaExpiracionDescuento;
       widget.producto.descuentoIndefinido = _descuentoIndefinido;
+      widget.producto.stockControlMode = _stockControlMode;
 
       await Provider.of<ProductoProvider>(context, listen: false)
           .editarProducto(widget.producto);

@@ -10,6 +10,7 @@ class User {
   final bool isActive;
   final TipoVendedor tipoVendedor;
   final String? zona;
+  final int? tenantId;
 
   User({
     required this.id,
@@ -21,6 +22,7 @@ class User {
     required this.isActive,
     TipoVendedor? tipoVendedor,
     this.zona,
+    this.tenantId,
   }) : tipoVendedor = tipoVendedor ?? TipoVendedor.repartidor;
 
   factory User.fromJson(Map<String, dynamic> json) {
@@ -36,6 +38,7 @@ class User {
           ? TipoVendedor.fromJson(json['tipoVendedor'])
           : TipoVendedor.repartidor,
       zona: json['zona'],
+      tenantId: json['tenantId'] as int?,
     );
   }
 
@@ -50,6 +53,7 @@ class User {
       'isActive': isActive,
       'tipoVendedor': tipoVendedor.toJson(),
       'zona': zona,
+      'tenantId': tenantId,
     };
   }
 

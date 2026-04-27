@@ -9,6 +9,7 @@ import 'package:tobaco/Services/Categoria_Service/categoria_provider.dart';
 import 'package:tobaco/Services/Clientes_Service/clientes_provider.dart';
 import 'package:tobaco/Services/Permisos_Service/permisos_provider.dart';
 import 'package:tobaco/Services/Productos_Service/productos_provider.dart';
+import 'package:tobaco/Services/Tenant_Service/tenant_provider.dart';
 import 'package:tobaco/Services/Ventas_Service/ventas_provider.dart';
 import 'package:tobaco/Theme/app_theme.dart';
 import 'package:tobaco/Theme/dialogs.dart';
@@ -23,6 +24,28 @@ class ConfigScreen extends StatefulWidget {
 
 class _ConfigScreenState extends State<ConfigScreen> {
   bool _isProcessingAction = false;
+  bool _miTenantSolicitado = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final auth = context.read<AuthProvider>();
+    if (!_miTenantSolicitado &&
+        auth.currentUser?.isAdmin == true &&
+        auth.currentUser?.isSuperAdmin != true) {
+      _miTenantSolicitado = true;
+      // Cargar la configuración del tenant del Admin para poder mostrar el
+      // switch de control de stock global. Lo hacemos diferido para no
+      // disparar notifyListeners durante el build.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final provider = context.read<TenantProvider>();
+        if (provider.miTenant == null) {
+          provider.cargarMiTenant();
+        }
+      });
+    }
+  }
 
   TextTheme get _textTheme => Theme.of(context).textTheme;
 
@@ -75,6 +98,13 @@ class _ConfigScreenState extends State<ConfigScreen> {
               const SizedBox(height: 12),
               _buildAssistanceCard(),
               const SizedBox(height: 24),
+              if (authProvider.currentUser?.isAdmin == true &&
+                  authProvider.currentUser?.isSuperAdmin != true) ...[
+                _buildSectionTitle('Inventario'),
+                const SizedBox(height: 12),
+                _buildStockControlCard(),
+                const SizedBox(height: 24),
+              ],
               if (authProvider.currentUser?.isAdmin == true) ...[
                 _buildSectionTitle('Administración'),
                 const SizedBox(height: 12),
@@ -249,6 +279,109 @@ class _ConfigScreenState extends State<ConfigScreen> {
             );
           },
         ),
+      ),
+    );
+  }
+
+  Widget _buildStockControlCard() {
+    return Card(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16.0),
+        child: Consumer<TenantProvider>(
+          builder: (context, tenantProvider, _) {
+            final tenant = tenantProvider.miTenant;
+            final isLoading =
+                tenantProvider.isLoading && tenant == null;
+            final isUpdating = tenantProvider.isUpdatingStockControl;
+            final value = tenant?.stockControlEnabledByDefault ?? true;
+            final errorMessage = tenantProvider.errorMessage;
+
+            return ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: CircleAvatar(
+                backgroundColor: AppTheme.primaryColor.withOpacity(0.15),
+                child: const Icon(
+                  Icons.inventory_2_outlined,
+                  color: AppTheme.primaryColor,
+                ),
+              ),
+              title: Text(
+                'Control de stock por defecto',
+                style: _cardTitleStyle,
+              ),
+              subtitle: Padding(
+                padding: const EdgeInsets.only(top: 4.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      isLoading
+                          ? 'Cargando configuración…'
+                          : value
+                              ? 'Los productos controlan stock salvo que se indique lo contrario.'
+                              : 'Los productos no controlan stock salvo que se indique lo contrario.',
+                      style: _supportTextStyle,
+                    ),
+                    if (errorMessage != null && tenant == null) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        errorMessage,
+                        style: _supportTextStyle.copyWith(color: Colors.red),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              trailing: isLoading || isUpdating
+                  ? const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Switch(
+                      value: value,
+                      activeColor: AppTheme.primaryColor,
+                      onChanged: tenant == null
+                          ? null
+                          : (nuevoValor) =>
+                              _toggleStockControlGlobal(nuevoValor),
+                    ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Future<void> _toggleStockControlGlobal(bool nuevoValor) async {
+    final tenantProvider = context.read<TenantProvider>();
+    final ok =
+        await tenantProvider.actualizarControlDeStockGlobal(nuevoValor);
+    if (!mounted) return;
+
+    if (!ok) {
+      await AppDialogs.showErrorDialog(
+        context: context,
+        title: 'No se pudo actualizar',
+        message: tenantProvider.errorMessage ??
+            'Ocurrió un error al actualizar la configuración de stock.',
+      );
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          nuevoValor
+              ? 'Control de stock global activado.'
+              : 'Control de stock global desactivado.',
+        ),
+        duration: const Duration(seconds: 2),
       ),
     );
   }
