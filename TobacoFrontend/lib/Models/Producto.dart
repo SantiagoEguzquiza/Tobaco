@@ -1,4 +1,5 @@
 import 'ProductQuantityPrice.dart';
+import 'StockControlMode.dart';
 
 class Producto {
   int? id;
@@ -15,6 +16,15 @@ class Producto {
   DateTime? fechaExpiracionDescuento;
   bool descuentoIndefinido;
 
+  /// Modo de control de stock para este producto puntual.
+  /// Por defecto hereda la configuración del tenant.
+  StockControlMode stockControlMode;
+
+  /// Resolución efectiva del control de stock que devuelve el backend
+  /// (combinando la configuración global del tenant y `stockControlMode`).
+  /// Es de solo lectura desde el backend.
+  bool? effectiveStockControl;
+
   Producto({
     required this.id,
     required this.nombre,
@@ -29,6 +39,8 @@ class Producto {
     this.descuento = 0.0,
     this.fechaExpiracionDescuento,
     this.descuentoIndefinido = false,
+    this.stockControlMode = StockControlMode.inheritTenant,
+    this.effectiveStockControl,
   });
 
   factory Producto.fromJson(Map<String, dynamic> json) {
@@ -65,6 +77,10 @@ class Producto {
           : 0.0,
       fechaExpiracionDescuento: parseFechaExpiracion,
       descuentoIndefinido: json['descuentoIndefinido'] ?? false,
+      stockControlMode: json['stockControlMode'] != null
+          ? StockControlMode.fromJson(json['stockControlMode'])
+          : StockControlMode.inheritTenant,
+      effectiveStockControl: json['effectiveStockControl'] as bool?,
     );
   }
   Map<String, dynamic> toJson() {
@@ -81,6 +97,7 @@ class Producto {
       'descuento': descuento,
       'fechaExpiracionDescuento': fechaExpiracionDescuento?.toIso8601String(),
       'descuentoIndefinido': descuentoIndefinido,
+      'stockControlMode': stockControlMode.toJson(),
     };
     
     // Solo incluir id si no es null (para productos existentes)
@@ -106,6 +123,7 @@ class Producto {
       'descuento': descuento,
       'fechaExpiracionDescuento': fechaExpiracionDescuento?.toIso8601String(),
       'descuentoIndefinido': descuentoIndefinido,
+      'stockControlMode': stockControlMode.toJson(),
     };
   }
 }
