@@ -11,7 +11,7 @@ class ApiConfig {
   /// Backend en tu PC: celular y PC en la misma Wi‑Fi. Reemplaza por la IP de tu PC (ipconfig).
   static const String localUrl = 'http://192.168.0.101:5006';
   /// Backend en producción (Railway).
-  static const String productionUrl = 'https://tobacoapi-production.up.railway.app';
+  static const String productionUrl = 'https://devtobacoapi-production.up.railway.app';
 }
 
 class Apihandler {

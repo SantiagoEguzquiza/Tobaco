@@ -61,6 +61,7 @@ class _RecuperarContrasenaScreenState extends State<RecuperarContrasenaScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(message),
+              const SizedBox(height: 16),
             ],
           ),
           actions: [
