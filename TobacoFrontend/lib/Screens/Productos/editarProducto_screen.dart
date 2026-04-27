@@ -207,7 +207,7 @@ class EditarProductoScreenState extends State<EditarProductoScreen> {
                   icon: Icons.category_outlined,
                   children: [
                     DropdownButtonFormField<int>(
-                      initialValue: categoriaSeleccionadaId,
+                      value: categoriaSeleccionadaId,
                       decoration: InputDecoration(
                         hintText: 'Seleccione una categoría',
                         hintStyle: TextStyle(
@@ -349,7 +349,7 @@ class EditarProductoScreenState extends State<EditarProductoScreen> {
                                 widget.producto.descuentoIndefinido = value;
                               });
                             },
-                            activeThumbColor: AppTheme.primaryColor,
+                            activeColor: AppTheme.primaryColor,
                           ),
                         ],
                       ),
@@ -469,7 +469,7 @@ class EditarProductoScreenState extends State<EditarProductoScreen> {
                                 widget.producto.half = value;
                               });
                             },
-                            activeThumbColor: AppTheme.primaryColor,
+                            activeColor: AppTheme.primaryColor,
                           ),
                         ],
                       ),

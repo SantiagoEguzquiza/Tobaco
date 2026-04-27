@@ -175,7 +175,7 @@ class _NuevoProductoScreenState extends State<NuevoProductoScreen> {
                   icon: Icons.category_outlined,
                   children: [
                     DropdownButtonFormField<Categoria>(
-                      initialValue: categorias.isNotEmpty ? categorias.first : null,
+                      value: categorias.isNotEmpty ? categorias.first : null,
                       decoration: InputDecoration(
                         hintText: 'Seleccione una categoría',
                         hintStyle: TextStyle(
@@ -312,7 +312,7 @@ class _NuevoProductoScreenState extends State<NuevoProductoScreen> {
                                 }
                               });
                             },
-                            activeThumbColor: AppTheme.primaryColor,
+                            activeColor: AppTheme.primaryColor,
                           ),
                         ],
                       ),
@@ -431,7 +431,7 @@ class _NuevoProductoScreenState extends State<NuevoProductoScreen> {
                                 halfController.text = value ? 'true' : 'false';
                               });
                             },
-                            activeThumbColor: AppTheme.primaryColor,
+                            activeColor: AppTheme.primaryColor,
                           ),
                         ],
                       ),

@@ -131,7 +131,7 @@ class _AdminsManagementScreenState extends State<AdminsManagementScreen> {
                         ],
                       ),
                       child: DropdownButtonFormField<Tenant>(
-                        initialValue: _selectedTenant != null &&
+                        value: _selectedTenant != null &&
                                 tenantProvider.tenants.any((t) => t.id == _selectedTenant!.id)
                             ? tenantProvider.tenants.firstWhere((t) => t.id == _selectedTenant!.id)
                             : null,

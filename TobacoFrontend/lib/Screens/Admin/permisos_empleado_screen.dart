@@ -200,7 +200,7 @@ class _PermisosEmpleadoScreenState extends State<PermisosEmpleadoScreen> {
           color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
         ),
       ),
-      activeThumbColor: AppTheme.primaryColor,
+      activeColor: AppTheme.primaryColor,
       contentPadding: const EdgeInsets.symmetric(horizontal: 0, vertical: 8),
     );
   }
